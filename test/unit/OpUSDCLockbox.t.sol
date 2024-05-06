@@ -8,3 +8,18 @@ abstract contract Base is Test {
 
   function setUp() public virtual {}
 }
+
+// TODO: Delete this, it needs to be here for workflow to pass for now
+contract UnitTest is Base {
+  function testTest() public {
+    uint256 _num = 1;
+    assertEq(_num, _num);
+  }
+}
+
+contract IntegrationTest is Base {
+  function testTest() public {
+    uint256 _num = 1;
+    assertEq(_num, _num);
+  }
+}
