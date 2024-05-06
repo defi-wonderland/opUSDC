@@ -21,25 +21,29 @@ interface IOpUSDCBridgeAdapter {
   //////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Address of the Bridged USDC token
+   * @notice Fetches address of the Bridged USDC token
+   * @return _bridgedUSDC Address of the bridged USDC token
    */
-  function BRIDGED_USDC() external view returns (address);
+  function BRIDGED_USDC() external view returns (address _bridgedUSDC);
 
   /**
-   * @notice Address of the OpUSDC Lockbox
+   * @notice Fetches address of the OpUSDC Lockbox
    * @dev Should be address(0) on L2's
+   * @return _lockbox Address of the lockbox
    */
-  function LOCKBOX() external view returns (address);
+  function LOCKBOX() external view returns (address _lockbox);
 
   /**
-   * @notice Address of the CrossDomainMessenger to send messages to L1 <-> L2
+   * @notice Fetches address of the CrossDomainMessenger to send messages to L1 <-> L2
+   * @return _messenger Address of the messenger
    */
-  function MESSENGER() external view returns (address);
+  function MESSENGER() external view returns (address _messenger);
 
   /**
-   * @notice Address of the linked adapter on L2 to send messages to and receive from
+   * @notice Fetches address of the linked adapter on L2 to send messages to and receive from
+   * @return _linkedAdapter Address of the linked adapter
    */
-  function linkedAdapter() external view returns (address);
+  function linkedAdapter() external view returns (address _linkedAdapter);
 
   /*///////////////////////////////////////////////////////////////
                             LOGIC
