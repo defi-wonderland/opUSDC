@@ -4,7 +4,7 @@ pragma solidity 0.8.25;
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 
-contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, Ownable {
+contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
   /// @inheritdoc IOpUSDCBridgeAdapter
   address public immutable BRIDGED_USDC;
 

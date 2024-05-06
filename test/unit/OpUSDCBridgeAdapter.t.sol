@@ -30,7 +30,7 @@ contract UnitInitialization is Base {
   function testLinkedAdapter() public {
     address _linkedAdapter = makeAddr('linkedAdapter');
 
-    vm.mockCall(address(_bridgedUSDC), abi.encodeWithSelector(bytes4(keccak256('owner()'))), abi.encode(_owner));
+    vm.mockCall(address(_bridgedUSDC), abi.encodeWithSignature('owner()'), abi.encode(_owner));
 
     vm.prank(_owner);
     adapter.setLinkedAdapter(_linkedAdapter);
@@ -46,7 +46,7 @@ contract UnitInitialization is Base {
   function testSetLinkedAdapterEmitsEvent() public {
     address _linkedAdapter = makeAddr('linkedAdapter');
 
-    vm.mockCall(address(_bridgedUSDC), abi.encodeWithSelector(bytes4(keccak256('owner()'))), abi.encode(_owner));
+    vm.mockCall(address(_bridgedUSDC), abi.encodeWithSignature('owner()'), abi.encode(_owner));
 
     vm.prank(_owner);
     vm.expectEmit(true, true, true, true);
@@ -57,9 +57,7 @@ contract UnitInitialization is Base {
   function testRevertsIfOwnerDoesntMatch() public {
     address _linkedAdapter = makeAddr('linkedAdapter');
 
-    vm.mockCall(
-      address(_bridgedUSDC), abi.encodeWithSelector(bytes4(keccak256('owner()'))), abi.encode(makeAddr('notOwner'))
-    );
+    vm.mockCall(address(_bridgedUSDC), abi.encodeWithSignature('owner()'), abi.encode(makeAddr('notOwner')));
 
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_NotTokenIssuer.selector);
     vm.prank(_owner);
