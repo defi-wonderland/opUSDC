@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {OpUSDCBridgeAdapter} from 'contracts/OpUSDCBridgeAdapter.sol';
+import {OpUSDCBridgeAdapter, IOpUSDCBridgeAdapter} from 'contracts/OpUSDCBridgeAdapter.sol';
 import {Test} from 'forge-std/Test.sol';
 
 abstract contract Base is Test {
@@ -29,6 +29,9 @@ contract UnitInitialization is Base {
 
   function testLinkedAdapter() public {
     address _linkedAdapter = makeAddr('linkedAdapter');
+
+    vm.mockCall(address(_bridgedUSDC), abi.encodeWithSelector(bytes4(keccak256('owner()'))), abi.encode(_owner));
+
     vm.prank(_owner);
     adapter.setLinkedAdapter(_linkedAdapter);
     assertEq(adapter.linkedAdapter(), _linkedAdapter, 'Linked adapter should be set to the new adapter');
@@ -42,9 +45,24 @@ contract UnitInitialization is Base {
 
   function testSetLinkedAdapterEmitsEvent() public {
     address _linkedAdapter = makeAddr('linkedAdapter');
+
+    vm.mockCall(address(_bridgedUSDC), abi.encodeWithSelector(bytes4(keccak256('owner()'))), abi.encode(_owner));
+
     vm.prank(_owner);
     vm.expectEmit(true, true, true, true);
     emit LinkedAdapterSet(_linkedAdapter);
+    adapter.setLinkedAdapter(_linkedAdapter);
+  }
+
+  function testRevertsIfOwnerDoesntMatch() public {
+    address _linkedAdapter = makeAddr('linkedAdapter');
+
+    vm.mockCall(
+      address(_bridgedUSDC), abi.encodeWithSelector(bytes4(keccak256('owner()'))), abi.encode(makeAddr('notOwner'))
+    );
+
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_NotTokenIssuer.selector);
+    vm.prank(_owner);
     adapter.setLinkedAdapter(_linkedAdapter);
   }
 }

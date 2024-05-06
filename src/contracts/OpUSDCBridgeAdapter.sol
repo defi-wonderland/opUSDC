@@ -35,7 +35,9 @@ contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, Ownable {
    * @dev Only the owner can call this function
    * @param _linkedAdapter The address of the linked adapter
    */
-  function setLinkedAdapter(address _linkedAdapter) external onlyOwner {
+  function setLinkedAdapter(address _linkedAdapter) external {
+    if (msg.sender != Ownable(BRIDGED_USDC).owner()) revert IOpUSDCBridgeAdapter_NotTokenIssuer();
+
     linkedAdapter = _linkedAdapter;
     emit LinkedAdapterSet(_linkedAdapter);
   }
