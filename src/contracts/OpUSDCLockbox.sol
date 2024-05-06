@@ -4,6 +4,7 @@ pragma solidity 0.8.25;
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {IOpUSDCLockbox} from 'interfaces/IOpUSDCLockbox.sol';
 import {XERC20Lockbox} from 'xerc20/contracts/XERC20Lockbox.sol';
+import {IXERC20} from 'xerc20/interfaces/IXERC20.sol';
 
 contract OpUSDCLockbox is IOpUSDCLockbox, Ownable, XERC20Lockbox {
   /**
@@ -14,9 +15,12 @@ contract OpUSDCLockbox is IOpUSDCLockbox, Ownable, XERC20Lockbox {
    */
   constructor(address _owner, address _xerc20, address _erc20) Ownable(_owner) XERC20Lockbox(_xerc20, _erc20, false) {}
 
-  /// @inheritdoc IOpUSDCLockbox
+  /**
+   * @notice Burns locked USDC tokens
+   * @dev The caller must be a minter and  must not be blacklisted
+   */
   function burnLockedUSDC() external onlyOwner {
-    (bool success,) = address(ERC20).call(abi.encodeWithSignature('burn(uint256)', ERC20.balanceOf(address(this))));
-    if (!success) revert XERC20Lockbox_BurnFailed();
+    address _lockbox = address(this);
+    IXERC20(address(ERC20)).burn(_lockbox, ERC20.balanceOf(_lockbox));
   }
 }

@@ -3,6 +3,7 @@ pragma solidity 0.8.25;
 
 import {IOpUSDCLockbox, OpUSDCLockbox} from 'contracts/OpUSDCLockbox.sol';
 import {Test} from 'forge-std/Test.sol';
+import {IXERC20} from 'xerc20/interfaces/IXERC20.sol';
 
 abstract contract Base is Test {
   OpUSDCLockbox internal _lockbox;
@@ -28,16 +29,8 @@ contract UnitInitialization is Base {
 contract UnitBurnLockedUSDC is Base {
   function testBurnLockedUSDC(uint256 _balance) public {
     vm.mockCall(_erc20, abi.encodeWithSignature('balanceOf(address)', _lockbox), abi.encode(_balance));
-    vm.mockCall(_erc20, abi.encodeWithSignature('burn(uint256)', _balance), abi.encode(true, bytes('')));
     vm.prank(_owner);
-    _lockbox.burnLockedUSDC();
-  }
-
-  function testBurnLockedUSDCRevert(uint256 _balance) public {
-    vm.mockCall(_erc20, abi.encodeWithSignature('balanceOf(address)', _lockbox), abi.encode(_balance));
-    vm.mockCall(_erc20, abi.encodeWithSignature('burn(uint256)', _balance), abi.encode(false, bytes('')));
-    vm.prank(_owner);
-    vm.expectRevert(IOpUSDCLockbox.XERC20Lockbox_BurnFailed.selector);
+    vm.expectCall(_erc20, abi.encodeCall(IXERC20.burn, (address(_lockbox), _balance)));
     _lockbox.burnLockedUSDC();
   }
 }
