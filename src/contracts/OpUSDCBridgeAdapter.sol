@@ -3,9 +3,9 @@ pragma solidity 0.8.25;
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IXERC20Lockbox} from 'interfaces/external/IXERC20Lockbox.sol';
 import {IXERC20} from 'interfaces/external/IXERC20.sol';
-import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 
 contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
