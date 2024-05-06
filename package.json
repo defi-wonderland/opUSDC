@@ -1,12 +1,7 @@
 {
-  "name": "solidity-foundry-boilerplate",
+  "name": "op-usdc",
   "version": "1.0.0",
-  "description": "Production ready Solidity boilerplate with Foundry",
-  "homepage": "https://github.com/defi-wonderland/solidity-foundry-boilerplate#readme",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/defi-wonderland/solidity-foundry-boilerplate.git"
-  },
+  "description": "opUSDC, a USDC bridge for any op-chain's canonical bridge",
   "license": "MIT",
   "author": "Wonderland",
   "scripts": {
