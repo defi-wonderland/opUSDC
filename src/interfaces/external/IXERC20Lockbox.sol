@@ -81,4 +81,10 @@ interface IXERC20Lockbox {
    */
 
   function withdrawTo(address _user, uint256 _amount) external;
+
+  /**
+   * @notice Returns the address of the native token
+   * @return _erc20 The address of the native token
+   */
+  function ERC20() external view returns (address _erc20);
 }

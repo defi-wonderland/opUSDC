@@ -65,12 +65,6 @@ interface IOpUSDCBridgeAdapter {
   function BRIDGED_USDC() external view returns (address _bridgedUSDC);
 
   /**
-   * @notice Fetches address of the L1  canonical USDC token
-   * @return _l1USDC Address of the L1 USDC token
-   */
-  function L1_USDC() external view returns (address _l1USDC);
-
-  /**
    * @notice Fetches address of the OpUSDC Lockbox
    * @dev Should be address(0) on L2's
    * @return _lockbox Address of the lockbox

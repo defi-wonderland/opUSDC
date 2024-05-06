@@ -20,7 +20,7 @@ abstract contract Base is Test {
 
   function setUp() public virtual {
     vm.prank(_owner);
-    adapter = new OpUSDCBridgeAdapter(_bridgedUSDC, _l1USDC, _lockbox, _messenger);
+    adapter = new OpUSDCBridgeAdapter(_bridgedUSDC, _lockbox, _messenger);
   }
 }
 
@@ -29,7 +29,6 @@ contract UnitInitialization is Base {
     assertEq(adapter.BRIDGED_USDC(), _bridgedUSDC);
     assertEq(adapter.LOCKBOX(), _lockbox);
     assertEq(adapter.MESSENGER(), _messenger);
-    assertEq(adapter.L1_USDC(), _l1USDC);
   }
 
   function testLinkedAdapter(address _linkedAdapter) public {
@@ -42,7 +41,7 @@ contract UnitInitialization is Base {
 
   function testZeroAddressLockbox() public {
     vm.prank(_owner);
-    OpUSDCBridgeAdapter _adapter = new OpUSDCBridgeAdapter(_bridgedUSDC, _l1USDC, address(0), _messenger);
+    OpUSDCBridgeAdapter _adapter = new OpUSDCBridgeAdapter(_bridgedUSDC, address(0), _messenger);
     assertEq(_adapter.LOCKBOX(), address(0), 'Lockbox should be set to address(0)');
   }
 
@@ -151,6 +150,7 @@ contract UnitMessaging is Base {
     _mockSetLinkedAdapter(_linkedAdapter);
 
     // Mocking calls
+    vm.mockCall(_lockbox, abi.encodeWithSignature('ERC20()'), abi.encode(_l1USDC));
     vm.mockCall(
       _l1USDC,
       abi.encodeWithSignature('transferFrom(address,address,uint256)', _user, address(adapter), _amount),
@@ -197,7 +197,7 @@ contract UnitMessaging is Base {
 
   function testRevertsIfSendingCanonicalFromL2(uint256 _amount, uint32 _minGasLimit, address _linkedAdapter) public {
     // Uses test adapter so cant use helper functions
-    OpUSDCBridgeAdapter _adapter = new OpUSDCBridgeAdapter(_bridgedUSDC, _l1USDC, address(0), _messenger);
+    OpUSDCBridgeAdapter _adapter = new OpUSDCBridgeAdapter(_bridgedUSDC, address(0), _messenger);
 
     vm.assume(_linkedAdapter != address(0));
     vm.mockCall(address(_bridgedUSDC), abi.encodeWithSignature('owner()'), abi.encode(_owner));
@@ -286,7 +286,7 @@ contract UnitMessaging is Base {
 
   function testReceiveMessageOnL2(address _user, uint256 _amount, address _linkedAdapter) public {
     // Uses test adapter so cant use helper functions
-    OpUSDCBridgeAdapter _adapter = new OpUSDCBridgeAdapter(_bridgedUSDC, _l1USDC, address(0), _messenger);
+    OpUSDCBridgeAdapter _adapter = new OpUSDCBridgeAdapter(_bridgedUSDC, address(0), _messenger);
 
     vm.assume(_linkedAdapter != address(0));
     vm.mockCall(address(_bridgedUSDC), abi.encodeWithSignature('owner()'), abi.encode(_owner));

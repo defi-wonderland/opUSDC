@@ -12,8 +12,6 @@ contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
   /// @inheritdoc IOpUSDCBridgeAdapter
   address public immutable BRIDGED_USDC;
 
-  address public immutable L1_USDC;
-
   /// @inheritdoc IOpUSDCBridgeAdapter
   address public immutable LOCKBOX;
 
@@ -27,15 +25,13 @@ contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
    * @notice Construct the OpUSDCBridgeAdapter contract
    * @dev On L2 the _lockbox param should be address(0)
    * @param _bridgedUSDC The address of the Bridged USDC contract
-   * @param _l1USDC The address of the L1 USDC contract
    * @param _lockbox The address of the lockbox contract
    * @param _messenger The address of the messenger contract
    */
-  constructor(address _bridgedUSDC, address _l1USDC, address _lockbox, address _messenger) {
+  constructor(address _bridgedUSDC, address _lockbox, address _messenger) {
     BRIDGED_USDC = _bridgedUSDC;
     LOCKBOX = _lockbox;
     MESSENGER = _messenger;
-    L1_USDC = _l1USDC;
   }
 
   /**
@@ -61,9 +57,10 @@ contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
 
     if (_isCanonical) {
       if (LOCKBOX == address(0)) revert IOpUSDCBridgeAdapter_OnlyOnL1();
+      address _nativeUSDC = IXERC20Lockbox(LOCKBOX).ERC20();
 
       // Transfer the tokens to the lockbox to mint the bridged representation
-      IERC20(L1_USDC).transferFrom(msg.sender, address(this), _amount);
+      IERC20(_nativeUSDC).transferFrom(msg.sender, address(this), _amount);
       IXERC20Lockbox(LOCKBOX).deposit(_amount);
     } else {
       // If not canonical transfer the bridged representation to this address from the user
