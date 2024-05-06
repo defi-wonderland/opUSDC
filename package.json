@@ -29,7 +29,8 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "5.0.0",
-    "isolmate": "github:defi-wonderland/isolmate#59e1804"
+    "isolmate": "github:defi-wonderland/isolmate#59e1804",
+    "op-bedrock": "github:ethereum-optimism/optimism/packages/contracts-bedrock"
   },
   "devDependencies": {
     "@commitlint/cli": "17.0.3",
