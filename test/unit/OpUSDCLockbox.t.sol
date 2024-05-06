@@ -3,8 +3,8 @@ pragma solidity 0.8.23;
 
 import {Test} from 'forge-std/Test.sol';
 
-contract IntegrationBase is Test {
+abstract contract Base is Test {
   // TODO: Setup
 
-  function setUp() public {}
+  function setUp() public virtual {}
 }
