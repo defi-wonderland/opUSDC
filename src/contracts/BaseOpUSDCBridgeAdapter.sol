@@ -2,9 +2,13 @@
 pragma solidity 0.8.25;
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 
 abstract contract BaseOpUSDCBridgeAdapter is Ownable, IOpUSDCBridgeAdapter {
+  using SafeERC20 for IERC20;
+
   /// @inheritdoc IOpUSDCBridgeAdapter
   address public immutable USDC;
 
@@ -14,13 +18,18 @@ abstract contract BaseOpUSDCBridgeAdapter is Ownable, IOpUSDCBridgeAdapter {
   /// @inheritdoc IOpUSDCBridgeAdapter
   address public linkedAdapter;
 
+  modifier linkedAdapterMustBeInitialized() {
+    if (linkedAdapter == address(0)) revert IOpUSDCBridgeAdapter_LinkedAdapterNotSet();
+    _;
+  }
+
   /**
    * @notice Construct the OpUSDCBridgeAdapter contract
-   * @param _USDC The address of the USDC Contract to be used by the adapter
+   * @param _usdc The address of the USDC Contract to be used by the adapter
    * @param _messenger The address of the messenger contract
    */
-  constructor(address _USDC, address _messenger) Ownable(msg.sender) {
-    USDC = _USDC;
+  constructor(address _usdc, address _messenger) Ownable(msg.sender) {
+    USDC = _usdc;
     MESSENGER = _messenger;
   }
 
@@ -36,11 +45,10 @@ abstract contract BaseOpUSDCBridgeAdapter is Ownable, IOpUSDCBridgeAdapter {
 
   /**
    * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
-   * @param _isCanonical Whether the user is using the canonical USDC or the bridged representation
    * @param _amount The amount of tokens to send
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  function send(bool _isCanonical, uint256 _amount, uint32 _minGasLimit) external virtual;
+  function send(uint256 _amount, uint32 _minGasLimit) external virtual;
 
   /**
    * @notice Receive the message from the other chain and mint the bridged representation for the user

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {BaseOpUSDCBridgeAdapter, IOpUSDCBridgeAdapter} from 'contracts/BaseOpUSDCBridgeAdapter.sol';
+import {BaseOpUSDCBridgeAdapter} from 'contracts/BaseOpUSDCBridgeAdapter.sol';
 import {Test} from 'forge-std/Test.sol';
 
 contract TestOpUSDCBridgeAdapter is BaseOpUSDCBridgeAdapter {
   constructor(address _USDC, address _messenger) BaseOpUSDCBridgeAdapter(_USDC, _messenger) {}
 
-  function send(bool _isCanonical, uint256 _amount, uint32 _minGasLimit) external override {}
+  function send(uint256 _amount, uint32 _minGasLimit) external override {}
 
   function receiveMessage(address _user, uint256 _amount) external override {}
 }
@@ -16,20 +16,20 @@ abstract contract Base is Test {
   TestOpUSDCBridgeAdapter public adapter;
 
   address internal _owner = makeAddr('owner');
-  address internal _USDC = makeAddr('opUSDC');
+  address internal _usdc = makeAddr('opUSDC');
   address internal _messenger = makeAddr('messenger');
 
   event LinkedAdapterSet(address linkedAdapter);
 
   function setUp() public virtual {
     vm.prank(_owner);
-    adapter = new TestOpUSDCBridgeAdapter(_USDC, _messenger);
+    adapter = new TestOpUSDCBridgeAdapter(_usdc, _messenger);
   }
 }
 
 contract UnitInitialization is Base {
   function testInitialization() public {
-    assertEq(adapter.USDC(), _USDC, 'USDC should be set to the provided address');
+    assertEq(adapter.USDC(), _usdc, 'USDC should be set to the provided address');
     assertEq(adapter.MESSENGER(), _messenger, 'Messenger should be set to the provided address');
     assertEq(adapter.linkedAdapter(), address(0), 'Linked adapter should be initialized to 0');
     assertEq(adapter.owner(), _owner, 'Owner should be set to the deployer');
