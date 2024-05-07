@@ -16,27 +16,15 @@ interface IOpUSDCBridgeAdapter {
                             ERRORS
   //////////////////////////////////////////////////////////////*/
 
-  /**
-   * @notice Error when the caller is not the token issuer
-   */
-  error IOpUSDCBridgeAdapter_NotTokenIssuer();
-
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
   //////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Fetches address of the Bridged USDC token
-   * @return _bridgedUSDC Address of the bridged USDC token
+   * @notice Fetches address of the USDC token
+   * @return _USDC Address of the USDC token
    */
-  function BRIDGED_USDC() external view returns (address _bridgedUSDC);
-
-  /**
-   * @notice Fetches address of the OpUSDC Lockbox
-   * @dev Should be address(0) on L2's
-   * @return _lockbox Address of the lockbox
-   */
-  function LOCKBOX() external view returns (address _lockbox);
+  function USDC() external view returns (address _USDC);
 
   /**
    * @notice Fetches address of the CrossDomainMessenger to send messages to L1 <-> L2
@@ -53,4 +41,27 @@ interface IOpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   //////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice Set the linked adapter
+   * @dev Only the owner can call this function
+   * @param _linkedAdapter The address of the linked adapter
+   */
+  function setLinkedAdapter(address _linkedAdapter) external;
+
+  /**
+   * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
+   * @param _isCanonical Whether the user is using the canonical USDC or the bridged representation
+   * @param _amount The amount of tokens to send
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  function send(bool _isCanonical, uint256 _amount, uint32 _minGasLimit) external;
+
+  /**
+   * @notice Receive the message from the other chain and mint the bridged representation for the user
+   * @dev This function should only be called when receiving a message to mint the bridged representation
+   * @param _user The user to mint the bridged representation for
+   * @param _amount The amount of tokens to mint
+   */
+  function receiveMessage(address _user, uint256 _amount) external;
 }
