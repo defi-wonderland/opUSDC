@@ -32,9 +32,9 @@ interface IOpUSDCBridgeAdapter {
 
   /**
    * @notice Fetches address of the USDC token
-   * @return _USDC Address of the USDC token
+   * @return _usdc Address of the USDC token
    */
-  function USDC() external view returns (address _USDC);
+  function USDC() external view returns (address _usdc);
 
   /**
    * @notice Fetches address of the CrossDomainMessenger to send messages to L1 <-> L2
