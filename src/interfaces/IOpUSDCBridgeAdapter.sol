@@ -40,7 +40,6 @@ interface IOpUSDCBridgeAdapter {
   /**
    * @notice Error when a message is trying to be sent when linked adapter is not set
    */
-
   error IOpUSDCBridgeAdapter_LinkedAdapterNotSet();
 
   /*///////////////////////////////////////////////////////////////
