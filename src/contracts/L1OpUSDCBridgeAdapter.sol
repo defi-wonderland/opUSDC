@@ -6,6 +6,11 @@ import {BaseOpUSDCBridgeAdapter} from 'contracts/BaseOpUSDCBridgeAdapter.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 
 contract L1OpUSDCBridgeAdapter is BaseOpUSDCBridgeAdapter {
+  /**
+   * @notice Construct the OpUSDCBridgeAdapter contract
+   * @param _usdc The address of the USDC Contract to be used by the adapter
+   * @param _messenger The address of the messenger contract
+   */
   constructor(address _usdc, address _messenger) BaseOpUSDCBridgeAdapter(_usdc, _messenger) {}
 
   /**
@@ -13,7 +18,7 @@ contract L1OpUSDCBridgeAdapter is BaseOpUSDCBridgeAdapter {
    * @param _amount The amount of tokens to send
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  function send(uint256 _amount, uint32 _minGasLimit) external override {
+  function send(uint256 _amount, uint32 _minGasLimit) external override linkedAdapterMustBeInitialized {
     // Ensure the linked adapter is set
     if (linkedAdapter == address(0)) revert IOpUSDCBridgeAdapter_LinkedAdapterNotSet();
 
@@ -34,12 +39,8 @@ contract L1OpUSDCBridgeAdapter is BaseOpUSDCBridgeAdapter {
    * @param _user The user to mint the bridged representation for
    * @param _amount The amount of tokens to mint
    */
-  function receiveMessage(address _user, uint256 _amount) external override {
+  function receiveMessage(address _user, uint256 _amount) external override linkedAdapterMustBeInitialized {
     // TODO: Add logic to check that messaging wasnt stopped
-
-    // Ensure the linked adapter is set
-    // This check is required as xDomainMessageSender can be address(0)
-    if (linkedAdapter == address(0)) revert IOpUSDCBridgeAdapter_LinkedAdapterNotSet();
 
     // Ensure the message is coming from the linked adapter
     if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != linkedAdapter) {
