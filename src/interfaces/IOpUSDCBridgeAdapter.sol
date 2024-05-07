@@ -12,9 +12,19 @@ interface IOpUSDCBridgeAdapter {
    */
   event LinkedAdapterSet(address _linkedAdapter);
 
+  /**
+   * @notice Emitted when messaging is stopped
+   */
+  event MessagingStopped();
+
   /*///////////////////////////////////////////////////////////////
                             ERRORS
   //////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice Error when the stop messaging function is not called by the linked adapter
+   */
+  error OpUSDCBridgeAdapter_NotLinkedAdapter();
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
@@ -37,6 +47,12 @@ interface IOpUSDCBridgeAdapter {
    * @return _linkedAdapter Address of the linked adapter
    */
   function linkedAdapter() external view returns (address _linkedAdapter);
+
+  /**
+   * @notice Fetches whether messaging is disabled
+   * @return _isMessagingDisabled Whether messaging is disabled
+   */
+  function isMessagingDisabled() external view returns (bool _isMessagingDisabled);
 
   /*///////////////////////////////////////////////////////////////
                             LOGIC
@@ -64,4 +80,15 @@ interface IOpUSDCBridgeAdapter {
    * @param _amount The amount of tokens to mint
    */
   function receiveMessage(address _user, uint256 _amount) external;
+
+  /**
+   * @notice Send a message to the linked adapter to call receiveStopMessaging() and stop outgoing messages.
+   * @dev Only callable by the owner of the adapter.
+   */
+  function stopMessaging() external;
+
+  /**
+   * @notice Receive the stop messaging message from the linked adapter and stop outgoing messages
+   */
+  function receiveStopMessaging() external;
 }

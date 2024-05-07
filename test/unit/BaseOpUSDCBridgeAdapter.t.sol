@@ -2,7 +2,7 @@
 pragma solidity 0.8.25;
 
 import {BaseOpUSDCBridgeAdapter, IOpUSDCBridgeAdapter} from 'contracts/BaseOpUSDCBridgeAdapter.sol';
-import {Test} from 'forge-std/Test.sol';
+import {StdStorage, Test, stdStorage} from 'forge-std/Test.sol';
 
 contract TestOpUSDCBridgeAdapter is BaseOpUSDCBridgeAdapter {
   constructor(address _USDC, address _messenger) BaseOpUSDCBridgeAdapter(_USDC, _messenger) {}
@@ -50,5 +50,36 @@ contract UnitInitialization is Base {
     vm.expectEmit(true, true, true, true);
     emit LinkedAdapterSet(_linkedAdapter);
     adapter.setLinkedAdapter(_linkedAdapter);
+  }
+}
+
+contract UnitStopMessaging is Base {
+  using stdStorage for StdStorage;
+
+  function testStopMessaging() public {
+    vm.mockCall(adapter.linkedAdapter(), abi.encodeWithSignature('receiveStopMessaging()'), abi.encode(''));
+    vm.prank(_owner);
+    adapter.stopMessaging();
+    assertEq(adapter.isMessagingDisabled(), true, 'Messaging should be disabled');
+  }
+
+  function testReceiveStopMessaging() public {
+    address _linkedAdapter = makeAddr('linkedAdapter');
+
+    stdstore.target(address(adapter)).sig('linkedAdapter()').depth(0).checked_write(_linkedAdapter);
+    vm.prank(_linkedAdapter);
+    adapter.receiveStopMessaging();
+    assertEq(adapter.isMessagingDisabled(), true, 'Messaging should be disabled');
+  }
+
+  function testReceiveStopMessagingWrongSender() public {
+    address _linkedAdapter = makeAddr('linkedAdapter');
+    address _notLinkedAdapter = makeAddr('notLinkedAdapter');
+
+    stdstore.target(address(adapter)).sig('linkedAdapter()').depth(0).checked_write(_linkedAdapter);
+    vm.prank(_notLinkedAdapter);
+    vm.expectRevert(IOpUSDCBridgeAdapter.OpUSDCBridgeAdapter_NotLinkedAdapter.selector);
+    adapter.receiveStopMessaging();
+    assertEq(adapter.isMessagingDisabled(), false, 'Messaging should not be disabled');
   }
 }

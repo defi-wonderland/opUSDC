@@ -14,13 +14,16 @@ abstract contract BaseOpUSDCBridgeAdapter is Ownable, IOpUSDCBridgeAdapter {
   /// @inheritdoc IOpUSDCBridgeAdapter
   address public linkedAdapter;
 
+  /// @inheritdoc IOpUSDCBridgeAdapter
+  bool public isMessagingDisabled;
+
   /**
    * @notice Construct the OpUSDCBridgeAdapter contract
-   * @param _USDC The address of the USDC Contract to be used by the adapter
+   * @param _usdc The address of the USDC Contract to be used by the adapter
    * @param _messenger The address of the messenger contract
    */
-  constructor(address _USDC, address _messenger) Ownable(msg.sender) {
-    USDC = _USDC;
+  constructor(address _usdc, address _messenger) Ownable(msg.sender) {
+    USDC = _usdc;
     MESSENGER = _messenger;
   }
 
@@ -49,4 +52,23 @@ abstract contract BaseOpUSDCBridgeAdapter is Ownable, IOpUSDCBridgeAdapter {
    * @param _amount The amount of tokens to mint
    */
   function receiveMessage(address _user, uint256 _amount) external virtual;
+
+  /**
+   * @notice Send a message to the linked adapter to call receiveStopMessaging() and stop outgoing messages.
+   * @dev Only callable by the owner of the adapter
+   */
+  function stopMessaging() external onlyOwner {
+    isMessagingDisabled = true;
+    IOpUSDCBridgeAdapter(linkedAdapter).receiveStopMessaging();
+    emit MessagingStopped();
+  }
+
+  /**
+   * @notice Receive the stop messaging message from the linked adapter and stop outgoing messages
+   */
+  function receiveStopMessaging() external {
+    if (msg.sender != linkedAdapter) revert OpUSDCBridgeAdapter_NotLinkedAdapter();
+    isMessagingDisabled = true;
+    emit MessagingStopped();
+  }
 }
