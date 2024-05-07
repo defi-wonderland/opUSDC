@@ -25,7 +25,6 @@ interface IOpUSDCBridgeAdapter {
    * @param _user The user that recieved the message
    * @param _amount The amount of tokens recieved
    */
-
   event MessageReceived(address _user, uint256 _amount);
 
   /*///////////////////////////////////////////////////////////////
