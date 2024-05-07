@@ -5,6 +5,7 @@ import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
+import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 
 abstract contract BaseOpUSDCBridgeAdapter is Ownable, IOpUSDCBridgeAdapter {
   using SafeERC20 for IERC20;
@@ -65,18 +66,31 @@ abstract contract BaseOpUSDCBridgeAdapter is Ownable, IOpUSDCBridgeAdapter {
    * @notice Send a message to the linked adapter to call receiveStopMessaging() and stop outgoing messages.
    * @dev Only callable by the owner of the adapter
    */
-  function stopMessaging() external onlyOwner {
+  function stopMessaging(uint32 _minGasLimit) external virtual onlyOwner linkedAdapterMustBeInitialized {
     isMessagingDisabled = true;
-    IOpUSDCBridgeAdapter(linkedAdapter).receiveStopMessaging();
+    ICrossDomainMessenger(MESSENGER).sendMessage(
+      linkedAdapter, abi.encodeWithSignature('receiveStopMessaging()'), _minGasLimit
+    );
     emit MessagingStopped();
   }
 
   /**
    * @notice Receive the stop messaging message from the linked adapter and stop outgoing messages
    */
-  function receiveStopMessaging() external {
-    if (msg.sender != linkedAdapter) revert OpUSDCBridgeAdapter_NotLinkedAdapter();
+  function receiveStopMessaging() external virtual linkedAdapterMustBeInitialized {
+    // Ensure the message is coming from the linked adapter
+    _checkCrossDomainMsgSender(linkedAdapter);
     isMessagingDisabled = true;
     emit MessagingStopped();
+  }
+
+  /**
+   * @notice Check if the sender is the cross domain messenger and the expected sender
+   * @param _expectedSender The expected sender of the message
+   */
+  function _checkCrossDomainMsgSender(address _expectedSender) internal view {
+    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != _expectedSender) {
+      revert IOpUSDCBridgeAdapter_NotLinkedAdapter();
+    }
   }
 }

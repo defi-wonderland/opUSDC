@@ -37,9 +37,9 @@ interface IOpUSDCBridgeAdapter {
   //////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Error when the stop messaging function is not called by the linked adapter
+   * @notice Error when messaging is disabled
    */
-  error OpUSDCBridgeAdapter_NotLinkedAdapter();
+  error IOpUSDCBridgeAdapter_MessagingDisabled();
 
   /**
    * @notice Error when the caller is not the linked adapter
@@ -109,7 +109,7 @@ interface IOpUSDCBridgeAdapter {
    * @notice Send a message to the linked adapter to call receiveStopMessaging() and stop outgoing messages.
    * @dev Only callable by the owner of the adapter.
    */
-  function stopMessaging() external;
+  function stopMessaging(uint32 _minGasLimit) external;
 
   /**
    * @notice Receive the stop messaging message from the linked adapter and stop outgoing messages

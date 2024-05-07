@@ -56,18 +56,38 @@ contract UnitInitialization is Base {
 contract UnitStopMessaging is Base {
   using stdStorage for StdStorage;
 
+  event MessagingStopped();
+
   function testStopMessaging() public {
-    vm.mockCall(adapter.linkedAdapter(), abi.encodeWithSignature('receiveStopMessaging()'), abi.encode(''));
+    address _linkedAdapter = makeAddr('linkedAdapter');
+    bytes memory _messageData = abi.encodeWithSignature('receiveStopMessaging()');
+    uint32 _minGasLimit = 21_000;
+
+    stdstore.target(address(adapter)).sig('linkedAdapter()').checked_write(_linkedAdapter);
+    vm.mockCall(
+      _messenger,
+      abi.encodeWithSignature('sendMessage(address,bytes,uint32)', _linkedAdapter, _messageData, _minGasLimit),
+      abi.encode('')
+    );
+
+    vm.expectEmit(true, true, true, true);
+    emit MessagingStopped();
+
     vm.prank(_owner);
-    adapter.stopMessaging();
+    adapter.stopMessaging(_minGasLimit);
     assertEq(adapter.isMessagingDisabled(), true, 'Messaging should be disabled');
   }
 
   function testReceiveStopMessaging() public {
     address _linkedAdapter = makeAddr('linkedAdapter');
 
-    stdstore.target(address(adapter)).sig('linkedAdapter()').depth(0).checked_write(_linkedAdapter);
-    vm.prank(_linkedAdapter);
+    stdstore.target(address(adapter)).sig('linkedAdapter()').checked_write(_linkedAdapter);
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+
+    vm.expectEmit(true, true, true, true);
+    emit MessagingStopped();
+
+    vm.prank(_messenger);
     adapter.receiveStopMessaging();
     assertEq(adapter.isMessagingDisabled(), true, 'Messaging should be disabled');
   }
@@ -76,9 +96,9 @@ contract UnitStopMessaging is Base {
     address _linkedAdapter = makeAddr('linkedAdapter');
     address _notLinkedAdapter = makeAddr('notLinkedAdapter');
 
-    stdstore.target(address(adapter)).sig('linkedAdapter()').depth(0).checked_write(_linkedAdapter);
+    stdstore.target(address(adapter)).sig('linkedAdapter()').checked_write(_linkedAdapter);
     vm.prank(_notLinkedAdapter);
-    vm.expectRevert(IOpUSDCBridgeAdapter.OpUSDCBridgeAdapter_NotLinkedAdapter.selector);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_NotLinkedAdapter.selector);
     adapter.receiveStopMessaging();
     assertEq(adapter.isMessagingDisabled(), false, 'Messaging should not be disabled');
   }

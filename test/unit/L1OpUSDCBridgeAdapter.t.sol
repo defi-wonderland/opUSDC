@@ -1,7 +1,7 @@
 pragma solidity ^0.8.25;
 
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
-import {Test} from 'forge-std/Test.sol';
+import {StdStorage, Test, stdStorage} from 'forge-std/Test.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 
 abstract contract Base is Test {
@@ -22,6 +22,8 @@ abstract contract Base is Test {
 }
 
 contract UnitMessaging is Base {
+  using stdStorage for StdStorage;
+
   function testSendMessage(uint256 _amount, uint32 _minGasLimit, address _linkedAdapter) external {
     vm.assume(_linkedAdapter != address(0));
 
@@ -64,6 +66,21 @@ contract UnitMessaging is Base {
     // Execute
     vm.prank(_user);
     adapter.send(_amount, _minGasLimit);
+  }
+
+  function testSendMessageRevertsOnMessagingStopped() external {
+    // Mock storage
+    // link adapter and isMessagingDisabled are in the same storage slot
+    // _linkedAdapter = eeb02b2b8d37153666cba8021567b92a6e22de64
+    // isMessagingDisabled = true = 0x00000001
+    stdstore.target(address(adapter)).sig('linkedAdapter()').checked_write(
+      bytes32(0x000000000000000000000001eeb02b2b8d37153666cba8021567b92a6e22de64)
+    );
+
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
+    adapter.send(0, 0);
   }
 
   function testSendMessageEmitsEvent(uint256 _amount, uint32 _minGasLimit, address _linkedAdapter) external {
