@@ -16,7 +16,6 @@ abstract contract BaseOpUSDCBridgeAdapter is Ownable, IOpUSDCBridgeAdapter {
 
   /**
    * @notice Construct the OpUSDCBridgeAdapter contract
-   * @dev On L2 the _lockbox param should be address(0)
    * @param _USDC The address of the USDC Contract to be used by the adapter
    * @param _messenger The address of the messenger contract
    */
