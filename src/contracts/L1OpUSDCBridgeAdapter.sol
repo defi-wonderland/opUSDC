@@ -2,8 +2,8 @@
 pragma solidity 0.8.25;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {BaseOpUSDCBridgeAdapter} from 'contracts/BaseOpUSDCBridgeAdapter.sol';
+import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 
 contract L1OpUSDCBridgeAdapter is BaseOpUSDCBridgeAdapter {
   constructor(address _usdc, address _messenger) BaseOpUSDCBridgeAdapter(_usdc, _messenger) {}
@@ -35,6 +35,8 @@ contract L1OpUSDCBridgeAdapter is BaseOpUSDCBridgeAdapter {
    * @param _amount The amount of tokens to mint
    */
   function receiveMessage(address _user, uint256 _amount) external override {
+    // TODO: Add logic to check that messaging wasnt stopped
+
     // Ensure the linked adapter is set
     // This check is required as xDomainMessageSender can be address(0)
     if (linkedAdapter == address(0)) revert IOpUSDCBridgeAdapter_LinkedAdapterNotSet();

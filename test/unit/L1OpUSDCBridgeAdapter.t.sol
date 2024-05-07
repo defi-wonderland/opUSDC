@@ -1,8 +1,8 @@
 pragma solidity ^0.8.25;
 
+import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {Test} from 'forge-std/Test.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
-import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 
 abstract contract Base is Test {
   L1OpUSDCBridgeAdapter public adapter;

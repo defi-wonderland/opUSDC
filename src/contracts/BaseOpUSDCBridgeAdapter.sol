@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
+import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 
 abstract contract BaseOpUSDCBridgeAdapter is Ownable, IOpUSDCBridgeAdapter {
@@ -20,11 +20,11 @@ abstract contract BaseOpUSDCBridgeAdapter is Ownable, IOpUSDCBridgeAdapter {
 
   /**
    * @notice Construct the OpUSDCBridgeAdapter contract
-   * @param _USDC The address of the USDC Contract to be used by the adapter
+   * @param _usdc The address of the USDC Contract to be used by the adapter
    * @param _messenger The address of the messenger contract
    */
-  constructor(address _USDC, address _messenger) Ownable(msg.sender) {
-    USDC = _USDC;
+  constructor(address _usdc, address _messenger) Ownable(msg.sender) {
+    USDC = _usdc;
     MESSENGER = _messenger;
   }
 
