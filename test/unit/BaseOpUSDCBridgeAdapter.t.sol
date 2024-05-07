@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {IOpUSDCBridgeAdapter, BaseOpUSDCBridgeAdapter} from 'contracts/OpUSDCBridgeAdapter.sol';
+import {IOpUSDCBridgeAdapter, BaseOpUSDCBridgeAdapter} from 'contracts/BaseOpUSDCBridgeAdapter.sol';
 import {Test} from 'forge-std/Test.sol';
 
 contract TestOpUSDCBridgeAdapter is BaseOpUSDCBridgeAdapter {
