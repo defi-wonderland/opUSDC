@@ -17,6 +17,21 @@ interface IOpUSDCBridgeAdapter {
    */
   event MessagingStopped();
 
+  /**
+   * @notice Emitted when a message is sent to the linked adapter
+   * @param _user The user that sent the message
+   * @param _amount The amount of tokens to send
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  event MessageSent(address _user, uint256 _amount, uint32 _minGasLimit);
+
+  /**
+   * @notice Emitted when a message as recieved
+   * @param _user The user that recieved the message
+   * @param _amount The amount of tokens recieved
+   */
+  event MessageReceived(address _user, uint256 _amount);
+
   /*///////////////////////////////////////////////////////////////
                             ERRORS
   //////////////////////////////////////////////////////////////*/
@@ -25,6 +40,16 @@ interface IOpUSDCBridgeAdapter {
    * @notice Error when the stop messaging function is not called by the linked adapter
    */
   error OpUSDCBridgeAdapter_NotLinkedAdapter();
+
+  /**
+   * @notice Error when the caller is not the linked adapter
+   */
+  error IOpUSDCBridgeAdapter_NotLinkedAdapter();
+
+  /**
+   * @notice Error when a message is trying to be sent when linked adapter is not set
+   */
+  error IOpUSDCBridgeAdapter_LinkedAdapterNotSet();
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
@@ -67,11 +92,10 @@ interface IOpUSDCBridgeAdapter {
 
   /**
    * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
-   * @param _isCanonical Whether the user is using the canonical USDC or the bridged representation
    * @param _amount The amount of tokens to send
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  function send(bool _isCanonical, uint256 _amount, uint32 _minGasLimit) external;
+  function send(uint256 _amount, uint32 _minGasLimit) external;
 
   /**
    * @notice Receive the message from the other chain and mint the bridged representation for the user
