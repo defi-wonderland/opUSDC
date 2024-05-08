@@ -44,7 +44,7 @@ interface IOpUSDCBridgeAdapter {
   /**
    * @notice Error when the caller is not the linked adapter
    */
-  error IOpUSDCBridgeAdapter_NotLinkedAdapter();
+  error IOpUSDCBridgeAdapter_InvalidSender();
 
   /**
    * @notice Error when a message is trying to be sent when linked adapter is not set

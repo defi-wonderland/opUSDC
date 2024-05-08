@@ -140,7 +140,7 @@ contract UnitMessaging is Base {
 
     // Execute
     vm.prank(_user);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_NotLinkedAdapter.selector);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
     adapter.receiveMessage(_user, _amount);
   }
 
@@ -159,7 +159,7 @@ contract UnitMessaging is Base {
 
     // Execute
     vm.prank(_messenger);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_NotLinkedAdapter.selector);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
     adapter.receiveMessage(_user, _amount);
   }
 

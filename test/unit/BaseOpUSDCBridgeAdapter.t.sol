@@ -110,7 +110,7 @@ contract UnitStopMessaging is Base {
 
     // Execute
     vm.prank(_notMessenger);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_NotLinkedAdapter.selector);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
     adapter.receiveStopMessaging();
     assertEq(adapter.isMessagingDisabled(), false, 'Messaging should not be disabled');
   }
@@ -130,7 +130,7 @@ contract UnitStopMessaging is Base {
 
     // Execute
     vm.prank(_messenger);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_NotLinkedAdapter.selector);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
     adapter.receiveStopMessaging();
     assertEq(adapter.isMessagingDisabled(), false, 'Messaging should not be disabled');
   }

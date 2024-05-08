@@ -82,7 +82,7 @@ abstract contract BaseOpUSDCBridgeAdapter is Ownable, IOpUSDCBridgeAdapter {
   function receiveStopMessaging() external virtual linkedAdapterMustBeInitialized {
     // Ensure the message is coming from the linked adapter
     if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != linkedAdapter) {
-      revert IOpUSDCBridgeAdapter_NotLinkedAdapter();
+      revert IOpUSDCBridgeAdapter_InvalidSender();
     }
     isMessagingDisabled = true;
     emit MessagingStopped();
