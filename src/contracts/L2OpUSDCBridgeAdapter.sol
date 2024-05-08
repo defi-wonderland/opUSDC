@@ -15,7 +15,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   constructor(address _usdc, address _messenger) OpUSDCBridgeAdapter(_usdc, _messenger) {}
 
   /**
-   * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
+   * @notice Send a message to the linked adapter to transfer the tokens to the user
+   * @dev Burn the bridged representation acording to the amount and sent on the message
    * @param _amount The amount of tokens to send
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
