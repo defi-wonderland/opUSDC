@@ -16,7 +16,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
 
   /**
    * @notice Send a message to the linked adapter to transfer the tokens to the user
-   * @dev Burn the bridged representation acording to the amount and sent on the message
+   * @dev Burn the bridged representation acording to the amount sent on the message
    * @param _amount The amount of tokens to send
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
