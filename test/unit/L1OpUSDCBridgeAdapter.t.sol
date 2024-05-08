@@ -1,7 +1,7 @@
 pragma solidity ^0.8.25;
 
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
-import {StdStorage, Test, stdStorage} from 'forge-std/Test.sol';
+import {Test} from 'forge-std/Test.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 
 contract TestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
@@ -30,8 +30,6 @@ abstract contract Base is Test {
 }
 
 contract UnitMessaging is Base {
-  using stdStorage for StdStorage;
-
   function testSendMessage(uint256 _amount, uint32 _minGasLimit, address _linkedAdapter) external {
     vm.assume(_linkedAdapter != address(0));
 
