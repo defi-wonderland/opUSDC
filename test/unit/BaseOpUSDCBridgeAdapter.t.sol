@@ -2,7 +2,7 @@
 pragma solidity 0.8.25;
 
 import {BaseOpUSDCBridgeAdapter, IOpUSDCBridgeAdapter} from 'contracts/BaseOpUSDCBridgeAdapter.sol';
-import {StdStorage, Test, stdStorage} from 'forge-std/Test.sol';
+import {Test} from 'forge-std/Test.sol';
 
 contract TestOpUSDCBridgeAdapter is BaseOpUSDCBridgeAdapter {
   constructor(address _USDC, address _messenger) BaseOpUSDCBridgeAdapter(_USDC, _messenger) {}
@@ -54,39 +54,48 @@ contract UnitInitialization is Base {
 }
 
 contract UnitStopMessaging is Base {
-  using stdStorage for StdStorage;
-
   event MessagingStopped();
 
-  function testStopMessaging() public {
-    address _linkedAdapter = makeAddr('linkedAdapter');
-    bytes memory _messageData = abi.encodeWithSignature('receiveStopMessaging()');
-    uint32 _minGasLimit = 21_000;
+  function testStopMessaging(address _linkedAdapter, uint32 _minGasLimit) public {
+    vm.assume(_linkedAdapter != address(0));
 
-    stdstore.target(address(adapter)).sig('linkedAdapter()').checked_write(_linkedAdapter);
+    bytes memory _messageData = abi.encodeWithSignature('receiveStopMessaging()');
+
+    vm.prank(_owner);
+    adapter.setLinkedAdapter(_linkedAdapter);
+
+    // Mock calls
     vm.mockCall(
       _messenger,
       abi.encodeWithSignature('sendMessage(address,bytes,uint32)', _linkedAdapter, _messageData, _minGasLimit),
       abi.encode('')
     );
 
-    vm.expectEmit(true, true, true, true);
-    emit MessagingStopped();
+    // Expect calls
+    vm.expectCall(
+      _messenger,
+      abi.encodeWithSignature('sendMessage(address,bytes,uint32)', _linkedAdapter, _messageData, _minGasLimit)
+    );
 
+    // Execute
     vm.prank(_owner);
     adapter.stopMessaging(_minGasLimit);
     assertEq(adapter.isMessagingDisabled(), true, 'Messaging should be disabled');
   }
 
-  function testReceiveStopMessaging() public {
-    address _linkedAdapter = makeAddr('linkedAdapter');
+  function testReceiveStopMessaging(address _linkedAdapter) public {
+    vm.assume(_linkedAdapter != address(0));
 
-    stdstore.target(address(adapter)).sig('linkedAdapter()').checked_write(_linkedAdapter);
+    vm.prank(_owner);
+    adapter.setLinkedAdapter(_linkedAdapter);
+
+    // Mock calls
     vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
-    vm.expectEmit(true, true, true, true);
-    emit MessagingStopped();
+    /// Expect calls
+    vm.expectCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'));
 
+    // Execute
     vm.prank(_messenger);
     adapter.receiveStopMessaging();
     assertEq(adapter.isMessagingDisabled(), true, 'Messaging should be disabled');
@@ -96,10 +105,55 @@ contract UnitStopMessaging is Base {
     address _linkedAdapter = makeAddr('linkedAdapter');
     address _notLinkedAdapter = makeAddr('notLinkedAdapter');
 
-    stdstore.target(address(adapter)).sig('linkedAdapter()').checked_write(_linkedAdapter);
+    vm.prank(_owner);
+    adapter.setLinkedAdapter(_linkedAdapter);
+
+    // Execute
     vm.prank(_notLinkedAdapter);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_NotLinkedAdapter.selector);
     adapter.receiveStopMessaging();
     assertEq(adapter.isMessagingDisabled(), false, 'Messaging should not be disabled');
+  }
+
+  function testStopMessagingEmitsEvent(address _linkedAdapter, uint32 _minGasLimit) public {
+    vm.assume(_linkedAdapter != address(0));
+
+    bytes memory _messageData = abi.encodeWithSignature('receiveStopMessaging()');
+
+    vm.prank(_owner);
+    adapter.setLinkedAdapter(_linkedAdapter);
+
+    /// Mock calls
+    vm.mockCall(
+      _messenger,
+      abi.encodeWithSignature('sendMessage(address,bytes,uint32)', _linkedAdapter, _messageData, _minGasLimit),
+      abi.encode('')
+    );
+
+    // Expect events
+    vm.expectEmit(true, true, true, true);
+    emit MessagingStopped();
+
+    // Execute
+    vm.prank(_owner);
+    adapter.stopMessaging(_minGasLimit);
+  }
+
+  function testReceiveStopMessagingEmitsEvent(address _linkedAdapter) public {
+    vm.assume(_linkedAdapter != address(0));
+
+    vm.prank(_owner);
+    adapter.setLinkedAdapter(_linkedAdapter);
+
+    // Mock calls
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+
+    // Expect events
+    vm.expectEmit(true, true, true, true);
+    emit MessagingStopped();
+
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveStopMessaging();
   }
 }

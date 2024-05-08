@@ -65,6 +65,8 @@ abstract contract BaseOpUSDCBridgeAdapter is Ownable, IOpUSDCBridgeAdapter {
   /**
    * @notice Send a message to the linked adapter to call receiveStopMessaging() and stop outgoing messages.
    * @dev Only callable by the owner of the adapter
+   * @dev Setting isMessagingDisabled to true is an irreversible operation
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function stopMessaging(uint32 _minGasLimit) external virtual onlyOwner linkedAdapterMustBeInitialized {
     isMessagingDisabled = true;
@@ -79,18 +81,10 @@ abstract contract BaseOpUSDCBridgeAdapter is Ownable, IOpUSDCBridgeAdapter {
    */
   function receiveStopMessaging() external virtual linkedAdapterMustBeInitialized {
     // Ensure the message is coming from the linked adapter
-    _checkCrossDomainMsgSender(linkedAdapter);
-    isMessagingDisabled = true;
-    emit MessagingStopped();
-  }
-
-  /**
-   * @notice Check if the sender is the cross domain messenger and the expected sender
-   * @param _expectedSender The expected sender of the message
-   */
-  function _checkCrossDomainMsgSender(address _expectedSender) internal view {
-    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != _expectedSender) {
+    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != linkedAdapter) {
       revert IOpUSDCBridgeAdapter_NotLinkedAdapter();
     }
+    isMessagingDisabled = true;
+    emit MessagingStopped();
   }
 }

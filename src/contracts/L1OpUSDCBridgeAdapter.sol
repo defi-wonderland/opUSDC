@@ -41,7 +41,9 @@ contract L1OpUSDCBridgeAdapter is BaseOpUSDCBridgeAdapter {
    */
   function receiveMessage(address _user, uint256 _amount) external override linkedAdapterMustBeInitialized {
     // Ensure the message is coming from the linked adapter
-    _checkCrossDomainMsgSender(linkedAdapter);
+    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != linkedAdapter) {
+      revert IOpUSDCBridgeAdapter_NotLinkedAdapter();
+    }
 
     // Transfer the tokens to the user
     IERC20(USDC).transfer(_user, _amount);

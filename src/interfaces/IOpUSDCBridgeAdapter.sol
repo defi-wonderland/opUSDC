@@ -108,6 +108,8 @@ interface IOpUSDCBridgeAdapter {
   /**
    * @notice Send a message to the linked adapter to call receiveStopMessaging() and stop outgoing messages.
    * @dev Only callable by the owner of the adapter.
+   * @dev Setting isMessagingDisabled to true is an irreversible operation.
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function stopMessaging(uint32 _minGasLimit) external;
 

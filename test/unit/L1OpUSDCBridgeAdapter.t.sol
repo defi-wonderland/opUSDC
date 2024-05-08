@@ -76,7 +76,11 @@ contract UnitMessaging is Base {
     adapter.send(_amount, _minGasLimit);
   }
 
-  function testSendMessageRevertsOnMessagingStopped(address _linkedAdapter) external {
+  function testSendMessageRevertsOnMessagingStopped(
+    uint256 _amount,
+    uint32 _minGasLimit,
+    address _linkedAdapter
+  ) external {
     vm.assume(_linkedAdapter != address(0));
 
     vm.startPrank(_owner);
@@ -87,7 +91,7 @@ contract UnitMessaging is Base {
     // Execute
     vm.prank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
-    adapter.send(0, 0);
+    adapter.send(_amount, _minGasLimit);
   }
 
   function testSendMessageEmitsEvent(uint256 _amount, uint32 _minGasLimit, address _linkedAdapter) external {
