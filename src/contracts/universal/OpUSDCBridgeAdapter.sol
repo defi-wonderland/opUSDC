@@ -17,37 +17,21 @@ abstract contract OpUSDCBridgeAdapter is Ownable, IOpUSDCBridgeAdapter {
   address public immutable MESSENGER;
 
   /// @inheritdoc IOpUSDCBridgeAdapter
-  address public linkedAdapter;
+  address public immutable LINKED_ADAPTER;
 
   /// @inheritdoc IOpUSDCBridgeAdapter
   bool public isMessagingDisabled;
 
   /**
-   * @notice Modifier to ensure the linked adapter is initialized
-   */
-  modifier linkedAdapterMustBeInitialized() {
-    if (linkedAdapter == address(0)) revert IOpUSDCBridgeAdapter_LinkedAdapterNotSet();
-    _;
-  }
-
-  /**
    * @notice Construct the OpUSDCBridgeAdapter contract
    * @param _usdc The address of the USDC Contract to be used by the adapter
    * @param _messenger The address of the messenger contract
-   */
-  constructor(address _usdc, address _messenger) Ownable(msg.sender) {
-    USDC = _usdc;
-    MESSENGER = _messenger;
-  }
-
-  /**
-   * @notice Set the linked adapter
-   * @dev Only the owner can call this function
    * @param _linkedAdapter The address of the linked adapter
    */
-  function setLinkedAdapter(address _linkedAdapter) external onlyOwner {
-    linkedAdapter = _linkedAdapter;
-    emit LinkedAdapterSet(_linkedAdapter);
+  constructor(address _usdc, address _messenger, address _linkedAdapter) Ownable(msg.sender) {
+    USDC = _usdc;
+    MESSENGER = _messenger;
+    LINKED_ADAPTER = _linkedAdapter;
   }
 
   /**
@@ -71,10 +55,10 @@ abstract contract OpUSDCBridgeAdapter is Ownable, IOpUSDCBridgeAdapter {
    * @dev Setting isMessagingDisabled to true is an irreversible operation
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  function stopMessaging(uint32 _minGasLimit) external virtual onlyOwner linkedAdapterMustBeInitialized {
+  function stopMessaging(uint32 _minGasLimit) external virtual onlyOwner {
     isMessagingDisabled = true;
     ICrossDomainMessenger(MESSENGER).sendMessage(
-      linkedAdapter, abi.encodeWithSignature('receiveStopMessaging()'), _minGasLimit
+      LINKED_ADAPTER, abi.encodeWithSignature('receiveStopMessaging()'), _minGasLimit
     );
     emit MessagingStopped();
   }
@@ -82,9 +66,9 @@ abstract contract OpUSDCBridgeAdapter is Ownable, IOpUSDCBridgeAdapter {
   /**
    * @notice Receive the stop messaging message from the linked adapter and stop outgoing messages
    */
-  function receiveStopMessaging() external virtual linkedAdapterMustBeInitialized {
+  function receiveStopMessaging() external virtual {
     // Ensure the message is coming from the linked adapter
-    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != linkedAdapter) {
+    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != LINKED_ADAPTER) {
       revert IOpUSDCBridgeAdapter_InvalidSender();
     }
     isMessagingDisabled = true;

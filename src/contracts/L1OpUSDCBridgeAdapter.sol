@@ -14,8 +14,13 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @notice Construct the OpUSDCBridgeAdapter contract
    * @param _usdc The address of the USDC Contract to be used by the adapter
    * @param _messenger The address of the messenger contract
+   * @param _linkedAdapter The address of the linked adapter
    */
-  constructor(address _usdc, address _messenger) OpUSDCBridgeAdapter(_usdc, _messenger) {}
+  constructor(
+    address _usdc,
+    address _messenger,
+    address _linkedAdapter
+  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
 
   /**
    * @notice Sets the amount of USDC tokens that will be burned when the burnLockedUSDC function is called
@@ -42,7 +47,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _amount The amount of tokens to send
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  function send(uint256 _amount, uint32 _minGasLimit) external override linkedAdapterMustBeInitialized {
+  function send(uint256 _amount, uint32 _minGasLimit) external override {
     // Ensure messaging is enabled
     if (isMessagingDisabled) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
@@ -51,7 +56,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
 
     // Send the message to the linked adapter
     ICrossDomainMessenger(MESSENGER).sendMessage(
-      linkedAdapter, abi.encodeWithSignature('receiveMessage(address,uint256)', msg.sender, _amount), _minGasLimit
+      LINKED_ADAPTER, abi.encodeWithSignature('receiveMessage(address,uint256)', msg.sender, _amount), _minGasLimit
     );
 
     emit MessageSent(msg.sender, _amount, _minGasLimit);
@@ -63,9 +68,9 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _user The user to mint the bridged representation for
    * @param _amount The amount of tokens to mint
    */
-  function receiveMessage(address _user, uint256 _amount) external override linkedAdapterMustBeInitialized {
+  function receiveMessage(address _user, uint256 _amount) external override {
     // Ensure the message is coming from the linked adapter
-    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != linkedAdapter) {
+    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != LINKED_ADAPTER) {
       revert IOpUSDCBridgeAdapter_InvalidSender();
     }
 
