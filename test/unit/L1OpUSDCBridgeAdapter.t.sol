@@ -4,8 +4,16 @@ import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {Test} from 'forge-std/Test.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 
+contract TestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
+  constructor(address _usdc, address _messenger) L1OpUSDCBridgeAdapter(_usdc, _messenger) {}
+
+  function setIsMessagingDisabled() external {
+    isMessagingDisabled = true;
+  }
+}
+
 abstract contract Base is Test {
-  L1OpUSDCBridgeAdapter public adapter;
+  TestL1OpUSDCBridgeAdapter public adapter;
 
   address internal _owner = makeAddr('owner');
   address internal _user = makeAddr('user');
@@ -18,7 +26,7 @@ abstract contract Base is Test {
 
   function setUp() public virtual {
     vm.prank(_owner);
-    adapter = new L1OpUSDCBridgeAdapter(_usdc, _messenger);
+    adapter = new TestL1OpUSDCBridgeAdapter(_usdc, _messenger);
   }
 }
 
@@ -64,6 +72,24 @@ contract UnitMessaging is Base {
 
     // Execute
     vm.prank(_user);
+    adapter.send(_amount, _minGasLimit);
+  }
+
+  function testSendMessageRevertsOnMessagingStopped(
+    uint256 _amount,
+    uint32 _minGasLimit,
+    address _linkedAdapter
+  ) external {
+    vm.assume(_linkedAdapter != address(0));
+
+    vm.startPrank(_owner);
+    adapter.setLinkedAdapter(_linkedAdapter);
+    adapter.setIsMessagingDisabled();
+    vm.stopPrank();
+
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
     adapter.send(_amount, _minGasLimit);
   }
 
@@ -115,7 +141,7 @@ contract UnitMessaging is Base {
 
     // Execute
     vm.prank(_user);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_NotLinkedAdapter.selector);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
     adapter.receiveMessage(_user, _amount);
   }
 
@@ -134,7 +160,7 @@ contract UnitMessaging is Base {
 
     // Execute
     vm.prank(_messenger);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_NotLinkedAdapter.selector);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
     adapter.receiveMessage(_user, _amount);
   }
 

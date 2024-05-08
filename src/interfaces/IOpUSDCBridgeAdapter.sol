@@ -13,6 +13,11 @@ interface IOpUSDCBridgeAdapter {
   event LinkedAdapterSet(address _linkedAdapter);
 
   /**
+   * @notice Emitted when messaging is stopped
+   */
+  event MessagingStopped();
+
+  /**
    * @notice Emitted when a message is sent to the linked adapter
    * @param _user The user that sent the message
    * @param _amount The amount of tokens to send
@@ -32,9 +37,14 @@ interface IOpUSDCBridgeAdapter {
   //////////////////////////////////////////////////////////////*/
 
   /**
+   * @notice Error when messaging is disabled
+   */
+  error IOpUSDCBridgeAdapter_MessagingDisabled();
+
+  /**
    * @notice Error when the caller is not the linked adapter
    */
-  error IOpUSDCBridgeAdapter_NotLinkedAdapter();
+  error IOpUSDCBridgeAdapter_InvalidSender();
 
   /**
    * @notice Error when a message is trying to be sent when linked adapter is not set
@@ -47,9 +57,9 @@ interface IOpUSDCBridgeAdapter {
 
   /**
    * @notice Fetches address of the USDC token
-   * @return _USDC Address of the USDC token
+   * @return _usdc Address of the USDC token
    */
-  function USDC() external view returns (address _USDC);
+  function USDC() external view returns (address _usdc);
 
   /**
    * @notice Fetches address of the CrossDomainMessenger to send messages to L1 <-> L2
@@ -62,6 +72,12 @@ interface IOpUSDCBridgeAdapter {
    * @return _linkedAdapter Address of the linked adapter
    */
   function linkedAdapter() external view returns (address _linkedAdapter);
+
+  /**
+   * @notice Fetches whether messaging is disabled
+   * @return _isMessagingDisabled Whether messaging is disabled
+   */
+  function isMessagingDisabled() external view returns (bool _isMessagingDisabled);
 
   /*///////////////////////////////////////////////////////////////
                             LOGIC
@@ -88,4 +104,17 @@ interface IOpUSDCBridgeAdapter {
    * @param _amount The amount of tokens to mint
    */
   function receiveMessage(address _user, uint256 _amount) external;
+
+  /**
+   * @notice Send a message to the linked adapter to call receiveStopMessaging() and stop outgoing messages.
+   * @dev Only callable by the owner of the adapter.
+   * @dev Setting isMessagingDisabled to true is an irreversible operation.
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  function stopMessaging(uint32 _minGasLimit) external;
+
+  /**
+   * @notice Receive the stop messaging message from the linked adapter and stop outgoing messages
+   */
+  function receiveStopMessaging() external;
 }

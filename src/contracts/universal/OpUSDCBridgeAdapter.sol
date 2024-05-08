@@ -4,6 +4,7 @@ pragma solidity 0.8.25;
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
+import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 abstract contract OpUSDCBridgeAdapter is Ownable, IOpUSDCBridgeAdapter {
@@ -17,6 +18,9 @@ abstract contract OpUSDCBridgeAdapter is Ownable, IOpUSDCBridgeAdapter {
 
   /// @inheritdoc IOpUSDCBridgeAdapter
   address public linkedAdapter;
+
+  /// @inheritdoc IOpUSDCBridgeAdapter
+  bool public isMessagingDisabled;
 
   /**
    * @notice Modifier to ensure the linked adapter is initialized
@@ -60,4 +64,30 @@ abstract contract OpUSDCBridgeAdapter is Ownable, IOpUSDCBridgeAdapter {
    * @param _amount The amount of tokens to mint
    */
   function receiveMessage(address _user, uint256 _amount) external virtual;
+
+  /**
+   * @notice Send a message to the linked adapter to call receiveStopMessaging() and stop outgoing messages.
+   * @dev Only callable by the owner of the adapter
+   * @dev Setting isMessagingDisabled to true is an irreversible operation
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  function stopMessaging(uint32 _minGasLimit) external virtual onlyOwner linkedAdapterMustBeInitialized {
+    isMessagingDisabled = true;
+    ICrossDomainMessenger(MESSENGER).sendMessage(
+      linkedAdapter, abi.encodeWithSignature('receiveStopMessaging()'), _minGasLimit
+    );
+    emit MessagingStopped();
+  }
+
+  /**
+   * @notice Receive the stop messaging message from the linked adapter and stop outgoing messages
+   */
+  function receiveStopMessaging() external virtual linkedAdapterMustBeInitialized {
+    // Ensure the message is coming from the linked adapter
+    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != linkedAdapter) {
+      revert IOpUSDCBridgeAdapter_InvalidSender();
+    }
+    isMessagingDisabled = true;
+    emit MessagingStopped();
+  }
 }

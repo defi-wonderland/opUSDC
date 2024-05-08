@@ -43,8 +43,8 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function send(uint256 _amount, uint32 _minGasLimit) external override linkedAdapterMustBeInitialized {
-    // Ensure the linked adapter is set
-    if (linkedAdapter == address(0)) revert IOpUSDCBridgeAdapter_LinkedAdapterNotSet();
+    // Ensure messaging is enabled
+    if (isMessagingDisabled) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
     // Transfer the tokens to the contract
     IUSDC(USDC).transferFrom(msg.sender, address(this), _amount);
@@ -64,11 +64,9 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _amount The amount of tokens to mint
    */
   function receiveMessage(address _user, uint256 _amount) external override linkedAdapterMustBeInitialized {
-    // TODO: Add logic to check that messaging wasnt stopped
-
     // Ensure the message is coming from the linked adapter
     if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != linkedAdapter) {
-      revert IOpUSDCBridgeAdapter_NotLinkedAdapter();
+      revert IOpUSDCBridgeAdapter_InvalidSender();
     }
 
     // Transfer the tokens to the user
