@@ -4,8 +4,16 @@ import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {StdStorage, Test, stdStorage} from 'forge-std/Test.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 
+contract TestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
+  constructor(address _usdc, address _messenger) L1OpUSDCBridgeAdapter(_usdc, _messenger) {}
+
+  function setIsMessagingDisabled() external {
+    isMessagingDisabled = true;
+  }
+}
+
 abstract contract Base is Test {
-  L1OpUSDCBridgeAdapter public adapter;
+  TestL1OpUSDCBridgeAdapter public adapter;
 
   address internal _owner = makeAddr('owner');
   address internal _user = makeAddr('user');
@@ -17,7 +25,7 @@ abstract contract Base is Test {
 
   function setUp() public virtual {
     vm.prank(_owner);
-    adapter = new L1OpUSDCBridgeAdapter(_usdc, _messenger);
+    adapter = new TestL1OpUSDCBridgeAdapter(_usdc, _messenger);
   }
 }
 
@@ -68,14 +76,13 @@ contract UnitMessaging is Base {
     adapter.send(_amount, _minGasLimit);
   }
 
-  function testSendMessageRevertsOnMessagingStopped() external {
-    // Mock storage
-    // link adapter and isMessagingDisabled are in the same storage slot
-    // _linkedAdapter = eeb02b2b8d37153666cba8021567b92a6e22de64
-    // isMessagingDisabled = true = 0x00000001
-    stdstore.target(address(adapter)).sig('linkedAdapter()').checked_write(
-      bytes32(0x000000000000000000000001eeb02b2b8d37153666cba8021567b92a6e22de64)
-    );
+  function testSendMessageRevertsOnMessagingStopped(address _linkedAdapter) external {
+    vm.assume(_linkedAdapter != address(0));
+
+    vm.startPrank(_owner);
+    adapter.setLinkedAdapter(_linkedAdapter);
+    adapter.setIsMessagingDisabled();
+    vm.stopPrank();
 
     // Execute
     vm.prank(_user);
