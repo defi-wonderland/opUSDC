@@ -104,17 +104,4 @@ interface IOpUSDCBridgeAdapter {
    * @param _amount The amount of tokens to mint
    */
   function receiveMessage(address _user, uint256 _amount) external;
-
-  /**
-   * @notice Send a message to the linked adapter to call receiveStopMessaging() and stop outgoing messages.
-   * @dev Only callable by the owner of the adapter.
-   * @dev Setting isMessagingDisabled to true is an irreversible operation.
-   * @param _minGasLimit Minimum gas limit that the message can be executed with
-   */
-  function stopMessaging(uint32 _minGasLimit) external;
-
-  /**
-   * @notice Receive the stop messaging message from the linked adapter and stop outgoing messages
-   */
-  function receiveStopMessaging() external;
 }
