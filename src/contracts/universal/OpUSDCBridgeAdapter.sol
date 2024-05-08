@@ -2,13 +2,13 @@
 pragma solidity 0.8.25;
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
-import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
+import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
-abstract contract BaseOpUSDCBridgeAdapter is Ownable, IOpUSDCBridgeAdapter {
-  using SafeERC20 for IERC20;
+abstract contract OpUSDCBridgeAdapter is Ownable, IOpUSDCBridgeAdapter {
+  using SafeERC20 for IUSDC;
 
   /// @inheritdoc IOpUSDCBridgeAdapter
   address public immutable USDC;
@@ -22,6 +22,9 @@ abstract contract BaseOpUSDCBridgeAdapter is Ownable, IOpUSDCBridgeAdapter {
   /// @inheritdoc IOpUSDCBridgeAdapter
   bool public isMessagingDisabled;
 
+  /**
+   * @notice Modifier to ensure the linked adapter is initialized
+   */
   modifier linkedAdapterMustBeInitialized() {
     if (linkedAdapter == address(0)) revert IOpUSDCBridgeAdapter_LinkedAdapterNotSet();
     _;
