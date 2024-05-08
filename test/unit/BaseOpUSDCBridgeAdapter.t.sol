@@ -101,15 +101,35 @@ contract UnitStopMessaging is Base {
     assertEq(adapter.isMessagingDisabled(), true, 'Messaging should be disabled');
   }
 
-  function testReceiveStopMessagingWrongSender() public {
+  function testReceiveStopMessagingWrongMessenger(address _notMessenger) public {
+    vm.assume(_notMessenger != _messenger);
+    address _linkedAdapter = makeAddr('linkedAdapter');
+
+    vm.prank(_owner);
+    adapter.setLinkedAdapter(_linkedAdapter);
+
+    // Execute
+    vm.prank(_notMessenger);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_NotLinkedAdapter.selector);
+    adapter.receiveStopMessaging();
+    assertEq(adapter.isMessagingDisabled(), false, 'Messaging should not be disabled');
+  }
+
+  function testReceiveStopMessagingWrongLinkedAdapter() public {
     address _linkedAdapter = makeAddr('linkedAdapter');
     address _notLinkedAdapter = makeAddr('notLinkedAdapter');
 
     vm.prank(_owner);
     adapter.setLinkedAdapter(_linkedAdapter);
 
+    // Mock calls
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_notLinkedAdapter));
+
+    /// Expect calls
+    vm.expectCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'));
+
     // Execute
-    vm.prank(_notLinkedAdapter);
+    vm.prank(_messenger);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_NotLinkedAdapter.selector);
     adapter.receiveStopMessaging();
     assertEq(adapter.isMessagingDisabled(), false, 'Messaging should not be disabled');
