@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {BaseOpUSDCBridgeAdapter} from 'contracts/BaseOpUSDCBridgeAdapter.sol';
+import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
 import {Test} from 'forge-std/Test.sol';
 
-contract TestOpUSDCBridgeAdapter is BaseOpUSDCBridgeAdapter {
-  constructor(address _USDC, address _messenger) BaseOpUSDCBridgeAdapter(_USDC, _messenger) {}
+contract TestOpUSDCBridgeAdapter is OpUSDCBridgeAdapter {
+  constructor(address _USDC, address _messenger) OpUSDCBridgeAdapter(_USDC, _messenger) {}
 
   function send(uint256 _amount, uint32 _minGasLimit) external override {}
 
