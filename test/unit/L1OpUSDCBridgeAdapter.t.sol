@@ -14,6 +14,7 @@ abstract contract Base is Test {
 
   event MessageSent(address _user, uint256 _amount, uint32 _minGasLimit);
   event MessageReceived(address _user, uint256 _amount);
+  event BurnAmountSet(uint256 _burnAmount);
 
   function setUp() public virtual {
     vm.prank(_owner);
@@ -173,5 +174,47 @@ contract UnitMessaging is Base {
 
     vm.prank(_messenger);
     adapter.receiveMessage(_user, _amount);
+  }
+}
+
+contract UnitBurning is Base {
+  function testBurnLockedUSDC(uint256 _burnAmount) external {
+    // Mock calls
+    vm.mockCall(
+      address(_usdc), abi.encodeWithSignature('burn(address,uint256)', address(adapter), _burnAmount), abi.encode(true)
+    );
+
+    // Expect calls
+    vm.expectCall(address(_usdc), abi.encodeWithSignature('burn(address,uint256)', address(adapter), _burnAmount));
+
+    // Execute
+    vm.startPrank(_owner);
+    adapter.setBurnAmount(_burnAmount);
+    adapter.burnLockedUSDC();
+    vm.stopPrank();
+  }
+
+  function testSetBurnLockedUSDC(uint256 _burnAmount) external {
+    vm.assume(_burnAmount > 0);
+
+    uint256 _originalBurnAmount = adapter.burnAmount();
+
+    // Execute
+    vm.prank(_owner);
+    adapter.setBurnAmount(_burnAmount);
+
+    // Assert
+    assertEq(adapter.burnAmount(), _burnAmount, 'Burn amount should be set');
+    assertGt(adapter.burnAmount(), _originalBurnAmount, 'Burn amount should be greater than the original amount');
+  }
+
+  function testSetBurnLockedUSDCEmitsEvent(uint256 _burnAmount) external {
+    vm.assume(_burnAmount > 0);
+
+    // Execute
+    vm.prank(_owner);
+    vm.expectEmit(true, true, true, true);
+    emit BurnAmountSet(_burnAmount);
+    adapter.setBurnAmount(_burnAmount);
   }
 }

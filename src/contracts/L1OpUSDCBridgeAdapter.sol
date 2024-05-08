@@ -1,17 +1,41 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import {BaseOpUSDCBridgeAdapter} from 'contracts/BaseOpUSDCBridgeAdapter.sol';
+import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
+import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
+import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
-contract L1OpUSDCBridgeAdapter is BaseOpUSDCBridgeAdapter {
+contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
+  /// @inheritdoc IL1OpUSDCBridgeAdapter
+  uint256 public burnAmount;
+
   /**
    * @notice Construct the OpUSDCBridgeAdapter contract
    * @param _usdc The address of the USDC Contract to be used by the adapter
    * @param _messenger The address of the messenger contract
    */
-  constructor(address _usdc, address _messenger) BaseOpUSDCBridgeAdapter(_usdc, _messenger) {}
+  constructor(address _usdc, address _messenger) OpUSDCBridgeAdapter(_usdc, _messenger) {}
+
+  /**
+   * @notice Sets the amount of USDC tokens that will be burned when the burnLockedUSDC function is called
+   * @param _amount The amount of USDC tokens that will be burned
+   * @dev Only callable by the owner
+   */
+  function setBurnAmount(uint256 _amount) external onlyOwner {
+    burnAmount = _amount;
+
+    emit BurnAmountSet(_amount);
+  }
+
+  /**
+   * @notice Burns the USDC tokens locked in the contract
+   * @dev The amount is determined by the burnAmount variable, which is set in the setBurnAmount function
+   */
+  function burnLockedUSDC() external onlyOwner {
+    // Burn the USDC tokens
+    IUSDC(USDC).burn(address(this), burnAmount);
+  }
 
   /**
    * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
@@ -23,7 +47,7 @@ contract L1OpUSDCBridgeAdapter is BaseOpUSDCBridgeAdapter {
     if (linkedAdapter == address(0)) revert IOpUSDCBridgeAdapter_LinkedAdapterNotSet();
 
     // Transfer the tokens to the contract
-    IERC20(USDC).transferFrom(msg.sender, address(this), _amount);
+    IUSDC(USDC).transferFrom(msg.sender, address(this), _amount);
 
     // Send the message to the linked adapter
     ICrossDomainMessenger(MESSENGER).sendMessage(
@@ -48,7 +72,7 @@ contract L1OpUSDCBridgeAdapter is BaseOpUSDCBridgeAdapter {
     }
 
     // Transfer the tokens to the user
-    IERC20(USDC).transfer(_user, _amount);
+    IUSDC(USDC).transfer(_user, _amount);
 
     emit MessageReceived(_user, _amount);
   }
