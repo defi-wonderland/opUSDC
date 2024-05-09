@@ -35,6 +35,9 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   function burnLockedUSDC() external onlyOwner {
     // Burn the USDC tokens
     IUSDC(USDC).burn(address(this), burnAmount);
+
+    // Set the burn amount to 0
+    burnAmount = 0;
   }
 
   /**

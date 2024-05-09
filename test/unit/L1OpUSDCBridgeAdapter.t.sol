@@ -218,6 +218,8 @@ contract UnitBurning is Base {
     adapter.setBurnAmount(_burnAmount);
     adapter.burnLockedUSDC();
     vm.stopPrank();
+
+    assertEq(adapter.burnAmount(), 0, 'Burn amount should be set to 0');
   }
 
   function testSetBurnLockedUSDC(uint256 _burnAmount) external {
