@@ -41,7 +41,56 @@ contract UnitInitialization is Base {
   }
 }
 
+contract UnitBurning is Base {
+  function testSetBurnLockedUSDC(uint256 _burnAmount) external {
+    vm.assume(_burnAmount > 0);
+
+    uint256 _originalBurnAmount = adapter.burnAmount();
+
+    // Execute
+    vm.prank(_owner);
+    adapter.setBurnAmount(_burnAmount);
+
+    // Assert
+    assertEq(adapter.burnAmount(), _burnAmount, 'Burn amount should be set');
+    assertGt(adapter.burnAmount(), _originalBurnAmount, 'Burn amount should be greater than the original amount');
+  }
+
+  function testSetBurnLockedUSDCEmitsEvent(uint256 _burnAmount) external {
+    vm.assume(_burnAmount > 0);
+
+    // Execute
+    vm.prank(_owner);
+    vm.expectEmit(true, true, true, true);
+    emit BurnAmountSet(_burnAmount);
+    adapter.setBurnAmount(_burnAmount);
+  }
+
+  function testBurnLockedUSDC(uint256 _burnAmount) external {
+    _mockAndExpect(
+      address(_usdc), abi.encodeWithSignature('burn(address,uint256)', address(adapter), _burnAmount), abi.encode(true)
+    );
+
+    // Execute
+    vm.startPrank(_owner);
+    adapter.setBurnAmount(_burnAmount);
+    adapter.burnLockedUSDC();
+    vm.stopPrank();
+
+    assertEq(adapter.burnAmount(), 0, 'Burn amount should be set to 0');
+  }
+}
+
 contract UnitMessaging is Base {
+  function testSendMessageRevertsOnMessagingStopped(uint256 _amount, uint32 _minGasLimit) external {
+    adapter.setIsMessagingDisabled();
+
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
+    adapter.send(_amount, _minGasLimit);
+  }
+
   function testSendMessage(uint256 _amount, uint32 _minGasLimit) external {
     _mockAndExpect(
       address(_usdc),
@@ -61,15 +110,6 @@ contract UnitMessaging is Base {
 
     // Execute
     vm.prank(_user);
-    adapter.send(_amount, _minGasLimit);
-  }
-
-  function testSendMessageRevertsOnMessagingStopped(uint256 _amount, uint32 _minGasLimit) external {
-    adapter.setIsMessagingDisabled();
-
-    // Execute
-    vm.prank(_user);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
     adapter.send(_amount, _minGasLimit);
   }
 
@@ -147,46 +187,6 @@ contract UnitMessaging is Base {
 
     vm.prank(_messenger);
     adapter.receiveMessage(_user, _amount);
-  }
-}
-
-contract UnitBurning is Base {
-  function testBurnLockedUSDC(uint256 _burnAmount) external {
-    _mockAndExpect(
-      address(_usdc), abi.encodeWithSignature('burn(address,uint256)', address(adapter), _burnAmount), abi.encode(true)
-    );
-
-    // Execute
-    vm.startPrank(_owner);
-    adapter.setBurnAmount(_burnAmount);
-    adapter.burnLockedUSDC();
-    vm.stopPrank();
-
-    assertEq(adapter.burnAmount(), 0, 'Burn amount should be set to 0');
-  }
-
-  function testSetBurnLockedUSDC(uint256 _burnAmount) external {
-    vm.assume(_burnAmount > 0);
-
-    uint256 _originalBurnAmount = adapter.burnAmount();
-
-    // Execute
-    vm.prank(_owner);
-    adapter.setBurnAmount(_burnAmount);
-
-    // Assert
-    assertEq(adapter.burnAmount(), _burnAmount, 'Burn amount should be set');
-    assertGt(adapter.burnAmount(), _originalBurnAmount, 'Burn amount should be greater than the original amount');
-  }
-
-  function testSetBurnLockedUSDCEmitsEvent(uint256 _burnAmount) external {
-    vm.assume(_burnAmount > 0);
-
-    // Execute
-    vm.prank(_owner);
-    vm.expectEmit(true, true, true, true);
-    emit BurnAmountSet(_burnAmount);
-    adapter.setBurnAmount(_burnAmount);
   }
 }
 

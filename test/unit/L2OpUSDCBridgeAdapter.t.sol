@@ -33,6 +33,15 @@ abstract contract Base is Helpers {
 }
 
 contract UnitMessaging is Base {
+  function testSendMessageRevertsOnMessagingStopped(uint256 _amount, uint32 _minGasLimit) external {
+    adapter.setIsMessagingDisabled();
+
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
+    adapter.send(_amount, _minGasLimit);
+  }
+
   function testSendMessage(uint256 _amount, uint32 _minGasLimit) external {
     _mockAndExpect(address(_usdc), abi.encodeWithSignature('burn(address,uint256)', _user, _amount), abi.encode(true));
     _mockAndExpect(
@@ -48,15 +57,6 @@ contract UnitMessaging is Base {
 
     // Execute
     vm.prank(_user);
-    adapter.send(_amount, _minGasLimit);
-  }
-
-  function testSendMessageRevertsOnMessagingStopped(uint256 _amount, uint32 _minGasLimit) external {
-    adapter.setIsMessagingDisabled();
-
-    // Execute
-    vm.prank(_user);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
     adapter.send(_amount, _minGasLimit);
   }
 
@@ -135,15 +135,6 @@ contract UnitMessaging is Base {
 contract UnitStopMessaging is Base {
   event MessagingStopped();
 
-  function testReceiveStopMessaging() public {
-    _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
-
-    // Execute
-    vm.prank(_messenger);
-    adapter.receiveStopMessaging();
-    assertEq(adapter.isMessagingDisabled(), true, 'Messaging should be disabled');
-  }
-
   function testReceiveStopMessagingWrongMessenger(address _notMessenger) public {
     vm.assume(_notMessenger != _messenger);
 
@@ -164,6 +155,15 @@ contract UnitStopMessaging is Base {
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
     adapter.receiveStopMessaging();
     assertEq(adapter.isMessagingDisabled(), false, 'Messaging should not be disabled');
+  }
+
+  function testReceiveStopMessaging() public {
+    _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveStopMessaging();
+    assertEq(adapter.isMessagingDisabled(), true, 'Messaging should be disabled');
   }
 
   function testReceiveStopMessagingEmitsEvent() public {
