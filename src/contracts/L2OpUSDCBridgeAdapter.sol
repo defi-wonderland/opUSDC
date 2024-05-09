@@ -28,7 +28,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     // Ensure messaging is enabled
     if (isMessagingDisabled) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
-    //Burn the tokens
+    // Burn the tokens
     IUSDC(USDC).burn(msg.sender, _amount);
 
     // Send the message to the linked adapter

@@ -41,34 +41,6 @@ interface IOpUSDCBridgeAdapter {
   error IOpUSDCBridgeAdapter_InvalidSender();
 
   /*///////////////////////////////////////////////////////////////
-                            VARIABLES
-  //////////////////////////////////////////////////////////////*/
-
-  /**
-   * @notice Fetches address of the USDC token
-   * @return _usdc Address of the USDC token
-   */
-  function USDC() external view returns (address _usdc);
-
-  /**
-   * @notice Fetches address of the CrossDomainMessenger to send messages to L1 <-> L2
-   * @return _messenger Address of the messenger
-   */
-  function MESSENGER() external view returns (address _messenger);
-
-  /**
-   * @notice Fetches address of the linked adapter on L2 to send messages to and receive from
-   * @return _linkedAdapter Address of the linked adapter
-   */
-  function LINKED_ADAPTER() external view returns (address _linkedAdapter);
-
-  /**
-   * @notice Fetches whether messaging is disabled
-   * @return _isMessagingDisabled Whether messaging is disabled
-   */
-  function isMessagingDisabled() external view returns (bool _isMessagingDisabled);
-
-  /*///////////////////////////////////////////////////////////////
                             LOGIC
   //////////////////////////////////////////////////////////////*/
 
@@ -86,4 +58,35 @@ interface IOpUSDCBridgeAdapter {
    * @param _amount The amount of tokens to mint
    */
   function receiveMessage(address _user, uint256 _amount) external;
+
+  /*///////////////////////////////////////////////////////////////
+                            VARIABLES
+  //////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice Fetches address of the USDC token
+   * @return _usdc Address of the USDC token
+   */
+  // solhint-disable-next-line func-name-mixedcase
+  function USDC() external view returns (address _usdc);
+
+  /**
+   * @notice Fetches address of the CrossDomainMessenger to send messages to L1 <-> L2
+   * @return _messenger Address of the messenger
+   */
+  // solhint-disable-next-line func-name-mixedcase
+  function MESSENGER() external view returns (address _messenger);
+
+  /**
+   * @notice Fetches address of the linked adapter on L2 to send messages to and receive from
+   * @return _linkedAdapter Address of the linked adapter
+   */
+  // solhint-disable-next-line func-name-mixedcase
+  function LINKED_ADAPTER() external view returns (address _linkedAdapter);
+
+  /**
+   * @notice Fetches whether messaging is disabled
+   * @return _isMessagingDisabled Whether messaging is disabled
+   */
+  function isMessagingDisabled() external view returns (bool _isMessagingDisabled);
 }

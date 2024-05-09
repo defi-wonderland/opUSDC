@@ -13,16 +13,6 @@ interface IL1OpUSDCBridgeAdapter {
   event BurnAmountSet(uint256 _burnAmount);
 
   /*///////////////////////////////////////////////////////////////
-                            VARIABLES
-  //////////////////////////////////////////////////////////////*/
-
-  /**
-   * @notice Fetches the amount of USDC tokens that will be burned when the burnLockedUSDC function is called
-   * @return uint256 The amount of USDC tokens that will be burned
-   */
-  function burnAmount() external view returns (uint256);
-
-  /*///////////////////////////////////////////////////////////////
                             LOGIC
   //////////////////////////////////////////////////////////////*/
 
@@ -46,4 +36,14 @@ interface IL1OpUSDCBridgeAdapter {
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function stopMessaging(uint32 _minGasLimit) external;
+
+  /*///////////////////////////////////////////////////////////////
+                            VARIABLES
+  //////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice Fetches the amount of USDC tokens that will be burned when the burnLockedUSDC function is called
+   * @return uint256 The amount of USDC tokens that will be burned
+   */
+  function burnAmount() external view returns (uint256);
 }
