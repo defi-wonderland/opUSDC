@@ -24,7 +24,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _amount The amount of tokens to send
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  function send(uint256 _amount, uint32 _minGasLimit) external override {
+  function sendMessage(uint256 _amount, uint32 _minGasLimit) external override {
     // Ensure messaging is enabled
     if (isMessagingDisabled) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 

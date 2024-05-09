@@ -39,7 +39,7 @@ contract UnitMessaging is Base {
     // Execute
     vm.prank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
-    adapter.send(_amount, _minGasLimit);
+    adapter.sendMessage(_amount, _minGasLimit);
   }
 
   function testSendMessage(uint256 _amount, uint32 _minGasLimit) external {
@@ -57,7 +57,7 @@ contract UnitMessaging is Base {
 
     // Execute
     vm.prank(_user);
-    adapter.send(_amount, _minGasLimit);
+    adapter.sendMessage(_amount, _minGasLimit);
   }
 
   function testSendMessageEmitsEvent(uint256 _amount, uint32 _minGasLimit) external {
@@ -81,7 +81,7 @@ contract UnitMessaging is Base {
 
     // Execute
     vm.prank(_user);
-    adapter.send(_amount, _minGasLimit);
+    adapter.sendMessage(_amount, _minGasLimit);
   }
 
   function testReceiveMessageRevertsIfNotMessenger(uint256 _amount) external {
