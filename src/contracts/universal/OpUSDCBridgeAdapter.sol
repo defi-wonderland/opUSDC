@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
-  using SafeERC20 for IUSDC;
-
   /// @inheritdoc IOpUSDCBridgeAdapter
   address public immutable USDC;
 
