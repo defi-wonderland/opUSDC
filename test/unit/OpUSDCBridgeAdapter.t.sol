@@ -19,13 +19,11 @@ contract TestOpUSDCBridgeAdapter is OpUSDCBridgeAdapter {
 abstract contract Base is Test {
   TestOpUSDCBridgeAdapter public adapter;
 
-  address internal _owner = makeAddr('owner');
   address internal _usdc = makeAddr('opUSDC');
   address internal _messenger = makeAddr('messenger');
   address internal _linkedAdapter = makeAddr('linkedAdapter');
 
   function setUp() public virtual {
-    vm.prank(_owner);
     adapter = new TestOpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter);
   }
 }
