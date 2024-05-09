@@ -43,6 +43,16 @@ contract UnitInitialization is Base {
 contract UnitStopMessaging is Base {
   event MessagingStopped();
 
+  function testReceiveStopMessagingWrongMessenger(address _notMessenger) public {
+    vm.assume(_notMessenger != _messenger);
+
+    // Execute
+    vm.prank(_notMessenger);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
+    adapter.receiveStopMessaging();
+    assertEq(adapter.isMessagingDisabled(), false, 'Messaging should not be disabled');
+  }
+
   function testStopMessaging(uint32 _minGasLimit) public {
     bytes memory _messageData = abi.encodeWithSignature('receiveStopMessaging()');
 
@@ -76,16 +86,6 @@ contract UnitStopMessaging is Base {
     vm.prank(_messenger);
     adapter.receiveStopMessaging();
     assertEq(adapter.isMessagingDisabled(), true, 'Messaging should be disabled');
-  }
-
-  function testReceiveStopMessagingWrongMessenger(address _notMessenger) public {
-    vm.assume(_notMessenger != _messenger);
-
-    // Execute
-    vm.prank(_notMessenger);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
-    adapter.receiveStopMessaging();
-    assertEq(adapter.isMessagingDisabled(), false, 'Messaging should not be disabled');
   }
 
   function testReceiveStopMessagingWrongLinkedAdapter() public {
