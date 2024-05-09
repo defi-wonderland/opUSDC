@@ -5,7 +5,11 @@ import {Test} from 'forge-std/Test.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 
 contract TestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
-  constructor(address _usdc, address _messenger) L2OpUSDCBridgeAdapter(_usdc, _messenger) {}
+  constructor(
+    address _usdc,
+    address _messenger,
+    address _linkedAdapter
+  ) L2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
 
   function setIsMessagingDisabled() external {
     isMessagingDisabled = true;
@@ -15,27 +19,21 @@ contract TestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
 abstract contract Base is Test {
   TestL2OpUSDCBridgeAdapter public adapter;
 
-  address internal _owner = makeAddr('owner');
   address internal _user = makeAddr('user');
   address internal _usdc = makeAddr('opUSDC');
   address internal _messenger = makeAddr('messenger');
+  address internal _linkedAdapter = makeAddr('linkedAdapter');
 
   event MessageSent(address _user, uint256 _amount, uint32 _minGasLimit);
   event MessageReceived(address _user, uint256 _amount);
 
   function setUp() public virtual {
-    vm.prank(_owner);
-    adapter = new TestL2OpUSDCBridgeAdapter(_usdc, _messenger);
+    adapter = new TestL2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter);
   }
 }
 
 contract UnitMessaging is Base {
-  function testSendMessage(uint256 _amount, uint32 _minGasLimit, address _linkedAdapter) external {
-    vm.assume(_linkedAdapter != address(0));
-
-    vm.prank(_owner);
-    adapter.setLinkedAdapter(_linkedAdapter);
-
+  function testSendMessage(uint256 _amount, uint32 _minGasLimit) external {
     // Mock calls
     vm.mockCall(address(_usdc), abi.encodeWithSignature('burn(address,uint256)', _user, _amount), abi.encode(true));
 
@@ -68,17 +66,8 @@ contract UnitMessaging is Base {
     adapter.send(_amount, _minGasLimit);
   }
 
-  function testSendMessageRevertsOnMessagingStopped(
-    uint256 _amount,
-    uint32 _minGasLimit,
-    address _linkedAdapter
-  ) external {
-    vm.assume(_linkedAdapter != address(0));
-
-    vm.startPrank(_owner);
-    adapter.setLinkedAdapter(_linkedAdapter);
+  function testSendMessageRevertsOnMessagingStopped(uint256 _amount, uint32 _minGasLimit) external {
     adapter.setIsMessagingDisabled();
-    vm.stopPrank();
 
     // Execute
     vm.prank(_user);
@@ -86,12 +75,7 @@ contract UnitMessaging is Base {
     adapter.send(_amount, _minGasLimit);
   }
 
-  function testSendMessageEmitsEvent(uint256 _amount, uint32 _minGasLimit, address _linkedAdapter) external {
-    vm.assume(_linkedAdapter != address(0));
-
-    vm.prank(_owner);
-    adapter.setLinkedAdapter(_linkedAdapter);
-
+  function testSendMessageEmitsEvent(uint256 _amount, uint32 _minGasLimit) external {
     // Mock calls
     vm.mockCall(address(_usdc), abi.encodeWithSignature('burn(address,uint256)', _user, _amount), abi.encode(true));
 
@@ -115,19 +99,7 @@ contract UnitMessaging is Base {
     adapter.send(_amount, _minGasLimit);
   }
 
-  function testSendMessageRevertsIfAdapterNotSet(uint256 _amount, uint32 _minGasLimit) external {
-    // Execute
-    vm.prank(_user);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_LinkedAdapterNotSet.selector);
-    adapter.send(_amount, _minGasLimit);
-  }
-
-  function testReceiveMessageRevertsIfNotMessenger(uint256 _amount, address _linkedAdapter) external {
-    vm.assume(_linkedAdapter != address(0));
-
-    vm.prank(_owner);
-    adapter.setLinkedAdapter(_linkedAdapter);
-
+  function testReceiveMessageRevertsIfNotMessenger(uint256 _amount) external {
     // Execute
     vm.prank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
@@ -136,13 +108,9 @@ contract UnitMessaging is Base {
 
   function testReceiveMessageRevertsIfLinkedAdapterDidntSendTheMessage(
     uint256 _amount,
-    address _messageSender,
-    address _linkedAdapter
+    address _messageSender
   ) external {
-    vm.assume(_linkedAdapter != address(0) && _linkedAdapter != _messageSender);
-
-    vm.prank(_owner);
-    adapter.setLinkedAdapter(_linkedAdapter);
+    vm.assume(_linkedAdapter != _messageSender);
 
     // Mock calls
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_messageSender));
@@ -153,12 +121,7 @@ contract UnitMessaging is Base {
     adapter.receiveMessage(_user, _amount);
   }
 
-  function testReceiveMessageSendsTokens(uint256 _amount, address _linkedAdapter) external {
-    vm.assume(_linkedAdapter != address(0));
-
-    vm.prank(_owner);
-    adapter.setLinkedAdapter(_linkedAdapter);
-
+  function testReceiveMessageSendsTokens(uint256 _amount) external {
     // Mock calls
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
@@ -172,12 +135,7 @@ contract UnitMessaging is Base {
     adapter.receiveMessage(_user, _amount);
   }
 
-  function testReceiveMessageEmitsEvent(uint256 _amount, address _linkedAdapter) external {
-    vm.assume(_linkedAdapter != address(0));
-
-    vm.prank(_owner);
-    adapter.setLinkedAdapter(_linkedAdapter);
-
+  function testReceiveMessageEmitsEvent(uint256 _amount) external {
     // Mock calls
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
@@ -195,12 +153,7 @@ contract UnitMessaging is Base {
 contract UnitStopMessaging is Base {
   event MessagingStopped();
 
-  function testReceiveStopMessaging(address _linkedAdapter) public {
-    vm.assume(_linkedAdapter != address(0));
-
-    vm.prank(_owner);
-    adapter.setLinkedAdapter(_linkedAdapter);
-
+  function testReceiveStopMessaging() public {
     // Mock calls
     vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
@@ -215,10 +168,6 @@ contract UnitStopMessaging is Base {
 
   function testReceiveStopMessagingWrongMessenger(address _notMessenger) public {
     vm.assume(_notMessenger != _messenger);
-    address _linkedAdapter = makeAddr('linkedAdapter');
-
-    vm.prank(_owner);
-    adapter.setLinkedAdapter(_linkedAdapter);
 
     // Execute
     vm.prank(_notMessenger);
@@ -228,11 +177,7 @@ contract UnitStopMessaging is Base {
   }
 
   function testReceiveStopMessagingWrongLinkedAdapter() public {
-    address _linkedAdapter = makeAddr('linkedAdapter');
     address _notLinkedAdapter = makeAddr('notLinkedAdapter');
-
-    vm.prank(_owner);
-    adapter.setLinkedAdapter(_linkedAdapter);
 
     // Mock calls
     vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_notLinkedAdapter));
@@ -247,12 +192,7 @@ contract UnitStopMessaging is Base {
     assertEq(adapter.isMessagingDisabled(), false, 'Messaging should not be disabled');
   }
 
-  function testReceiveStopMessagingEmitsEvent(address _linkedAdapter) public {
-    vm.assume(_linkedAdapter != address(0));
-
-    vm.prank(_owner);
-    adapter.setLinkedAdapter(_linkedAdapter);
-
+  function testReceiveStopMessagingEmitsEvent() public {
     // Mock calls
     vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 

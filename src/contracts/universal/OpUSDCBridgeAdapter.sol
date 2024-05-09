@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
-abstract contract OpUSDCBridgeAdapter is Ownable, IOpUSDCBridgeAdapter {
+abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
   using SafeERC20 for IUSDC;
 
   /// @inheritdoc IOpUSDCBridgeAdapter
@@ -16,37 +15,21 @@ abstract contract OpUSDCBridgeAdapter is Ownable, IOpUSDCBridgeAdapter {
   address public immutable MESSENGER;
 
   /// @inheritdoc IOpUSDCBridgeAdapter
-  address public linkedAdapter;
+  address public immutable LINKED_ADAPTER;
 
   /// @inheritdoc IOpUSDCBridgeAdapter
   bool public isMessagingDisabled;
 
   /**
-   * @notice Modifier to ensure the linked adapter is initialized
-   */
-  modifier linkedAdapterMustBeInitialized() {
-    if (linkedAdapter == address(0)) revert IOpUSDCBridgeAdapter_LinkedAdapterNotSet();
-    _;
-  }
-
-  /**
    * @notice Construct the OpUSDCBridgeAdapter contract
    * @param _usdc The address of the USDC Contract to be used by the adapter
    * @param _messenger The address of the messenger contract
-   */
-  constructor(address _usdc, address _messenger) Ownable(msg.sender) {
-    USDC = _usdc;
-    MESSENGER = _messenger;
-  }
-
-  /**
-   * @notice Set the linked adapter
-   * @dev Only the owner can call this function
    * @param _linkedAdapter The address of the linked adapter
    */
-  function setLinkedAdapter(address _linkedAdapter) external onlyOwner {
-    linkedAdapter = _linkedAdapter;
-    emit LinkedAdapterSet(_linkedAdapter);
+  constructor(address _usdc, address _messenger, address _linkedAdapter) {
+    USDC = _usdc;
+    MESSENGER = _messenger;
+    LINKED_ADAPTER = _linkedAdapter;
   }
 
   /**

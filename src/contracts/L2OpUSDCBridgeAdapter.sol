@@ -12,7 +12,11 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _usdc The address of the USDC Contract to be used by the adapter
    * @param _messenger The address of the messenger contract
    */
-  constructor(address _usdc, address _messenger) OpUSDCBridgeAdapter(_usdc, _messenger) {}
+  constructor(
+    address _usdc,
+    address _messenger,
+    address _linkedAdapter
+  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
 
   /**
    * @notice Send a message to the linked adapter to transfer the tokens to the user
@@ -20,7 +24,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _amount The amount of tokens to send
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  function send(uint256 _amount, uint32 _minGasLimit) external override linkedAdapterMustBeInitialized {
+  function send(uint256 _amount, uint32 _minGasLimit) external override {
     // Ensure messaging is enabled
     if (isMessagingDisabled) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
@@ -29,7 +33,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
 
     // Send the message to the linked adapter
     ICrossDomainMessenger(MESSENGER).sendMessage(
-      linkedAdapter, abi.encodeWithSignature('receiveMessage(address,uint256)', msg.sender, _amount), _minGasLimit
+      LINKED_ADAPTER, abi.encodeWithSignature('receiveMessage(address,uint256)', msg.sender, _amount), _minGasLimit
     );
 
     emit MessageSent(msg.sender, _amount, _minGasLimit);
@@ -41,8 +45,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _user The user to mint the bridged representation for
    * @param _amount The amount of tokens to mint
    */
-  function receiveMessage(address _user, uint256 _amount) external override linkedAdapterMustBeInitialized {
-    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != linkedAdapter) {
+  function receiveMessage(address _user, uint256 _amount) external override {
+    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != LINKED_ADAPTER) {
       revert IOpUSDCBridgeAdapter_InvalidSender();
     }
 
@@ -55,8 +59,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /**
    * @notice Receive the stop messaging message from the linked adapter and stop outgoing messages
    */
-  function receiveStopMessaging() external virtual linkedAdapterMustBeInitialized {
-    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != linkedAdapter) {
+  function receiveStopMessaging() external virtual {
+    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != LINKED_ADAPTER) {
       revert IOpUSDCBridgeAdapter_InvalidSender();
     }
     isMessagingDisabled = true;

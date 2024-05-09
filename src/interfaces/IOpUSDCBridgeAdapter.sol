@@ -7,12 +7,6 @@ interface IOpUSDCBridgeAdapter {
   //////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Emitted when the linked adapter is set
-   * @param _linkedAdapter Address of the linked adapter
-   */
-  event LinkedAdapterSet(address _linkedAdapter);
-
-  /**
    * @notice Emitted when messaging is stopped
    */
   event MessagingStopped();
@@ -46,11 +40,6 @@ interface IOpUSDCBridgeAdapter {
    */
   error IOpUSDCBridgeAdapter_InvalidSender();
 
-  /**
-   * @notice Error when a message is trying to be sent when linked adapter is not set
-   */
-  error IOpUSDCBridgeAdapter_LinkedAdapterNotSet();
-
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
   //////////////////////////////////////////////////////////////*/
@@ -71,7 +60,7 @@ interface IOpUSDCBridgeAdapter {
    * @notice Fetches address of the linked adapter on L2 to send messages to and receive from
    * @return _linkedAdapter Address of the linked adapter
    */
-  function linkedAdapter() external view returns (address _linkedAdapter);
+  function LINKED_ADAPTER() external view returns (address _linkedAdapter);
 
   /**
    * @notice Fetches whether messaging is disabled
@@ -82,13 +71,6 @@ interface IOpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   //////////////////////////////////////////////////////////////*/
-
-  /**
-   * @notice Set the linked adapter
-   * @dev Only the owner can call this function
-   * @param _linkedAdapter The address of the linked adapter
-   */
-  function setLinkedAdapter(address _linkedAdapter) external;
 
   /**
    * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
