@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
+import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
-contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
+contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, Ownable {
   /// @inheritdoc IL1OpUSDCBridgeAdapter
   uint256 public burnAmount;
 
@@ -20,7 +21,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     address _usdc,
     address _messenger,
     address _linkedAdapter
-  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
+  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) Ownable(msg.sender) {}
 
   /**
    * @notice Sets the amount of USDC tokens that will be burned when the burnLockedUSDC function is called
@@ -40,6 +41,9 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   function burnLockedUSDC() external onlyOwner {
     // Burn the USDC tokens
     IUSDC(USDC).burn(address(this), burnAmount);
+
+    // Set the burn amount to 0
+    burnAmount = 0;
   }
 
   /**
@@ -63,13 +67,12 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   }
 
   /**
-   * @notice Receive the message from the other chain and mint the bridged representation for the user
+   * @notice Receive the message from the other chain and transfer the tokens to the user
    * @dev This function should only be called when receiving a message to mint the bridged representation
    * @param _user The user to mint the bridged representation for
    * @param _amount The amount of tokens to mint
    */
   function receiveMessage(address _user, uint256 _amount) external override {
-    // Ensure the message is coming from the linked adapter
     if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != LINKED_ADAPTER) {
       revert IOpUSDCBridgeAdapter_InvalidSender();
     }
@@ -78,5 +81,19 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     IUSDC(USDC).transfer(_user, _amount);
 
     emit MessageReceived(_user, _amount);
+  }
+
+  /**
+   * @notice Send a message to the linked adapter to call receiveStopMessaging() and stop outgoing messages.
+   * @dev Only callable by the owner of the adapter
+   * @dev Setting isMessagingDisabled to true is an irreversible operation
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  function stopMessaging(uint32 _minGasLimit) external virtual onlyOwner {
+    isMessagingDisabled = true;
+    ICrossDomainMessenger(MESSENGER).sendMessage(
+      LINKED_ADAPTER, abi.encodeWithSignature('receiveStopMessaging()'), _minGasLimit
+    );
+    emit MessagingStopped();
   }
 }
