@@ -67,21 +67,21 @@ interface IOpUSDCBridgeAdapter {
    * @notice Fetches address of the USDC token
    * @return _usdc Address of the USDC token
    */
-  // Solhint-disable-next-line func-name-mixedcase
+  // solhint-disable-next-line func-name-mixedcase
   function USDC() external view returns (address _usdc);
 
   /**
    * @notice Fetches address of the CrossDomainMessenger to send messages to L1 <-> L2
    * @return _messenger Address of the messenger
    */
-  // Solhint-disable-next-line func-name-mixedcase
+  // solhint-disable-next-line func-name-mixedcase
   function MESSENGER() external view returns (address _messenger);
 
   /**
    * @notice Fetches address of the linked adapter on L2 to send messages to and receive from
    * @return _linkedAdapter Address of the linked adapter
    */
-  // Solhint-disable-next-line func-name-mixedcase
+  // solhint-disable-next-line func-name-mixedcase
   function LINKED_ADAPTER() external view returns (address _linkedAdapter);
 
   /**
