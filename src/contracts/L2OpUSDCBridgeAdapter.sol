@@ -49,10 +49,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != LINKED_ADAPTER) {
       revert IOpUSDCBridgeAdapter_InvalidSender();
     }
-
     // Mint the tokens to the user
     IUSDC(USDC).mint(_user, _amount);
-
     emit MessageReceived(_user, _amount);
   }
 
