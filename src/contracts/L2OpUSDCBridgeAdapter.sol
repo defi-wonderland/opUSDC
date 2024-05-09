@@ -42,7 +42,6 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _amount The amount of tokens to mint
    */
   function receiveMessage(address _user, uint256 _amount) external override linkedAdapterMustBeInitialized {
-    // Ensure the message is coming from the linked adapter
     if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != linkedAdapter) {
       revert IOpUSDCBridgeAdapter_InvalidSender();
     }
@@ -57,7 +56,6 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @notice Receive the stop messaging message from the linked adapter and stop outgoing messages
    */
   function receiveStopMessaging() external virtual linkedAdapterMustBeInitialized {
-    // Ensure the message is coming from the linked adapter
     if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != linkedAdapter) {
       revert IOpUSDCBridgeAdapter_InvalidSender();
     }

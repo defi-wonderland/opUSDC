@@ -67,7 +67,6 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _amount The amount of tokens to mint
    */
   function receiveMessage(address _user, uint256 _amount) external override linkedAdapterMustBeInitialized {
-    // Ensure the message is coming from the linked adapter
     if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != linkedAdapter) {
       revert IOpUSDCBridgeAdapter_InvalidSender();
     }
