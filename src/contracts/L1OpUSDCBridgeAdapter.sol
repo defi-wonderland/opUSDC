@@ -92,7 +92,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
    * @dev Setting isMessagingDisabled to true is an irreversible operation
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  function stopMessaging(uint32 _minGasLimit) external virtual onlyOwner {
+  function stopMessaging(uint32 _minGasLimit) external onlyOwner {
     isMessagingDisabled = true;
     ICrossDomainMessenger(MESSENGER).sendMessage(
       LINKED_ADAPTER, abi.encodeWithSignature('receiveStopMessaging()'), _minGasLimit

@@ -57,7 +57,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /**
    * @notice Receive the stop messaging message from the linked adapter and stop outgoing messages
    */
-  function receiveStopMessaging() external virtual {
+  function receiveStopMessaging() external {
     if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != LINKED_ADAPTER) {
       revert IOpUSDCBridgeAdapter_InvalidSender();
     }
