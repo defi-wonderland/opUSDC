@@ -1,8 +1,8 @@
 pragma solidity ^0.8.25;
 
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
-import {Test} from 'forge-std/Test.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
+import {Helpers} from 'test/utils/Helpers.sol';
 
 contract TestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
   constructor(
@@ -16,7 +16,7 @@ contract TestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
   }
 }
 
-abstract contract Base is Test {
+abstract contract Base is Helpers {
   TestL2OpUSDCBridgeAdapter public adapter;
 
   address internal _user = makeAddr('user');
@@ -34,10 +34,8 @@ abstract contract Base is Test {
 
 contract UnitMessaging is Base {
   function testSendMessage(uint256 _amount, uint32 _minGasLimit) external {
-    // Mock calls
-    vm.mockCall(address(_usdc), abi.encodeWithSignature('burn(address,uint256)', _user, _amount), abi.encode(true));
-
-    vm.mockCall(
+    _mockAndExpect(address(_usdc), abi.encodeWithSignature('burn(address,uint256)', _user, _amount), abi.encode(true));
+    _mockAndExpect(
       address(_messenger),
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
@@ -46,19 +44,6 @@ contract UnitMessaging is Base {
         _minGasLimit
       ),
       abi.encode()
-    );
-
-    // Expect calls
-
-    vm.expectCall(address(_usdc), abi.encodeWithSignature('burn(address,uint256)', _user, _amount));
-    vm.expectCall(
-      address(_messenger),
-      abi.encodeWithSignature(
-        'sendMessage(address,bytes,uint32)',
-        _linkedAdapter,
-        abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _amount),
-        _minGasLimit
-      )
     );
 
     // Execute
@@ -125,10 +110,7 @@ contract UnitMessaging is Base {
     // Mock calls
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
-    vm.mockCall(address(_usdc), abi.encodeWithSignature('mint(address,uint256)', _user, _amount), abi.encode(true));
-
-    // Expect calls
-    vm.expectCall(address(_usdc), abi.encodeWithSignature('mint(address,uint256)', _user, _amount));
+    _mockAndExpect(address(_usdc), abi.encodeWithSignature('mint(address,uint256)', _user, _amount), abi.encode(true));
 
     // Execute
     vm.prank(_messenger);
@@ -154,11 +136,7 @@ contract UnitStopMessaging is Base {
   event MessagingStopped();
 
   function testReceiveStopMessaging() public {
-    // Mock calls
-    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
-
-    /// Expect calls
-    vm.expectCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'));
+    _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
     // Execute
     vm.prank(_messenger);
@@ -179,11 +157,7 @@ contract UnitStopMessaging is Base {
   function testReceiveStopMessagingWrongLinkedAdapter() public {
     address _notLinkedAdapter = makeAddr('notLinkedAdapter');
 
-    // Mock calls
-    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_notLinkedAdapter));
-
-    /// Expect calls
-    vm.expectCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'));
+    _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_notLinkedAdapter));
 
     // Execute
     vm.prank(_messenger);

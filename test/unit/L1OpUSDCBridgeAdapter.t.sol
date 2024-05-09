@@ -1,8 +1,8 @@
 pragma solidity ^0.8.25;
 
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
-import {Test} from 'forge-std/Test.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
+import {Helpers} from 'test/utils/Helpers.sol';
 
 contract TestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
   constructor(
@@ -16,7 +16,7 @@ contract TestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
   }
 }
 
-abstract contract Base is Test {
+abstract contract Base is Helpers {
   TestL1OpUSDCBridgeAdapter public adapter;
 
   address internal _owner = makeAddr('owner');
@@ -43,14 +43,12 @@ contract UnitInitialization is Base {
 
 contract UnitMessaging is Base {
   function testSendMessage(uint256 _amount, uint32 _minGasLimit) external {
-    // Mock calls
-    vm.mockCall(
+    _mockAndExpect(
       address(_usdc),
       abi.encodeWithSignature('transferFrom(address,address,uint256)', _user, address(adapter), _amount),
       abi.encode(true)
     );
-
-    vm.mockCall(
+    _mockAndExpect(
       address(_messenger),
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
@@ -59,21 +57,6 @@ contract UnitMessaging is Base {
         _minGasLimit
       ),
       abi.encode()
-    );
-
-    // Expect calls
-
-    vm.expectCall(
-      address(_usdc), abi.encodeWithSignature('transferFrom(address,address,uint256)', _user, address(adapter), _amount)
-    );
-    vm.expectCall(
-      address(_messenger),
-      abi.encodeWithSignature(
-        'sendMessage(address,bytes,uint32)',
-        _linkedAdapter,
-        abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _amount),
-        _minGasLimit
-      )
     );
 
     // Execute
@@ -143,10 +126,9 @@ contract UnitMessaging is Base {
     // Mock calls
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
-    vm.mockCall(address(_usdc), abi.encodeWithSignature('transfer(address,uint256)', _user, _amount), abi.encode(true));
-
-    // Expect calls
-    vm.expectCall(address(_usdc), abi.encodeWithSignature('transfer(address,uint256)', _user, _amount));
+    _mockAndExpect(
+      address(_usdc), abi.encodeWithSignature('transfer(address,uint256)', _user, _amount), abi.encode(true)
+    );
 
     // Execute
     vm.prank(_messenger);
@@ -170,13 +152,9 @@ contract UnitMessaging is Base {
 
 contract UnitBurning is Base {
   function testBurnLockedUSDC(uint256 _burnAmount) external {
-    // Mock calls
-    vm.mockCall(
+    _mockAndExpect(
       address(_usdc), abi.encodeWithSignature('burn(address,uint256)', address(adapter), _burnAmount), abi.encode(true)
     );
-
-    // Expect calls
-    vm.expectCall(address(_usdc), abi.encodeWithSignature('burn(address,uint256)', address(adapter), _burnAmount));
 
     // Execute
     vm.startPrank(_owner);
@@ -218,17 +196,10 @@ contract UnitStopMessaging is Base {
   function testStopMessaging(uint32 _minGasLimit) public {
     bytes memory _messageData = abi.encodeWithSignature('receiveStopMessaging()');
 
-    // Mock calls
-    vm.mockCall(
+    _mockAndExpect(
       _messenger,
       abi.encodeWithSignature('sendMessage(address,bytes,uint32)', _linkedAdapter, _messageData, _minGasLimit),
       abi.encode('')
-    );
-
-    // Expect calls
-    vm.expectCall(
-      _messenger,
-      abi.encodeWithSignature('sendMessage(address,bytes,uint32)', _linkedAdapter, _messageData, _minGasLimit)
     );
 
     // Execute
