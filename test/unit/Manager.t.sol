@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {Manager} from 'contracts/Manager.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {Manager} from 'contracts/Manager.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
 abstract contract Base is Helpers {
