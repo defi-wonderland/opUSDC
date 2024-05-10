@@ -4,20 +4,20 @@ import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
-contract TestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
+contract ForTestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
   constructor(
     address _usdc,
     address _messenger,
     address _linkedAdapter
   ) L1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
 
-  function setIsMessagingDisabled() external {
+  function forTest_setIsMessagingDisabled() external {
     isMessagingDisabled = true;
   }
 }
 
 abstract contract Base is Helpers {
-  TestL1OpUSDCBridgeAdapter public adapter;
+  ForTestL1OpUSDCBridgeAdapter public adapter;
 
   address internal _owner = makeAddr('owner');
   address internal _user = makeAddr('user');
@@ -31,7 +31,7 @@ abstract contract Base is Helpers {
 
   function setUp() public virtual {
     vm.prank(_owner);
-    adapter = new TestL1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter);
+    adapter = new ForTestL1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter);
   }
 }
 
@@ -83,7 +83,7 @@ contract UnitBurning is Base {
 
 contract UnitMessaging is Base {
   function testSendMessageRevertsOnMessagingStopped(uint256 _amount, uint32 _minGasLimit) external {
-    adapter.setIsMessagingDisabled();
+    adapter.forTest_setIsMessagingDisabled();
 
     // Execute
     vm.prank(_user);
