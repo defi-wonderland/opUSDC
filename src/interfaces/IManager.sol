@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
+import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+
 interface IManager {
   /*///////////////////////////////////////////////////////////////
                             LOGIC
@@ -9,21 +11,21 @@ interface IManager {
   /**
    * @notice Transfers ownership of the contract this manages to circle
    */
-  function transferOwnership() external;
+  function transferToCircle() external;
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
   //////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Returns the address of circle
+   * @return _circle Returns the address of circle
    */
   // solhint-disable-next-line func-name-mixedcase
   function CIRCLE() external view returns (address _circle);
 
   /**
-   * @notice Returns the address of the contract the manager manages
+   * @return _controlledContract Returns the address of the contract the manager manages
    */
   // solhint-disable-next-line func-name-mixedcase
-  function CONTROLLED_CONTRACT() external view returns (address _circle);
+  function CONTROLLED_CONTRACT() external view returns (Ownable _controlledContract);
 }
