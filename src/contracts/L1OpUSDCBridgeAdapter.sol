@@ -2,12 +2,15 @@
 pragma solidity 0.8.25;
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, Ownable {
+  using SafeERC20 for IUSDC;
+
   /// @inheritdoc IL1OpUSDCBridgeAdapter
   uint256 public burnAmount;
 
@@ -51,12 +54,12 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
    * @param _amount The amount of tokens to send
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  function send(uint256 _amount, uint32 _minGasLimit) external override {
+  function sendMessage(uint256 _amount, uint32 _minGasLimit) external override {
     // Ensure messaging is enabled
     if (isMessagingDisabled) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
     // Transfer the tokens to the contract
-    IUSDC(USDC).transferFrom(msg.sender, address(this), _amount);
+    IUSDC(USDC).safeTransferFrom(msg.sender, address(this), _amount);
 
     // Send the message to the linked adapter
     ICrossDomainMessenger(MESSENGER).sendMessage(
@@ -78,7 +81,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
     }
 
     // Transfer the tokens to the user
-    IUSDC(USDC).transfer(_user, _amount);
+    IUSDC(USDC).safeTransfer(_user, _amount);
 
     emit MessageReceived(_user, _amount);
   }
@@ -89,7 +92,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
    * @dev Setting isMessagingDisabled to true is an irreversible operation
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  function stopMessaging(uint32 _minGasLimit) external virtual onlyOwner {
+  function stopMessaging(uint32 _minGasLimit) external onlyOwner {
     isMessagingDisabled = true;
     ICrossDomainMessenger(MESSENGER).sendMessage(
       LINKED_ADAPTER, abi.encodeWithSignature('receiveStopMessaging()'), _minGasLimit

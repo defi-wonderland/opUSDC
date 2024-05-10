@@ -1,23 +1,23 @@
 pragma solidity ^0.8.25;
 
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
-import {Test} from 'forge-std/Test.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
+import {Helpers} from 'test/utils/Helpers.sol';
 
-contract TestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
+contract ForTestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
   constructor(
     address _usdc,
     address _messenger,
     address _linkedAdapter
   ) L1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
 
-  function setIsMessagingDisabled() external {
+  function forTest_setIsMessagingDisabled() external {
     isMessagingDisabled = true;
   }
 }
 
-abstract contract Base is Test {
-  TestL1OpUSDCBridgeAdapter public adapter;
+abstract contract Base is Helpers {
+  ForTestL1OpUSDCBridgeAdapter public adapter;
 
   address internal _owner = makeAddr('owner');
   address internal _user = makeAddr('user');
@@ -31,7 +31,7 @@ abstract contract Base is Test {
 
   function setUp() public virtual {
     vm.prank(_owner);
-    adapter = new TestL1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter);
+    adapter = new ForTestL1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter);
   }
 }
 
@@ -41,16 +41,63 @@ contract UnitInitialization is Base {
   }
 }
 
+contract UnitBurning is Base {
+  function testSetBurnLockedUSDC(uint256 _burnAmount) external {
+    vm.assume(_burnAmount > 0);
+
+    uint256 _originalBurnAmount = adapter.burnAmount();
+
+    // Execute
+    vm.prank(_owner);
+    adapter.setBurnAmount(_burnAmount);
+
+    // Assert
+    assertEq(adapter.burnAmount(), _burnAmount, 'Burn amount should be set');
+    assertGt(adapter.burnAmount(), _originalBurnAmount, 'Burn amount should be greater than the original amount');
+  }
+
+  function testSetBurnLockedUSDCEmitsEvent(uint256 _burnAmount) external {
+    vm.assume(_burnAmount > 0);
+
+    // Execute
+    vm.prank(_owner);
+    vm.expectEmit(true, true, true, true);
+    emit BurnAmountSet(_burnAmount);
+    adapter.setBurnAmount(_burnAmount);
+  }
+
+  function testBurnLockedUSDC(uint256 _burnAmount) external {
+    _mockAndExpect(
+      address(_usdc), abi.encodeWithSignature('burn(address,uint256)', address(adapter), _burnAmount), abi.encode(true)
+    );
+
+    // Execute
+    vm.startPrank(_owner);
+    adapter.setBurnAmount(_burnAmount);
+    adapter.burnLockedUSDC();
+    vm.stopPrank();
+
+    assertEq(adapter.burnAmount(), 0, 'Burn amount should be set to 0');
+  }
+}
+
 contract UnitMessaging is Base {
+  function testSendMessageRevertsOnMessagingStopped(uint256 _amount, uint32 _minGasLimit) external {
+    adapter.forTest_setIsMessagingDisabled();
+
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
+    adapter.sendMessage(_amount, _minGasLimit);
+  }
+
   function testSendMessage(uint256 _amount, uint32 _minGasLimit) external {
-    // Mock calls
-    vm.mockCall(
+    _mockAndExpect(
       address(_usdc),
       abi.encodeWithSignature('transferFrom(address,address,uint256)', _user, address(adapter), _amount),
       abi.encode(true)
     );
-
-    vm.mockCall(
+    _mockAndExpect(
       address(_messenger),
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
@@ -61,33 +108,9 @@ contract UnitMessaging is Base {
       abi.encode()
     );
 
-    // Expect calls
-
-    vm.expectCall(
-      address(_usdc), abi.encodeWithSignature('transferFrom(address,address,uint256)', _user, address(adapter), _amount)
-    );
-    vm.expectCall(
-      address(_messenger),
-      abi.encodeWithSignature(
-        'sendMessage(address,bytes,uint32)',
-        _linkedAdapter,
-        abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _amount),
-        _minGasLimit
-      )
-    );
-
     // Execute
     vm.prank(_user);
-    adapter.send(_amount, _minGasLimit);
-  }
-
-  function testSendMessageRevertsOnMessagingStopped(uint256 _amount, uint32 _minGasLimit) external {
-    adapter.setIsMessagingDisabled();
-
-    // Execute
-    vm.prank(_user);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
-    adapter.send(_amount, _minGasLimit);
+    adapter.sendMessage(_amount, _minGasLimit);
   }
 
   function testSendMessageEmitsEvent(uint256 _amount, uint32 _minGasLimit) external {
@@ -115,7 +138,7 @@ contract UnitMessaging is Base {
 
     // Execute
     vm.prank(_user);
-    adapter.send(_amount, _minGasLimit);
+    adapter.sendMessage(_amount, _minGasLimit);
   }
 
   function testReceiveMessageRevertsIfNotMessenger(uint256 _amount) external {
@@ -143,10 +166,9 @@ contract UnitMessaging is Base {
     // Mock calls
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
-    vm.mockCall(address(_usdc), abi.encodeWithSignature('transfer(address,uint256)', _user, _amount), abi.encode(true));
-
-    // Expect calls
-    vm.expectCall(address(_usdc), abi.encodeWithSignature('transfer(address,uint256)', _user, _amount));
+    _mockAndExpect(
+      address(_usdc), abi.encodeWithSignature('transfer(address,uint256)', _user, _amount), abi.encode(true)
+    );
 
     // Execute
     vm.prank(_messenger);
@@ -168,67 +190,16 @@ contract UnitMessaging is Base {
   }
 }
 
-contract UnitBurning is Base {
-  function testBurnLockedUSDC(uint256 _burnAmount) external {
-    // Mock calls
-    vm.mockCall(
-      address(_usdc), abi.encodeWithSignature('burn(address,uint256)', address(adapter), _burnAmount), abi.encode(true)
-    );
-
-    // Expect calls
-    vm.expectCall(address(_usdc), abi.encodeWithSignature('burn(address,uint256)', address(adapter), _burnAmount));
-
-    // Execute
-    vm.startPrank(_owner);
-    adapter.setBurnAmount(_burnAmount);
-    adapter.burnLockedUSDC();
-    vm.stopPrank();
-
-    assertEq(adapter.burnAmount(), 0, 'Burn amount should be set to 0');
-  }
-
-  function testSetBurnLockedUSDC(uint256 _burnAmount) external {
-    vm.assume(_burnAmount > 0);
-
-    uint256 _originalBurnAmount = adapter.burnAmount();
-
-    // Execute
-    vm.prank(_owner);
-    adapter.setBurnAmount(_burnAmount);
-
-    // Assert
-    assertEq(adapter.burnAmount(), _burnAmount, 'Burn amount should be set');
-    assertGt(adapter.burnAmount(), _originalBurnAmount, 'Burn amount should be greater than the original amount');
-  }
-
-  function testSetBurnLockedUSDCEmitsEvent(uint256 _burnAmount) external {
-    vm.assume(_burnAmount > 0);
-
-    // Execute
-    vm.prank(_owner);
-    vm.expectEmit(true, true, true, true);
-    emit BurnAmountSet(_burnAmount);
-    adapter.setBurnAmount(_burnAmount);
-  }
-}
-
 contract UnitStopMessaging is Base {
   event MessagingStopped();
 
   function testStopMessaging(uint32 _minGasLimit) public {
     bytes memory _messageData = abi.encodeWithSignature('receiveStopMessaging()');
 
-    // Mock calls
-    vm.mockCall(
+    _mockAndExpect(
       _messenger,
       abi.encodeWithSignature('sendMessage(address,bytes,uint32)', _linkedAdapter, _messageData, _minGasLimit),
       abi.encode('')
-    );
-
-    // Expect calls
-    vm.expectCall(
-      _messenger,
-      abi.encodeWithSignature('sendMessage(address,bytes,uint32)', _linkedAdapter, _messageData, _minGasLimit)
     );
 
     // Execute

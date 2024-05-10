@@ -4,27 +4,27 @@ pragma solidity 0.8.25;
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
 import {Test} from 'forge-std/Test.sol';
 
-contract TestOpUSDCBridgeAdapter is OpUSDCBridgeAdapter {
+contract ForTestOpUSDCBridgeAdapter is OpUSDCBridgeAdapter {
   constructor(
     address _usdc,
     address _messenger,
     address _linkedAdapter
   ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
 
-  function send(uint256 _amount, uint32 _minGasLimit) external override {}
+  function sendMessage(uint256 _amount, uint32 _minGasLimit) external override {}
 
   function receiveMessage(address _user, uint256 _amount) external override {}
 }
 
 abstract contract Base is Test {
-  TestOpUSDCBridgeAdapter public adapter;
+  ForTestOpUSDCBridgeAdapter public adapter;
 
   address internal _usdc = makeAddr('opUSDC');
   address internal _messenger = makeAddr('messenger');
   address internal _linkedAdapter = makeAddr('linkedAdapter');
 
   function setUp() public virtual {
-    adapter = new TestOpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter);
+    adapter = new ForTestOpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter);
   }
 }
 
