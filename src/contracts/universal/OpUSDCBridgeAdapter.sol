@@ -2,7 +2,6 @@
 pragma solidity 0.8.25;
 
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
-import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
   /// @inheritdoc IOpUSDCBridgeAdapter
