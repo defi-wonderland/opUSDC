@@ -28,7 +28,7 @@
     "package.json": "sort-package-json"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "5.0.0",
+    "@openzeppelin/contracts": "^5.0.2",
     "isolmate": "github:defi-wonderland/isolmate#59e1804"
   },
   "devDependencies": {

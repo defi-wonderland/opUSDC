@@ -4,3 +4,4 @@ isolmate/=node_modules/isolmate/src
 
 contracts/=src/contracts
 interfaces/=src/interfaces
+@openzeppelin/=node_modules/@openzeppelin
