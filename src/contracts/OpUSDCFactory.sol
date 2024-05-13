@@ -5,10 +5,10 @@ import {CreateX} from 'contracts/CreateX.sol';
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {AddressAliasHelper} from 'contracts/utils/AddressAliasHelper.sol';
-import {ICreateX} from 'interfaces/ICreateX.sol';
 import {IOpUSDCFactory} from 'interfaces/IOpUSDCFactory.sol';
-import {IOptimismPortal} from 'interfaces/IOptimismPortal.sol';
+import {ICreateX} from 'interfaces/external/ICreateX.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
+import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 // NOTE: Possible grieffing attack where someone already deploys the contract on the same address before the message
