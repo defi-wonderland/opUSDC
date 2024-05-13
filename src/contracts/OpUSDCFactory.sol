@@ -11,9 +11,6 @@ import {IOpUSDCFactory} from 'interfaces/IOpUSDCFactory.sol';
 import {ICreateX} from 'interfaces/external/ICreateX.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
-import {IUSDC} from 'interfaces/external/IUSDC.sol';
-
-import 'forge-std/Test.sol';
 
 contract OpUSDCFactory is IOpUSDCFactory {
   using AddressAliasHelper for bytes;
@@ -103,7 +100,8 @@ contract OpUSDCFactory is IOpUSDCFactory {
     L1_CREATEX.deployCreate3(
       SALT_ONE,
       bytes.concat(
-        type(L1OpUSDCBridgeAdapter).creationCode, abi.encode(USDC, address(L1_CROSS_DOMAIN_MESSENGER), _l2LinkedAdapter)
+        type(L1OpUSDCBridgeAdapter).creationCode,
+        abi.encode(USDC, address(L1_CROSS_DOMAIN_MESSENGER), _l2LinkedAdapter, msg.sender)
       )
     );
   }

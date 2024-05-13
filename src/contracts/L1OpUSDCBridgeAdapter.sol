@@ -16,12 +16,14 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
    * @param _usdc The address of the USDC Contract to be used by the adapter
    * @param _messenger The address of the messenger contract
    * @param _linkedAdapter The address of the linked adapter
+   * @param _owner The address of the owner of the contract
    */
   constructor(
     address _usdc,
     address _messenger,
-    address _linkedAdapter
-  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) Ownable(msg.sender) {}
+    address _linkedAdapter,
+    address _owner
+  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) Ownable(_owner) {}
 
   /**
    * @notice Sets the amount of USDC tokens that will be burned when the burnLockedUSDC function is called

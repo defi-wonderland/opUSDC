@@ -8,8 +8,9 @@ contract TestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
   constructor(
     address _usdc,
     address _messenger,
-    address _linkedAdapter
-  ) L1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
+    address _linkedAdapter,
+    address _owner
+  ) L1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _owner) {}
 
   function setIsMessagingDisabled() external {
     isMessagingDisabled = true;
@@ -31,7 +32,7 @@ abstract contract Base is Test {
 
   function setUp() public virtual {
     vm.prank(_owner);
-    adapter = new TestL1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter);
+    adapter = new TestL1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _owner);
   }
 }
 
