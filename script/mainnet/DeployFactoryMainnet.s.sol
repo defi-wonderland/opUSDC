@@ -25,8 +25,9 @@ contract DeployFactoryMainnet is Script {
     vm.startBroadcast(deployer);
 
     // Deploy OpUSDCFactory
+    uint256 _salt = block.number + uint256(blockhash(block.number));
     OpUSDCFactory factory = new OpUSDCFactory(
-      L1_CROSS_DOMAIN_MESSENGER, L2_CROSS_DOMAIN_MESSENGER, USDC, USDC_IMPLEMENTATION, L1_CREATEX, L2_CREATEX
+      L1_CROSS_DOMAIN_MESSENGER, L2_CROSS_DOMAIN_MESSENGER, USDC, USDC_IMPLEMENTATION, L1_CREATEX, L2_CREATEX, _salt
     );
 
     // Run the deploy function
