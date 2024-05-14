@@ -3,6 +3,8 @@ pragma solidity 0.8.25;
 
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {OpUSDCFactory} from 'contracts/OpUSDCFactory.sol';
+
+import {USDC_CREATION_CODE} from 'contracts/utils/USDCCreationCode.sol';
 import {Script} from 'forge-std/Script.sol';
 import {ICreateX} from 'interfaces/external/ICreateX.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
@@ -31,7 +33,7 @@ contract DeployFactoryMainnet is Script {
     );
 
     // Run the deploy function
-    factory.deploy(MIN_GAS_LIMIT_USDC_DEPLOY, MIN_GAS_LIMIT_ADAPTER_DEPLOY);
+    factory.deploy(USDC_CREATION_CODE, MIN_GAS_LIMIT_USDC_DEPLOY, MIN_GAS_LIMIT_ADAPTER_DEPLOY);
 
     vm.stopBroadcast();
   }

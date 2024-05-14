@@ -6,7 +6,6 @@ import {CreateX} from 'contracts/CreateX.sol';
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {AddressAliasHelper} from 'contracts/utils/AddressAliasHelper.sol';
-import {USDC_CREATION_CODE} from 'contracts/utils/USDCCreationCode.sol';
 import {IOpUSDCFactory} from 'interfaces/IOpUSDCFactory.sol';
 import {ICreateX} from 'interfaces/external/ICreateX.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
@@ -46,7 +45,11 @@ contract OpUSDCFactory is IOpUSDCFactory {
     SALT = _addressThisToBytes | crossChainByte | _parsedSalt;
   }
 
-  function deploy(uint32 _minGasLimitUsdcDeploy, uint32 _minGasLimitAdapterDeploy) external {
+  function deploy(
+    bytes memory _usdcCreationCode,
+    uint32 _minGasLimitUsdcDeploy,
+    uint32 _minGasLimitAdapterDeploy
+  ) external {
     // Get the proxy address created on the `deployAndCreate3` thath will deploy the adapter
     bytes memory proxyChildBytecode = hex'67363d3d37363d34f03d5260086018f3';
     bytes32 _guardedSalt = keccak256(abi.encode(address(this), block.chainid, SALT));
@@ -61,7 +64,7 @@ contract OpUSDCFactory is IOpUSDCFactory {
     bytes memory _adapterDeployTx;
     {
       // Precalculate token address on l2
-      bytes memory _usdcInitCode = bytes.concat(USDC_CREATION_CODE, abi.encode(USDC_IMPLEMENTATION));
+      bytes memory _usdcInitCode = bytes.concat(_usdcCreationCode, abi.encode(USDC_IMPLEMENTATION));
       address _l2Usdc = L1_CREATEX.computeCreate2Address(SALT, keccak256(_usdcInitCode), L2_CREATEX);
 
       // If the deployer is an EOA, we transfer the ownership of the USDC to the same address. Otherwise, we transfer it
