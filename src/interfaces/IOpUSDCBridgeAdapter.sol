@@ -14,10 +14,11 @@ interface IOpUSDCBridgeAdapter {
   /**
    * @notice Emitted when a message is sent to the linked adapter
    * @param _user The user that sent the message
+   * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  event MessageSent(address _user, uint256 _amount, uint32 _minGasLimit);
+  event MessageSent(address _user, address _to, uint256 _amount, uint32 _minGasLimit);
 
   /**
    * @notice Emitted when a message as recieved
@@ -46,10 +47,11 @@ interface IOpUSDCBridgeAdapter {
 
   /**
    * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
+   * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  function sendMessage(uint256 _amount, uint32 _minGasLimit) external;
+  function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external;
 
   /**
    * @notice Receive the message from the other chain and mint the bridged representation for the user

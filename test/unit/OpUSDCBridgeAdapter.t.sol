@@ -11,7 +11,7 @@ contract ForTestOpUSDCBridgeAdapter is OpUSDCBridgeAdapter {
     address _linkedAdapter
   ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
 
-  function sendMessage(uint256 _amount, uint32 _minGasLimit) external override {}
+  function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external override {}
 
   function receiveMessage(address _user, uint256 _amount) external override {}
 }
