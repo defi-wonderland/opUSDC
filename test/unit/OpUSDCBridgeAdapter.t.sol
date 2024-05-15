@@ -28,8 +28,8 @@ abstract contract Base is Test {
   }
 }
 
-contract UnitInitialization is Base {
-  function testInitialization() public {
+contract OpUSDCBridgeAdapter_Unit_Constructor is Base {
+  function test_constructorParams() public {
     assertEq(adapter.USDC(), _usdc, 'USDC should be set to the provided address');
     assertEq(adapter.MESSENGER(), _messenger, 'Messenger should be set to the provided address');
     assertEq(adapter.LINKED_ADAPTER(), _linkedAdapter, 'Linked adapter should be set to the provided address');
