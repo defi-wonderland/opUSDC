@@ -2,6 +2,7 @@
 pragma solidity 0.8.25;
 
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
+import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {OpUSDCFactory} from 'contracts/OpUSDCFactory.sol';
 
 import {USDC_IMPLEMENTATION_BYTECODE, USDC_PROXY_BYTECODE} from 'contracts/utils/USDCCreationCode.sol';
@@ -34,18 +35,20 @@ contract DeployFactoryMainnet is Script {
 
     // Run the deploy function
     address _owner = vm.envAddress('OWNER_ADDRESS');
+    uint256 _l2ChainId = vm.envUint('L2_CHAIN_ID');
 
     OpUSDCFactory.DeployParams memory _params = OpUSDCFactory.DeployParams({
       l2Messenger: L2_CROSS_DOMAIN_MESSENGER,
       l1OpUSDCBridgeAdapterCreationCode: type(L1OpUSDCBridgeAdapter).creationCode,
-      l2OpUSDCBridgeAdapterCreationCode: type(L1OpUSDCBridgeAdapter).creationCode,
+      l2OpUSDCBridgeAdapterCreationCode: type(L2OpUSDCBridgeAdapter).creationCode,
       usdcProxyCreationCode: USDC_PROXY_BYTECODE,
       usdcImplementationCreationCode: USDC_IMPLEMENTATION_BYTECODE,
       owner: _owner,
       minGasLimitUsdcProxyDeploy: MIN_GAS_LIMIT_USDC_DEPLOY,
       minGasLimitUsdcImplementationDeploy: MIN_GAS_LIMIT_ADAPTER_DEPLOY,
       minGasLimitL2AdapterDeploy: MIN_GAS_LIMIT_ADAPTER_DEPLOY,
-      minGasLimitInitializeTxs: MIN_GAS_LIMIT_INITIALIZE_TXS
+      minGasLimitInitializeTxs: MIN_GAS_LIMIT_INITIALIZE_TXS,
+      l2ChainId: _l2ChainId
     });
 
     factory.deploy(_params);

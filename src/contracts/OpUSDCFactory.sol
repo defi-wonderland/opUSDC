@@ -7,6 +7,8 @@ import {IOpUSDCFactory} from 'interfaces/IOpUSDCFactory.sol';
 import {ICreateX} from 'interfaces/external/ICreateX.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 
+import 'forge-std/Test.sol';
+
 contract OpUSDCFactory is IOpUSDCFactory {
   struct DeployParams {
     ICrossDomainMessenger l2Messenger;
@@ -19,6 +21,7 @@ contract OpUSDCFactory is IOpUSDCFactory {
     uint32 minGasLimitUsdcImplementationDeploy;
     uint32 minGasLimitL2AdapterDeploy;
     uint32 minGasLimitInitializeTxs;
+    uint256 l2ChainId;
   }
 
   address public constant ADDRESS_ONE = address(1);
@@ -40,7 +43,7 @@ contract OpUSDCFactory is IOpUSDCFactory {
   bytes public constant PROXY_CHILD_BYTECODE = hex'67363d3d37363d34f03d5260086018f3';
 
   bytes32 public immutable SALT;
-  bytes32 public immutable GUARDED_SALT;
+  bytes32 public immutable GUARDED_SALT_L1;
   address public immutable PROXY_DEPLOYER;
   address public immutable L1_LINKED_ADAPTER;
   ICrossDomainMessenger public immutable L1_CROSS_DOMAIN_MESSENGER;
@@ -70,56 +73,63 @@ contract OpUSDCFactory is IOpUSDCFactory {
     // Mask the given salt to take only the last 12 bytes and prevent it from interfering with the address part
     bytes32 _parsedSalt = bytes32(_salt + 1 & 0x000000000000000000000000000000000000000000ffffffffffffffffffff);
     SALT = _addressThisToBytes | crossChainByte | _parsedSalt;
-    GUARDED_SALT = keccak256(abi.encode(address(this), block.chainid, SALT));
-    PROXY_DEPLOYER = ICreateX(L1_CREATEX).computeCreate2Address(GUARDED_SALT, keccak256(PROXY_CHILD_BYTECODE));
+    GUARDED_SALT_L1 = keccak256(abi.encode(address(this), block.chainid, SALT));
+    // PROXY_DEPLOYER = ICreateX(L1_CREATEX).computeCreate2Address(GUARDED_SALT_L1, keccak256(PROXY_CHILD_BYTECODE));
     // Calculate L1 adapter address
-    L1_LINKED_ADAPTER = L1_CREATEX.computeCreate3Address(SALT, PROXY_DEPLOYER);
+    L1_LINKED_ADAPTER = L1_CREATEX.computeCreate3Address(GUARDED_SALT_L1, address(L1_CREATEX));
   }
 
   function deploy(DeployParams memory _params) external {
-    // Declare vars and define them in a block to avoid stack too deep error
+    // Declare vars and define them in a block to avoid stack too deep error to get the L2 deployment addresses and txs
     address _l2LinkedAdapter;
     address _l2UsdcImplementation;
-    bytes memory _usdcImplementationDeployAndInitTx;
+    bytes memory _usdcImplementationDeployTx;
     bytes memory _usdcDeployProxyTx;
     bytes memory _l2AdapterDeployTx;
 
     {
-      // Precalculate usdc implementation address on l2
-      _l2UsdcImplementation = L1_CREATEX.computeCreate2Address(
-        GUARDED_SALT, keccak256(_params.usdcImplementationCreationCode), address(L2_CREATEX)
-      );
+      bytes32 _messengerToBytes = bytes32(uint256(uint160(address(_params.l2Messenger))) << 96);
+      bytes32 crossChainByte = bytes32(uint256(0x01) << (88));
+      // Mask the given salt to take only the last 12 bytes and prevent it from interfering with the address part
+      bytes32 _parsedSalt = bytes32(uint256(SALT) & 0x000000000000000000000000000000000000000000ffffffffffffffffffff);
+      bytes32 _saltTwo = _messengerToBytes | crossChainByte | _parsedSalt;
+      bytes32 _guardedSaltL2 = keccak256(abi.encode(_params.l2Messenger, _params.l2ChainId, _saltTwo));
+      console.log('_guardedSaltL2: %s');
+      console.logBytes32(_guardedSaltL2);
 
       // Deploy usdc implementation on l2 tx
-      ICreateX.Values memory _cValues = ICreateX.Values(0, 0);
-      _usdcImplementationDeployAndInitTx = abi.encodeWithSignature(
-        'deployCreate2AndInit(bytes32,bytes,bytes, bytes)',
-        SALT,
-        _params.usdcImplementationCreationCode,
-        INITIALIZE_TX,
-        _cValues
+      _usdcImplementationDeployTx =
+        abi.encodeWithSignature('deployCreate2(bytes32,bytes)', _saltTwo, _params.usdcImplementationCreationCode);
+      // Precalculate usdc implementation address on l2
+      _l2UsdcImplementation = L1_CREATEX.computeCreate2Address(
+        _guardedSaltL2, keccak256(_params.usdcImplementationCreationCode), address(L2_CREATEX)
       );
 
-      // Precalculate token address on l2
-      bytes memory _usdcInitCode = bytes.concat(_params.usdcProxyCreationCode, abi.encode(_l2UsdcImplementation));
-      address _l2Usdc = L1_CREATEX.computeCreate2Address(SALT, keccak256(_usdcInitCode), L2_CREATEX);
       // Deploy usdc on L2 tx
-      _usdcDeployProxyTx = abi.encodeWithSignature('deployCreate2(bytes32,bytes)', SALT, _usdcInitCode);
+      bytes memory _usdcInitCode = bytes.concat(_params.usdcProxyCreationCode, abi.encode(_l2UsdcImplementation));
+      _usdcDeployProxyTx = abi.encodeWithSignature('deployCreate2(bytes32,bytes)', _saltTwo, _usdcInitCode);
+      // Precalculate token address on l2
+      address _l2Usdc = L1_CREATEX.computeCreate2Address(_guardedSaltL2, keccak256(_usdcInitCode), L2_CREATEX);
 
       // Deploy adapter on L2 tx
       bytes memory _l2AdapterCArgs = abi.encode(_l2Usdc, _params.l2Messenger, L1_LINKED_ADAPTER);
       bytes memory _l2AdapterInitCode = bytes.concat(_params.l2OpUSDCBridgeAdapterCreationCode, _l2AdapterCArgs);
-      _l2AdapterDeployTx = abi.encodeWithSignature('deployCreate2(bytes32,bytes)', SALT, _l2AdapterInitCode);
-
+      _l2AdapterDeployTx = abi.encodeWithSignature('deployCreate2(bytes32,bytes)', _saltTwo, _l2AdapterInitCode);
       // Precalculate linked adapter address on L2
-      _l2LinkedAdapter = L1_CREATEX.computeCreate2Address(SALT, keccak256(_l2AdapterInitCode), L2_CREATEX);
+      _l2LinkedAdapter = L1_CREATEX.computeCreate2Address(_guardedSaltL2, keccak256(_l2AdapterInitCode), L2_CREATEX);
+
+      console.log('_l2Usdc: %s', _l2Usdc);
     }
+
+    console.log('_l2UsdcImplementation: %s', _l2UsdcImplementation);
+    console.log('_l2LinkedAdapter: %s', _l2LinkedAdapter);
 
     // Send the usdc and adapter deploy messages to L2
     L1_CROSS_DOMAIN_MESSENGER.sendMessage(
-      L2_CREATEX, _usdcImplementationDeployAndInitTx, _params.minGasLimitUsdcImplementationDeploy
+      L2_CREATEX, _usdcImplementationDeployTx, _params.minGasLimitUsdcImplementationDeploy
     );
     L1_CROSS_DOMAIN_MESSENGER.sendMessage(_l2UsdcImplementation, INITIALIZE_TX, _params.minGasLimitInitializeTxs);
+    L1_CROSS_DOMAIN_MESSENGER.sendMessage(_l2UsdcImplementation, INITIALIZE2_TX, _params.minGasLimitInitializeTxs);
     L1_CROSS_DOMAIN_MESSENGER.sendMessage(_l2UsdcImplementation, INITIALIZE2_1_TX, _params.minGasLimitInitializeTxs);
     L1_CROSS_DOMAIN_MESSENGER.sendMessage(_l2UsdcImplementation, INITIALIZE2_2_TX, _params.minGasLimitInitializeTxs);
     L1_CROSS_DOMAIN_MESSENGER.sendMessage(L2_CREATEX, _usdcDeployProxyTx, _params.minGasLimitUsdcProxyDeploy);
@@ -127,12 +137,15 @@ contract OpUSDCFactory is IOpUSDCFactory {
 
     /* Deploy the L1 adapter */
     // Breaking the CEI here because the deployment is way more expensive than sending the messages if they revert
-    L1_CREATEX.deployCreate3(
+    address _createdL1Adapter = L1_CREATEX.deployCreate3(
       SALT,
       bytes.concat(
         _params.l1OpUSDCBridgeAdapterCreationCode,
         abi.encode(USDC, address(L1_CROSS_DOMAIN_MESSENGER), _l2LinkedAdapter, _params.owner)
       )
     );
+
+    console.log('COMPUTED L1_LINKED_ADAPTER: %s', L1_LINKED_ADAPTER);
+    console.log('CREATED L1 ADAPTER: %s', _createdL1Adapter);
   }
 }
