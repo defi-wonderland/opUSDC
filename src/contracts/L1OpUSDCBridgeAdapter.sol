@@ -94,6 +94,9 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function stopMessaging(uint32 _minGasLimit) external onlyOwner {
+    // Ensure messaging is enabled
+    if (isMessagingDisabled) revert IOpUSDCBridgeAdapter_MessagingDisabled();
+
     isMessagingDisabled = true;
     ICrossDomainMessenger(MESSENGER).sendMessage(
       LINKED_ADAPTER, abi.encodeWithSignature('receiveStopMessaging()'), _minGasLimit
