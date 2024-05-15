@@ -17,8 +17,9 @@ contract DeployFactorySepolia is Script {
   address public constant USDC_IMPLEMENTATION = 0xDa317C1d3E835dD5F1BE459006471aCAA1289068;
   ICreateX public constant L1_CREATEX = ICreateX(0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed);
   address public constant L2_CREATEX = 0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed;
-  uint32 public constant MIN_GAS_LIMIT_USDC_DEPLOY = 2_000_000;
-  uint32 public constant MIN_GAS_LIMIT_ADAPTER_DEPLOY = 2_000_000;
+  uint32 public constant MIN_GAS_LIMIT_USDC_DEPLOY = 20_000_000;
+  uint32 public constant MIN_GAS_LIMIT_ADAPTER_DEPLOY = 20_000_000;
+  uint32 public constant MIN_GAS_LIMIT_INITIALIZE_TXS = 2_000_000;
 
   address public deployer = vm.rememberKey(vm.envUint('SEPOLIA_DEPLOYER_PK'));
 
@@ -27,16 +28,26 @@ contract DeployFactorySepolia is Script {
 
     // Deploy OpUSDCFactory
     uint256 _salt = block.number + uint256(blockhash(block.number));
-    OpUSDCFactory factory = new OpUSDCFactory(
-      L1_CROSS_DOMAIN_MESSENGER, L2_CROSS_DOMAIN_MESSENGER, L1_USDC, USDC_IMPLEMENTATION, L1_CREATEX, L2_CREATEX, _salt
-    );
+    OpUSDCFactory factory =
+      new OpUSDCFactory(L1_CROSS_DOMAIN_MESSENGER, L1_USDC, USDC_IMPLEMENTATION, L1_CREATEX, L2_CREATEX, _salt);
 
     // Run the deploy function
-    address _owner = vm.envAddress('L2_USDC_OWNER_ADDRESS');
+    address _owner = vm.envAddress('OWNER_ADDRESS');
 
-    factory.deploy(
-      USDC_PROXY_BYTECODE, USDC_IMPLEMENTATION_BYTECODE, MIN_GAS_LIMIT_USDC_DEPLOY, MIN_GAS_LIMIT_ADAPTER_DEPLOY
-    );
+    OpUSDCFactory.DeployParams memory _params = OpUSDCFactory.DeployParams({
+      l2Messenger: L2_CROSS_DOMAIN_MESSENGER,
+      l1OpUSDCBridgeAdapterCreationCode: type(L1OpUSDCBridgeAdapter).creationCode,
+      l2OpUSDCBridgeAdapterCreationCode: type(L1OpUSDCBridgeAdapter).creationCode,
+      usdcProxyCreationCode: USDC_PROXY_BYTECODE,
+      usdcImplementationCreationCode: USDC_IMPLEMENTATION_BYTECODE,
+      owner: _owner,
+      minGasLimitUsdcProxyDeploy: MIN_GAS_LIMIT_USDC_DEPLOY,
+      minGasLimitUsdcImplementationDeploy: MIN_GAS_LIMIT_ADAPTER_DEPLOY,
+      minGasLimitL2AdapterDeploy: MIN_GAS_LIMIT_ADAPTER_DEPLOY,
+      minGasLimitInitializeTxs: MIN_GAS_LIMIT_INITIALIZE_TXS
+    });
+
+    factory.deploy(_params);
 
     vm.stopBroadcast();
   }
