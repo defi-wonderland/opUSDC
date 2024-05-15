@@ -14,6 +14,10 @@ contract ForTestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
   function forTest_setIsMessagingDisabled() external {
     isMessagingDisabled = true;
   }
+
+  function forTest_setBurnAmount(uint256 _amount) external {
+    burnAmount = _amount;
+  }
 }
 
 abstract contract Base is Helpers {
@@ -35,30 +39,26 @@ abstract contract Base is Helpers {
   }
 }
 
-contract L1OpUSDCBridgeAdapte_Unit_Constructor is Base {
+contract L1OpUSDCBridgeAdapter_Unit_Constructor is Base {
   function test_constructorParams() public {
     assertEq(adapter.owner(), _owner, 'Owner should be set to the deployer');
+    assertEq(adapter.USDC(), _usdc, 'USDC should be set to the provided address');
+    assertEq(adapter.MESSENGER(), _messenger, 'Messenger should be set to the provided address');
+    assertEq(adapter.LINKED_ADAPTER(), _linkedAdapter, 'Linked adapter should be set to the provided address');
   }
 }
 
 contract L1OpUSDCBridgeAdapter_Unit_SetBurnAmount is Base {
-  function test_setsAmountGreaterThanZero(uint256 _burnAmount) external {
-    vm.assume(_burnAmount > 0);
-
-    uint256 _originalBurnAmount = adapter.burnAmount();
-
+  function test_setAmount(uint256 _burnAmount) external {
     // Execute
     vm.prank(_owner);
     adapter.setBurnAmount(_burnAmount);
 
     // Assert
     assertEq(adapter.burnAmount(), _burnAmount, 'Burn amount should be set');
-    assertGt(adapter.burnAmount(), _originalBurnAmount, 'Burn amount should be greater than the original amount');
   }
 
-  function test_emitsEvent(uint256 _burnAmount) external {
-    vm.assume(_burnAmount > 0);
-
+  function test_emitEvent(uint256 _burnAmount) external {
     // Execute
     vm.prank(_owner);
     vm.expectEmit(true, true, true, true);
@@ -68,23 +68,23 @@ contract L1OpUSDCBridgeAdapter_Unit_SetBurnAmount is Base {
 }
 
 contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
-  function test_burnsSettedAmount(uint256 _burnAmount) external {
+  function test_burnSetAmount(uint256 _burnAmount) external {
     _mockAndExpect(
       address(_usdc), abi.encodeWithSignature('burn(address,uint256)', address(adapter), _burnAmount), abi.encode(true)
     );
 
+    adapter.forTest_setBurnAmount(_burnAmount);
+
     // Execute
-    vm.startPrank(_owner);
-    adapter.setBurnAmount(_burnAmount);
+    vm.prank(_owner);
     adapter.burnLockedUSDC();
-    vm.stopPrank();
 
     assertEq(adapter.burnAmount(), 0, 'Burn amount should be set to 0');
   }
 }
 
 contract L1OpUSDCBridgeAdapter_Unit_SendMessage is Base {
-  function test_revertsOnMessagingDisabled(address _to, uint256 _amount, uint32 _minGasLimit) external {
+  function test_revertOnMessagingDisabled(address _to, uint256 _amount, uint32 _minGasLimit) external {
     adapter.forTest_setIsMessagingDisabled();
 
     // Execute
@@ -115,7 +115,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessage is Base {
     adapter.sendMessage(_to, _amount, _minGasLimit);
   }
 
-  function test_emitsEvent(address _to, uint256 _amount, uint32 _minGasLimit) external {
+  function test_emitEvent(address _to, uint256 _amount, uint32 _minGasLimit) external {
     // Mock calls
     vm.mockCall(
       address(_usdc),
@@ -145,14 +145,14 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessage is Base {
 }
 
 contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
-  function test_revertsIfNotMessenger(uint256 _amount) external {
+  function test_revertIfNotMessenger(uint256 _amount) external {
     // Execute
     vm.prank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
     adapter.receiveMessage(_user, _amount);
   }
 
-  function test_revertsIfLinkedAdapterDidntSendTheMessage(uint256 _amount, address _messageSender) external {
+  function test_revertIfLinkedAdapterDidntSendTheMessage(uint256 _amount, address _messageSender) external {
     vm.assume(_messageSender != _linkedAdapter);
     // Mock calls
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_messageSender));
@@ -163,7 +163,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
     adapter.receiveMessage(_user, _amount);
   }
 
-  function test_sendsTokens(uint256 _amount) external {
+  function test_sendTokens(uint256 _amount) external {
     // Mock calls
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
@@ -176,7 +176,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
     adapter.receiveMessage(_user, _amount);
   }
 
-  function test_emitsEvent(uint256 _amount) external {
+  function test_emitEvent(uint256 _amount) external {
     // Mock calls
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
@@ -194,7 +194,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
   event MessagingStopped();
 
-  function test_setsIsMessagingDisabledToTrue(uint32 _minGasLimit) public {
+  function test_setIsMessagingDisabledToTrue(uint32 _minGasLimit) public {
     bytes memory _messageData = abi.encodeWithSignature('receiveStopMessaging()');
 
     _mockAndExpect(
@@ -209,7 +209,7 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
     assertEq(adapter.isMessagingDisabled(), true, 'Messaging should be disabled');
   }
 
-  function test_emitsEvent(uint32 _minGasLimit) public {
+  function test_emitEvent(uint32 _minGasLimit) public {
     bytes memory _messageData = abi.encodeWithSignature('receiveStopMessaging()');
 
     /// Mock calls
