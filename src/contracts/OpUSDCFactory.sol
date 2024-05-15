@@ -11,6 +11,8 @@ import {ICreateX} from 'interfaces/external/ICreateX.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
 
+import 'forge-std/Test.sol';
+
 contract OpUSDCFactory is IOpUSDCFactory {
   bytes32 public immutable SALT;
   ICrossDomainMessenger public immutable L1_CROSS_DOMAIN_MESSENGER;
@@ -46,7 +48,8 @@ contract OpUSDCFactory is IOpUSDCFactory {
   }
 
   function deploy(
-    bytes memory _usdcCreationCode,
+    bytes memory _usdcProxyBytecode,
+    bytes memory _usdcImplementationBytecode,
     uint32 _minGasLimitUsdcDeploy,
     uint32 _minGasLimitAdapterDeploy
   ) external {
@@ -59,30 +62,20 @@ contract OpUSDCFactory is IOpUSDCFactory {
     address _l1LinkedAdapter = L1_CREATEX.computeCreate3Address(SALT, _proxyDeployer);
 
     // Declare vars and define them in a block to avoid stack too deep error
+    address _l2UsdcImplementation;
     address _l2LinkedAdapter;
     bytes memory _usdcDeployAndInitTx;
     bytes memory _adapterDeployTx;
     {
+      // Precalculate usdc implementation address on l2
+      _l2UsdcImplementation =
+        L1_CREATEX.computeCreate2Address(SALT, keccak256(_usdcImplementationBytecode), address(L1_CREATEX));
       // Precalculate token address on l2
-      bytes memory _usdcInitCode = bytes.concat(_usdcCreationCode, abi.encode(USDC_IMPLEMENTATION));
+      bytes memory _usdcInitCode = bytes.concat(_usdcProxyBytecode, abi.encode(_l2UsdcImplementation));
       address _l2Usdc = L1_CREATEX.computeCreate2Address(SALT, keccak256(_usdcInitCode), L2_CREATEX);
 
-      // If the deployer is an EOA, we transfer the ownership of the USDC to the same address. Otherwise, we transfer it
-      // to the aliased contract.
-      // TODO: could we use `tx.origin` here instead of the aliased sender in case there it is a contract?
-      address _l2ChainOperator =
-        address(msg.sender).code.length == 0 ? msg.sender : AddressAliasHelper.applyL1ToL2Alias(msg.sender);
-      bytes memory _transferOwnershipTx = abi.encodeWithSelector(Ownable.transferOwnership.selector, _l2ChainOperator);
-
-      // Deploy Token on L2 and transfer ownership as initial tx
-      ICreateX.Values memory _noConstructorValues = ICreateX.Values(0, 0);
-      _usdcDeployAndInitTx = abi.encodeWithSignature(
-        'deployCreate2AndInit(bytes32,bytes,bytes,bytes)',
-        SALT,
-        _usdcInitCode,
-        _transferOwnershipTx,
-        _noConstructorValues
-      );
+      // Deploy usdc on L2 tx
+      _usdcDeployAndInitTx = abi.encodeWithSignature('deployCreate2(bytes32,bytes)', SALT, _usdcInitCode);
 
       // Deploy adapter on L2 tx
       bytes memory _l2AdapterCArgs = abi.encode(_l2Usdc, L2_CROSS_DOMAIN_MESSENGER, _l1LinkedAdapter);
@@ -92,9 +85,9 @@ contract OpUSDCFactory is IOpUSDCFactory {
       _l2LinkedAdapter = L1_CREATEX.computeCreate2Address(SALT, keccak256(_l2AdapterInitCode), L2_CREATEX);
     }
 
-    // Send the usdc and adapter deploy messages to L2
-    L1_CROSS_DOMAIN_MESSENGER.sendMessage(L2_CREATEX, _usdcDeployAndInitTx, _minGasLimitUsdcDeploy);
-    L1_CROSS_DOMAIN_MESSENGER.sendMessage(L2_CREATEX, _adapterDeployTx, _minGasLimitAdapterDeploy);
+    // // Send the usdc and adapter deploy messages to L2
+    // L1_CROSS_DOMAIN_MESSENGER.sendMessage(L2_CREATEX, _usdcDeployAndInitTx, _minGasLimitUsdcDeploy);
+    // L1_CROSS_DOMAIN_MESSENGER.sendMessage(L2_CREATEX, _adapterDeployTx, _minGasLimitAdapterDeploy);
 
     /* Deploy the L1 adapter */
     // Breaking the CEI here because the deployment is way more expensive than sending the messages if they revert
@@ -105,5 +98,10 @@ contract OpUSDCFactory is IOpUSDCFactory {
         abi.encode(USDC, address(L1_CROSS_DOMAIN_MESSENGER), _l2LinkedAdapter, msg.sender)
       )
     );
+
+    // console.log('computed l1 impl result:       ', _l2UsdcImplementation);
+    // address _l1Impl = L1_CREATEX.deployCreate2(SALT, _usdcImplementationBytecode);
+    // console.log('L1 implementation deployed at: ', _l1Impl);
+    // L1_CREATEX.deployCreate2(SALT, bytes.concat(_usdcProxyBytecode, abi.encode(_l1Impl)));
   }
 }
