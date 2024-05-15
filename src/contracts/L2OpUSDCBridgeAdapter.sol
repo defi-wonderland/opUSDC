@@ -1,22 +1,28 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
+import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
 import {IL2OpUSDCBridgeAdapter} from 'interfaces/IL2OpUSDCBridgeAdapter.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
-contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
+contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCBridgeAdapter, UUPSUpgradeable {
   /**
    * @notice Construct the OpUSDCBridgeAdapter contract
    * @param _usdc The address of the USDC Contract to be used by the adapter
    * @param _messenger The address of the messenger contract
+   * @param _linkedAdapter The address of the linked adapter
+   * @dev The constructor is only used to initialize the OpUSDCBridgeAdapter immutable variables
    */
   constructor(
     address _usdc,
     address _messenger,
     address _linkedAdapter
-  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
+  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {
+    _disableInitializers();
+  }
 
   /**
    * @notice Send a message to the linked adapter to transfer the tokens to the user
@@ -64,5 +70,14 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     }
     isMessagingDisabled = true;
     emit MessagingStopped();
+  }
+
+  /**
+   * @notice Authorize the upgrade of the implementation of the contract
+   * @param newImplementation The address of the new implementation
+   * @dev Only callable by the owner of the contract
+   */
+  function _authorizeUpgrade(address newImplementation) internal override {
+    // TODO: Check the sender is LinkedAdapter
   }
 }

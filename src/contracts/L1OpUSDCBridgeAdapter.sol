@@ -1,14 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
+import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
-contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, Ownable {
+contract L1OpUSDCBridgeAdapter is
+  IL1OpUSDCBridgeAdapter,
+  Initializable,
+  OpUSDCBridgeAdapter,
+  OwnableUpgradeable,
+  UUPSUpgradeable
+{
   using SafeERC20 for IUSDC;
 
   /// @inheritdoc IL1OpUSDCBridgeAdapter
@@ -19,12 +27,23 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
    * @param _usdc The address of the USDC Contract to be used by the adapter
    * @param _messenger The address of the messenger contract
    * @param _linkedAdapter The address of the linked adapter
+   * @dev The constructor is only used to initialize the OpUSDCBridgeAdapter immutable variables
    */
   constructor(
     address _usdc,
     address _messenger,
     address _linkedAdapter
-  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) Ownable(msg.sender) {}
+  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {
+    _disableInitializers();
+  }
+
+  /**
+   * @notice Initialize the contract
+   * @param initialOwner The address of the initial owner of the contract
+   */
+  function initialize(address initialOwner) external initializer {
+    __Ownable_init(initialOwner);
+  }
 
   /**
    * @notice Sets the amount of USDC tokens that will be burned when the burnLockedUSDC function is called
@@ -103,4 +122,11 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
     );
     emit MessagingStopped();
   }
+
+  /**
+   * @notice Authorize the upgrade of the implementation of the contract
+   * @param newImplementation The address of the new implementation
+   * @dev Only callable by the owner of the contract
+   */
+  function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }
