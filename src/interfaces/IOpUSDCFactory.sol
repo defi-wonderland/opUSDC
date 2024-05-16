@@ -7,9 +7,10 @@ import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.s
 interface IOpUSDCFactory {
   /**
    * @notice Deploy params needed to call the `deploy()` function
+   * @param l1Messenger The address of the L1 CrossDomainMessenger
    * @param l2Messenger The address of the L2 CrossDomainMessenger
-   * @param l1OpUSDCBridgeAdapterCreationCode The creation code of the `L1OpUSDCBridgeAdapter` contract
-   * @param l2OpUSDCBridgeAdapterCreationCode The creation code of the `L2OpUSDCBridgeAdapter` contract
+   * @param l1dapterCreationCode The creation code of the `L1OpUSDCBridgeAdapter` contract
+   * @param l2AdapterCreationCode The creation code of the `L2OpUSDCBridgeAdapter` contract
    * @param usdcProxyCreationCode The creation code of the USDC proxy contract
    * @param usdcImplementationCreationCode The creation code of the USDC implementation contract
    * @param owner The owner of the `L1OpUSDCBridgeAdapter` contract
@@ -21,24 +22,40 @@ interface IOpUSDCFactory {
    * @param l2ChainId The chain ID of the L2 network
    */
   struct DeployParams {
+    ICrossDomainMessenger l1Messenger;
     address l2Messenger;
-    bytes l1OpUSDCBridgeAdapterCreationCode;
-    bytes l2OpUSDCBridgeAdapterCreationCode;
-    bytes usdcProxyCreationCode;
+    bytes l1AdapterCreationCode;
+    bytes l2AdapterCreationCode;
     bytes usdcImplementationCreationCode;
+    bytes usdcProxyCreationCode;
     address owner;
-    uint32 minGasLimitUsdcProxyDeploy;
     uint32 minGasLimitUsdcImplementationDeploy;
+    uint32 minGasLimitUsdcProxyDeploy;
     uint32 minGasLimitL2AdapterDeploy;
-    uint32 minGasLimitInitializeTxs;
+    uint32 minGasLimitInitTxs;
     uint256 l2ChainId;
+  }
+
+  /**
+   * @notice Deployment addresses of the contracts deployed by the `deploy()` function
+   * @param l1Adapter The address of the L1OpUSDCAdapter contract
+   * @param l2Adapter The address of the L2OpUSDCAdapter contract
+   * @param l2UsdcImplementation The address of the USDC implementation contract on L2
+   * @param l2UsdcProxy The address of the USDC proxy contract on L2
+   */
+  struct DeploymentAddresses {
+    address l1Adapter;
+    address l2Adapter;
+    address l2UsdcImplementation;
+    address l2UsdcProxy;
   }
 
   /**
    * @notice Deploy the L1OpUSDCAdapter on L1, the L2OpUSDCAdapter and the USDC implementation and proxy contracts on L2
    * @param _params The deploy params needed to deploy the contracts
+   * @return _deploymentAddresses The addresses of the deployed contracts
    */
-  function deploy(DeployParams memory _params) external;
+  function deploy(DeployParams memory _params) external returns (DeploymentAddresses memory _deploymentAddresses);
 
   /**
    * @return _salt The salt used to deploy the contracts when interacting with the CreateX contract
@@ -47,32 +64,14 @@ interface IOpUSDCFactory {
   function SALT() external view returns (bytes32 _salt);
 
   /**
-   * @return _l1LinkedAdapter The address of the linked adapter on L1
-   */
-  //solhint-disable-next-line func-name-mixedcase
-  function L1_LINKED_ADAPTER() external view returns (address _l1LinkedAdapter);
-
-  /**
-   * @return _l1CrossDomainMessenger The address of the CrossDomainMessenger contract on L1
-   */
-  //solhint-disable-next-line func-name-mixedcase
-  function L1_CROSS_DOMAIN_MESSENGER() external view returns (ICrossDomainMessenger _l1CrossDomainMessenger);
-
-  /**
    * @return _usdc The address of the USDC contract
    */
   //solhint-disable-next-line func-name-mixedcase
   function USDC() external view returns (address _usdc);
 
   /**
-   * @return _l1CreateX The address of the CreateX contract on L1
+   * @return _createX The CreateX contract instance
    */
   //solhint-disable-next-line func-name-mixedcase
-  function L1_CREATEX() external view returns (ICreateX _l1CreateX);
-
-  /**
-   * @return _l2CreateX The address of the CreateX contract on L2
-   */
-  //solhint-disable-next-line func-name-mixedcase
-  function L2_CREATEX() external view returns (address _l2CreateX);
+  function CREATEX() external view returns (ICreateX _createX);
 }
