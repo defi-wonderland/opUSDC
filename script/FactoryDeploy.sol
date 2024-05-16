@@ -2,8 +2,8 @@
 pragma solidity 0.8.25;
 
 import {OpUSDCFactory} from 'contracts/OpUSDCFactory.sol';
-import {console} from 'forge-std/Console.sol';
 import {Script} from 'forge-std/Script.sol';
+import {console} from 'forge-std/Test.sol';
 import {IOpUSDCFactory} from 'interfaces/IOpUSDCFactory.sol';
 
 abstract contract FactoryDeploy is Script {
