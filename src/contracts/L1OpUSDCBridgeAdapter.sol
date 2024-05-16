@@ -90,16 +90,26 @@ contract L1OpUSDCBridgeAdapter is
   }
 
   /**
+   * @notice Send a message to the linked adapter to upgrade the implementation of the contract
+   * @param _newImplementation The address of the new implementation
+   * @param _data The data to be used in the upgrade call
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  function sendUpgrade(address _newImplementation, bytes memory _data, uint32 _minGasLimit) external onlyOwner {
+    ICrossDomainMessenger(MESSENGER).sendMessage(
+      LINKED_ADAPTER,
+      abi.encodeWithSignature('upgradeToAndCall(address,bytes)', _newImplementation, _data),
+      _minGasLimit
+    );
+  }
+
+  /**
    * @notice Receive the message from the other chain and transfer the tokens to the user
    * @dev This function should only be called when receiving a message to mint the bridged representation
    * @param _user The user to mint the bridged representation for
    * @param _amount The amount of tokens to mint
    */
-  function receiveMessage(address _user, uint256 _amount) external override {
-    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != LINKED_ADAPTER) {
-      revert IOpUSDCBridgeAdapter_InvalidSender();
-    }
-
+  function receiveMessage(address _user, uint256 _amount) external override checkSender {
     // Transfer the tokens to the user
     IUSDC(USDC).safeTransfer(_user, _amount);
 

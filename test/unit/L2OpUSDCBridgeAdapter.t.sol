@@ -1,5 +1,6 @@
 pragma solidity ^0.8.25;
 
+import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
@@ -28,7 +29,9 @@ abstract contract Base is Helpers {
   event MessageReceived(address _user, uint256 _amount);
 
   function setUp() public virtual {
-    adapter = new ForTestL2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter);
+    adapter = ForTestL2OpUSDCBridgeAdapter(
+      address(new ERC1967Proxy(address(new ForTestL2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter)), ''))
+    );
   }
 }
 

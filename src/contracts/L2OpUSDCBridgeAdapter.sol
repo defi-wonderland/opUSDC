@@ -52,10 +52,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
    * @param _user The user to mint the bridged representation for
    * @param _amount The amount of tokens to mint
    */
-  function receiveMessage(address _user, uint256 _amount) external override {
-    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != LINKED_ADAPTER) {
-      revert IOpUSDCBridgeAdapter_InvalidSender();
-    }
+  function receiveMessage(address _user, uint256 _amount) external override checkSender {
     // Mint the tokens to the user
     IUSDC(USDC).mint(_user, _amount);
     emit MessageReceived(_user, _amount);
@@ -64,10 +61,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
   /**
    * @notice Receive the stop messaging message from the linked adapter and stop outgoing messages
    */
-  function receiveStopMessaging() external {
-    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != LINKED_ADAPTER) {
-      revert IOpUSDCBridgeAdapter_InvalidSender();
-    }
+  function receiveStopMessaging() external checkSender {
     isMessagingDisabled = true;
     emit MessagingStopped();
   }
@@ -77,9 +71,5 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
    * @param newImplementation The address of the new implementation
    * @dev Only callable by the owner of the contract
    */
-  function _authorizeUpgrade(address newImplementation) internal override {
-    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != LINKED_ADAPTER) {
-      revert IOpUSDCBridgeAdapter_InvalidSender();
-    }
-  }
+  function _authorizeUpgrade(address newImplementation) internal override checkSender {}
 }
