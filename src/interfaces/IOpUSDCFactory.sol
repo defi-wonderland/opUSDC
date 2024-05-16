@@ -58,10 +58,12 @@ interface IOpUSDCFactory {
   function deploy(DeployParams memory _params) external returns (DeploymentAddresses memory _deploymentAddresses);
 
   /**
-   * @return _salt The salt used to deploy the contracts when interacting with the CreateX contract
+   * @return _redeployProtectionByte The redeploy protection byte to safegurad against cross chain redeploys over the
+   * same address when the deployer is different
+   * @dev Used on `_parseSalt()` function in the same way that CreateX recommends
    */
   //solhint-disable-next-line func-name-mixedcase
-  function SALT() external view returns (bytes32 _salt);
+  function REDEPLOY_PROTECTION_BYTE() external view returns (bytes32 _redeployProtectionByte);
 
   /**
    * @return _usdc The address of the USDC contract
@@ -74,4 +76,16 @@ interface IOpUSDCFactory {
    */
   //solhint-disable-next-line func-name-mixedcase
   function CREATEX() external view returns (ICreateX _createX);
+
+  /**
+   * @return _saltL1 The salt used to deploy the contracts when interacting with the CreateX contract
+   */
+  //solhint-disable-next-line func-name-mixedcase
+  function SALT_L1() external view returns (bytes32 _saltL1);
+
+  /**
+   * @return _guardedSalt The guarded salt for the L1 deployment
+   */
+  //solhint-disable-next-line func-name-mixedcase
+  function GUARDED_SALT_L1() external view returns (bytes32 _guardedSalt);
 }
