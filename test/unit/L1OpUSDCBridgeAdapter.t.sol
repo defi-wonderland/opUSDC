@@ -1,5 +1,6 @@
 pragma solidity ^0.8.25;
 
+import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
@@ -49,6 +50,13 @@ contract L1OpUSDCBridgeAdapter_Unit_Constructor is Base {
 }
 
 contract L1OpUSDCBridgeAdapter_Unit_SetBurnAmount is Base {
+  function test_onlyOwner() external {
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _user));
+    adapter.setBurnAmount(0);
+  }
+
   function test_setAmount(uint256 _burnAmount) external {
     // Execute
     vm.prank(_owner);
@@ -68,7 +76,16 @@ contract L1OpUSDCBridgeAdapter_Unit_SetBurnAmount is Base {
 }
 
 contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
+  function test_onlyOwner() external {
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _user));
+    adapter.burnLockedUSDC();
+  }
+
   function test_burnSetAmount(uint256 _burnAmount) external {
+    vm.assume(_burnAmount > 0);
+
     _mockAndExpect(
       address(_usdc), abi.encodeWithSignature('burn(address,uint256)', address(adapter), _burnAmount), abi.encode(true)
     );
@@ -193,6 +210,13 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 
 contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
   event MessagingStopped();
+
+  function test_onlyOwner() public {
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _user));
+    adapter.stopMessaging(0);
+  }
 
   function test_setIsMessagingDisabledToTrue(uint32 _minGasLimit) public {
     bytes memory _messageData = abi.encodeWithSignature('receiveStopMessaging()');
