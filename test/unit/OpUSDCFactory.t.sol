@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
-import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {OpUSDCFactory} from 'contracts/OpUSDCFactory.sol';
 import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
 import {Test} from 'forge-std/Test.sol';
 import {IOpUSDCFactory} from 'interfaces/IOpUSDCFactory.sol';
-import {ICreateX} from 'interfaces/external/ICreateX.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
@@ -38,13 +35,14 @@ abstract contract Base is Test, Helpers {
   address internal _l1Adapter = makeAddr('l1Adapter');
   address internal _l2Adapter = makeAddr('l2Adapter');
   address internal _createX = makeAddr('createX');
-  address _l2UsdcProxyAddress = makeAddr('l2UsdcProxyAddress');
-  address _l2UsdcImplAddress = makeAddr('l2UsdcImplAddress');
-  address _l1AdapterAddress = makeAddr('l1AdapterAddress');
-  address _l2AdapterAddress = makeAddr('l2AdapterAddress');
+  address internal _l2UsdcProxyAddress = makeAddr('l2UsdcProxyAddress');
+  address internal _l2UsdcImplAddress = makeAddr('l2UsdcImplAddress');
+  address internal _l1AdapterAddress = makeAddr('l1AdapterAddress');
+  address internal _l2AdapterAddress = makeAddr('l2AdapterAddress');
   uint32 internal _minGasLimitUsdcImplementationDeploy = 1000;
   uint32 internal _minGasLimitUsdcProxyDeploy = 2000;
   uint32 internal _minGasLimitL2AdapterDeploy = 3000;
+  // Define random creation codes
   bytes internal _l1AdapterCreationCode = '0x608060809090';
   bytes internal _l2AdapterCreationCode = '0x608060802020';
   bytes internal _usdcProxyCreationCode = '0x608060803030';
@@ -77,6 +75,7 @@ abstract contract Base is Test, Helpers {
       minGasLimitInitTxs: _minGasLimitInitTxs,
       l2ChainId: _l2ChainId
     });
+
     _saltL1 = factory.SALT_L1();
     _guardedSaltL1 = factory.GUARDED_SALT_L1();
     // Get the SALT for L2 deployment and calculate its guarded salt
@@ -84,9 +83,8 @@ abstract contract Base is Test, Helpers {
     _guardedSaltL2 = factory.forTest_getGuardedSalt(_params.l2Messenger, _params.l2ChainId, _saltL2);
   }
 
-  function _mockAllDeployCalls() public {
+  function _mockAllDeployCalls() internal {
     // Mock call over compute usdc implementation address
-
     vm.mockCall(
       _createX,
       abi.encodeWithSignature(
@@ -126,6 +124,7 @@ abstract contract Base is Test, Helpers {
       ),
       abi.encode((_l2AdapterAddress))
     );
+
     // Mock messaging calls
     vm.mockCall(_l1Messenger, abi.encodeWithSignature('sendMessage(address,bytes,uint32)'), abi.encode(true));
 
@@ -135,17 +134,24 @@ abstract contract Base is Test, Helpers {
 }
 
 contract OpUSDCFactory_Unit_Constructor is Base {
+  /**
+   * @notice Test the constructor params are correctly set
+   */
   function test_constructorParams() public {
-    assertEq(factory.USDC(), _usdc, 'USDC should be set');
-    assertEq(address(factory.CREATEX()), _createX, 'CREATEX should be set');
+    assertEq(factory.USDC(), _usdc, 'Invalid USDC');
+    assertEq(address(factory.CREATEX()), _createX, 'Invalid CREATEX');
     bytes32 _parsedSalt = factory.forTest_parseSalt(address(factory), _inputSalt);
-    assertEq(factory.SALT_L1(), _parsedSalt, 'SALT should be set');
+    assertEq(factory.SALT_L1(), _parsedSalt, 'Invalid SALT');
     bytes32 _guardedSalt = factory.forTest_getGuardedSalt(address(factory), _l2ChainId, _parsedSalt);
-    assertEq(factory.GUARDED_SALT_L1(), _guardedSalt, 'GUARDED_SALT should be set');
+    assertEq(factory.GUARDED_SALT_L1(), _guardedSalt, 'Invalid GUARDED_SALT');
   }
 }
 
 contract OpUSDCFactory_Unit_Deploy is Base {
+  /**
+   * @notice Test the `computeCreate2Address` function is correctly called for calculating the l2 usdc implemenation
+   * address
+   */
   function test_callComputeUsdcImplAddress() public {
     // Mock and expect call over compute usdc implementation address
     address _l2UsdcImplAddress = makeAddr('l2UsdcImplAddress');
@@ -168,11 +174,14 @@ contract OpUSDCFactory_Unit_Deploy is Base {
     factory.deploy(_params);
   }
 
+  /**
+   * @notice Test the `computeCreate2Address` function is correctly called for calculating the l2 usdc proxy address,
+   * properly using the l2 usdc implementation address as constructor argument
+   */
   function test_callComputeUsdcProxyAddress() public {
     // Mock and expect call over compute usdc proxy address
     address _l2UsdcProxyAddress = makeAddr('l2UsdcProxyAddress');
     bytes memory _usdcProxyInitCode = bytes.concat(_params.usdcProxyCreationCode, abi.encode(_l2UsdcImplAddress));
-
     _mockAndExpect(
       _createX,
       abi.encodeWithSignature(
@@ -188,8 +197,11 @@ contract OpUSDCFactory_Unit_Deploy is Base {
     factory.deploy(_params);
   }
 
+  /**
+   * @notice Test the `computeCreate3Address` function is correctly called for calculating the l1 adapter address
+   */
   function test_callComputeL1AdapterAddress() public {
-    // Mock call over compute l1 linked adapter address
+    // Mock and expect call over compute l1 linked adapter address
     address _l1AdapterAddress = makeAddr('l1AdapterAddress');
     _mockAndExpect(
       _createX,
@@ -205,8 +217,12 @@ contract OpUSDCFactory_Unit_Deploy is Base {
     factory.deploy(_params);
   }
 
+  /**
+   * @notice Test the `computeCreate2Address` function is correctly called for calculating the l2 adapter address,
+   * properly using the l2 usdc proxy, l2 messenger and l1 adapter addresses as constructor arguments
+   */
   function test_callComputeL2AdapterAddress() public {
-    // Mock call over compute l2 linked adaper address
+    // Mock and expect call over compute l2 linked adaper address
     address _l2AdapterAddress = makeAddr('l2AdapterAddress');
     bytes memory _l2AdapterCArgs = abi.encode(_l2UsdcProxyAddress, _params.l2Messenger, _l1AdapterAddress);
     bytes memory _l2AdapterInitCode = bytes.concat(_params.l2AdapterCreationCode, _l2AdapterCArgs);
@@ -226,6 +242,9 @@ contract OpUSDCFactory_Unit_Deploy is Base {
     factory.deploy(_params);
   }
 
+  /**
+   * @notice Test the `sendMessage` function is correctly called for deploying the usdc implementation contract on L2
+   */
   function test_callSendUsdcImplDeployMsg() public {
     // Mock and expect call over usdc implementation message sent
     bytes memory _usdcImplementationDeployTx =
@@ -246,6 +265,10 @@ contract OpUSDCFactory_Unit_Deploy is Base {
     factory.deploy(_params);
   }
 
+  /**
+   * @notice Test the `sendMessage` function is correctly called for the first initialize tx over the usdc
+   * implementation contract on L2
+   */
   function test_callSendUsdcImplInitializeMsg() public {
     // Mock and expect call over usdc implementation message sent
     _mockAndExpect(
@@ -264,6 +287,9 @@ contract OpUSDCFactory_Unit_Deploy is Base {
     factory.deploy(_params);
   }
 
+  /**
+   * @notice Test the `sendMessage` function is correctly called for the second initialize tx over the usdc
+   */
   function test_callSendUsdcImplInitializeV2Msg() public {
     // Mock and expect call over usdc implementation message sent
     _mockAndExpect(
@@ -282,6 +308,9 @@ contract OpUSDCFactory_Unit_Deploy is Base {
     factory.deploy(_params);
   }
 
+  /**
+   * @notice Test the `sendMessage` function is correctly called for the third initialize tx over the usdc
+   */
   function test_callSendUsdcImplInitializeV2_1Msg() public {
     // Mock and expect call over usdc implementation message sent
     _mockAndExpect(
@@ -300,6 +329,9 @@ contract OpUSDCFactory_Unit_Deploy is Base {
     factory.deploy(_params);
   }
 
+  /**
+   * @notice Test the `sendMessage` function is correctly called for the fourth initialize tx over the usdc
+   */
   function test_callSendUsdcImplInitializeV2_2Msg() public {
     // Mock and expect call over usdc implementation message sent
     _mockAndExpect(
@@ -318,8 +350,12 @@ contract OpUSDCFactory_Unit_Deploy is Base {
     factory.deploy(_params);
   }
 
+  /**
+   * @notice Test the `sendMessage` function is correctly called for deploying the usdc proxy contract on L2, using the
+   * l2 usdc implementation address as constructor argument
+   */
   function test_callSendUsdcProxyDeployMsg() public {
-    // Expect the deploy usdc message to be correctly sent
+    // Mock and expect the deploy usdc message to be correctly sent
     bytes memory _usdcProxyInitCode = bytes.concat(_params.usdcProxyCreationCode, abi.encode(_l2UsdcImplAddress));
     bytes memory _usdcDeployProxyTx =
       abi.encodeWithSignature('deployCreate2(bytes32,bytes)', _saltL2, _usdcProxyInitCode);
@@ -339,6 +375,10 @@ contract OpUSDCFactory_Unit_Deploy is Base {
     factory.deploy(_params);
   }
 
+  /**
+   * @notice Test the `sendMessage` function is correctly called for deploying the l2 adapter contract on L2, using the
+   * l2 usdc proxy, l2 messenger and l1 adapter addresses as constructor arguments
+   */
   function test_callSendL2AdapterDeployMsg() public {
     // Expect the deploy l2 adapter message to be correctly sent
     bytes memory _l2AdapterCArgs = abi.encode(_l2UsdcProxyAddress, _params.l2Messenger, _l1AdapterAddress);
@@ -361,6 +401,10 @@ contract OpUSDCFactory_Unit_Deploy is Base {
     factory.deploy(_params);
   }
 
+  /**
+   * @notice Test the `deployCreate3` function is correctly called for deploying the l1 adapter contract on L1, using
+   * the USDC, l1 messenger, l2 adapter and owner addresses as constructor arguments
+   */
   function test_callDeployCreate3() public {
     // Mock the rest of the calls
     _mockAllDeployCalls();
@@ -379,9 +423,30 @@ contract OpUSDCFactory_Unit_Deploy is Base {
     vm.prank(_user);
     factory.deploy(_params);
   }
+
+  /**
+   * @notice Test the returned deployment addresses are correct
+   */
+  function test_returnDeploymentAddresses() public {
+    // Mock the rest of the calls
+    _mockAllDeployCalls();
+
+    // Execute
+    vm.prank(_user);
+    IOpUSDCFactory.DeploymentAddresses memory _deploymentAddresses = factory.deploy(_params);
+
+    // Assert
+    assertEq(_deploymentAddresses.l1Adapter, _l1AdapterAddress, 'Invalid l1Adapter address');
+    assertEq(_deploymentAddresses.l2Adapter, _l2AdapterAddress, 'Invalid l2Adapter address');
+    assertEq(_deploymentAddresses.l2UsdcImplementation, _l2UsdcImplAddress, 'Invalid l2UsdcImplementation address');
+    assertEq(_deploymentAddresses.l2UsdcProxy, _l2UsdcProxyAddress, 'Invalid l2UsdcProxy address');
+  }
 }
 
 contract OpUSDCFactory_Unit_ParseSalt is Base {
+  /**
+   * @notice Test the `_parseSalt` function correctly parses the input salt
+   */
   function test_parseSalt(address _sender, uint256 _inputSalt) public {
     // Calculate the expected salt
     bytes32 _senderToBytes = bytes32(uint256(uint160(_sender)) << 96);
@@ -395,6 +460,9 @@ contract OpUSDCFactory_Unit_ParseSalt is Base {
 }
 
 contract OpUSDCFactory_Unit_GetGuardedSalt is Base {
+  /**
+   * @notice Test the `_getGuardedSalt` function correctly calculates the guarded salt
+   */
   function test_getGuardedSalt(address _sender, uint256 _chainId, bytes32 _inputSalt) public {
     // Calculate the expected guarded salt
     bytes32 _expectedGuardedSalt = keccak256(abi.encode(_sender, _chainId, _inputSalt));

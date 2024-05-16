@@ -74,14 +74,15 @@ contract OpUSDCFactory is IOpUSDCFactory {
         bytes.concat(_params.usdcProxyCreationCode, abi.encode(_deploymentAddresses.l2UsdcImplementation));
       _usdcDeployProxyTx = abi.encodeWithSignature('deployCreate2(bytes32,bytes)', _saltL2, _usdcProxyInitCode);
       // Precalculate token address on l2
-
-      address _l2Usdc = CREATEX.computeCreate2Address(_guardedSaltL2, keccak256(_usdcProxyInitCode), address(CREATEX));
+      _deploymentAddresses.l2UsdcProxy =
+        CREATEX.computeCreate2Address(_guardedSaltL2, keccak256(_usdcProxyInitCode), address(CREATEX));
 
       // Define the l1 linked adapter address inner block scope to avoid stack too deep error
       _deploymentAddresses.l1Adapter = CREATEX.computeCreate3Address(GUARDED_SALT_L1, address(CREATEX));
 
       // Deploy adapter on L2 tx
-      bytes memory _l2AdapterCArgs = abi.encode(_l2Usdc, _params.l2Messenger, _deploymentAddresses.l1Adapter);
+      bytes memory _l2AdapterCArgs =
+        abi.encode(_deploymentAddresses.l2UsdcProxy, _params.l2Messenger, _deploymentAddresses.l1Adapter);
       bytes memory _l2AdapterInitCode = bytes.concat(_params.l2AdapterCreationCode, _l2AdapterCArgs);
       _l2AdapterDeployTx = abi.encodeWithSignature('deployCreate2(bytes32,bytes)', _saltL2, _l2AdapterInitCode);
       // Precalculate linked adapter address on L2
