@@ -1,13 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
-import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
-  using SafeERC20 for IUSDC;
-
   /// @inheritdoc IOpUSDCBridgeAdapter
   address public immutable USDC;
 
@@ -37,7 +33,7 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
    * @param _amount The amount of tokens to send
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  function send(uint256 _amount, uint32 _minGasLimit) external virtual;
+  function sendMessage(uint256 _amount, uint32 _minGasLimit) external virtual;
 
   /**
    * @notice Receive the message from the other chain and mint the bridged representation for the user
