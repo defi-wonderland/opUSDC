@@ -29,9 +29,8 @@ abstract contract Base is Helpers {
   event MessageReceived(address _user, uint256 _amount);
 
   function setUp() public virtual {
-    adapter = ForTestL2OpUSDCBridgeAdapter(
-      address(new ERC1967Proxy(address(new ForTestL2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter)), ''))
-    );
+    address _implementation = address(new ForTestL2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter));
+    adapter = ForTestL2OpUSDCBridgeAdapter(address(new ERC1967Proxy(_implementation, '')));
   }
 }
 

@@ -32,10 +32,9 @@ abstract contract Base is Helpers {
 
   function setUp() public virtual {
     vm.prank(_owner);
+    address _implementation = address(new ForTestL1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter));
     bytes memory _data = abi.encodeWithSignature('initialize(address)', _owner);
-    adapter = ForTestL1OpUSDCBridgeAdapter(
-      address(new ERC1967Proxy(address(new ForTestL1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter)), _data))
-    );
+    adapter = ForTestL1OpUSDCBridgeAdapter(address(new ERC1967Proxy(_implementation, _data)));
   }
 }
 
