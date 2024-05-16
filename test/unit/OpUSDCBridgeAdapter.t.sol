@@ -29,6 +29,9 @@ abstract contract Base is Test {
 }
 
 contract OpUSDCBridgeAdapter_Unit_Constructor is Base {
+  /**
+   * @notice Check that the constructor works as expected
+   */
   function test_constructorParams() public {
     assertEq(adapter.USDC(), _usdc, 'USDC should be set to the provided address');
     assertEq(adapter.MESSENGER(), _messenger, 'Messenger should be set to the provided address');
