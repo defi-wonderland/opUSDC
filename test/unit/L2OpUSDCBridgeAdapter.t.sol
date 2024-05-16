@@ -24,7 +24,7 @@ abstract contract Base is Helpers {
   address internal _messenger = makeAddr('messenger');
   address internal _linkedAdapter = makeAddr('linkedAdapter');
 
-  event MessageSent(address _user, uint256 _amount, uint32 _minGasLimit);
+  event MessageSent(address _user, address _to, uint256 _amount, uint32 _minGasLimit);
   event MessageReceived(address _user, uint256 _amount);
 
   function setUp() public virtual {
@@ -33,23 +33,23 @@ abstract contract Base is Helpers {
 }
 
 contract UnitMessaging is Base {
-  function testSendMessageRevertsOnMessagingStopped(uint256 _amount, uint32 _minGasLimit) external {
+  function testSendMessageRevertsOnMessagingStopped(address _to, uint256 _amount, uint32 _minGasLimit) external {
     adapter.forTest_setIsMessagingDisabled();
 
     // Execute
     vm.prank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
-    adapter.sendMessage(_amount, _minGasLimit);
+    adapter.sendMessage(_to, _amount, _minGasLimit);
   }
 
-  function testSendMessage(uint256 _amount, uint32 _minGasLimit) external {
+  function testSendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external {
     _mockAndExpect(address(_usdc), abi.encodeWithSignature('burn(address,uint256)', _user, _amount), abi.encode(true));
     _mockAndExpect(
       address(_messenger),
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
-        abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _amount),
+        abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount),
         _minGasLimit
       ),
       abi.encode()
@@ -57,10 +57,10 @@ contract UnitMessaging is Base {
 
     // Execute
     vm.prank(_user);
-    adapter.sendMessage(_amount, _minGasLimit);
+    adapter.sendMessage(_to, _amount, _minGasLimit);
   }
 
-  function testSendMessageEmitsEvent(uint256 _amount, uint32 _minGasLimit) external {
+  function testSendMessageEmitsEvent(address _to, uint256 _amount, uint32 _minGasLimit) external {
     // Mock calls
     vm.mockCall(address(_usdc), abi.encodeWithSignature('burn(address,uint256)', _user, _amount), abi.encode(true));
 
@@ -69,7 +69,7 @@ contract UnitMessaging is Base {
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
-        abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _amount),
+        abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount),
         _minGasLimit
       ),
       abi.encode()
@@ -77,11 +77,11 @@ contract UnitMessaging is Base {
 
     // Expect events
     vm.expectEmit(true, true, true, true);
-    emit MessageSent(_user, _amount, _minGasLimit);
+    emit MessageSent(_user, _to, _amount, _minGasLimit);
 
     // Execute
     vm.prank(_user);
-    adapter.sendMessage(_amount, _minGasLimit);
+    adapter.sendMessage(_to, _amount, _minGasLimit);
   }
 
   function testReceiveMessageRevertsIfNotMessenger(uint256 _amount) external {

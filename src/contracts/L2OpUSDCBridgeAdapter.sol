@@ -21,10 +21,11 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /**
    * @notice Send a message to the linked adapter to transfer the tokens to the user
    * @dev Burn the bridged representation acording to the amount sent on the message
+   * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  function sendMessage(uint256 _amount, uint32 _minGasLimit) external override {
+  function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external override {
     // Ensure messaging is enabled
     if (isMessagingDisabled) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
@@ -33,10 +34,10 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
 
     // Send the message to the linked adapter
     ICrossDomainMessenger(MESSENGER).sendMessage(
-      LINKED_ADAPTER, abi.encodeWithSignature('receiveMessage(address,uint256)', msg.sender, _amount), _minGasLimit
+      LINKED_ADAPTER, abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount), _minGasLimit
     );
 
-    emit MessageSent(msg.sender, _amount, _minGasLimit);
+    emit MessageSent(msg.sender, _to, _amount, _minGasLimit);
   }
 
   /**
