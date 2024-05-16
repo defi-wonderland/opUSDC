@@ -6,16 +6,15 @@ import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {OpUSDCFactory} from 'contracts/OpUSDCFactory.sol';
 import {USDC_IMPLEMENTATION_BYTECODE, USDC_PROXY_BYTECODE} from 'contracts/utils/USDCCreationCode.sol';
 import {Script} from 'forge-std/Script.sol';
+import {IOpUSDCFactory} from 'interfaces/IOpUSDCFactory.sol';
 import {ICreateX} from 'interfaces/external/ICreateX.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 
 contract DeployFactorySepolia is Script {
   ICrossDomainMessenger public constant L1_CROSS_DOMAIN_MESSENGER =
     ICrossDomainMessenger(0x58Cc85b8D04EA49cC6DBd3CbFFd00B4B8D6cb3ef);
-  ICrossDomainMessenger public constant L2_CROSS_DOMAIN_MESSENGER =
-    ICrossDomainMessenger(0x4200000000000000000000000000000000000007);
+  address public constant L2_CROSS_DOMAIN_MESSENGER = 0x4200000000000000000000000000000000000007;
   address public constant L1_USDC = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238;
-  address public constant USDC_IMPLEMENTATION = 0xDa317C1d3E835dD5F1BE459006471aCAA1289068;
   ICreateX public constant L1_CREATEX = ICreateX(0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed);
   address public constant L2_CREATEX = 0xba5Ed099633D3B313e4D5F7bdc1305d3c28ba5Ed;
   uint32 public constant MIN_GAS_LIMIT_USDC_PROXY_DEPLOY = 1_000_000;
@@ -29,15 +28,14 @@ contract DeployFactorySepolia is Script {
     vm.startBroadcast(deployer);
 
     // Deploy OpUSDCFactory
-    uint256 _salt = block.number;
-    OpUSDCFactory factory =
-      new OpUSDCFactory(L1_CROSS_DOMAIN_MESSENGER, L1_USDC, USDC_IMPLEMENTATION, L1_CREATEX, L2_CREATEX, _salt);
+    uint256 _salt = block.number + uint256(blockhash(block.number - 1));
+    OpUSDCFactory factory = new OpUSDCFactory(L1_CROSS_DOMAIN_MESSENGER, L1_USDC, L1_CREATEX, L2_CREATEX, _salt);
 
     // Run the deploy function
     address _owner = vm.envAddress('OWNER_ADDRESS');
     uint256 _l2ChainId = vm.envUint('TESTNET_L2_CHAIN_ID');
 
-    OpUSDCFactory.DeployParams memory _params = OpUSDCFactory.DeployParams({
+    IOpUSDCFactory.DeployParams memory _params = IOpUSDCFactory.DeployParams({
       l2Messenger: L2_CROSS_DOMAIN_MESSENGER,
       l1OpUSDCBridgeAdapterCreationCode: type(L1OpUSDCBridgeAdapter).creationCode,
       l2OpUSDCBridgeAdapterCreationCode: type(L2OpUSDCBridgeAdapter).creationCode,
