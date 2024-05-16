@@ -78,6 +78,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
    * @dev Only callable by the owner of the contract
    */
   function _authorizeUpgrade(address newImplementation) internal override {
-    // TODO: Check the sender is LinkedAdapter
+    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != LINKED_ADAPTER) {
+      revert IOpUSDCBridgeAdapter_InvalidSender();
+    }
   }
 }
