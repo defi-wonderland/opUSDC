@@ -34,8 +34,22 @@ abstract contract Base is Helpers {
   }
 }
 
-contract UnitMessaging is Base {
-  function testSendMessageRevertsOnMessagingStopped(address _to, uint256 _amount, uint32 _minGasLimit) external {
+contract L2OpUSDCBridgeAdapter_Unit_Constructor is Base {
+  /**
+   * @notice Check that the constructor works as expected
+   */
+  function test_constructorParams() public {
+    assertEq(adapter.USDC(), _usdc, 'USDC should be set to the provided address');
+    assertEq(adapter.MESSENGER(), _messenger, 'Messenger should be set to the provided address');
+    assertEq(adapter.LINKED_ADAPTER(), _linkedAdapter, 'Linked adapter should be set to the provided address');
+  }
+}
+
+contract L2OpUSDCBridgeAdapter_Unit_SendMessage is Base {
+  /**
+   * @notice Check that sending a message reverts if messaging is disabled
+   */
+  function test_revertOnMessagingDisabled(address _to, uint256 _amount, uint32 _minGasLimit) external {
     adapter.forTest_setIsMessagingDisabled();
 
     // Execute
@@ -44,7 +58,10 @@ contract UnitMessaging is Base {
     adapter.sendMessage(_to, _amount, _minGasLimit);
   }
 
-  function testSendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external {
+  /**
+   * @notice Check that burning tokens and sending a message works as expected
+   */
+  function test_expectedCall(address _to, uint256 _amount, uint32 _minGasLimit) external {
     _mockAndExpect(address(_usdc), abi.encodeWithSignature('burn(address,uint256)', _user, _amount), abi.encode(true));
     _mockAndExpect(
       address(_messenger),
@@ -62,7 +79,10 @@ contract UnitMessaging is Base {
     adapter.sendMessage(_to, _amount, _minGasLimit);
   }
 
-  function testSendMessageEmitsEvent(address _to, uint256 _amount, uint32 _minGasLimit) external {
+  /**
+   * @notice Check that the event is emitted as expected
+   */
+  function test_emitEvent(address _to, uint256 _amount, uint32 _minGasLimit) external {
     // Mock calls
     vm.mockCall(address(_usdc), abi.encodeWithSignature('burn(address,uint256)', _user, _amount), abi.encode(true));
 
@@ -85,18 +105,23 @@ contract UnitMessaging is Base {
     vm.prank(_user);
     adapter.sendMessage(_to, _amount, _minGasLimit);
   }
+}
 
-  function testReceiveMessageRevertsIfNotMessenger(uint256 _amount) external {
+contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
+  /**
+   * @notice Check that the function reverts if the sender is not the messenger
+   */
+  function test_revertIfNotMessenger(uint256 _amount) external {
     // Execute
     vm.prank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
     adapter.receiveMessage(_user, _amount);
   }
 
-  function testReceiveMessageRevertsIfLinkedAdapterDidntSendTheMessage(
-    uint256 _amount,
-    address _messageSender
-  ) external {
+  /**
+   * @notice Check that the function reverts if the linked adapter didn't send the message
+   */
+  function test_revertIfLinkedAdapterDidntSendTheMessage(uint256 _amount, address _messageSender) external {
     vm.assume(_linkedAdapter != _messageSender);
 
     // Mock calls
@@ -108,7 +133,10 @@ contract UnitMessaging is Base {
     adapter.receiveMessage(_user, _amount);
   }
 
-  function testReceiveMessageSendsTokens(uint256 _amount) external {
+  /**
+   * @notice Check that the token minting works as expected
+   */
+  function test_sendTokens(uint256 _amount) external {
     // Mock calls
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
@@ -119,7 +147,10 @@ contract UnitMessaging is Base {
     adapter.receiveMessage(_user, _amount);
   }
 
-  function testReceiveMessageEmitsEvent(uint256 _amount) external {
+  /**
+   * @notice Check that the event is emitted as expected
+   */
+  function test_emitEvent(uint256 _amount) external {
     // Mock calls
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
@@ -134,10 +165,13 @@ contract UnitMessaging is Base {
   }
 }
 
-contract UnitStopMessaging is Base {
+contract L2OpUSDCBridgeAdapter_Unit_ReceiveStopMessaging is Base {
   event MessagingStopped();
 
-  function testReceiveStopMessagingWrongMessenger(address _notMessenger) public {
+  /**
+   * @notice Check that the function reverts if the sender is not the messenger
+   */
+  function test_wrongMessenger(address _notMessenger) public {
     vm.assume(_notMessenger != _messenger);
 
     // Execute
@@ -147,7 +181,10 @@ contract UnitStopMessaging is Base {
     assertEq(adapter.isMessagingDisabled(), false, 'Messaging should not be disabled');
   }
 
-  function testReceiveStopMessagingWrongLinkedAdapter() public {
+  /**
+   * @notice Check that the function reverts if the linked adapter didn't send the message
+   */
+  function test_wrongLinkedAdapter() public {
     address _notLinkedAdapter = makeAddr('notLinkedAdapter');
 
     _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_notLinkedAdapter));
@@ -159,7 +196,10 @@ contract UnitStopMessaging is Base {
     assertEq(adapter.isMessagingDisabled(), false, 'Messaging should not be disabled');
   }
 
-  function testReceiveStopMessaging() public {
+  /**
+   * @notice Check that isMessagingDisabled is set to true
+   */
+  function test_setIsMessagingDisabledToTrue() public {
     _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
     // Execute
@@ -168,7 +208,10 @@ contract UnitStopMessaging is Base {
     assertEq(adapter.isMessagingDisabled(), true, 'Messaging should be disabled');
   }
 
-  function testReceiveStopMessagingEmitsEvent() public {
+  /**
+   * @notice Check that the event is emitted as expected
+   */
+  function test_emitEvent() public {
     // Mock calls
     vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
