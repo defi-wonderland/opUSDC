@@ -55,6 +55,18 @@ contract L1OpUSDCBridgeAdapter_Unit_Constructor is Base {
   }
 }
 
+contract L1OpUSDCBridgeAdapter_Unit_UpgradeToAndCall is Base {
+  /**
+   * @notice Check that only the owner can upgrade the contract
+   */
+  function test_onlyOwner(address _newImplementation, bytes memory _data) external {
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _user));
+    adapter.upgradeToAndCall(_newImplementation, _data);
+  }
+}
+
 contract L1OpUSDCBridgeAdapter_Unit_SetBurnAmount is Base {
   /**
    * @notice Check that only the owner can set the burn amount
@@ -205,6 +217,38 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessage is Base {
     // Execute
     vm.prank(_user);
     adapter.sendMessage(_to, _amount, _minGasLimit);
+  }
+}
+
+contract L1OpUSDCBridgeAdapter_Unit_SendUpgrade is Base {
+  /**
+   * @notice Check that only the owner can send an upgrade message
+   */
+  function test_onlyOwner(address _newImplementation, bytes memory _data, uint32 _minGasLimit) external {
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _user));
+    adapter.sendUpgrade(_newImplementation, _data, _minGasLimit);
+  }
+
+  /**
+   * @notice Check that the message is sent as expected
+   */
+  function test_expectedCall(address _newImplementation, bytes memory _data, uint32 _minGasLimit) external {
+    _mockAndExpect(
+      address(_messenger),
+      abi.encodeWithSignature(
+        'sendMessage(address,bytes,uint32)',
+        _linkedAdapter,
+        abi.encodeWithSignature('upgradeToAndCall(address,bytes)', _newImplementation, _data),
+        _minGasLimit
+      ),
+      abi.encode()
+    );
+
+    // Execute
+    vm.prank(_owner);
+    adapter.sendUpgrade(_newImplementation, _data, _minGasLimit);
   }
 }
 
