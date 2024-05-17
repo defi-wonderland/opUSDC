@@ -12,6 +12,13 @@ interface IL1OpUSDCBridgeAdapter {
    */
   event BurnAmountSet(uint256 _burnAmount);
 
+  /**
+   * @notice Emitted when L2 upgrade method is called
+   * @param _newImplementation The address of the new implementation
+   * @param _data The data to be sent to the new implementation
+   * @param _minGasLimit The minimum gas limit for the message
+   */
+  event L2AdapterUpgradeSent(address _newImplementation, bytes _data, uint32 _minGasLimit);
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   //////////////////////////////////////////////////////////////*/

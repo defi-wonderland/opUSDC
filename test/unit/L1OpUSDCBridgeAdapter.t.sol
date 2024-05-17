@@ -34,6 +34,7 @@ abstract contract Base is Helpers {
   event MessageSent(address _user, address _to, uint256 _amount, uint32 _minGasLimit);
   event MessageReceived(address _user, uint256 _amount);
   event BurnAmountSet(uint256 _burnAmount);
+  event L2AdapterUpgradeSent(address _newImplementation, bytes _data, uint32 _minGasLimit);
 
   function setUp() public virtual {
     vm.prank(_owner);
@@ -64,6 +65,16 @@ contract L1OpUSDCBridgeAdapter_Unit_UpgradeToAndCall is Base {
     vm.prank(_user);
     vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _user));
     adapter.upgradeToAndCall(_newImplementation, _data);
+  }
+
+  /**
+   * @notice Check that the upgrade is called as expected
+   */
+  function test_callUpgradeToAndCall() external {
+    address _newImplementation = address(new ForTestL1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter));
+    // Execute
+    vm.prank(_owner);
+    adapter.upgradeToAndCall(_newImplementation, '');
   }
 }
 
@@ -220,7 +231,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessage is Base {
   }
 }
 
-contract L1OpUSDCBridgeAdapter_Unit_SendUpgrade is Base {
+contract L1OpUSDCBridgeAdapter_Unit_SendL2AdapterUpgrade is Base {
   /**
    * @notice Check that only the owner can send an upgrade message
    */
@@ -228,7 +239,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendUpgrade is Base {
     // Execute
     vm.prank(_user);
     vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _user));
-    adapter.sendUpgrade(_newImplementation, _data, _minGasLimit);
+    adapter.sendL2AdapterUpgrade(_newImplementation, _data, _minGasLimit);
   }
 
   /**
@@ -248,7 +259,32 @@ contract L1OpUSDCBridgeAdapter_Unit_SendUpgrade is Base {
 
     // Execute
     vm.prank(_owner);
-    adapter.sendUpgrade(_newImplementation, _data, _minGasLimit);
+    adapter.sendL2AdapterUpgrade(_newImplementation, _data, _minGasLimit);
+  }
+
+  /**
+   * @notice Check that the event is emitted as expected
+   */
+  function test_emitEvent(address _newImplementation, bytes memory _data, uint32 _minGasLimit) external {
+    // Mock calls
+    vm.mockCall(
+      address(_messenger),
+      abi.encodeWithSignature(
+        'sendMessage(address,bytes,uint32)',
+        _linkedAdapter,
+        abi.encodeWithSignature('upgradeToAndCall(address,bytes)', _newImplementation, _data),
+        _minGasLimit
+      ),
+      abi.encode()
+    );
+
+    // Expect events
+    vm.expectEmit(true, true, true, true);
+    emit L2AdapterUpgradeSent(_newImplementation, _data, _minGasLimit);
+
+    // Execute
+    vm.prank(_owner);
+    adapter.sendL2AdapterUpgrade(_newImplementation, _data, _minGasLimit);
   }
 }
 

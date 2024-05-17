@@ -69,7 +69,6 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
   /**
    * @notice Authorize the upgrade of the implementation of the contract
    * @param newImplementation The address of the new implementation
-   * @dev Only callable by the owner of the contract
    */
   function _authorizeUpgrade(address newImplementation) internal override checkSender {}
 }
