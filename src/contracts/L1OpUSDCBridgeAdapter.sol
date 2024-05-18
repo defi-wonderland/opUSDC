@@ -95,7 +95,11 @@ contract L1OpUSDCBridgeAdapter is
    * @param _data The data to be used in the upgrade call
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  function sendL2AdapterUpgrade(address _newImplementation, bytes memory _data, uint32 _minGasLimit) external onlyOwner {
+  function sendL2AdapterUpgrade(
+    address _newImplementation,
+    bytes calldata _data,
+    uint32 _minGasLimit
+  ) external onlyOwner {
     // TODO:  modify when updgrade manager is implemented
     ICrossDomainMessenger(MESSENGER).sendMessage(
       LINKED_ADAPTER,
@@ -138,7 +142,7 @@ contract L1OpUSDCBridgeAdapter is
 
   /**
    * @notice Authorize the upgrade of the implementation of the contract
-   * @param newImplementation The address of the new implementation
+   * @param _newImplementation The address of the new implementation
    */
-  function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+  function _authorizeUpgrade(address _newImplementation) internal override onlyOwner {}
 }

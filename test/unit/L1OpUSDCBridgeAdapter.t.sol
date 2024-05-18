@@ -1,5 +1,6 @@
 pragma solidity ^0.8.25;
 
+import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
@@ -24,6 +25,7 @@ contract ForTestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
 
 abstract contract Base is Helpers {
   ForTestL1OpUSDCBridgeAdapter public adapter;
+  ForTestL1OpUSDCBridgeAdapter public implementation;
 
   address internal _owner = makeAddr('owner');
   address internal _user = makeAddr('user');
@@ -38,9 +40,9 @@ abstract contract Base is Helpers {
 
   function setUp() public virtual {
     vm.prank(_owner);
-    address _implementation = address(new ForTestL1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter));
+    implementation = new ForTestL1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter);
     bytes memory _data = abi.encodeWithSignature('initialize(address)', _owner);
-    adapter = ForTestL1OpUSDCBridgeAdapter(address(new ERC1967Proxy(_implementation, _data)));
+    adapter = ForTestL1OpUSDCBridgeAdapter(address(new ERC1967Proxy(address(implementation), _data)));
   }
 }
 
@@ -53,6 +55,15 @@ contract L1OpUSDCBridgeAdapter_Unit_Constructor is Base {
     assertEq(adapter.USDC(), _usdc, 'USDC should be set to the provided address');
     assertEq(adapter.MESSENGER(), _messenger, 'Messenger should be set to the provided address');
     assertEq(adapter.LINKED_ADAPTER(), _linkedAdapter, 'Linked adapter should be set to the provided address');
+  }
+
+  /**
+   * @notice Check that the intialize function is disabled
+   */
+  function test_disableInitialize() public {
+    // Execute
+    vm.expectRevert(Initializable.InvalidInitialization.selector);
+    implementation.initialize(_owner);
   }
 }
 
@@ -358,6 +369,18 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
     vm.prank(_user);
     vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _user));
     adapter.stopMessaging(0);
+  }
+
+  /**
+   * @notice Check that the function reverts if messaging is already disabled
+   */
+  function test_revertIfMessagingIsAlreadyDisabled(uint32 _minGasLimit) public {
+    adapter.forTest_setIsMessagingDisabled();
+
+    // Execute
+    vm.prank(_owner);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
+    adapter.stopMessaging(_minGasLimit);
   }
 
   /**
