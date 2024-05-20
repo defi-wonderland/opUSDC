@@ -16,6 +16,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
    * @param _linkedAdapter The address of the linked adapter
    * @dev The constructor is only used to initialize the OpUSDCBridgeAdapter immutable variables
    */
+  /* solhint-disable no-unused-vars */
   constructor(
     address _usdc,
     address _messenger,
@@ -23,6 +24,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
   ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {
     _disableInitializers();
   }
+  /* solhint-enable no-unused-vars */
 
   /**
    * @notice Send a message to the linked adapter to transfer the tokens to the user
