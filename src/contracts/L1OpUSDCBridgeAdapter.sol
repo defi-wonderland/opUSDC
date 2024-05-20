@@ -141,6 +141,15 @@ contract L1OpUSDCBridgeAdapter is
   }
 
   /**
+   * @notice Initiates the process to migrate the bridged USDC to native USDC
+   * @param _l1Messenger The address of the L1 messenger
+   * @param _circle The address to transfer ownerships to
+   */
+  function migrateToNative(address _l1Messenger, address _circle) external {
+    // TODO: Implement this in future PR
+  }
+
+  /**
    * @notice Authorize the upgrade of the implementation of the contract
    * @param _newImplementation The address of the new implementation
    */
