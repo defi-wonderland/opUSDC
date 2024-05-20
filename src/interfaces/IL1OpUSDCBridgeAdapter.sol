@@ -12,6 +12,13 @@ interface IL1OpUSDCBridgeAdapter {
    */
   event BurnAmountSet(uint256 _burnAmount);
 
+  /**
+   * @notice Emitted when L2 upgrade method is called
+   * @param _newImplementation The address of the new implementation
+   * @param _data The data to be sent to the new implementation
+   * @param _minGasLimit The minimum gas limit for the message
+   */
+  event L2AdapterUpgradeSent(address _newImplementation, bytes _data, uint32 _minGasLimit);
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   //////////////////////////////////////////////////////////////*/
@@ -40,6 +47,12 @@ interface IL1OpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
   //////////////////////////////////////////////////////////////*/
+
+  /**
+   * @return _upgradeManager The address of the Upgrade Manager contract
+   */
+  // solhint-disable-next-line func-name-mixedcase
+  function UPGRADE_MANAGER() external view returns (address _upgradeManager);
 
   /**
    * @notice Fetches the amount of USDC tokens that will be burned when the burnLockedUSDC function is called

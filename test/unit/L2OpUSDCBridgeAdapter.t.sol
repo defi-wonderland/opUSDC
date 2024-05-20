@@ -1,5 +1,6 @@
 pragma solidity ^0.8.25;
 
+import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
@@ -13,6 +14,10 @@ contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
 
   function forTest_setIsMessagingDisabled() external {
     isMessagingDisabled = true;
+  }
+
+  function forTest_authorizeUpgrade(address _newImplementation) external {
+    _authorizeUpgrade(_newImplementation);
   }
 }
 
@@ -28,7 +33,8 @@ abstract contract Base is Helpers {
   event MessageReceived(address _user, uint256 _amount);
 
   function setUp() public virtual {
-    adapter = new ForTestL2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter);
+    address _implementation = address(new ForTestL2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter));
+    adapter = ForTestL2OpUSDCBridgeAdapter(address(new ERC1967Proxy(_implementation, '')));
   }
 }
 
@@ -220,5 +226,42 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveStopMessaging is Base {
     // Execute
     vm.prank(_messenger);
     adapter.receiveStopMessaging();
+  }
+}
+
+contract L1OpUSDCBridgeAdapter_AuthorizeUpgrade is Base {
+  /**
+   * @notice Check that the authorizeUpgrade function reverts if the sender is not MESSENGER
+   */
+  function test_revertIfNotMessenger() external {
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
+    adapter.forTest_authorizeUpgrade(makeAddr('newImplementation'));
+  }
+
+  /**
+   * @notice Check that the authorizeUpgrade function reverts if the sender is not Linked Adapter
+   */
+  function test_revertIfNotLinkedAdapter() external {
+    // Mock calls
+    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_user));
+
+    // Execute
+    vm.prank(_messenger);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
+    adapter.forTest_authorizeUpgrade(makeAddr('newImplementation'));
+  }
+
+  /**
+   * @notice Check that the upgrade is authorized as expected
+   */
+  function test_authorizeUpgrade() external {
+    address _newImplementation = address(new ForTestL2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter));
+    // Mock calls
+    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    // Execute
+    vm.prank(_messenger);
+    adapter.forTest_authorizeUpgrade(_newImplementation);
   }
 }
