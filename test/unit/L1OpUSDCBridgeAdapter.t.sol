@@ -20,6 +20,10 @@ contract ForTestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
   function forTest_setBurnAmount(uint256 _amount) external {
     burnAmount = _amount;
   }
+
+  function forTest_authorizeUpgrade(address _newImplementation) external {
+    _authorizeUpgrade(_newImplementation);
+  }
 }
 
 abstract contract Base is Helpers {
@@ -52,29 +56,6 @@ contract L1OpUSDCBridgeAdapter_Unit_Constructor is Base {
     assertEq(adapter.USDC(), _usdc, 'USDC should be set to the provided address');
     assertEq(adapter.MESSENGER(), _messenger, 'Messenger should be set to the provided address');
     assertEq(adapter.LINKED_ADAPTER(), _linkedAdapter, 'Linked adapter should be set to the provided address');
-  }
-}
-
-contract L1OpUSDCBridgeAdapter_Unit_UpgradeToAndCall is Base {
-  /**
-   * @notice Check that only the owner can upgrade the contract
-   */
-  function test_onlyUpgradeManager(address _newImplementation, bytes memory _data) external {
-    // Execute
-    vm.prank(_user);
-    vm.expectRevert(abi.encodeWithSelector(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector));
-    adapter.upgradeToAndCall(_newImplementation, _data);
-  }
-
-  /**
-   * @notice Check that the upgrade is called as expected
-   */
-  function test_callUpgradeToAndCall() external {
-    address _newImplementation =
-      address(new ForTestL1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _upgradeManager));
-    // Execute
-    vm.prank(_upgradeManager);
-    adapter.upgradeToAndCall(_newImplementation, '');
   }
 }
 
@@ -410,5 +391,28 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
     // Execute
     vm.prank(_upgradeManager);
     adapter.stopMessaging(_minGasLimit);
+  }
+}
+
+contract L1OpUSDCBridgeAdapter_Unit_AuthorizeUpgrade is Base {
+  /**
+   * @notice Check that only the owner can upgrade the contract
+   */
+  function test_onlyUpgradeManager(address _newImplementation) external {
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(abi.encodeWithSelector(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector));
+    adapter.forTest_authorizeUpgrade(_newImplementation);
+  }
+
+  /**
+   * @notice Check that the upgrade is authorized as expected
+   */
+  function test_authorizeUpgrade() external {
+    address _newImplementation =
+      address(new ForTestL1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _upgradeManager));
+    // Execute
+    vm.prank(_upgradeManager);
+    adapter.forTest_authorizeUpgrade(_newImplementation);
   }
 }
