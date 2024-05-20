@@ -35,6 +35,7 @@ abstract contract Base is Helpers {
   event L2AdapterImplementationSet(address indexed implementation);
   event MessengerWhitelisted(address l1Messenger);
   event BridgedUSDCImplementationSet(address indexed implementation);
+  event Initialized(uint64);
 
   error OwnableUnauthorizedAccount(address);
 
@@ -53,6 +54,15 @@ contract UpgradeManager_Unit_Constructor is Base {
   function test_constructorParams() public {
     assertEq(upgradeManager.L1_ADAPTER(), _l1Adapter, 'L1_ADAPTER should be set to the provided address');
   }
+
+  /**
+   * @notice Check that the constructor emits the expected event after disabling initializers
+   */
+  function test_initializerDisabled() public {
+    vm.expectEmit(true, true, true, true);
+    emit Initialized(type(uint64).max);
+    new ForTestUpgradeManager(_l1Adapter);
+  }
 }
 
 contract UpgradeManager_Unit_Initialize is Base {
@@ -68,15 +78,10 @@ contract UpgradeManager_Unit_SetL2AdapterImplementation is Base {
   /**
    * @notice Check that the setL2AdapterImplementation function reverts when called by an unauthorized account
    */
-  function test_revertsIfNotOwner(address _newImplementation) public {
+  function test_revertIfNotOwner(address _newImplementation) public {
     vm.prank(_user);
     vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, _user));
     upgradeManager.setL2AdapterImplementation(_newImplementation);
-    assertEq(
-      upgradeManager.l2AdapterImplementation(),
-      address(0),
-      'L2 Adapter Implementation should be set to the provided address'
-    );
   }
 
   /**
@@ -107,15 +112,10 @@ contract UpgradeManager_Unit_SetBridgedUSDCImplementation is Base {
   /**
    * @notice Check that the setBridgedUSDCImplementation function reverts when called by an unauthorized account
    */
-  function test_revertsIfNotOwner(address _newImplementation) public {
+  function test_revertIfNotOwner(address _newImplementation) public {
     vm.prank(_user);
     vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, _user));
     upgradeManager.setBridgedUSDCImplementation(_newImplementation);
-    assertEq(
-      upgradeManager.bridgedUSDCImplementation(),
-      address(0),
-      'Bridged USDC Implementation should be set to the provided address'
-    );
   }
 
   /**
@@ -146,11 +146,10 @@ contract UpgradeManager_Unit_WhitelistMessenger is Base {
   /**
    * @notice Check that the whitelistMessenger function reverts when called by an unauthorized account
    */
-  function test_revertsIfNotOwner(address _newMessenger) public {
+  function test_revertIfNotOwner(address _newMessenger) public {
     vm.prank(_user);
     vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, _user));
     upgradeManager.whitelistMessenger(_newMessenger);
-    assertEq(upgradeManager.isL1MessengerWhitelisted(_newMessenger), false, 'Messenger should not be whitelisted');
   }
 
   /**
@@ -177,21 +176,16 @@ contract UpgradeManager_Unit_PrepareMigrateToNative is Base {
   /**
    * @notice Check that the prepareMigrateToNative function reverts if the owner doesnt call it
    */
-  function test_revertsIfNotCalledByOwner(address _l1Messenger, address _circle, address _executor) public {
+  function test_revertIfNotCalledByOwner(address _l1Messenger, address _circle, address _executor) public {
     vm.prank(_user);
     vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, _user));
     upgradeManager.prepareMigrateToNative(_l1Messenger, _circle, _executor);
-
-    (address _savedCircle, address _savedExecutor,) = upgradeManager.migrations(_l1Messenger);
-
-    assertEq(_savedCircle, address(0), 'Circle should not be set');
-    assertEq(_savedExecutor, address(0), 'Executor should not be set');
   }
 
   /**
    * @notice Check that the prepareMigrateToNative function reverts if the migration is already executed
    */
-  function test_revertsIfMigrationAlreadyExecuted(address _l1Messenger, address _circle, address _executor) public {
+  function test_revertIfMigrationAlreadyExecuted(address _l1Messenger, address _circle, address _executor) public {
     upgradeManager.forTest_setMigrationsExecuted(_l1Messenger);
 
     vm.prank(_owner);
@@ -228,7 +222,21 @@ contract UpgradeManager_Unit_ExecuteMigration is Base {
   /**
    * @notice Check that the executeMigration function reverts if the migration is not prepared
    */
-  function test_revertsIfMigrationNotPrepared(address _l1Messenger) public {
+  function test_revertIfMigrationNotPrepared(address _l1Messenger, address _circle) public {
+    vm.assume(_circle != address(0));
+    upgradeManager.forTest_setMigrationsCircle(_l1Messenger, _circle);
+
+    vm.expectRevert(abi.encodeWithSelector(IUpgradeManager.IUpgradeManager_MigrationNotPrepared.selector));
+    upgradeManager.executeMigration(_l1Messenger);
+  }
+
+  /**
+   * @notice Check that the executeMigration function reverts if the migration is not prepared
+   */
+  function test_revertIfMigrationNotPreparedProperly(address _l1Messenger, address _executor) public {
+    vm.assume(_executor != address(0));
+    upgradeManager.forTest_setMigrationsExecutor(_l1Messenger, _executor);
+
     vm.expectRevert(abi.encodeWithSelector(IUpgradeManager.IUpgradeManager_MigrationNotPrepared.selector));
     upgradeManager.executeMigration(_l1Messenger);
   }
@@ -236,7 +244,7 @@ contract UpgradeManager_Unit_ExecuteMigration is Base {
   /**
    * @notice Check that the executeMigration function reverts if the migration is already executed
    */
-  function test_revertsIfMigrationAlreadyExecuted(address _l1Messenger, address _executor, address _circle) public {
+  function test_revertIfMigrationAlreadyExecuted(address _l1Messenger, address _executor, address _circle) public {
     vm.assume(_circle != address(0));
     vm.assume(_executor != address(0));
 
@@ -251,7 +259,7 @@ contract UpgradeManager_Unit_ExecuteMigration is Base {
   /**
    * @notice Check that the executeMigration function reverts if the caller is not the executor
    */
-  function test_revertsIfNotExecutor(address _l1Messenger, address _circle, address _executor) public {
+  function test_revertIfNotExecutor(address _l1Messenger, address _circle, address _executor) public {
     vm.assume(_circle != address(0));
     vm.assume(_executor != address(0));
 
@@ -314,7 +322,7 @@ contract UpgradeManager_Unit_UpgradeToAndCall is Base {
   /**
    * @notice Check that the _authorizeUpgrade function reverts when called by an unauthorized account
    */
-  function test_revertsIfNotOwner(address _newImplementation) public {
+  function test_revertIfNotOwner(address _newImplementation) public {
     vm.prank(_user);
     vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, _user));
     upgradeManager.upgradeToAndCall(_newImplementation, '');

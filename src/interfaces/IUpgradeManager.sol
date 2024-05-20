@@ -26,33 +26,43 @@ interface IUpgradeManager {
 
   /**
    * @notice Emitted when a migration is prepared
+   * @param _l1Messenger The address of the L1 messenger
+   * @param _newOwner The address to transfer ownership to
+   * @param _executor The address that will execute this migration
    */
-  event MigrationPrepared(address indexed l1Messenger, address indexed circle, address indexed executor);
+  event MigrationPrepared(address indexed _l1Messenger, address indexed _newOwner, address indexed _executor);
 
   /**
    * @notice Emitted when a migration is executed
+   * @param _l1Messenger The address of the L1 messenger
+   * @param _newOwner The address to transfer ownership to
+   * @param _executor The address that will execute this migration
    */
-  event MigrationExecuted(address indexed l1Messenger, address indexed circle, address indexed executor);
+  event MigrationExecuted(address indexed _l1Messenger, address indexed _newOwner, address indexed _executor);
 
   /**
    * @notice Emitted when an L1 Adapter Implementation is set
+   * @param _implementation The address of the new implementation
    */
-  event L1AdapterImplementationSet(address indexed implementation);
+  event L1AdapterImplementationSet(address indexed _implementation);
 
   /**
    * @notice Emitted when an L2 Adapter Implementation is set
+   * @param _implementation The address of the new implementation
    */
-  event L2AdapterImplementationSet(address indexed implementation);
+  event L2AdapterImplementationSet(address indexed _implementation);
 
   /**
    * @notice Emitted when a Bridged USDC Implementation is set
+   * @param _implementation The address of the new implementation
    */
-  event BridgedUSDCImplementationSet(address indexed implementation);
+  event BridgedUSDCImplementationSet(address indexed _implementation);
 
   /**
    * @notice Emitted when an L1 Messenger is whitelisted
+   * @param _l1Messenger The address of the L1 Messenger
    */
-  event MessengerWhitelisted(address l1Messenger);
+  event MessengerWhitelisted(address _l1Messenger);
 
   /*///////////////////////////////////////////////////////////////
                             ERRORS
@@ -94,10 +104,10 @@ interface IUpgradeManager {
   /**
    * @notice Prepare the migration of the L1 Adapter to the native chain
    * @param _l1Messenger The address of the L1 messenger
-   * @param _circle The address to transfer ownerships to
+   * @param _newOwner The address to transfer ownership to
    * @param _executor The address that will execute this migration
    */
-  function prepareMigrateToNative(address _l1Messenger, address _circle, address _executor) external;
+  function prepareMigrateToNative(address _l1Messenger, address _newOwner, address _executor) external;
 
   /**
    * @notice Execute the migration of the L1 Adapter to the native chain

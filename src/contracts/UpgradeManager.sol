@@ -7,6 +7,10 @@ import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
 
+/**
+ * @notice The UpgradeManager contract
+ * @title UpgradeManager
+ */
 contract UpgradeManager is IUpgradeManager, Initializable, OwnableUpgradeable, UUPSUpgradeable {
   /// @inheritdoc IUpgradeManager
   address public immutable L1_ADAPTER;
@@ -75,15 +79,15 @@ contract UpgradeManager is IUpgradeManager, Initializable, OwnableUpgradeable, U
   /**
    * @notice Prepare the migration of the L1 Adapter to the native chain
    * @param _l1Messenger The address of the L1 messenger
-   * @param _circle The address to transfer ownerships to
+   * @param _newOwner The address to transfer ownership to
    * @param _executor The address that will execute this migration
    */
-  function prepareMigrateToNative(address _l1Messenger, address _circle, address _executor) external onlyOwner {
+  function prepareMigrateToNative(address _l1Messenger, address _newOwner, address _executor) external onlyOwner {
     if (migrations[_l1Messenger].executed) revert IUpgradeManager_MigrationAlreadyExecuted();
 
-    migrations[_l1Messenger] = Migration(_circle, _executor, false);
+    migrations[_l1Messenger] = Migration(_newOwner, _executor, false);
 
-    emit MigrationPrepared(_l1Messenger, _circle, _executor);
+    emit MigrationPrepared(_l1Messenger, _newOwner, _executor);
   }
 
   /**
@@ -91,21 +95,21 @@ contract UpgradeManager is IUpgradeManager, Initializable, OwnableUpgradeable, U
    * @param _l1Messenger The address of the L1 messenger
    */
   function executeMigration(address _l1Messenger) external {
-    Migration memory migration = migrations[_l1Messenger];
+    Migration memory _migration = migrations[_l1Messenger];
 
     // Check the migration is prepared, not executed and is being called by the executor
-    if (migration.circle == address(0) || migration.executor == address(0)) {
+    if (_migration.circle == address(0) || _migration.executor == address(0)) {
       revert IUpgradeManager_MigrationNotPrepared();
     }
-    if (migration.executed) revert IUpgradeManager_MigrationAlreadyExecuted();
-    if (msg.sender != migration.executor) revert IUpgradeManager_NotExecutor();
+    if (_migration.executed) revert IUpgradeManager_MigrationAlreadyExecuted();
+    if (msg.sender != _migration.executor) revert IUpgradeManager_NotExecutor();
 
     // Migrate
-    IL1OpUSDCBridgeAdapter(L1_ADAPTER).migrateToNative(_l1Messenger, migration.circle);
+    IL1OpUSDCBridgeAdapter(L1_ADAPTER).migrateToNative(_l1Messenger, _migration.circle);
 
     migrations[_l1Messenger].executed = true;
 
-    emit MigrationExecuted(_l1Messenger, migration.circle, migration.executor);
+    emit MigrationExecuted(_l1Messenger, _migration.circle, _migration.executor);
   }
 
   /**
