@@ -1,7 +1,6 @@
 pragma solidity ^0.8.25;
 
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
-import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
@@ -11,8 +10,9 @@ contract ForTestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
   constructor(
     address _usdc,
     address _messenger,
-    address _linkedAdapter
-  ) L1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
+    address _linkedAdapter,
+    address _upgradeManager
+  ) L1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _upgradeManager) {}
 
   function forTest_setIsMessagingDisabled() external {
     isMessagingDisabled = true;
@@ -27,11 +27,11 @@ abstract contract Base is Helpers {
   ForTestL1OpUSDCBridgeAdapter public adapter;
   ForTestL1OpUSDCBridgeAdapter public implementation;
 
-  address internal _owner = makeAddr('owner');
   address internal _user = makeAddr('user');
   address internal _usdc = makeAddr('opUSDC');
   address internal _messenger = makeAddr('messenger');
   address internal _linkedAdapter = makeAddr('linkedAdapter');
+  address internal _upgradeManager = makeAddr('upgradeManager');
 
   event MessageSent(address _user, address _to, uint256 _amount, uint32 _minGasLimit);
   event MessageReceived(address _user, uint256 _amount);
@@ -39,10 +39,8 @@ abstract contract Base is Helpers {
   event L2AdapterUpgradeSent(address _newImplementation, bytes _data, uint32 _minGasLimit);
 
   function setUp() public virtual {
-    vm.prank(_owner);
-    implementation = new ForTestL1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter);
-    bytes memory _data = abi.encodeWithSignature('initialize(address)', _owner);
-    adapter = ForTestL1OpUSDCBridgeAdapter(address(new ERC1967Proxy(address(implementation), _data)));
+    implementation = new ForTestL1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _upgradeManager);
+    adapter = ForTestL1OpUSDCBridgeAdapter(address(new ERC1967Proxy(address(implementation), '')));
   }
 }
 
@@ -51,19 +49,10 @@ contract L1OpUSDCBridgeAdapter_Unit_Constructor is Base {
    * @notice Check that the constructor works as expected
    */
   function test_constructorParams() public {
-    assertEq(adapter.owner(), _owner, 'Owner should be set to the deployer');
+    assertEq(adapter.UPGRADE_MANAGER(), _upgradeManager, 'Owner should be set to the deployer');
     assertEq(adapter.USDC(), _usdc, 'USDC should be set to the provided address');
     assertEq(adapter.MESSENGER(), _messenger, 'Messenger should be set to the provided address');
     assertEq(adapter.LINKED_ADAPTER(), _linkedAdapter, 'Linked adapter should be set to the provided address');
-  }
-
-  /**
-   * @notice Check that the intialize function is disabled
-   */
-  function test_disableInitialize() public {
-    // Execute
-    vm.expectRevert(Initializable.InvalidInitialization.selector);
-    implementation.initialize(_owner);
   }
 }
 
@@ -71,10 +60,10 @@ contract L1OpUSDCBridgeAdapter_Unit_UpgradeToAndCall is Base {
   /**
    * @notice Check that only the owner can upgrade the contract
    */
-  function test_onlyOwner(address _newImplementation, bytes memory _data) external {
+  function test_onlyUpgradeManager(address _newImplementation, bytes memory _data) external {
     // Execute
     vm.prank(_user);
-    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _user));
+    vm.expectRevert(abi.encodeWithSelector(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector));
     adapter.upgradeToAndCall(_newImplementation, _data);
   }
 
@@ -82,9 +71,10 @@ contract L1OpUSDCBridgeAdapter_Unit_UpgradeToAndCall is Base {
    * @notice Check that the upgrade is called as expected
    */
   function test_callUpgradeToAndCall() external {
-    address _newImplementation = address(new ForTestL1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter));
+    address _newImplementation =
+      address(new ForTestL1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _upgradeManager));
     // Execute
-    vm.prank(_owner);
+    vm.prank(_upgradeManager);
     adapter.upgradeToAndCall(_newImplementation, '');
   }
 }
@@ -93,10 +83,10 @@ contract L1OpUSDCBridgeAdapter_Unit_SetBurnAmount is Base {
   /**
    * @notice Check that only the owner can set the burn amount
    */
-  function test_onlyOwner() external {
+  function test_onlyUpgradeManager() external {
     // Execute
     vm.prank(_user);
-    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _user));
+    vm.expectRevert(abi.encodeWithSelector(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector));
     adapter.setBurnAmount(0);
   }
 
@@ -105,7 +95,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SetBurnAmount is Base {
    */
   function test_setAmount(uint256 _burnAmount) external {
     // Execute
-    vm.prank(_owner);
+    vm.prank(_upgradeManager);
     adapter.setBurnAmount(_burnAmount);
 
     // Assert
@@ -117,7 +107,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SetBurnAmount is Base {
    */
   function test_emitEvent(uint256 _burnAmount) external {
     // Execute
-    vm.prank(_owner);
+    vm.prank(_upgradeManager);
     vm.expectEmit(true, true, true, true);
     emit BurnAmountSet(_burnAmount);
     adapter.setBurnAmount(_burnAmount);
@@ -128,10 +118,10 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
   /**
    * @notice Check that only the owner can burn the locked USDC
    */
-  function test_onlyOwner() external {
+  function test_onlyUpgradeManager() external {
     // Execute
     vm.prank(_user);
-    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _user));
+    vm.expectRevert(abi.encodeWithSelector(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector));
     adapter.burnLockedUSDC();
   }
 
@@ -148,7 +138,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
     adapter.forTest_setBurnAmount(_burnAmount);
 
     // Execute
-    vm.prank(_owner);
+    vm.prank(_upgradeManager);
     adapter.burnLockedUSDC();
   }
 
@@ -165,7 +155,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
     adapter.forTest_setBurnAmount(_burnAmount);
 
     // Execute
-    vm.prank(_owner);
+    vm.prank(_upgradeManager);
     adapter.burnLockedUSDC();
 
     assertEq(adapter.burnAmount(), 0, 'Burn amount should be set to 0');
@@ -246,10 +236,10 @@ contract L1OpUSDCBridgeAdapter_Unit_SendL2AdapterUpgrade is Base {
   /**
    * @notice Check that only the owner can send an upgrade message
    */
-  function test_onlyOwner(address _newImplementation, bytes memory _data, uint32 _minGasLimit) external {
+  function test_onlyUpgradeManager(address _newImplementation, bytes memory _data, uint32 _minGasLimit) external {
     // Execute
     vm.prank(_user);
-    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _user));
+    vm.expectRevert(abi.encodeWithSelector(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector));
     adapter.sendL2AdapterUpgrade(_newImplementation, _data, _minGasLimit);
   }
 
@@ -269,7 +259,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendL2AdapterUpgrade is Base {
     );
 
     // Execute
-    vm.prank(_owner);
+    vm.prank(_upgradeManager);
     adapter.sendL2AdapterUpgrade(_newImplementation, _data, _minGasLimit);
   }
 
@@ -294,7 +284,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendL2AdapterUpgrade is Base {
     emit L2AdapterUpgradeSent(_newImplementation, _data, _minGasLimit);
 
     // Execute
-    vm.prank(_owner);
+    vm.prank(_upgradeManager);
     adapter.sendL2AdapterUpgrade(_newImplementation, _data, _minGasLimit);
   }
 }
@@ -364,10 +354,10 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
   /**
    * @notice Check that only the owner can stop messaging
    */
-  function test_onlyOwner() public {
+  function test_onlyUpgradeManager() public {
     // Execute
     vm.prank(_user);
-    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _user));
+    vm.expectRevert(abi.encodeWithSelector(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector));
     adapter.stopMessaging(0);
   }
 
@@ -378,7 +368,7 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
     adapter.forTest_setIsMessagingDisabled();
 
     // Execute
-    vm.prank(_owner);
+    vm.prank(_upgradeManager);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
     adapter.stopMessaging(_minGasLimit);
   }
@@ -396,7 +386,7 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
     );
 
     // Execute
-    vm.prank(_owner);
+    vm.prank(_upgradeManager);
     adapter.stopMessaging(_minGasLimit);
     assertEq(adapter.isMessagingDisabled(), true, 'Messaging should be disabled');
   }
@@ -419,7 +409,7 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
     emit MessagingStopped();
 
     // Execute
-    vm.prank(_owner);
+    vm.prank(_upgradeManager);
     adapter.stopMessaging(_minGasLimit);
   }
 }
