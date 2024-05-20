@@ -309,3 +309,23 @@ contract UpgradeManager_Unit_ExecuteMigration is Base {
     upgradeManager.executeMigration(_l1Messenger);
   }
 }
+
+contract UpgradeManager_Unit_UpgradeToAndCall is Base {
+  /**
+   * @notice Check that the _authorizeUpgrade function reverts when called by an unauthorized account
+   */
+  function test_revertsIfNotOwner(address _newImplementation) public {
+    vm.prank(_user);
+    vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, _user));
+    upgradeManager.upgradeToAndCall(_newImplementation, '');
+  }
+
+  /**
+   * @notice Check that the _authorizeUpgrade function works as expected
+   */
+  function test_authorizeUpgrade() public {
+    address _newImplementation = address(new ForTestUpgradeManager(_l1Adapter));
+    vm.prank(_owner);
+    upgradeManager.upgradeToAndCall(_newImplementation, '');
+  }
+}
