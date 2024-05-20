@@ -97,7 +97,6 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, Initializable, OpUSDCB
     bytes calldata _data,
     uint32 _minGasLimit
   ) external onlyUpgradeManager {
-    // TODO:  modify when updgrade manager is implemented
     ICrossDomainMessenger(MESSENGER).sendMessage(
       LINKED_ADAPTER,
       abi.encodeWithSignature('upgradeToAndCall(address,bytes)', _newImplementation, _data),

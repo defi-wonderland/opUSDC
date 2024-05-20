@@ -51,7 +51,7 @@ contract ForTestOpUSDCBridgeAdapter_Unit_SendMessage is Base {
 
 contract ForTestOpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
   /**
-   * @notice Execute  vitual function to get 100% coverage
+   * @notice Execute vitual function to get 100% coverage
    */
   function test_doNothing() public {
     // Execute
