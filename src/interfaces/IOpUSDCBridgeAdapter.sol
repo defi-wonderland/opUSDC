@@ -16,9 +16,10 @@ interface IOpUSDCBridgeAdapter {
    * @param _user The user that sent the message
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
+   * @param _messenger The address of the messenger contract that was sent through
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  event MessageSent(address _user, address _to, uint256 _amount, uint32 _minGasLimit);
+  event MessageSent(address _user, address _to, uint256 _amount, address _messenger, uint32 _minGasLimit);
 
   /**
    * @notice Emitted when a message as recieved
@@ -46,14 +47,6 @@ interface IOpUSDCBridgeAdapter {
   //////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
-   * @param _to The target address on the destination chain
-   * @param _amount The amount of tokens to send
-   * @param _minGasLimit Minimum gas limit that the message can be executed with
-   */
-  function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external;
-
-  /**
    * @notice Receive the message from the other chain and mint the bridged representation for the user
    * @dev This function should only be called when receiving a message to mint the bridged representation
    * @param _user The user to mint the bridged representation for
@@ -71,13 +64,6 @@ interface IOpUSDCBridgeAdapter {
    */
   // solhint-disable-next-line func-name-mixedcase
   function USDC() external view returns (address _usdc);
-
-  /**
-   * @notice Fetches address of the CrossDomainMessenger to send messages to L1 <-> L2
-   * @return _messenger Address of the messenger
-   */
-  // solhint-disable-next-line func-name-mixedcase
-  function MESSENGER() external view returns (address _messenger);
 
   /**
    * @notice Fetches address of the linked adapter on L2 to send messages to and receive from

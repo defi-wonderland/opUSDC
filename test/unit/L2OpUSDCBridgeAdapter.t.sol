@@ -29,7 +29,7 @@ abstract contract Base is Helpers {
   address internal _messenger = makeAddr('messenger');
   address internal _linkedAdapter = makeAddr('linkedAdapter');
 
-  event MessageSent(address _user, address _to, uint256 _amount, uint32 _minGasLimit);
+  event MessageSent(address _user, address _to, uint256 _amount, address _messenger, uint32 _minGasLimit);
   event MessageReceived(address _user, uint256 _amount);
 
   function setUp() public virtual {
@@ -49,7 +49,7 @@ contract L2OpUSDCBridgeAdapter_Unit_Constructor is Base {
   }
 }
 
-contract L1OpUSDCBridgeAdapter_Unit_UpgradeToAndCall is Base {
+contract L2OpUSDCBridgeAdapter_Unit_UpgradeToAndCall is Base {
   /**
    * @notice Check that the upgradeToAndCall function reverts if the sender is not MESSENGER
    */
@@ -140,7 +140,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessage is Base {
 
     // Expect events
     vm.expectEmit(true, true, true, true);
-    emit MessageSent(_user, _to, _amount, _minGasLimit);
+    emit MessageSent(_user, _to, _amount, _messenger, _minGasLimit);
 
     // Execute
     vm.prank(_user);

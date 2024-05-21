@@ -3,6 +3,24 @@ pragma solidity 0.8.25;
 
 interface IL1OpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
+                            ENUMS
+  //////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice The status of an L1 Messenger
+   * @param Unintialized The messenger is unintialized
+   * @param Active The messenger is active
+   * @param Paused The messenger is paused
+   * @param Deprecated The messenger is deprecated
+   */
+  enum Status {
+    Unintialized,
+    Active,
+    Paused,
+    Deprecated
+  }
+
+  /*///////////////////////////////////////////////////////////////
                             EVENTS
   //////////////////////////////////////////////////////////////*/
 
@@ -19,6 +37,18 @@ interface IL1OpUSDCBridgeAdapter {
    * @param _minGasLimit The minimum gas limit for the message
    */
   event L2AdapterUpgradeSent(address _newImplementation, bytes _data, uint32 _minGasLimit);
+
+  /**
+   * @notice Emitted when circle is set
+   * @param _circle The address of the Circle contract
+   */
+  event CircleSet(address _circle);
+
+  /**
+   * @notice Emitted when a new messenger is initialized
+   * @param _messenger The address of the messenger
+   */
+  event MessengerInitialized(address _messenger);
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   //////////////////////////////////////////////////////////////*/
@@ -41,8 +71,9 @@ interface IL1OpUSDCBridgeAdapter {
    * @dev Only callable by the owner of the adapter.
    * @dev Setting isMessagingDisabled to true is an irreversible operation.
    * @param _minGasLimit Minimum gas limit that the message can be executed with
+   * @param _messenger The address of the L2 messenger to stop messaging with
    */
-  function stopMessaging(uint32 _minGasLimit) external;
+  function stopMessaging(uint32 _minGasLimit, address _messenger) external;
 
   /**
    * @notice Initiates the process to migrate the bridged USDC to native USDC
@@ -62,8 +93,27 @@ interface IL1OpUSDCBridgeAdapter {
   function UPGRADE_MANAGER() external view returns (address _upgradeManager);
 
   /**
-   * @notice Fetches the amount of USDC tokens that will be burned when the burnLockedUSDC function is called
-   * @return uint256 The amount of USDC tokens that will be burned
+   * @return _factory The address of the factory contract
    */
-  function burnAmount() external view returns (uint256);
+  // solhint-disable-next-line func-name-mixedcase
+  function FACTORY() external view returns (address _factory);
+
+  /**
+   * @notice Fetches the amount of USDC tokens that will be burned when the burnLockedUSDC function is called
+   * @return _burnAmount The amount of USDC tokens that will be burned
+   */
+  function burnAmount() external view returns (uint256 _burnAmount);
+
+  /**
+   * @notice Fetches the address of the Circle contract
+   * @return _circle The address of the Circle contract
+   */
+  function circle() external view returns (address _circle);
+
+  /**
+   * @notice Fetches the status of an L1 messenger
+   * @param _l1Messenger The address of the L1 messenger
+   * @return _status The status of the messenger
+   */
+  function messengerStatus(address _l1Messenger) external view returns (Status _status);
 }
