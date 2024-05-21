@@ -3,6 +3,8 @@ pragma solidity 0.8.25;
 
 import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import {ECDSA} from '@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
+import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
@@ -16,6 +18,9 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
 
   /// @inheritdoc IL1OpUSDCBridgeAdapter
   uint256 public burnAmount;
+
+  /// @inheritdoc IL1OpUSDCBridgeAdapter
+  mapping(address _user => uint256 _nonce) public userNonce;
 
   /**
    * @notice modifier to check that the sender is the Upgrade Manager
@@ -85,6 +90,46 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
     );
 
     emit MessageSent(msg.sender, _to, _amount, _minGasLimit);
+  }
+
+  /**
+   * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
+   * @param _to The target address on the destination chain
+   * @param _amount The amount of tokens to send
+   * @param _signature The signature of the user
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  function sendMessage(
+    address _to,
+    uint256 _amount,
+    uint256 _nonce,
+    bytes calldata _signature,
+    uint32 _minGasLimit
+  ) external {
+    // Ensure messaging is enabled
+    if (isMessagingDisabled) revert IOpUSDCBridgeAdapter_MessagingDisabled();
+
+    // Hash the message
+    bytes32 messageHash = keccak256(abi.encodePacked(address(this), _to, _amount, _nonce));
+
+    // Recover the signer
+    address signer = ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(messageHash), _signature);
+
+    // Check the nonce
+    if (userNonce[signer] != _nonce) revert IOpUSDCBridgeAdapter_InvalidNonce();
+
+    // Transfer the tokens to the contract
+    IUSDC(USDC).safeTransferFrom(signer, address(this), _amount);
+
+    // Send the message to the linked adapter
+    ICrossDomainMessenger(MESSENGER).sendMessage(
+      LINKED_ADAPTER, abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount), _minGasLimit
+    );
+
+    // Increment the nonce
+    userNonce[signer]++;
+
+    emit MessageSent(signer, _to, _amount, _minGasLimit);
   }
 
   /**

@@ -19,6 +19,16 @@ interface IL1OpUSDCBridgeAdapter {
    * @param _minGasLimit The minimum gas limit for the message
    */
   event L2AdapterUpgradeSent(address _newImplementation, bytes _data, uint32 _minGasLimit);
+
+  /*///////////////////////////////////////////////////////////////
+                            ERRORS
+  //////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice Error when the nonce is invalid
+   */
+  error IOpUSDCBridgeAdapter_InvalidNonce();
+
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   //////////////////////////////////////////////////////////////*/
@@ -66,4 +76,11 @@ interface IL1OpUSDCBridgeAdapter {
    * @return uint256 The amount of USDC tokens that will be burned
    */
   function burnAmount() external view returns (uint256);
+
+  /**
+   * @notice Returns the nonce of a given user to avoid replay attacks
+   * @param _user The user to fetch the nonce for
+   * @return _nonce The nonce of the user
+   */
+  function userNonce(address _user) external view returns (uint256 _nonce);
 }
