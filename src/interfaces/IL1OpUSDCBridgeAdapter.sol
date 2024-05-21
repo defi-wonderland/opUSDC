@@ -56,6 +56,12 @@ interface IL1OpUSDCBridgeAdapter {
   //////////////////////////////////////////////////////////////*/
 
   /**
+   * @return _upgradeManager The address of the Upgrade Manager contract
+   */
+  // solhint-disable-next-line func-name-mixedcase
+  function UPGRADE_MANAGER() external view returns (address _upgradeManager);
+
+  /**
    * @notice Fetches the amount of USDC tokens that will be burned when the burnLockedUSDC function is called
    * @return uint256 The amount of USDC tokens that will be burned
    */
