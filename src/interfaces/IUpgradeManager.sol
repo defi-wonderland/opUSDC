@@ -143,8 +143,9 @@ interface IUpgradeManager {
   /**
    * @notice Checks if an L1 Messenger is whitelisted
    * @param _l1Messenger The address of the L1 Messenger
+   * @return _isWhitelisted Whether the L1 Messenger is whitelisted
    */
-  function isL1MessengerWhitelisted(address _l1Messenger) external view returns (bool);
+  function isL1MessengerWhitelisted(address _l1Messenger) external view returns (bool _isWhitelisted);
 
   /**
    * @notice Fetches the address of the L1 Adapter

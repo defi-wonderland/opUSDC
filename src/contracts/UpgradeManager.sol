@@ -11,7 +11,7 @@ import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
  * @notice The UpgradeManager contract
  * @title UpgradeManager
  */
-contract UpgradeManager is IUpgradeManager, Initializable, OwnableUpgradeable, UUPSUpgradeable {
+contract UpgradeManager is Initializable, OwnableUpgradeable, UUPSUpgradeable, IUpgradeManager {
   /// @inheritdoc IUpgradeManager
   address public immutable L1_ADAPTER;
 
