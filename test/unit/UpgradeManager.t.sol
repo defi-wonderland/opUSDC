@@ -262,6 +262,7 @@ contract UpgradeManager_Unit_ExecuteMigration is Base {
   function test_revertIfNotExecutor(address _l1Messenger, address _circle, address _executor) public {
     vm.assume(_circle != address(0));
     vm.assume(_executor != address(0));
+    vm.assume(_executor != _user);
 
     upgradeManager.forTest_setMigrationsCircle(_l1Messenger, _circle);
     upgradeManager.forTest_setMigrationsExecutor(_l1Messenger, _executor);
