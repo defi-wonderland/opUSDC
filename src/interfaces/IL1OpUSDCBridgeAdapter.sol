@@ -44,6 +44,13 @@ interface IL1OpUSDCBridgeAdapter {
    */
   function stopMessaging(uint32 _minGasLimit) external;
 
+  /**
+   * @notice Initiates the process to migrate the bridged USDC to native USDC
+   * @param _l1Messenger The address of the L1 messenger
+   * @param _circle The address to transfer ownerships to
+   */
+  function migrateToNative(address _l1Messenger, address _circle) external;
+
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
   //////////////////////////////////////////////////////////////*/

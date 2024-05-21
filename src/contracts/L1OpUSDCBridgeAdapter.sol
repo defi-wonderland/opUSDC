@@ -8,7 +8,7 @@ import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
-contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, UUPSUpgradeable {
+contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSDCBridgeAdapter {
   using SafeERC20 for IUSDC;
 
   /// @inheritdoc IL1OpUSDCBridgeAdapter
@@ -118,6 +118,15 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, U
     IUSDC(USDC).safeTransfer(_user, _amount);
 
     emit MessageReceived(_user, _amount);
+  }
+
+  /**
+   * @notice Initiates the process to migrate the bridged USDC to native USDC
+   * @param _l1Messenger The address of the L1 messenger
+   * @param _circle The address to transfer ownerships to
+   */
+  function migrateToNative(address _l1Messenger, address _circle) external {
+    // TODO: Implement this in future PR
   }
 
   /**

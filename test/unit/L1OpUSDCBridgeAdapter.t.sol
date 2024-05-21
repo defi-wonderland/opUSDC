@@ -20,10 +20,6 @@ contract ForTestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
   function forTest_setBurnAmount(uint256 _amount) external {
     burnAmount = _amount;
   }
-
-  function forTest_authorizeUpgrade(address _newImplementation) external {
-    _authorizeUpgrade(_newImplementation);
-  }
 }
 
 abstract contract Base is Helpers {
@@ -394,7 +390,7 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
   }
 }
 
-contract L1OpUSDCBridgeAdapter_Unit_AuthorizeUpgrade is Base {
+contract L1OpUSDCBridgeAdapter_Unit_UpgradeToAndCall is Base {
   /**
    * @notice Check that only the owner can upgrade the contract
    */
@@ -402,7 +398,7 @@ contract L1OpUSDCBridgeAdapter_Unit_AuthorizeUpgrade is Base {
     // Execute
     vm.prank(_user);
     vm.expectRevert(abi.encodeWithSelector(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector));
-    adapter.forTest_authorizeUpgrade(_newImplementation);
+    adapter.upgradeToAndCall(_newImplementation, '');
   }
 
   /**
@@ -413,6 +409,6 @@ contract L1OpUSDCBridgeAdapter_Unit_AuthorizeUpgrade is Base {
       address(new ForTestL1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _upgradeManager));
     // Execute
     vm.prank(_upgradeManager);
-    adapter.forTest_authorizeUpgrade(_newImplementation);
+    adapter.upgradeToAndCall(_newImplementation, '');
   }
 }

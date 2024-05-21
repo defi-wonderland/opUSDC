@@ -49,6 +49,43 @@ contract L2OpUSDCBridgeAdapter_Unit_Constructor is Base {
   }
 }
 
+contract L1OpUSDCBridgeAdapter_Unit_UpgradeToAndCall is Base {
+  /**
+   * @notice Check that the upgradeToAndCall function reverts if the sender is not MESSENGER
+   */
+  function test_revertIfNotMessenger() external {
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
+    adapter.upgradeToAndCall(makeAddr('newImplementation'), '');
+  }
+
+  /**
+   * @notice Check that the upgradeToAndCall function reverts if the sender is not Linked Adapter
+   */
+  function test_revertIfNotLinkedAdapter() external {
+    // Mock calls
+    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_user));
+
+    // Execute
+    vm.prank(_messenger);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
+    adapter.upgradeToAndCall(makeAddr('newImplementation'), '');
+  }
+
+  /**
+   * @notice Check that the upgrade is called as expected
+   */
+  function test_callUpgradeToAndCall() external {
+    address _newImplementation = address(new ForTestL2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter));
+    // Mock calls
+    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    // Execute
+    vm.prank(_messenger);
+    adapter.upgradeToAndCall(_newImplementation, '');
+  }
+}
+
 contract L2OpUSDCBridgeAdapter_Unit_SendMessage is Base {
   /**
    * @notice Check that sending a message reverts if messaging is disabled
