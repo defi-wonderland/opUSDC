@@ -13,10 +13,6 @@ contract ForTestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
     address _factory
   ) L1OpUSDCBridgeAdapter(_usdc, _linkedAdapter, _upgradeManager, _factory) {}
 
-  function forTest_setIsMessagingDisabled() external {
-    isMessagingDisabled = true;
-  }
-
   function forTest_setBurnAmount(uint256 _amount) external {
     burnAmount = _amount;
   }
@@ -40,14 +36,18 @@ abstract contract Base is Helpers {
   address internal _upgradeManager = makeAddr('upgradeManager');
   address internal _factory = makeAddr('factory');
 
+  // cant fuzz this because of foundry's VM
+  address internal _messenger = makeAddr('messenger');
+
   event MessageSent(address _user, address _to, uint256 _amount, address _messenger, uint32 _minGasLimit);
-  event MessageReceived(address _user, uint256 _amount);
+  event MessageReceived(address _user, uint256 _amount, address _messenger);
   event BurnAmountSet(uint256 _burnAmount);
-  event L2AdapterUpgradeSent(address _newImplementation, bytes _data, uint32 _minGasLimit);
+  event L2AdapterUpgradeSent(address _newImplementation, address _messenger, bytes _data, uint32 _minGasLimit);
   event CircleSet(address _circle);
   event MessengerInitialized(address _messenger);
 
   function setUp() public virtual {
+    vm.etch(_messenger, 'xDomainMessageSender');
     implementation = new ForTestL1OpUSDCBridgeAdapter(_usdc, _linkedAdapter, _upgradeManager, _factory);
     adapter = ForTestL1OpUSDCBridgeAdapter(address(new ERC1967Proxy(address(implementation), '')));
   }
@@ -199,6 +199,18 @@ contract L1OpUSDCBridgeAdapter_Unit_InitalizeNewMessenger is Base {
   }
 
   /**
+   * @notice Check that the messenger reverts if its already initialized
+   */
+  function test_revertIfMessengerAlreadyInitialized(address _newMessenger) external {
+    adapter.forTest_setMessagerStatus(_newMessenger, IL1OpUSDCBridgeAdapter.Status.Active);
+
+    // Execute
+    vm.prank(_factory);
+    vm.expectRevert(IL1OpUSDCBridgeAdapter.IL1OpUSDCBridgeAdapter_MessengerAlreadyInitialized.selector);
+    adapter.initalizeNewMessenger(_newMessenger);
+  }
+
+  /**
    * @notice Check that the messenger is set as expected
    */
   function test_setMessengerStatus(address _newMessenger) external {
@@ -228,16 +240,9 @@ contract L1OpUSDCBridgeAdapter_Unit_InitalizeNewMessenger is Base {
 
 contract L1OpUSDCBridgeAdapter_Unit_SendMessage is Base {
   /**
-   * @notice Check that the function reverts if messaging is disabled
+   * @notice Check that the function reverts if messager is not active
    */
-  function test_revertOnMessagingDisabled(
-    address _to,
-    uint256 _amount,
-    uint32 _minGasLimit,
-    address _messenger
-  ) external {
-    adapter.forTest_setIsMessagingDisabled();
-
+  function test_revertOnMessengerNotActive(address _to, uint256 _amount, uint32 _minGasLimit) external {
     // Execute
     vm.prank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
@@ -247,7 +252,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessage is Base {
   /**
    * @notice Check that transferFrom and sendMessage are called as expected
    */
-  function test_expectedCall(address _to, uint256 _amount, uint32 _minGasLimit, address _messenger) external {
+  function test_expectedCall(address _to, uint256 _amount, uint32 _minGasLimit) external {
     adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
     _mockAndExpect(
       address(_usdc),
@@ -273,7 +278,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessage is Base {
   /**
    * @notice Check that the event is emitted as expected
    */
-  function test_emitEvent(address _to, uint256 _amount, uint32 _minGasLimit, address _messenger) external {
+  function test_emitEvent(address _to, uint256 _amount, uint32 _minGasLimit) external {
     adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
     // Mock calls
     vm.mockCall(
@@ -307,12 +312,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendL2AdapterUpgrade is Base {
   /**
    * @notice Check that only the owner can send an upgrade message
    */
-  function test_onlyUpgradeManager(
-    address _newImplementation,
-    bytes memory _data,
-    uint32 _minGasLimit,
-    address _messenger
-  ) external {
+  function test_onlyUpgradeManager(address _newImplementation, bytes memory _data, uint32 _minGasLimit) external {
     // Execute
     vm.prank(_user);
     vm.expectRevert(abi.encodeWithSelector(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector));
@@ -320,14 +320,25 @@ contract L1OpUSDCBridgeAdapter_Unit_SendL2AdapterUpgrade is Base {
   }
 
   /**
-   * @notice Check that the message is sent as expected
+   * @notice Check that the function reverts if a messenger is unitialized
    */
-  function test_expectedCall(
+  function test_revertOnMessagingUnintialized(
     address _newImplementation,
     bytes memory _data,
-    uint32 _minGasLimit,
-    address _messenger
+    uint32 _minGasLimit
   ) external {
+    // Execute
+    vm.prank(_upgradeManager);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
+    adapter.sendL2AdapterUpgrade(_newImplementation, _messenger, _data, _minGasLimit);
+  }
+
+  /**
+   * @notice Check that the message is sent as expected
+   */
+  function test_expectedCall(address _newImplementation, bytes memory _data, uint32 _minGasLimit) external {
+    adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
+
     _mockAndExpect(
       address(_messenger),
       abi.encodeWithSignature(
@@ -347,12 +358,9 @@ contract L1OpUSDCBridgeAdapter_Unit_SendL2AdapterUpgrade is Base {
   /**
    * @notice Check that the event is emitted as expected
    */
-  function test_emitEvent(
-    address _newImplementation,
-    bytes memory _data,
-    uint32 _minGasLimit,
-    address _messenger
-  ) external {
+  function test_emitEvent(address _newImplementation, bytes memory _data, uint32 _minGasLimit) external {
+    adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
+
     // Mock calls
     vm.mockCall(
       address(_messenger),
@@ -367,7 +375,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendL2AdapterUpgrade is Base {
 
     // Expect events
     vm.expectEmit(true, true, true, true);
-    emit L2AdapterUpgradeSent(_newImplementation, _data, _minGasLimit);
+    emit L2AdapterUpgradeSent(_newImplementation, _messenger, _data, _minGasLimit);
 
     // Execute
     vm.prank(_upgradeManager);
@@ -389,11 +397,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
   /**
    * @notice Check that the function reverts if the linked adapter didn't send the message
    */
-  function test_revertIfLinkedAdapterDidntSendTheMessage(
-    uint256 _amount,
-    address _messageSender,
-    address _messenger
-  ) external {
+  function test_revertIfLinkedAdapterDidntSendTheMessage(uint256 _amount, address _messageSender) external {
     vm.assume(_messageSender != _linkedAdapter);
     // Mock calls
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_messageSender));
@@ -407,7 +411,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
   /**
    * @notice Check that token transfer is called as expected
    */
-  function test_sendTokens(uint256 _amount, address _messenger) external {
+  function test_sendTokens(uint256 _amount) external {
     adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
 
     // Mock calls
@@ -425,7 +429,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
   /**
    * @notice Check that the event is emitted as expected
    */
-  function test_emitEvent(uint256 _amount, address _messenger) external {
+  function test_emitEvent(uint256 _amount) external {
     adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
 
     // Mock calls
@@ -435,7 +439,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 
     // Execute
     vm.expectEmit(true, true, true, true);
-    emit MessageReceived(_user, _amount);
+    emit MessageReceived(_user, _amount, _messenger);
 
     vm.prank(_messenger);
     adapter.receiveMessage(_user, _amount);
@@ -443,12 +447,12 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 }
 
 contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
-  event MessagingStopped();
+  event MessagingStopped(address _messenger);
 
   /**
    * @notice Check that only the owner can stop messaging
    */
-  function test_onlyUpgradeManager(address _messenger) public {
+  function test_onlyUpgradeManager() public {
     // Execute
     vm.prank(_user);
     vm.expectRevert(abi.encodeWithSelector(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector));
@@ -458,9 +462,7 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
   /**
    * @notice Check that the function reverts if messaging is already disabled
    */
-  function test_revertIfMessagingIsAlreadyDisabled(uint32 _minGasLimit, address _messenger) public {
-    adapter.forTest_setIsMessagingDisabled();
-
+  function test_revertIfMessagingIsAlreadyDisabled(uint32 _minGasLimit) public {
     // Execute
     vm.prank(_upgradeManager);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
@@ -468,9 +470,11 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
   }
 
   /**
-   * @notice Check that isMessagingDisabled is set to true
+   * @notice Check that messenger status gets set to paused
    */
-  function test_setIsMessagingDisabledToTrue(uint32 _minGasLimit, address _messenger) public {
+  function test_setMessengerStatusToPaused(uint32 _minGasLimit) public {
+    adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
+
     bytes memory _messageData = abi.encodeWithSignature('receiveStopMessaging()');
 
     _mockAndExpect(
@@ -482,13 +486,19 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
     // Execute
     vm.prank(_upgradeManager);
     adapter.stopMessaging(_minGasLimit, _messenger);
-    assertEq(adapter.isMessagingDisabled(), true, 'Messaging should be disabled');
+    assertEq(
+      uint256(adapter.messengerStatus(_messenger)),
+      uint256(IL1OpUSDCBridgeAdapter.Status.Paused),
+      'Messaging should be disabled'
+    );
   }
 
   /**
    * @notice Check that the event is emitted as expected
    */
-  function test_emitEvent(uint32 _minGasLimit, address _messenger) public {
+  function test_emitEvent(uint32 _minGasLimit) public {
+    adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
+
     bytes memory _messageData = abi.encodeWithSignature('receiveStopMessaging()');
 
     /// Mock calls
@@ -500,7 +510,7 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
 
     // Expect events
     vm.expectEmit(true, true, true, true);
-    emit MessagingStopped();
+    emit MessagingStopped(_messenger);
 
     // Execute
     vm.prank(_upgradeManager);

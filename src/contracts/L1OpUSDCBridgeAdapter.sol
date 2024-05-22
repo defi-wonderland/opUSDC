@@ -35,20 +35,13 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
   }
 
   /**
-   * @notice modifier to check that the sender is the Circle contract
-   */
-  modifier onlyCircle() {
-    if (msg.sender != circle) revert IOpUSDCBridgeAdapter_InvalidSender();
-    _;
-  }
-
-  /**
    * @notice Modifier to check if the sender is the linked adapter through the messenger
    * @param _messenger The address of the messenger contract
    */
   modifier checkSender(address _messenger) {
+    // We should accept incoming messages from all messengers that have been initialized
     if (
-      messengerStatus[_messenger] != Status.Active
+      messengerStatus[_messenger] == Status.Unintialized
         || ICrossDomainMessenger(_messenger).xDomainMessageSender() != LINKED_ADAPTER
     ) {
       revert IOpUSDCBridgeAdapter_InvalidSender();
@@ -102,7 +95,9 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
    * @notice Burns the USDC tokens locked in the contract
    * @dev The amount is determined by the burnAmount variable, which is set in the setBurnAmount function
    */
-  function burnLockedUSDC() external onlyCircle {
+  function burnLockedUSDC() external {
+    if (msg.sender != circle) revert IOpUSDCBridgeAdapter_InvalidSender();
+
     // Burn the USDC tokens
     IUSDC(USDC).burn(address(this), burnAmount);
 
@@ -118,6 +113,10 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
    */
   function initalizeNewMessenger(address _l1Messenger) external {
     if (msg.sender != FACTORY) revert IOpUSDCBridgeAdapter_InvalidSender();
+    if (messengerStatus[_l1Messenger] != Status.Unintialized) {
+      revert IL1OpUSDCBridgeAdapter_MessengerAlreadyInitialized();
+    }
+
     messengerStatus[_l1Messenger] = Status.Active;
 
     emit MessengerInitialized(_l1Messenger);
@@ -132,9 +131,7 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
    */
   function sendMessage(address _to, uint256 _amount, address _messenger, uint32 _minGasLimit) external {
     // Ensure messaging is enabled
-    if (isMessagingDisabled) revert IOpUSDCBridgeAdapter_MessagingDisabled();
-
-    // if (messengerStatus[_messenger] != Status.Active) revert();
+    if (messengerStatus[_messenger] != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
     // Transfer the tokens to the contract
     IUSDC(USDC).safeTransferFrom(msg.sender, address(this), _amount);
@@ -160,13 +157,15 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
     bytes calldata _data,
     uint32 _minGasLimit
   ) external onlyUpgradeManager {
+    if (messengerStatus[_messenger] != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
+
     ICrossDomainMessenger(_messenger).sendMessage(
       LINKED_ADAPTER,
       abi.encodeWithSignature('upgradeToAndCall(address,bytes)', _newImplementation, _data),
       _minGasLimit
     );
 
-    emit L2AdapterUpgradeSent(_newImplementation, _data, _minGasLimit);
+    emit L2AdapterUpgradeSent(_newImplementation, _messenger, _data, _minGasLimit);
   }
 
   /**
@@ -179,7 +178,7 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
     // Transfer the tokens to the user
     IUSDC(USDC).safeTransfer(_user, _amount);
 
-    emit MessageReceived(_user, _amount);
+    emit MessageReceived(_user, _amount, msg.sender);
   }
 
   /**
@@ -200,13 +199,15 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
    */
   function stopMessaging(uint32 _minGasLimit, address _messenger) external onlyUpgradeManager {
     // Ensure messaging is enabled
-    if (isMessagingDisabled) revert IOpUSDCBridgeAdapter_MessagingDisabled();
+    if (messengerStatus[_messenger] != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
-    isMessagingDisabled = true;
     ICrossDomainMessenger(_messenger).sendMessage(
       LINKED_ADAPTER, abi.encodeWithSignature('receiveStopMessaging()'), _minGasLimit
     );
-    emit MessagingStopped();
+
+    messengerStatus[_messenger] = Status.Paused;
+
+    emit MessagingStopped(_messenger);
   }
 
   /**

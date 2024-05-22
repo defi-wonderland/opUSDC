@@ -8,8 +8,9 @@ interface IOpUSDCBridgeAdapter {
 
   /**
    * @notice Emitted when messaging is stopped
+   * @param _messenger The address of the messenger contract that was stopped
    */
-  event MessagingStopped();
+  event MessagingStopped(address _messenger);
 
   /**
    * @notice Emitted when a message is sent to the linked adapter
@@ -25,8 +26,9 @@ interface IOpUSDCBridgeAdapter {
    * @notice Emitted when a message as recieved
    * @param _user The user that recieved the message
    * @param _amount The amount of tokens recieved
+   * @param _messenger The address of the messenger contract that was recieved through
    */
-  event MessageReceived(address _user, uint256 _amount);
+  event MessageReceived(address _user, uint256 _amount, address _messenger);
 
   /*///////////////////////////////////////////////////////////////
                             ERRORS
@@ -71,10 +73,4 @@ interface IOpUSDCBridgeAdapter {
    */
   // solhint-disable-next-line func-name-mixedcase
   function LINKED_ADAPTER() external view returns (address _linkedAdapter);
-
-  /**
-   * @notice Fetches whether messaging is disabled
-   * @return _isMessagingDisabled Whether messaging is disabled
-   */
-  function isMessagingDisabled() external view returns (bool _isMessagingDisabled);
 }

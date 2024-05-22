@@ -30,7 +30,7 @@ abstract contract Base is Helpers {
   address internal _linkedAdapter = makeAddr('linkedAdapter');
 
   event MessageSent(address _user, address _to, uint256 _amount, address _messenger, uint32 _minGasLimit);
-  event MessageReceived(address _user, uint256 _amount);
+  event MessageReceived(address _user, uint256 _amount, address _messenger);
 
   function setUp() public virtual {
     address _implementation = address(new ForTestL2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter));
@@ -199,7 +199,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 
     // Execute
     vm.expectEmit(true, true, true, true);
-    emit MessageReceived(_user, _amount);
+    emit MessageReceived(_user, _amount, _messenger);
 
     vm.prank(_messenger);
     adapter.receiveMessage(_user, _amount);
@@ -207,7 +207,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 }
 
 contract L2OpUSDCBridgeAdapter_Unit_ReceiveStopMessaging is Base {
-  event MessagingStopped();
+  event MessagingStopped(address _messenger);
 
   /**
    * @notice Check that the function reverts if the sender is not the messenger
@@ -258,7 +258,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveStopMessaging is Base {
 
     // Expect events
     vm.expectEmit(true, true, true, true);
-    emit MessagingStopped();
+    emit MessagingStopped(_messenger);
 
     // Execute
     vm.prank(_messenger);

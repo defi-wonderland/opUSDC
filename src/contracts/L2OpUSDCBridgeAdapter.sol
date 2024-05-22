@@ -12,6 +12,19 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
   /// @inheritdoc IL2OpUSDCBridgeAdapter
   address public immutable MESSENGER;
 
+  /// @inheritdoc IL2OpUSDCBridgeAdapter
+  bool public isMessagingDisabled;
+
+  /**
+   * @notice Modifier to check if the sender is the linked adapter through the messenger
+   */
+  modifier checkSender() {
+    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != LINKED_ADAPTER) {
+      revert IOpUSDCBridgeAdapter_InvalidSender();
+    }
+    _;
+  }
+
   /**
    * @notice Construct the OpUSDCBridgeAdapter contract
    * @param _usdc The address of the USDC Contract to be used by the adapter
@@ -25,16 +38,6 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
     _disableInitializers();
   }
   /* solhint-enable no-unused-vars */
-
-  /**
-   * @notice Modifier to check if the sender is the linked adapter through the messenger
-   */
-  modifier checkSender() {
-    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != LINKED_ADAPTER) {
-      revert IOpUSDCBridgeAdapter_InvalidSender();
-    }
-    _;
-  }
 
   /**
    * @notice Send a message to the linked adapter to transfer the tokens to the user
@@ -67,7 +70,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
   function receiveMessage(address _user, uint256 _amount) external override checkSender {
     // Mint the tokens to the user
     IUSDC(USDC).mint(_user, _amount);
-    emit MessageReceived(_user, _amount);
+    emit MessageReceived(_user, _amount, MESSENGER);
   }
 
   /**
@@ -75,7 +78,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
    */
   function receiveStopMessaging() external checkSender {
     isMessagingDisabled = true;
-    emit MessagingStopped();
+
+    emit MessagingStopped(MESSENGER);
   }
 
   /**

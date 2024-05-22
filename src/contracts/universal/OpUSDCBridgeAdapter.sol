@@ -2,7 +2,6 @@
 pragma solidity 0.8.25;
 
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
-import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 
 abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
   /// @inheritdoc IOpUSDCBridgeAdapter
@@ -10,9 +9,6 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
 
   /// @inheritdoc IOpUSDCBridgeAdapter
   address public immutable LINKED_ADAPTER;
-
-  /// @inheritdoc IOpUSDCBridgeAdapter
-  bool public isMessagingDisabled;
 
   /**
    * @notice Construct the OpUSDCBridgeAdapter contract

@@ -27,4 +27,10 @@ interface IL2OpUSDCBridgeAdapter {
    */
   // solhint-disable-next-line func-name-mixedcase
   function MESSENGER() external view returns (address _messenger);
+
+  /**
+   * @notice Fetches whether messaging is disabled
+   * @return _isMessagingDisabled Whether messaging is disabled
+   */
+  function isMessagingDisabled() external view returns (bool _isMessagingDisabled);
 }
