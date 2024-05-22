@@ -58,7 +58,7 @@ abstract contract Base is Helpers {
     adapter = ForTestL1OpUSDCBridgeAdapter(address(new ERC1967Proxy(address(implementation), '')));
   }
 
-  function generateSignature(address _to, uint256 _amount, uint256 _nonce) internal returns (bytes memory _signature) {
+  function _generateSignature(address _to, uint256 _amount, uint256 _nonce) internal returns (bytes memory _signature) {
     vm.startPrank(_signer);
     bytes32 digest =
       keccak256(abi.encodePacked(address(adapter), block.chainid, _to, _amount, _nonce)).toEthSignedMessageHash();
@@ -345,7 +345,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
    */
   function test_revertOnInvalidNonce(address _to, uint256 _amount, uint256 _nonce, uint32 _minGasLimit) external {
     vm.assume(_nonce != adapter.userNonce(_signer));
-    bytes memory _signature = generateSignature(_to, _amount, _nonce);
+    bytes memory _signature = _generateSignature(_to, _amount, _nonce);
     adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
 
     // Execute
@@ -359,7 +359,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
    */
   function test_expectedCall(address _to, uint256 _amount, uint32 _minGasLimit) external {
     uint256 _nonce = adapter.userNonce(_signer);
-    bytes memory _signature = generateSignature(_to, _amount, _nonce);
+    bytes memory _signature = _generateSignature(_to, _amount, _nonce);
     adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
     _mockAndExpect(
       address(_usdc),
@@ -387,7 +387,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
    */
   function test_emitEvent(address _to, uint256 _amount, uint32 _minGasLimit) external {
     uint256 _nonce = adapter.userNonce(_signer);
-    bytes memory _signature = generateSignature(_to, _amount, _nonce);
+    bytes memory _signature = _generateSignature(_to, _amount, _nonce);
     adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
     vm.mockCall(
       address(_usdc),

@@ -43,7 +43,7 @@ abstract contract Base is Helpers {
     adapter = ForTestL2OpUSDCBridgeAdapter(address(new ERC1967Proxy(_implementation, '')));
   }
 
-  function generateSignature(address _to, uint256 _amount, uint256 _nonce) internal returns (bytes memory _signature) {
+  function _generateSignature(address _to, uint256 _amount, uint256 _nonce) internal returns (bytes memory _signature) {
     vm.startPrank(_signer);
     bytes32 digest =
       keccak256(abi.encodePacked(address(adapter), block.chainid, _to, _amount, _nonce)).toEthSignedMessageHash();
@@ -186,7 +186,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
    */
   function test_revertOnInvalidNonce(address _to, uint256 _amount, uint256 _nonce, uint32 _minGasLimit) external {
     vm.assume(_nonce != adapter.userNonce(_signer));
-    bytes memory _signature = generateSignature(_to, _amount, _nonce);
+    bytes memory _signature = _generateSignature(_to, _amount, _nonce);
 
     // Execute
     vm.prank(_user);
@@ -199,7 +199,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
    */
   function test_expectedCall(address _to, uint256 _amount, uint32 _minGasLimit) external {
     uint256 _nonce = adapter.userNonce(_signer);
-    bytes memory _signature = generateSignature(_to, _amount, _nonce);
+    bytes memory _signature = _generateSignature(_to, _amount, _nonce);
     _mockAndExpect(address(_usdc), abi.encodeWithSignature('burn(address,uint256)', _signer, _amount), abi.encode(true));
     _mockAndExpect(
       address(_messenger),
@@ -222,7 +222,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
    */
   function test_emitEvent(address _to, uint256 _amount, uint32 _minGasLimit) external {
     uint256 _nonce = adapter.userNonce(_signer);
-    bytes memory _signature = generateSignature(_to, _amount, _nonce);
+    bytes memory _signature = _generateSignature(_to, _amount, _nonce);
     vm.mockCall(address(_usdc), abi.encodeWithSignature('burn(address,uint256)', _signer, _amount), abi.encode(true));
     vm.mockCall(
       address(_messenger),
