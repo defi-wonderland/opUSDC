@@ -8,13 +8,13 @@ interface IL1OpUSDCBridgeAdapter {
 
   /**
    * @notice The status of an L1 Messenger
-   * @param Unintialized The messenger is unintialized
+   * @param Uninitialized  The messenger is Uninitialized
    * @param Active The messenger is active
    * @param Paused The messenger is paused
    * @param Deprecated The messenger is deprecated
    */
   enum Status {
-    Unintialized,
+    Uninitialized,
     Active,
     Paused,
     Deprecated

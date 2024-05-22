@@ -43,7 +43,7 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
   modifier checkSender(address _messenger) {
     // We should accept incoming messages from all messengers that have been initialized
     if (
-      messengerStatus[_messenger] == Status.Unintialized
+      messengerStatus[_messenger] != Status.Active
         || ICrossDomainMessenger(_messenger).xDomainMessageSender() != LINKED_ADAPTER
     ) {
       revert IOpUSDCBridgeAdapter_InvalidSender();
@@ -115,7 +115,7 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
    */
   function initalizeNewMessenger(address _l1Messenger) external {
     if (msg.sender != FACTORY) revert IOpUSDCBridgeAdapter_InvalidSender();
-    if (messengerStatus[_l1Messenger] != Status.Unintialized) {
+    if (messengerStatus[_l1Messenger] != Status.Uninitialized) {
       revert IL1OpUSDCBridgeAdapter_MessengerAlreadyInitialized();
     }
 
