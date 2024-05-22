@@ -182,10 +182,23 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
   }
 
   /**
+   * @notice Check that function reverts when the nonce is invalid
+   */
+  function test_revertOnInvalidNonce(address _to, uint256 _amount, uint256 _nonce, uint32 _minGasLimit) external {
+    vm.assume(_nonce != adapter.userNonce(_signer));
+    bytes memory _signature = generateSignature(_to, _amount, _nonce);
+
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidNonce.selector);
+    adapter.sendMessage(_to, _amount, _nonce, _signature, _minGasLimit);
+  }
+
+  /**
    * @notice Check that burning tokens and sending a message works as expected
    */
   function test_expectedCall(address _to, uint256 _amount, uint32 _minGasLimit) external {
-    uint256 _nonce = adapter.userNonce(_user);
+    uint256 _nonce = adapter.userNonce(_signer);
     bytes memory _signature = generateSignature(_to, _amount, _nonce);
     _mockAndExpect(address(_usdc), abi.encodeWithSignature('burn(address,uint256)', _signer, _amount), abi.encode(true));
     _mockAndExpect(
@@ -198,6 +211,33 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
       ),
       abi.encode()
     );
+
+    // Execute
+    vm.prank(_user);
+    adapter.sendMessage(_to, _amount, _nonce, _signature, _minGasLimit);
+  }
+
+  /**
+   * @notice Check that the event is emitted as expected
+   */
+  function test_emitEvent(address _to, uint256 _amount, uint32 _minGasLimit) external {
+    uint256 _nonce = adapter.userNonce(_signer);
+    bytes memory _signature = generateSignature(_to, _amount, _nonce);
+    vm.mockCall(address(_usdc), abi.encodeWithSignature('burn(address,uint256)', _signer, _amount), abi.encode(true));
+    vm.mockCall(
+      address(_messenger),
+      abi.encodeWithSignature(
+        'sendMessage(address,bytes,uint32)',
+        _linkedAdapter,
+        abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount),
+        _minGasLimit
+      ),
+      abi.encode()
+    );
+
+    // Expect events
+    vm.expectEmit(true, true, true, true);
+    emit MessageSent(_signer, _to, _amount, _messenger, _minGasLimit);
 
     // Execute
     vm.prank(_user);
