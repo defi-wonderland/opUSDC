@@ -110,13 +110,16 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
     if (isMessagingDisabled) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
     // Hash the message
-    bytes32 _messageHash = keccak256(abi.encodePacked(address(this), _to, _amount, _nonce));
+    bytes32 _messageHash = keccak256(abi.encodePacked(address(this), block.chainid, _to, _amount, _nonce));
 
     // Recover the signer
     address _signer = ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(_messageHash), _signature);
 
     // Check the nonce
     if (userNonce[_signer] != _nonce) revert IOpUSDCBridgeAdapter_InvalidNonce();
+
+    // Increment the nonce
+    userNonce[_signer]++;
 
     // Transfer the tokens to the contract
     IUSDC(USDC).safeTransferFrom(_signer, address(this), _amount);
@@ -125,9 +128,6 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
     ICrossDomainMessenger(MESSENGER).sendMessage(
       LINKED_ADAPTER, abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount), _minGasLimit
     );
-
-    // Increment the nonce
-    userNonce[_signer]++;
 
     emit MessageSent(_signer, _to, _amount, _minGasLimit);
   }
