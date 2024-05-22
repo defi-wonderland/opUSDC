@@ -93,6 +93,15 @@ interface IL1OpUSDCBridgeAdapter {
    */
   function migrateToNative(address _l1Messenger, address _circle) external;
 
+  /**
+   * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
+   * @param _to The target address on the destination chain
+   * @param _amount The amount of tokens to send
+   * @param _messenger The address of the messenger contract to send through
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  function sendMessage(address _to, uint256 _amount, address _messenger, uint32 _minGasLimit) external;
+
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
   //////////////////////////////////////////////////////////////*/
