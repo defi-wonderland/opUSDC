@@ -28,10 +28,33 @@ abstract contract Base is Test {
   }
 }
 
-contract UnitInitialization is Base {
-  function testInitialization() public {
+contract OpUSDCBridgeAdapter_Unit_Constructor is Base {
+  /**
+   * @notice Check that the constructor works as expected
+   */
+  function test_constructorParams() public {
     assertEq(adapter.USDC(), _usdc, 'USDC should be set to the provided address');
     assertEq(adapter.MESSENGER(), _messenger, 'Messenger should be set to the provided address');
     assertEq(adapter.LINKED_ADAPTER(), _linkedAdapter, 'Linked adapter should be set to the provided address');
+  }
+}
+
+contract ForTestOpUSDCBridgeAdapter_Unit_SendMessage is Base {
+  /**
+   * @notice Execute vitual function to get 100% coverage
+   */
+  function test_doNothing() public {
+    // Execute
+    adapter.sendMessage(address(0), 0, 0);
+  }
+}
+
+contract ForTestOpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
+  /**
+   * @notice Execute vitual function to get 100% coverage
+   */
+  function test_doNothing() public {
+    // Execute
+    adapter.receiveMessage(address(0), 0);
   }
 }

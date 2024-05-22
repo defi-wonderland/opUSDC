@@ -1,22 +1,30 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
+import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
 import {IL2OpUSDCBridgeAdapter} from 'interfaces/IL2OpUSDCBridgeAdapter.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
-contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
+contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCBridgeAdapter, UUPSUpgradeable {
   /**
    * @notice Construct the OpUSDCBridgeAdapter contract
    * @param _usdc The address of the USDC Contract to be used by the adapter
    * @param _messenger The address of the messenger contract
+   * @param _linkedAdapter The address of the linked adapter
+   * @dev The constructor is only used to initialize the OpUSDCBridgeAdapter immutable variables
    */
+  /* solhint-disable no-unused-vars */
   constructor(
     address _usdc,
     address _messenger,
     address _linkedAdapter
-  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
+  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {
+    _disableInitializers();
+  }
+  /* solhint-enable no-unused-vars */
 
   /**
    * @notice Send a message to the linked adapter to transfer the tokens to the user
@@ -46,10 +54,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _user The user to mint the bridged representation for
    * @param _amount The amount of tokens to mint
    */
-  function receiveMessage(address _user, uint256 _amount) external override {
-    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != LINKED_ADAPTER) {
-      revert IOpUSDCBridgeAdapter_InvalidSender();
-    }
+  function receiveMessage(address _user, uint256 _amount) external override checkSender {
     // Mint the tokens to the user
     IUSDC(USDC).mint(_user, _amount);
     emit MessageReceived(_user, _amount);
@@ -58,11 +63,14 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /**
    * @notice Receive the stop messaging message from the linked adapter and stop outgoing messages
    */
-  function receiveStopMessaging() external {
-    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != LINKED_ADAPTER) {
-      revert IOpUSDCBridgeAdapter_InvalidSender();
-    }
+  function receiveStopMessaging() external checkSender {
     isMessagingDisabled = true;
     emit MessagingStopped();
   }
+
+  /**
+   * @notice Authorize the upgrade of the implementation of the contract
+   * @param _newImplementation The address of the new implementation
+   */
+  function _authorizeUpgrade(address _newImplementation) internal override checkSender {}
 }
