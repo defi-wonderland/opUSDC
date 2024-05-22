@@ -208,6 +208,26 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessage is Base {
   }
 }
 
+contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
+  /**
+   * @notice Check that the function reverts if messaging is disabled
+   */
+  function test_revertOnMessagingDisabled(
+    address _to,
+    uint256 _amount,
+    uint256 _nonce,
+    bytes memory _signature,
+    uint32 _minGasLimit
+  ) external {
+    adapter.forTest_setIsMessagingDisabled();
+
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
+    adapter.sendMessage(_to, _amount, _nonce, _signature, _minGasLimit);
+  }
+}
+
 contract L1OpUSDCBridgeAdapter_Unit_SendL2AdapterUpgrade is Base {
   /**
    * @notice Check that only the owner can send an upgrade message

@@ -57,7 +57,7 @@ contract ForTestOpUSDCBridgeAdapter_Unit_SendMessage is Base {
   }
 }
 
-contract ForTestOpUSDCBridgeAdapter_Unit_SendMessageWithNonce is Base {
+contract ForTestOpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
   /**
    * @notice Execute vitual function to get 100% coverage
    */
