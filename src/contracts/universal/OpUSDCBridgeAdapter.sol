@@ -2,50 +2,23 @@
 pragma solidity 0.8.25;
 
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
-import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 
 abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
   /// @inheritdoc IOpUSDCBridgeAdapter
   address public immutable USDC;
 
   /// @inheritdoc IOpUSDCBridgeAdapter
-  address public immutable MESSENGER;
-
-  /// @inheritdoc IOpUSDCBridgeAdapter
   address public immutable LINKED_ADAPTER;
-
-  /// @inheritdoc IOpUSDCBridgeAdapter
-  bool public isMessagingDisabled;
-
-  /**
-   * @notice Modifier to check if the sender is the linked adapter through the messenger
-   */
-  modifier checkSender() {
-    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != LINKED_ADAPTER) {
-      revert IOpUSDCBridgeAdapter_InvalidSender();
-    }
-    _;
-  }
 
   /**
    * @notice Construct the OpUSDCBridgeAdapter contract
    * @param _usdc The address of the USDC Contract to be used by the adapter
-   * @param _messenger The address of the messenger contract
    * @param _linkedAdapter The address of the linked adapter
    */
-  constructor(address _usdc, address _messenger, address _linkedAdapter) {
+  constructor(address _usdc, address _linkedAdapter) {
     USDC = _usdc;
-    MESSENGER = _messenger;
     LINKED_ADAPTER = _linkedAdapter;
   }
-
-  /**
-   * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
-   * @param _to The target address on the destination chain
-   * @param _amount The amount of tokens to send
-   * @param _minGasLimit Minimum gas limit that the message can be executed with
-   */
-  function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external virtual;
 
   /**
    * @notice Receive the message from the other chain and mint the bridged representation for the user
