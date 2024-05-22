@@ -3,10 +3,13 @@ pragma solidity 0.8.25;
 
 import {ICreateX} from 'interfaces/external/ICreateX.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
+import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
 
-interface IOpUSDCFactory {
+interface IL1OpUSDCFactory {
   /**
    * @notice Deploy params needed to call the `deploy()` function
+   * @param usdc The address of the USDC contract on L1
+   * @param portal The address of the Optimism portal contract on L1
    * @param l1Messenger The address of the L1 CrossDomainMessenger
    * @param l2Messenger The address of the L2 CrossDomainMessenger
    * @param l1dapterCreationCode The creation code of the `L1OpUSDCBridgeAdapter` contract
@@ -14,14 +17,12 @@ interface IOpUSDCFactory {
    * @param usdcProxyCreationCode The creation code of the USDC proxy contract
    * @param usdcImplementationCreationCode The creation code of the USDC implementation contract
    * @param owner The owner of the `L1OpUSDCBridgeAdapter` contract
-   * @param minGasLimitUsdcProxyDeploy The minimum gas limit for the USDC proxy contract deploy on L2
-   * @param minGasLimitUsdcImplementationDeploy The minimum gas limit for the USDC implementation contract deploy on L2
-   * @param minGasLimitL2AdapterDeploy The minimum gas limit for the L2 adapter contract deploy on L2
-   * @param minGasLimitInitializeTxs The minimum gas limit for the initialize transactions over the USDC implementation
-   * contract on L2
+   * @param minGasLimit The minimum gas limit to deploy the `L2OpUSDCFactory` on L2.
    * @param l2ChainId The chain ID of the L2 network
    */
   struct DeployParams {
+    address usdc;
+    IOptimismPortal portal;
     ICrossDomainMessenger l1Messenger;
     address l2Messenger;
     bytes l1AdapterCreationCode;
@@ -29,21 +30,19 @@ interface IOpUSDCFactory {
     bytes usdcImplementationCreationCode;
     bytes usdcProxyCreationCode;
     address owner;
-    uint32 minGasLimitUsdcImplementationDeploy;
-    uint32 minGasLimitUsdcProxyDeploy;
-    uint32 minGasLimitL2AdapterDeploy;
-    uint32 minGasLimitInitTxs;
-    uint256 l2ChainId;
+    uint32 minGasLimit;
   }
 
   /**
    * @notice Deployment addresses of the contracts deployed by the `deploy()` function
+   * @param l2Factory The address of the L2OpUSDCFactory contract
    * @param l1Adapter The address of the L1OpUSDCAdapter contract
    * @param l2Adapter The address of the L2OpUSDCAdapter contract
    * @param l2UsdcImplementation The address of the USDC implementation contract on L2
    * @param l2UsdcProxy The address of the USDC proxy contract on L2
    */
   struct DeploymentAddresses {
+    address l2Factory;
     address l1Adapter;
     address l2Adapter;
     address l2UsdcImplementation;
@@ -56,36 +55,4 @@ interface IOpUSDCFactory {
    * @return _deploymentAddresses The addresses of the deployed contracts
    */
   function deploy(DeployParams memory _params) external returns (DeploymentAddresses memory _deploymentAddresses);
-
-  /**
-   * @return _redeployProtectionByte The redeploy protection byte to safegurad against cross chain redeploys over the
-   * same address when the deployer is different
-   * @dev Used on `_parseSalt()` function in the same way that CreateX recommends
-   */
-  //solhint-disable-next-line func-name-mixedcase
-  function REDEPLOY_PROTECTION_BYTE() external view returns (bytes32 _redeployProtectionByte);
-
-  /**
-   * @return _usdc The address of the USDC contract
-   */
-  //solhint-disable-next-line func-name-mixedcase
-  function USDC() external view returns (address _usdc);
-
-  /**
-   * @return _createX The CreateX contract instance
-   */
-  //solhint-disable-next-line func-name-mixedcase
-  function CREATEX() external view returns (ICreateX _createX);
-
-  /**
-   * @return _saltL1 The salt used to deploy the contracts when interacting with the CreateX contract
-   */
-  //solhint-disable-next-line func-name-mixedcase
-  function SALT_L1() external view returns (bytes32 _saltL1);
-
-  /**
-   * @return _guardedSalt The guarded salt for the L1 deployment
-   */
-  //solhint-disable-next-line func-name-mixedcase
-  function GUARDED_SALT_L1() external view returns (bytes32 _guardedSalt);
 }
