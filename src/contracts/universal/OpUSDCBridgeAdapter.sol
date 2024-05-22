@@ -17,6 +17,9 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
   /// @inheritdoc IOpUSDCBridgeAdapter
   bool public isMessagingDisabled;
 
+  /// @inheritdoc IOpUSDCBridgeAdapter
+  mapping(address _user => uint256 _nonce) public userNonce;
+
   /**
    * @notice Modifier to check if the sender is the linked adapter through the messenger
    */
@@ -46,6 +49,22 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external virtual;
+
+  /**
+   * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
+   * @param _to The target address on the destination chain
+   * @param _amount The amount of tokens to send
+   * @param _nonce The nonce of the user
+   * @param _signature The signature of the user
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  function sendMessage(
+    address _to,
+    uint256 _amount,
+    uint256 _nonce,
+    bytes calldata _signature,
+    uint32 _minGasLimit
+  ) external virtual;
 
   /**
    * @notice Receive the message from the other chain and mint the bridged representation for the user

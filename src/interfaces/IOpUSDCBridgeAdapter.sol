@@ -41,6 +41,11 @@ interface IOpUSDCBridgeAdapter {
    */
   error IOpUSDCBridgeAdapter_InvalidSender();
 
+  /**
+   * @notice Error when the nonce is invalid
+   */
+  error IOpUSDCBridgeAdapter_InvalidNonce();
+
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   //////////////////////////////////////////////////////////////*/
@@ -52,6 +57,22 @@ interface IOpUSDCBridgeAdapter {
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external;
+
+  /**
+   * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
+   * @param _to The target address on the destination chain
+   * @param _amount The amount of tokens to send
+   * @param _nonce The nonce of the user
+   * @param _signature The signature of the user
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  function sendMessage(
+    address _to,
+    uint256 _amount,
+    uint256 _nonce,
+    bytes calldata _signature,
+    uint32 _minGasLimit
+  ) external;
 
   /**
    * @notice Receive the message from the other chain and mint the bridged representation for the user
@@ -91,4 +112,11 @@ interface IOpUSDCBridgeAdapter {
    * @return _isMessagingDisabled Whether messaging is disabled
    */
   function isMessagingDisabled() external view returns (bool _isMessagingDisabled);
+
+  /**
+   * @notice Returns the nonce of a given user to avoid replay attacks
+   * @param _user The user to fetch the nonce for
+   * @return _nonce The nonce of the user
+   */
+  function userNonce(address _user) external view returns (uint256 _nonce);
 }

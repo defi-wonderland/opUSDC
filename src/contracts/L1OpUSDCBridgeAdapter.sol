@@ -19,9 +19,6 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
   /// @inheritdoc IL1OpUSDCBridgeAdapter
   uint256 public burnAmount;
 
-  /// @inheritdoc IL1OpUSDCBridgeAdapter
-  mapping(address _user => uint256 _nonce) public userNonce;
-
   /**
    * @notice modifier to check that the sender is the Upgrade Manager
    */
@@ -96,6 +93,7 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
    * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
+   * @param _nonce The nonce of the user
    * @param _signature The signature of the user
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
@@ -105,7 +103,7 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
     uint256 _nonce,
     bytes calldata _signature,
     uint32 _minGasLimit
-  ) external {
+  ) external override {
     // Ensure messaging is enabled
     if (isMessagingDisabled) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 

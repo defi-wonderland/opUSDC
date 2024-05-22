@@ -13,6 +13,14 @@ contract ForTestOpUSDCBridgeAdapter is OpUSDCBridgeAdapter {
 
   function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external override {}
 
+  function sendMessage(
+    address _to,
+    uint256 _amount,
+    uint256 _nonce,
+    bytes calldata _signature,
+    uint32 _minGasLimit
+  ) external override {}
+
   function receiveMessage(address _user, uint256 _amount) external override {}
 }
 
@@ -46,6 +54,16 @@ contract ForTestOpUSDCBridgeAdapter_Unit_SendMessage is Base {
   function test_doNothing() public {
     // Execute
     adapter.sendMessage(address(0), 0, 0);
+  }
+}
+
+contract ForTestOpUSDCBridgeAdapter_Unit_SendMessageWithNonce is Base {
+  /**
+   * @notice Execute vitual function to get 100% coverage
+   */
+  function test_doNothing() public {
+    // Execute
+    adapter.sendMessage(address(0), 0, 0, '', 0);
   }
 }
 
