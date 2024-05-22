@@ -11,6 +11,22 @@ import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.s
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCBridgeAdapter, UUPSUpgradeable {
+  /// @inheritdoc IL2OpUSDCBridgeAdapter
+  address public immutable MESSENGER;
+
+  /// @inheritdoc IL2OpUSDCBridgeAdapter
+  bool public isMessagingDisabled;
+
+  /**
+   * @notice Modifier to check if the sender is the linked adapter through the messenger
+   */
+  modifier checkSender() {
+    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != LINKED_ADAPTER) {
+      revert IOpUSDCBridgeAdapter_InvalidSender();
+    }
+    _;
+  }
+
   /**
    * @notice Construct the OpUSDCBridgeAdapter contract
    * @param _usdc The address of the USDC Contract to be used by the adapter
@@ -19,11 +35,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
    * @dev The constructor is only used to initialize the OpUSDCBridgeAdapter immutable variables
    */
   /* solhint-disable no-unused-vars */
-  constructor(
-    address _usdc,
-    address _messenger,
-    address _linkedAdapter
-  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {
+  constructor(address _usdc, address _messenger, address _linkedAdapter) OpUSDCBridgeAdapter(_usdc, _linkedAdapter) {
+    MESSENGER = _messenger;
     _disableInitializers();
   }
   /* solhint-enable no-unused-vars */
@@ -47,7 +60,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
       LINKED_ADAPTER, abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount), _minGasLimit
     );
 
-    emit MessageSent(msg.sender, _to, _amount, _minGasLimit);
+    emit MessageSent(msg.sender, _to, _amount, MESSENGER, _minGasLimit);
   }
 
   /**
@@ -88,7 +101,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
       LINKED_ADAPTER, abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount), _minGasLimit
     );
 
-    emit MessageSent(_signer, _to, _amount, _minGasLimit);
+    emit MessageSent(_signer, _to, _amount, MESSENGER, _minGasLimit);
   }
 
   /**
@@ -100,7 +113,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
   function receiveMessage(address _user, uint256 _amount) external override checkSender {
     // Mint the tokens to the user
     IUSDC(USDC).mint(_user, _amount);
-    emit MessageReceived(_user, _amount);
+    emit MessageReceived(_user, _amount, MESSENGER);
   }
 
   /**
@@ -108,7 +121,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
    */
   function receiveStopMessaging() external checkSender {
     isMessagingDisabled = true;
-    emit MessagingStopped();
+
+    emit MessagingStopped(MESSENGER);
   }
 
   /**

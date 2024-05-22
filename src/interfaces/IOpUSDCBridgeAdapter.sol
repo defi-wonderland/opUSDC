@@ -8,24 +8,27 @@ interface IOpUSDCBridgeAdapter {
 
   /**
    * @notice Emitted when messaging is stopped
+   * @param _messenger The address of the messenger contract that was stopped
    */
-  event MessagingStopped();
+  event MessagingStopped(address _messenger);
 
   /**
    * @notice Emitted when a message is sent to the linked adapter
    * @param _user The user that sent the message
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
+   * @param _messenger The address of the messenger contract that was sent through
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  event MessageSent(address _user, address _to, uint256 _amount, uint32 _minGasLimit);
+  event MessageSent(address _user, address _to, uint256 _amount, address _messenger, uint32 _minGasLimit);
 
   /**
    * @notice Emitted when a message as recieved
    * @param _user The user that recieved the message
    * @param _amount The amount of tokens recieved
+   * @param _messenger The address of the messenger contract that was recieved through
    */
-  event MessageReceived(address _user, uint256 _amount);
+  event MessageReceived(address _user, uint256 _amount, address _messenger);
 
   /*///////////////////////////////////////////////////////////////
                             ERRORS
@@ -51,30 +54,6 @@ interface IOpUSDCBridgeAdapter {
   //////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
-   * @param _to The target address on the destination chain
-   * @param _amount The amount of tokens to send
-   * @param _minGasLimit Minimum gas limit that the message can be executed with
-   */
-  function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external;
-
-  /**
-   * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
-   * @param _to The target address on the destination chain
-   * @param _amount The amount of tokens to send
-   * @param _nonce The nonce of the user
-   * @param _signature The signature of the user
-   * @param _minGasLimit Minimum gas limit that the message can be executed with
-   */
-  function sendMessage(
-    address _to,
-    uint256 _amount,
-    uint256 _nonce,
-    bytes calldata _signature,
-    uint32 _minGasLimit
-  ) external;
-
-  /**
    * @notice Receive the message from the other chain and mint the bridged representation for the user
    * @dev This function should only be called when receiving a message to mint the bridged representation
    * @param _user The user to mint the bridged representation for
@@ -94,24 +73,11 @@ interface IOpUSDCBridgeAdapter {
   function USDC() external view returns (address _usdc);
 
   /**
-   * @notice Fetches address of the CrossDomainMessenger to send messages to L1 <-> L2
-   * @return _messenger Address of the messenger
-   */
-  // solhint-disable-next-line func-name-mixedcase
-  function MESSENGER() external view returns (address _messenger);
-
-  /**
    * @notice Fetches address of the linked adapter on L2 to send messages to and receive from
    * @return _linkedAdapter Address of the linked adapter
    */
   // solhint-disable-next-line func-name-mixedcase
   function LINKED_ADAPTER() external view returns (address _linkedAdapter);
-
-  /**
-   * @notice Fetches whether messaging is disabled
-   * @return _isMessagingDisabled Whether messaging is disabled
-   */
-  function isMessagingDisabled() external view returns (bool _isMessagingDisabled);
 
   /**
    * @notice Returns the nonce of a given user to avoid replay attacks
