@@ -1,6 +1,7 @@
 pragma solidity ^0.8.25;
 
 import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
+import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
@@ -22,9 +23,13 @@ contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
 }
 
 abstract contract Base is Helpers {
+  using MessageHashUtils for bytes32;
+
   ForTestL2OpUSDCBridgeAdapter public adapter;
 
   address internal _user = makeAddr('user');
+  address internal _signer;
+  uint256 internal _signerPk;
   address internal _usdc = makeAddr('opUSDC');
   address internal _messenger = makeAddr('messenger');
   address internal _linkedAdapter = makeAddr('linkedAdapter');
@@ -33,8 +38,18 @@ abstract contract Base is Helpers {
   event MessageReceived(address _user, uint256 _amount, address _messenger);
 
   function setUp() public virtual {
+    (_signer, _signerPk) = makeAddrAndKey('signer');
     address _implementation = address(new ForTestL2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter));
     adapter = ForTestL2OpUSDCBridgeAdapter(address(new ERC1967Proxy(_implementation, '')));
+  }
+
+  function generateSignature(address _to, uint256 _amount, uint256 _nonce) internal returns (bytes memory _signature) {
+    vm.startPrank(_signer);
+    bytes32 digest =
+      keccak256(abi.encodePacked(address(adapter), block.chainid, _to, _amount, _nonce)).toEthSignedMessageHash();
+    (uint8 v, bytes32 r, bytes32 s) = vm.sign(_signerPk, digest);
+    _signature = abi.encodePacked(r, s, v);
+    vm.stopPrank();
   }
 }
 
@@ -145,6 +160,48 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessage is Base {
     // Execute
     vm.prank(_user);
     adapter.sendMessage(_to, _amount, _minGasLimit);
+  }
+}
+
+contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
+  /**
+   * @notice Check that the function reverts if messaging is disabled
+   */
+  function test_revertOnMessengerNotActive(
+    address _to,
+    uint256 _amount,
+    uint256 _nonce,
+    bytes memory _signature,
+    uint32 _minGasLimit
+  ) external {
+    adapter.forTest_setIsMessagingDisabled();
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
+    adapter.sendMessage(_to, _amount, _nonce, _signature, _minGasLimit);
+  }
+
+  /**
+   * @notice Check that burning tokens and sending a message works as expected
+   */
+  function test_expectedCall(address _to, uint256 _amount, uint32 _minGasLimit) external {
+    uint256 _nonce = adapter.userNonce(_user);
+    bytes memory _signature = generateSignature(_to, _amount, _nonce);
+    _mockAndExpect(address(_usdc), abi.encodeWithSignature('burn(address,uint256)', _signer, _amount), abi.encode(true));
+    _mockAndExpect(
+      address(_messenger),
+      abi.encodeWithSignature(
+        'sendMessage(address,bytes,uint32)',
+        _linkedAdapter,
+        abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount),
+        _minGasLimit
+      ),
+      abi.encode()
+    );
+
+    // Execute
+    vm.prank(_user);
+    adapter.sendMessage(_to, _amount, _nonce, _signature, _minGasLimit);
   }
 }
 
