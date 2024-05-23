@@ -1,7 +1,6 @@
 pragma solidity ^0.8.25;
 
 import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
-import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
 import {IL1OpUSDCBridgeAdapter, L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
@@ -28,13 +27,11 @@ contract ForTestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
 }
 
 abstract contract Base is Helpers {
-  using MessageHashUtils for bytes32;
-
   ForTestL1OpUSDCBridgeAdapter public adapter;
   ForTestL1OpUSDCBridgeAdapter public implementation;
 
   address internal _user = makeAddr('user');
-  address internal _signer;
+  address internal _signerAd;
   uint256 internal _signerPk;
   address internal _usdc = makeAddr('opUSDC');
   address internal _linkedAdapter = makeAddr('linkedAdapter');
@@ -52,19 +49,10 @@ abstract contract Base is Helpers {
   event MessengerInitialized(address _messenger);
 
   function setUp() public virtual {
-    (_signer, _signerPk) = makeAddrAndKey('signer');
+    (_signerAd, _signerPk) = makeAddrAndKey('signer');
     vm.etch(_messenger, 'xDomainMessageSender');
     implementation = new ForTestL1OpUSDCBridgeAdapter(_usdc, _linkedAdapter, _upgradeManager, _factory);
     adapter = ForTestL1OpUSDCBridgeAdapter(address(new ERC1967Proxy(address(implementation), '')));
-  }
-
-  function _generateSignature(address _to, uint256 _amount, uint256 _nonce) internal returns (bytes memory _signature) {
-    vm.startPrank(_signer);
-    bytes32 digest =
-      keccak256(abi.encodePacked(address(adapter), block.chainid, _to, _amount, _nonce)).toEthSignedMessageHash();
-    (uint8 v, bytes32 r, bytes32 s) = vm.sign(_signerPk, digest);
-    _signature = abi.encodePacked(r, s, v);
-    vm.stopPrank();
   }
 }
 
@@ -344,8 +332,8 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
    * @notice Check that function reverts when the nonce is invalid
    */
   function test_revertOnInvalidNonce(address _to, uint256 _amount, uint256 _nonce, uint32 _minGasLimit) external {
-    vm.assume(_nonce != adapter.userNonce(_signer));
-    bytes memory _signature = _generateSignature(_to, _amount, _nonce);
+    vm.assume(_nonce != adapter.userNonce(_signerAd));
+    bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
     adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
 
     // Execute
@@ -358,12 +346,12 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
    * @notice Check that transferFrom and sendMessage are called as expected
    */
   function test_expectedCall(address _to, uint256 _amount, uint32 _minGasLimit) external {
-    uint256 _nonce = adapter.userNonce(_signer);
-    bytes memory _signature = _generateSignature(_to, _amount, _nonce);
+    uint256 _nonce = adapter.userNonce(_signerAd);
+    bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
     adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
     _mockAndExpect(
       address(_usdc),
-      abi.encodeWithSignature('transferFrom(address,address,uint256)', _signer, address(adapter), _amount),
+      abi.encodeWithSignature('transferFrom(address,address,uint256)', _signerAd, address(adapter), _amount),
       abi.encode(true)
     );
     _mockAndExpect(
@@ -386,12 +374,12 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
    * @notice Check that the event is emitted as expected
    */
   function test_emitEvent(address _to, uint256 _amount, uint32 _minGasLimit) external {
-    uint256 _nonce = adapter.userNonce(_signer);
-    bytes memory _signature = _generateSignature(_to, _amount, _nonce);
+    uint256 _nonce = adapter.userNonce(_signerAd);
+    bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
     adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
     vm.mockCall(
       address(_usdc),
-      abi.encodeWithSignature('transferFrom(address,address,uint256)', _signer, address(adapter), _amount),
+      abi.encodeWithSignature('transferFrom(address,address,uint256)', _signerAd, address(adapter), _amount),
       abi.encode(true)
     );
     vm.mockCall(
@@ -407,7 +395,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
 
     // Expect events
     vm.expectEmit(true, true, true, true);
-    emit MessageSent(_signer, _to, _amount, _messenger, _minGasLimit);
+    emit MessageSent(_signerAd, _to, _amount, _messenger, _minGasLimit);
     // Execute
     vm.prank(_user);
     adapter.sendMessage(_to, _amount, _messenger, _nonce, _signature, _minGasLimit);

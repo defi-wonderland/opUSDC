@@ -1,7 +1,6 @@
 pragma solidity ^0.8.25;
 
 import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
-import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
@@ -23,12 +22,10 @@ contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
 }
 
 abstract contract Base is Helpers {
-  using MessageHashUtils for bytes32;
-
   ForTestL2OpUSDCBridgeAdapter public adapter;
 
   address internal _user = makeAddr('user');
-  address internal _signer;
+  address internal _signerAd;
   uint256 internal _signerPk;
   address internal _usdc = makeAddr('opUSDC');
   address internal _messenger = makeAddr('messenger');
@@ -38,18 +35,9 @@ abstract contract Base is Helpers {
   event MessageReceived(address _user, uint256 _amount, address _messenger);
 
   function setUp() public virtual {
-    (_signer, _signerPk) = makeAddrAndKey('signer');
+    (_signerAd, _signerPk) = makeAddrAndKey('signer');
     address _implementation = address(new ForTestL2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter));
     adapter = ForTestL2OpUSDCBridgeAdapter(address(new ERC1967Proxy(_implementation, '')));
-  }
-
-  function _generateSignature(address _to, uint256 _amount, uint256 _nonce) internal returns (bytes memory _signature) {
-    vm.startPrank(_signer);
-    bytes32 digest =
-      keccak256(abi.encodePacked(address(adapter), block.chainid, _to, _amount, _nonce)).toEthSignedMessageHash();
-    (uint8 v, bytes32 r, bytes32 s) = vm.sign(_signerPk, digest);
-    _signature = abi.encodePacked(r, s, v);
-    vm.stopPrank();
   }
 }
 
@@ -185,8 +173,8 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
    * @notice Check that function reverts when the nonce is invalid
    */
   function test_revertOnInvalidNonce(address _to, uint256 _amount, uint256 _nonce, uint32 _minGasLimit) external {
-    vm.assume(_nonce != adapter.userNonce(_signer));
-    bytes memory _signature = _generateSignature(_to, _amount, _nonce);
+    vm.assume(_nonce != adapter.userNonce(_signerAd));
+    bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
 
     // Execute
     vm.prank(_user);
@@ -198,9 +186,11 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
    * @notice Check that burning tokens and sending a message works as expected
    */
   function test_expectedCall(address _to, uint256 _amount, uint32 _minGasLimit) external {
-    uint256 _nonce = adapter.userNonce(_signer);
-    bytes memory _signature = _generateSignature(_to, _amount, _nonce);
-    _mockAndExpect(address(_usdc), abi.encodeWithSignature('burn(address,uint256)', _signer, _amount), abi.encode(true));
+    uint256 _nonce = adapter.userNonce(_signerAd);
+    bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
+    _mockAndExpect(
+      address(_usdc), abi.encodeWithSignature('burn(address,uint256)', _signerAd, _amount), abi.encode(true)
+    );
     _mockAndExpect(
       address(_messenger),
       abi.encodeWithSignature(
@@ -221,9 +211,9 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
    * @notice Check that the event is emitted as expected
    */
   function test_emitEvent(address _to, uint256 _amount, uint32 _minGasLimit) external {
-    uint256 _nonce = adapter.userNonce(_signer);
-    bytes memory _signature = _generateSignature(_to, _amount, _nonce);
-    vm.mockCall(address(_usdc), abi.encodeWithSignature('burn(address,uint256)', _signer, _amount), abi.encode(true));
+    uint256 _nonce = adapter.userNonce(_signerAd);
+    bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
+    vm.mockCall(address(_usdc), abi.encodeWithSignature('burn(address,uint256)', _signerAd, _amount), abi.encode(true));
     vm.mockCall(
       address(_messenger),
       abi.encodeWithSignature(
@@ -237,7 +227,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
 
     // Expect events
     vm.expectEmit(true, true, true, true);
-    emit MessageSent(_signer, _to, _amount, _messenger, _minGasLimit);
+    emit MessageSent(_signerAd, _to, _amount, _messenger, _minGasLimit);
 
     // Execute
     vm.prank(_user);
