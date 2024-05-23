@@ -12,24 +12,31 @@ import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
  * `L2OpUSDCBridgeAdapter` and USDC proxy and implementation contracts on L2 on a single transaction.
  */
 contract L2OpUSDCFactory is IL2OpUSDCFactory {
-  event DeployedUSDCProxy(address usdc);
-  event DeployedUSDCImpl(address usdc);
-  event DeployedL2Adapter(address l2Adapter);
-
-  constructor(bytes memory _l2AdapterBytecode, bytes memory _usdcProxyBytecode, bytes memory _usdcImplBytecode) {
-    // deploy usdc impl
+  constructor(bytes memory _l2AdapterBytecode, bytes memory _usdcProxyInitCode, bytes memory _usdcImplBytecode) {
+    // Deploy usdc implementation
     address _implt = address(new BytecodeDeployer(_usdcImplBytecode));
     emit DeployedUSDCImpl(_implt);
 
-    // deploy usdc proxy
-    // bytes memory _usdcProxyInitCode = bytes.concat(_usdcProxyCreationCode, abi.encode(_implt));
-    // address _proxy = deployCreate2(_usdcProxyInitCode);
-    // TODO: check well this
-    address _proxy = address(new BytecodeDeployer(_usdcProxyBytecode));
+    // Deploy usdc proxy
+    address _proxy = createDeploy(_usdcProxyInitCode);
     emit DeployedUSDCProxy(_proxy);
 
     // Deploy l2 adapter
     address _adapter = address(new BytecodeDeployer(_l2AdapterBytecode));
     emit DeployedL2Adapter(_adapter);
+  }
+
+  /**
+   * @dev Deploys a new contract through the `CREATE` opcode
+   * @param _initCode The creation bytecode (contract initialization code + constructor arguments)
+   * @return _newContract The address where the contract was deployed
+   */
+  function createDeploy(bytes memory _initCode) public returns (address _newContract) {
+    assembly ("memory-safe") {
+      _newContract := create(0, add(_initCode, 0x20), mload(_initCode))
+    }
+    if (_newContract == address(0) || _newContract.code.length == 0) {
+      revert IL2OpUSDCBridgeAdapter_CreateDeploymentFailed();
+    }
   }
 }

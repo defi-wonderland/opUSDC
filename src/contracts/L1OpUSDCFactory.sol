@@ -2,6 +2,7 @@
 pragma solidity 0.8.25;
 
 import {BytecodeDeployer} from 'contracts/BytecodeDeployer.sol';
+import {USDC_PROXY_BYTECODE} from 'contracts/utils/USDCCreationCode.sol';
 
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 
@@ -76,17 +77,17 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * @inheritdoc IL1OpUSDCFactory
    */
   function deployL2UsdcAndAdapter(address _l1Messenger, uint32 _minGasLimit) external {
-    // Get the l2 factory init code
-    // TODO: get the impl codes
-    bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
+    // Get the l2 usdc proxy init code
+    bytes memory _usdcProxyCArgs = abi.encode(L2_USDC_IMPLEMENTATION);
+    bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_BYTECODE, _usdcProxyCArgs);
 
-    // TODO: do this or get the creation code directly?
-    bytes memory _usdcProxyBytecode = address(USDC).code;
-
-    bytes memory _l2AdapterBytecode = UPGRADE_MANAGER.l2AdapterImplementation().code;
+    // Get the bytecode of the l2 usdc implementation and the l2 adapter
     bytes memory _l2UsdcImplementationBytecode = UPGRADE_MANAGER.bridgedUSDCImplementation().code;
+    bytes memory _l2AdapterBytecode = UPGRADE_MANAGER.l2AdapterImplementation().code;
 
-    bytes memory _l2FactoryCArgs = abi.encode(_l2AdapterBytecode, _usdcProxyBytecode, _l2UsdcImplementationBytecode);
+    // Get the l2 factory init code
+    bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
+    bytes memory _l2FactoryCArgs = abi.encode(_l2AdapterBytecode, _usdcProxyInitCode, _l2UsdcImplementationBytecode);
     bytes memory _l2FactoryInitCode = bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs);
 
     // Deploy L2 op usdc factory through portal
@@ -96,9 +97,9 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
 
   /**
    * @notice Precalculates the address of a contract that will be deployed thorugh `CREATE` opcode.
-   * @param _deployer The 20-byte deployer address.
-   * @param _nonce The next 32-byte nonce of the deployer address.
-   * @return _precalculatedAddress The 20-byte address where a contract will be stored.
+   * @param _deployer The deployer address.
+   * @param _nonce The next nonce of the deployer address.
+   * @return _precalculatedAddress The address where the contract will be stored
    */
   function _precalculateCreateAddress(
     address _deployer,
@@ -117,6 +118,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     else if (_nonce <= 0x7f) {
       data = abi.encodePacked(bytes1(0xd6), len, _deployer, uint8(_nonce));
     }
+    // TODO: Needs check, but the following could be removed
     // In the case of `_nonce > 0x7f` and `_nonce <= type(uint8).max`, we have the following encoding scheme
     // (the same calculation can be carried over for higher _nonce bytes):
     // 0xda = 0xc0 (short RLP prefix) + 0x1a (= the bytes length of: 0x94 + address + 0x84 + _nonce, in hex),
