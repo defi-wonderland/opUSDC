@@ -28,8 +28,9 @@ contract Helpers is Test {
     address _adapter
   ) internal returns (bytes memory _signature) {
     vm.startPrank(_signerAd);
-    bytes32 digest = keccak256(abi.encodePacked(_adapter, block.chainid, _to, _amount, _nonce)).toEthSignedMessageHash();
-    (uint8 v, bytes32 r, bytes32 s) = vm.sign(_signerPk, digest);
+    bytes32 _digest =
+      keccak256(abi.encodePacked(_adapter, block.chainid, _to, _amount, _nonce)).toEthSignedMessageHash();
+    (uint8 v, bytes32 r, bytes32 s) = vm.sign(_signerPk, _digest);
     _signature = abi.encodePacked(r, s, v);
     vm.stopPrank();
   }
