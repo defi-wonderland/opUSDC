@@ -158,7 +158,6 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
   function test_revertOnMessengerNotActive(
     address _to,
     uint256 _amount,
-    uint256 _nonce,
     bytes memory _signature,
     uint32 _minGasLimit
   ) external {
@@ -166,20 +165,21 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     // Execute
     vm.prank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
-    adapter.sendMessage(_to, _amount, _nonce, _signature, _minGasLimit);
+    adapter.sendMessage(_signerAd, _to, _amount, _signature, _minGasLimit);
   }
 
   /**
-   * @notice Check that function reverts when the nonce is invalid
+   * @notice Check that the function reverts on invalid signature
    */
-  function test_revertOnInvalidNonce(address _to, uint256 _amount, uint256 _nonce, uint32 _minGasLimit) external {
-    vm.assume(_nonce != adapter.userNonce(_signerAd));
-    bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
+  function test_invalidSiganture(address _to, uint256 _amount, uint32 _minGasLimit) external {
+    uint256 _nonce = adapter.userNonce(_signerAd);
+    (address _notSignerAd, uint256 _notSignerPk) = makeAddrAndKey('notSigner');
+    bytes memory _signature = _generateSignature(_to, _amount, _nonce, _notSignerAd, _notSignerPk, address(adapter));
 
     // Execute
     vm.prank(_user);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidNonce.selector);
-    adapter.sendMessage(_to, _amount, _nonce, _signature, _minGasLimit);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSignature.selector);
+    adapter.sendMessage(_signerAd, _to, _amount, _signature, _minGasLimit);
   }
 
   /**
@@ -204,7 +204,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
 
     // Execute
     vm.prank(_user);
-    adapter.sendMessage(_to, _amount, _nonce, _signature, _minGasLimit);
+    adapter.sendMessage(_signerAd, _to, _amount, _signature, _minGasLimit);
   }
 
   /**
@@ -231,7 +231,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
 
     // Execute
     vm.prank(_user);
-    adapter.sendMessage(_to, _amount, _nonce, _signature, _minGasLimit);
+    adapter.sendMessage(_signerAd, _to, _amount, _signature, _minGasLimit);
   }
 }
 

@@ -45,9 +45,9 @@ interface IOpUSDCBridgeAdapter {
   error IOpUSDCBridgeAdapter_InvalidSender();
 
   /**
-   * @notice Error when the nonce is invalid
+   * @notice Error when the signature is invalid
    */
-  error IOpUSDCBridgeAdapter_InvalidNonce();
+  error IOpUSDCBridgeAdapter_InvalidSignature();
 
   /*///////////////////////////////////////////////////////////////
                             LOGIC

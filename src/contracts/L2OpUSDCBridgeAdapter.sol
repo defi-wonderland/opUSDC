@@ -5,12 +5,17 @@ import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import {ECDSA} from '@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
 import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
+import {SignatureChecker} from '@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol';
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
 import {IL2OpUSDCBridgeAdapter} from 'interfaces/IL2OpUSDCBridgeAdapter.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCBridgeAdapter, UUPSUpgradeable {
+  using ECDSA for bytes32;
+  using MessageHashUtils for bytes32;
+  using SignatureChecker for address;
+
   /// @inheritdoc IL2OpUSDCBridgeAdapter
   address public immutable MESSENGER;
 
@@ -65,16 +70,16 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
 
   /**
    * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
+   * @param _signer The address of the user sending the message
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
-   * @param _nonce The nonce of the user
    * @param _signature The signature of the user
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function sendMessage(
+    address _signer,
     address _to,
     uint256 _amount,
-    uint256 _nonce,
     bytes calldata _signature,
     uint32 _minGasLimit
   ) external override {
@@ -82,16 +87,12 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
     if (isMessagingDisabled) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
     // Hash the message
-    bytes32 _messageHash = keccak256(abi.encodePacked(address(this), block.chainid, _to, _amount, _nonce));
+    bytes32 _messageHash = keccak256(abi.encode(address(this), block.chainid, _to, _amount, userNonce[_signer]++));
 
-    // Recover the signer
-    address _signer = ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(_messageHash), _signature);
+    _messageHash = _messageHash.toEthSignedMessageHash();
 
-    // Check the nonce
-    if (userNonce[_signer] != _nonce) revert IOpUSDCBridgeAdapter_InvalidNonce();
-
-    // Increment the nonce
-    userNonce[_signer]++;
+    // Check from is the signer
+    if (!_signer.isValidSignatureNow(_messageHash, _signature)) revert IOpUSDCBridgeAdapter_InvalidSignature();
 
     // Burn the tokens
     IUSDC(USDC).burn(_signer, _amount);

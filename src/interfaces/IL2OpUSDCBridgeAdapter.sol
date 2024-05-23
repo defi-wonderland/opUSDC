@@ -20,16 +20,16 @@ interface IL2OpUSDCBridgeAdapter {
 
   /**
    * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
+   * @param _signer The address of the user sending the message
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
-   * @param _nonce The nonce of the user
    * @param _signature The signature of the user
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function sendMessage(
+    address _signer,
     address _to,
     uint256 _amount,
-    uint256 _nonce,
     bytes calldata _signature,
     uint32 _minGasLimit
   ) external;
