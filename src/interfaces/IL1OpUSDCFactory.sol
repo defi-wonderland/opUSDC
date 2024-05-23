@@ -1,38 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
+import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
+import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
 import {ICreateX} from 'interfaces/external/ICreateX.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
+import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 interface IL1OpUSDCFactory {
-  /**
-   * @notice Deploy params needed to call the `deploy()` function
-   * @param usdc The address of the USDC contract on L1
-   * @param portal The address of the Optimism portal contract on L1
-   * @param l1Messenger The address of the L1 CrossDomainMessenger
-   * @param l2Messenger The address of the L2 CrossDomainMessenger
-   * @param l1dapterCreationCode The creation code of the `L1OpUSDCBridgeAdapter` contract
-   * @param l2AdapterCreationCode The creation code of the `L2OpUSDCBridgeAdapter` contract
-   * @param usdcProxyCreationCode The creation code of the USDC proxy contract
-   * @param usdcImplementationCreationCode The creation code of the USDC implementation contract
-   * @param owner The owner of the `L1OpUSDCBridgeAdapter` contract
-   * @param minGasLimit The minimum gas limit to deploy the `L2OpUSDCFactory` on L2.
-   * @param l2ChainId The chain ID of the L2 network
-   */
-  struct DeployParams {
-    address usdc;
-    IOptimismPortal portal;
-    ICrossDomainMessenger l1Messenger;
-    address l2Messenger;
-    bytes l1AdapterCreationCode;
-    bytes l2AdapterCreationCode;
-    bytes usdcImplementationCreationCode;
-    bytes usdcProxyCreationCode;
-    address owner;
-    uint32 minGasLimit;
-  }
-
   /**
    * @notice Deployment addresses of the contracts deployed by the `deploy()` function
    * @param l2Factory The address of the L2OpUSDCFactory contract
@@ -50,9 +26,54 @@ interface IL1OpUSDCFactory {
   }
 
   /**
-   * @notice Deploy the L1OpUSDCAdapter on L1, the L2OpUSDCAdapter and the USDC implementation and proxy contracts on L2
-   * @param _params The deploy params needed to deploy the contracts
-   * @return _deploymentAddresses The addresses of the deployed contracts
+   * @return _l2Messenger The address of the L2 messenger
    */
-  function deploy(DeployParams memory _params) external returns (DeploymentAddresses memory _deploymentAddresses);
+  function L2_MESSENGER() external view returns (address _l2Messenger);
+
+  /**
+   * @return _upgradeManager The address of the UpgradeManager contract
+   */
+  function UPGRADE_MANAGER() external view returns (IUpgradeManager _upgradeManager);
+
+  /**
+   * @return _l1Adapter The address of the L1OpUSDCBridgeAdapter contract
+   */
+  function L1_ADAPTER() external view returns (IL1OpUSDCBridgeAdapter _l1Adapter);
+
+  /**
+   * @return _usdc The address of the USDC contract on L1
+   */
+  function USDC() external view returns (IUSDC _usdc);
+
+  /**
+   * @return _l2Factory The address of the L2OpUSDCFactory contract
+   */
+  function L2_FACTORY() external view returns (address _l2Factory);
+
+  /**
+   * @return _l2Adapter The address of the L2OpUSDCBridgeAdapter contract
+   */
+  function L2_ADAPTER() external view returns (address _l2Adapter);
+
+  /**
+   * @return _l2UsdcProxy The address of the USDC proxy contract on L2
+   */
+  function L2_USDC_PROXY() external view returns (address _l2UsdcProxy);
+
+  /**
+   * @return _l2UsdcImplementation The address of the USDC implementation contract on L2
+   */
+  function L2_USDC_IMPLEMENTATION() external view returns (address _l2UsdcImplementation);
+
+  /**
+   * @return _aliasedSelf The aliased address of the L1 factory contract on L2
+   * @dev This is the `msg.sender` that will deploy the L2 factory
+   */
+  function ALIASED_SELF() external view returns (address _aliasedSelf);
+
+  function deployL2UsdcAndAdapter(address _l1Messenger, uint32 _minGasLimit) external;
+
+  event L1AdapterDeployed(address _l1Adapter);
+
+  event UpgradeManagerDeployed(address _upgradeManager);
 }

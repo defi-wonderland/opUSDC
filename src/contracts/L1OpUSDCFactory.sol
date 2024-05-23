@@ -1,15 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
+import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
+import {UpgradeManager} from 'contracts/UpgradeManager.sol';
 import {AddressAliasHelper} from 'contracts/utils/AddressAliasHelper.sol';
 import {CreateDeployer} from 'contracts/utils/CreateDeployer.sol';
 import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
-import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
-import {ICreateX} from 'interfaces/external/ICreateX.sol';
-import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
 
 import 'forge-std/Test.sol';
+import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
+import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
+
+import {BytecodeDeployer} from 'contracts/BytecodeDeployer.sol';
+import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
+import {ICreateX} from 'interfaces/external/ICreateX.sol';
+import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
+import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
+import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 /**
  * @title L1OpUSDCFactory
@@ -17,128 +25,75 @@ import 'forge-std/Test.sol';
  * `L2OpUSDCBridgeAdapter` and USDC proxy and implementation contracts on L2 on a single transaction.
  */
 contract L1OpUSDCFactory is CreateDeployer, IL1OpUSDCFactory {
+  uint256 internal constant _ZERO_VALUE = 0;
+
+  address internal constant _ZERO_ADDRESS = address(0);
+
+  bool internal constant _IS_CREATION = true;
+
+  address public constant L2_MESSENGER = 0x4200000000000000000000000000000000000007;
+
+  IL1OpUSDCBridgeAdapter public immutable L1_ADAPTER;
+
+  IUpgradeManager public immutable UPGRADE_MANAGER;
+
+  IUSDC public immutable USDC;
+
+  address public immutable L2_FACTORY;
+
+  address public immutable L2_ADAPTER;
+
+  address public immutable L2_USDC_PROXY;
+
+  address public immutable L2_USDC_IMPLEMENTATION;
+
+  address public immutable ALIASED_SELF = AddressAliasHelper.applyL1ToL2Alias(address(this));
+
+  constructor(address _usdc, address _owner) {
+    USDC = IUSDC(_usdc);
+    // Calculate l1 adapter
+    uint256 _nonceFirstTx = 1;
+    L1_ADAPTER = IL1OpUSDCBridgeAdapter(computeCreateAddress(address(this), _nonceFirstTx));
+
+    // Calculate l2 factory and l2 deplloyments
+    L2_FACTORY = computeCreateAddress(ALIASED_SELF, 0);
+    L2_USDC_IMPLEMENTATION = computeCreateAddress(L2_FACTORY, 1);
+    L2_USDC_PROXY = computeCreateAddress(L2_FACTORY, 2);
+    L2_ADAPTER = computeCreateAddress(L2_FACTORY, 3);
+
+    // Calculate the upgrade manager using 2 as nonce since the first 2 txs will deploy the l1 adapter
+    UPGRADE_MANAGER = IUpgradeManager(computeCreateAddress(address(this), 2));
+
+    // Deploy the L1 adapter
+    new L1OpUSDCBridgeAdapter(_usdc, L2_ADAPTER, address(UPGRADE_MANAGER), address(this));
+    emit L1AdapterDeployed(address(L1_ADAPTER));
+
+    // Deploy and initialize the upgrade manager
+    new UpgradeManager(address(L1_ADAPTER));
+    emit UpgradeManagerDeployed(address(UPGRADE_MANAGER));
+    // TODO: initialize
+    // UPGRADE_MANAGER.initialize(_owner);
+  }
+
   /**
    * @inheritdoc IL1OpUSDCFactory
    */
-  function deploy(DeployParams memory _params) external returns (DeploymentAddresses memory _deploymentAddresses) {
-    // TODO: Check the l1 messenger is not already set
-
-    // Calculate l1 adapter
-    _deploymentAddresses.l1Adapter = computeCreate3Address(SALT, address(this));
-
-    // Get this contract address on L2
-    address _aliasedAddressThis = AddressAliasHelper.applyL1ToL2Alias(address(this));
-    console.log('_aliasedAddressThis: ', _aliasedAddressThis);
-    _deploymentAddresses.l2Factory = computeCreateAddress(_aliasedAddressThis, 0);
-
-    // Get the l2 adapter address
-    bytes memory _l2AdapterCArgs =
-      abi.encode(_deploymentAddresses.l2UsdcProxy, _params.l2Messenger, _deploymentAddresses.l1Adapter);
-    bytes memory _l2AdapterInitCode = bytes.concat(_params.l2AdapterCreationCode, _l2AdapterCArgs);
-    // Precalculate linked adapter address on L2
-    _deploymentAddresses.l2Adapter =
-      computeCreate2Address(SALT, keccak256(_l2AdapterInitCode), _deploymentAddresses.l2Factory);
-
+  function deployL2UsdcAndAdapter(address _l1Messenger, uint32 _minGasLimit) external {
     // Get the l2 factory init code
+    // TODO: get the impl codes
     bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
-    bytes memory _l2FactoryCArgs =
-      abi.encode(_l2AdapterInitCode, _params.usdcProxyCreationCode, _params.usdcImplementationCreationCode);
+
+    // TODO: do this or get the creation code directly?
+    bytes memory _usdcProxyBytecode = address(USDC).code;
+
+    bytes memory _l2AdapterBytecode = UPGRADE_MANAGER.l2AdapterImplementation().code;
+    bytes memory _l2UsdcImplementationBytecode = UPGRADE_MANAGER.bridgedUSDCImplementation().code;
+
+    bytes memory _l2FactoryCArgs = abi.encode(_l2AdapterBytecode, _usdcProxyBytecode, _l2UsdcImplementationBytecode);
     bytes memory _l2FactoryInitCode = bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs);
 
-    // Get the l2 usdc address
-    _deploymentAddresses.l2UsdcImplementation =
-      computeCreate2Address(SALT, keccak256(_params.usdcImplementationCreationCode), _deploymentAddresses.l2Factory);
-    bytes memory _l2UsdcProxyInitCode =
-      bytes.concat(_params.usdcProxyCreationCode, abi.encode(_deploymentAddresses.l2UsdcImplementation));
-    _deploymentAddresses.l2UsdcProxy =
-      computeCreate2Address(SALT, keccak256(_l2UsdcProxyInitCode), _deploymentAddresses.l2Factory);
-
-    // Deploy the L1 adapter
-    bytes memory _l1AdapterCArgs =
-      abi.encode(_params.usdc, _params.l1Messenger, _deploymentAddresses.l2Adapter, _params.owner);
-    bytes memory _l1AdapterInitCode = bytes.concat(_params.l1AdapterCreationCode, _l1AdapterCArgs);
-    deployCreate3(SALT, _l1AdapterInitCode);
-
-    console.log(4);
-
     // Deploy L2 op usdc factory through portal
-    _params.portal.depositTransaction(address(0), 0, _params.minGasLimit, true, _l2FactoryInitCode);
-
-    console.log(5);
-    // console.log('gas left: ', gasleft());
-
-    // L2OpUSDCFactory _jaja = new L2OpUSDCFactory(
-    //   _deploymentAddresses.l1Adapter,
-    //   _l2AdapterInitCode,
-    //   _params.usdcProxyCreationCode,
-    //   _params.usdcImplementationCreationCode
-    // );
-
-    // console.log('gas left: ', gasleft());
-    // console.log(6);
-    // console.log('jaja address: ', address(_jaja));
+    IOptimismPortal _portal = ICrossDomainMessenger(_l1Messenger).portal();
+    _portal.depositTransaction(_ZERO_ADDRESS, _ZERO_VALUE, _minGasLimit, _IS_CREATION, _l2FactoryInitCode);
   }
-
-  // /**
-  //  * @inheritdoc IL1OpUSDCFactory
-  //  */
-  // function deploy2(DeployParams memory _params) external returns (DeploymentAddresses memory _deploymentAddresses) {
-  //   // Declare vars outter and define them in an inner block scoper to avoid stack too deep error
-  //   bytes memory _usdcImplementationDeployTx;
-  //   bytes memory _usdcDeployProxyTx;
-  //   bytes memory _l2AdapterDeployTx;
-  //   {
-  //     // Deploy usdc implementation on l2 tx
-  //     _usdcImplementationDeployTx =
-  //       abi.encodeWithSignature('deployCreate2(bytes32,bytes)', SALT, _params.usdcImplementationCreationCode);
-  //     // Precalculate usdc implementation address on l2
-  //     _deploymentAddresses.l2UsdcImplementation = CREATEX.computeCreate2Address(
-  //       _guardedSaltL2, keccak256(_params.usdcImplementationCreationCode), address(CREATEX)
-  //     );
-
-  //     // Deploy usdc on L2 tx
-  //     bytes memory _usdcProxyInitCode =
-  //       bytes.concat(_params.usdcProxyCreationCode, abi.encode(_deploymentAddresses.l2UsdcImplementation));
-  //     _usdcDeployProxyTx = abi.encodeWithSignature('deployCreate2(bytes32,bytes)', SALT, _usdcProxyInitCode);
-  //     // Precalculate token address on l2
-  //     _deploymentAddresses.l2UsdcProxy =
-  //       CREATEX.computeCreate2Address(_guardedSaltL2, keccak256(_usdcProxyInitCode), address(CREATEX));
-
-  //     // Define the l1 linked adapter address inner block scope to avoid stack too deep error
-  //     _deploymentAddresses.l1Adapter = CREATEX.computeCreate3Address(GUARDED_SALT_L1, address(CREATEX));
-
-  //     // Deploy adapter on L2 tx
-  //     bytes memory _l2AdapterCArgs =
-  //       abi.encode(_deploymentAddresses.l2UsdcProxy, _params.l2Messenger, _deploymentAddresses.l1Adapter);
-  //     bytes memory _l2AdapterInitCode = bytes.concat(_params.l2AdapterCreationCode, _l2AdapterCArgs);
-  //     _l2AdapterDeployTx = abi.encodeWithSignature('deployCreate2(bytes32,bytes)', SALT, _l2AdapterInitCode);
-  //     // Precalculate linked adapter address on L2
-  //     _deploymentAddresses.l2Adapter =
-  //       CREATEX.computeCreate2Address(_guardedSaltL2, keccak256(_l2AdapterInitCode), address(CREATEX));
-  //   }
-
-  //   // Send the usdc and adapter deploy and initialization txs as messages to L2
-  //   _params.l1Messenger.sendMessage(
-  //     address(CREATEX), _usdcImplementationDeployTx, _params.minGasLimitUsdcImplementationDeploy
-  //   );
-  //   _params.l1Messenger.sendMessage(
-  //     _deploymentAddresses.l2UsdcImplementation, USDCInitTxs.INITIALIZE, _params.minGasLimitInitTxs
-  //   );
-  //   _params.l1Messenger.sendMessage(
-  //     _deploymentAddresses.l2UsdcImplementation, USDCInitTxs.INITIALIZEV2, _params.minGasLimitInitTxs
-  //   );
-  //   _params.l1Messenger.sendMessage(
-  //     _deploymentAddresses.l2UsdcImplementation, USDCInitTxs.INITIALIZEV2_1, _params.minGasLimitInitTxs
-  //   );
-  //   _params.l1Messenger.sendMessage(
-  //     _deploymentAddresses.l2UsdcImplementation, USDCInitTxs.INITIALIZEV2_2, _params.minGasLimitInitTxs
-  //   );
-  //   _params.l1Messenger.sendMessage(address(CREATEX), _usdcDeployProxyTx, _params.minGasLimitUsdcProxyDeploy);
-  //   _params.l1Messenger.sendMessage(address(CREATEX), _l2AdapterDeployTx, _params.minGasLimitL2AdapterDeploy);
-
-  //   // Deploy the L1 adapter
-  //   bytes memory _l1AdapterCArgs = abi.encode(USDC, _params.l1Messenger, _deploymentAddresses.l2Adapter, _params.owner);
-  //   bytes memory _l1AdapterInitCode = bytes.concat(_params.l1AdapterCreationCode, _l1AdapterCArgs);
-  //   CREATEX.deployCreate3(SALT_L1, _l1AdapterInitCode);
-  // }
 }

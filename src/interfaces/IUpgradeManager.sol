@@ -88,6 +88,12 @@ interface IUpgradeManager {
   //////////////////////////////////////////////////////////////*/
 
   /**
+   * @notice Initialize the contract
+   * @param _initialOwner The address of the initial owner of the contract
+   */
+  function initialize(address _initialOwner) external;
+
+  /**
    * @notice Set the implementation of the L2 Adapter
    * @dev Only callable by the owner
    * @param _newImplementation The address of the new implementation

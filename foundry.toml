@@ -17,6 +17,9 @@ optimizer_runs = 10_000
 via_ir = true
 out = 'out-via-ir'
 
+[default.optimizer_details]
+yul = false
+
 [profile.test]
 via_ir = true
 out = 'out-via-ir'

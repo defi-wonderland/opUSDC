@@ -6,13 +6,13 @@ import {USDC_IMPLEMENTATION_BYTECODE, USDC_PROXY_BYTECODE} from 'contracts/utils
 import {Script} from 'forge-std/Script.sol';
 import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
-import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
 
-contract FactoryDeployMainnet is Script {
-  address public constant L1_CROSS_DOMAIN_MESSENGER = 0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1;
-  uint32 public constant MIN_GAS_LIMIT = 8_000_000;
-  IL1OpUSDCFactory public immutable L1_FACTORY = IL1OpUSDCFactory(vm.envAddress('L1_FACTORY_MAINNET'));
-  address public deployer = vm.rememberKey(vm.envUint('MAINNET_DEPLOYER_PK'));
+contract FactoryDeployBase is Script {
+  address public constant L1_CROSS_DOMAIN_MESSENGER = 0xC34855F4De64F1840e5686e64278da901e261f20;
+  uint32 public constant MIN_GAS_LIMIT = 12_000_000;
+  IL1OpUSDCFactory public immutable L1_FACTORY = IL1OpUSDCFactory(vm.envAddress('L1_FACTORY_SEPOLIA'));
+
+  address public deployer = vm.rememberKey(vm.envUint('SEPOLIA_DEPLOYER_PK'));
 
   function run() public {
     vm.startBroadcast(deployer);

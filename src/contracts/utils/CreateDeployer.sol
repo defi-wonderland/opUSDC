@@ -19,6 +19,22 @@ abstract contract CreateDeployer {
   bytes32 internal constant SALT = bytes32('1');
 
   /**
+   * @dev Deploys a new contract via calling the `CREATE` opcode and using the creation
+   * bytecode `initCode` and `msg.value` as inputs. In order to save deployment costs,
+   * we do not sanity check the `initCode` length. Note that if `msg.value` is non-zero,
+   * `initCode` must have a `payable` constructor.
+   * @param initCode The creation bytecode.
+   * @return newContract The 20-byte address where the contract was deployed.
+   */
+  function deployCreate(bytes memory initCode) public payable returns (address newContract) {
+    assembly ("memory-safe") {
+      newContract := create(callvalue(), add(initCode, 0x20), mload(initCode))
+    }
+    _requireSuccessfulContractCreation({newContract: newContract});
+    // emit ContractCreation({newContract: newContract});
+  }
+
+  /**
    * @dev Returns the address where a contract will be stored if deployed via `deployer` using
    * the `CREATE` opcode. For the specification of the Recursive Length Prefix (RLP) encoding
    * scheme, please refer to p. 19 of the Ethereum Yellow Paper (https://web.archive.org/web/20230921110603/https://ethereum.github.io/yellowpaper/paper.pdf)
