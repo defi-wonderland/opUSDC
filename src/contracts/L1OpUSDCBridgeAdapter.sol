@@ -98,6 +98,25 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
   }
 
   /**
+   * @notice Resume messaging on the messenger
+   * @dev Only callable by the UpgradeManager
+   * @dev Cant resume deprecated messengers
+   * @param _messenger The address of the messenger to resume
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  function resumeMessaging(address _messenger, uint32 _minGasLimit) external onlyUpgradeManager {
+    if (messengerStatus[_messenger] != Status.Paused) revert IL1OpUSDCBridgeAdapter_MessengerNotPaused();
+
+    messengerStatus[_messenger] = Status.Active;
+
+    ICrossDomainMessenger(_messenger).sendMessage(
+      LINKED_ADAPTER, abi.encodeWithSignature('receiveResumeMessaging()'), _minGasLimit
+    );
+
+    emit MessagingResumed(_messenger);
+  }
+
+  /**
    * @notice Burns the USDC tokens locked in the contract
    * @dev The amount is determined by the burnAmount variable, which is set in the setBurnAmount function
    */
@@ -244,10 +263,10 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
    * @notice Send a message to the linked adapter to call receiveStopMessaging() and stop outgoing messages.
    * @dev Only callable by the owner of the adapter
    * @dev Setting isMessagingDisabled to true is an irreversible operation
+   *  @param _messenger The address of the L2 messenger to stop messaging with
    * @param _minGasLimit Minimum gas limit that the message can be executed with
-   * @param _messenger The address of the messenger contract to send through
    */
-  function stopMessaging(uint32 _minGasLimit, address _messenger) external onlyUpgradeManager {
+  function stopMessaging(address _messenger, uint32 _minGasLimit) external onlyUpgradeManager {
     // Ensure messaging is enabled
     if (messengerStatus[_messenger] != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 

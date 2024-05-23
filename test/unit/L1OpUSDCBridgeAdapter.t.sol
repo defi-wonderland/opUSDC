@@ -138,6 +138,84 @@ contract L1OpUSDCBridgeAdapter_Unit_SetCircle is Base {
   }
 }
 
+contract L1OpUSDCBridgeAdapter_Unit_ResumeMessaging is Base {
+  event MessagingResumed(address _messenger);
+
+  /**
+   * @notice Check that only the upgrade manager can resume messaging
+   */
+  function test_onlyUpgradeManager(uint32 _minGasLimit) external {
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(abi.encodeWithSelector(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector));
+    adapter.resumeMessaging(_messenger, _minGasLimit);
+  }
+
+  /**
+   * @notice Check that it reverts if bridging is not paused
+   */
+  function test_RevertIfBridgingIsNotPaused(uint32 _minGasLimit) external {
+    // Execute
+    vm.prank(_upgradeManager);
+    vm.expectRevert(IL1OpUSDCBridgeAdapter.IL1OpUSDCBridgeAdapter_MessengerNotPaused.selector);
+    adapter.resumeMessaging(_messenger, _minGasLimit);
+  }
+
+  /**
+   * @notice Check that the messenger status is set to active
+   */
+  function test_setMessengerStatusToActive(uint32 _minGasLimit) external {
+    adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Paused);
+
+    _mockAndExpect(
+      address(_messenger),
+      abi.encodeWithSignature(
+        'sendMessage(address,bytes,uint32)',
+        _linkedAdapter,
+        abi.encodeWithSignature('receiveResumeMessaging()'),
+        _minGasLimit
+      ),
+      abi.encode('')
+    );
+
+    // Execute
+    vm.prank(_upgradeManager);
+    adapter.resumeMessaging(_messenger, _minGasLimit);
+    assertEq(
+      uint256(adapter.messengerStatus(_messenger)),
+      uint256(IL1OpUSDCBridgeAdapter.Status.Active),
+      'Messaging should be enabled'
+    );
+  }
+
+  /**
+   * @notice Check that the event is emitted as expected
+   */
+  function test_emitEvent(uint32 _minGasLimit) external {
+    adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Paused);
+
+    // Mock calls
+    vm.mockCall(
+      address(_messenger),
+      abi.encodeWithSignature(
+        'sendMessage(address,bytes,uint32)',
+        _linkedAdapter,
+        abi.encodeWithSignature('receiveResumeMessaging()'),
+        _minGasLimit
+      ),
+      abi.encode('')
+    );
+
+    // Expect events
+    vm.expectEmit(true, true, true, true);
+    emit MessagingResumed(_messenger);
+
+    // Execute
+    vm.prank(_upgradeManager);
+    adapter.resumeMessaging(_messenger, _minGasLimit);
+  }
+}
+
 contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
   /**
    * @notice Check that only the owner can burn the locked USDC
@@ -605,7 +683,7 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
     // Execute
     vm.prank(_user);
     vm.expectRevert(abi.encodeWithSelector(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector));
-    adapter.stopMessaging(0, _messenger);
+    adapter.stopMessaging(_messenger, 0);
   }
 
   /**
@@ -615,7 +693,7 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
     // Execute
     vm.prank(_upgradeManager);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
-    adapter.stopMessaging(_minGasLimit, _messenger);
+    adapter.stopMessaging(_messenger, _minGasLimit);
   }
 
   /**
@@ -634,7 +712,7 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
 
     // Execute
     vm.prank(_upgradeManager);
-    adapter.stopMessaging(_minGasLimit, _messenger);
+    adapter.stopMessaging(_messenger, _minGasLimit);
     assertEq(
       uint256(adapter.messengerStatus(_messenger)),
       uint256(IL1OpUSDCBridgeAdapter.Status.Paused),
@@ -663,7 +741,7 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
 
     // Execute
     vm.prank(_upgradeManager);
-    adapter.stopMessaging(_minGasLimit, _messenger);
+    adapter.stopMessaging(_messenger, _minGasLimit);
   }
 }
 

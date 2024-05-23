@@ -19,6 +19,11 @@ interface IL2OpUSDCBridgeAdapter {
   function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external;
 
   /**
+   * @notice Resume messaging after it was stopped
+   */
+  function receiveResumeMessaging() external;
+
+  /**
    * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
    * @param _signer The address of the user sending the message
    * @param _to The target address on the destination chain

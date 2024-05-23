@@ -132,6 +132,16 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
   }
 
   /**
+   * @notice Resume messaging after it was stopped
+   */
+  function receiveResumeMessaging() external checkSender {
+    // NOTE: This is safe because this message can only be received when messaging is not deprecated on the L1 messenger
+    isMessagingDisabled = false;
+
+    emit MessagingResumed(MESSENGER);
+  }
+
+  /**
    * @notice Authorize the upgrade of the implementation of the contract
    * @param _newImplementation The address of the new implementation
    */
