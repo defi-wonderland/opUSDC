@@ -3,7 +3,6 @@ pragma solidity 0.8.25;
 
 import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
-import {ICreateX} from 'interfaces/external/ICreateX.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
@@ -62,6 +61,8 @@ interface IL1OpUSDCFactory {
 
   /**
    * @return _l2UsdcImplementation The address of the USDC implementation contract on L2
+   * @dev This is the first USDC implementation address deployed by the L2 factory. However, if then it gets updated,
+   * the implementation address will be another one.
    */
   function L2_USDC_IMPLEMENTATION() external view returns (address _l2UsdcImplementation);
 

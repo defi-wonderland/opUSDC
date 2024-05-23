@@ -3,7 +3,6 @@ pragma solidity 0.8.25;
 
 import {BytecodeDeployer} from 'contracts/BytecodeDeployer.sol';
 import {L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
-import {CreateDeployer} from 'contracts/utils/CreateDeployer.sol';
 import {Script} from 'forge-std/Script.sol';
 import {console} from 'forge-std/Test.sol';
 import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';

@@ -3,17 +3,15 @@ pragma solidity 0.8.25;
 
 import {BytecodeDeployer} from 'contracts/BytecodeDeployer.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
-import {CreateDeployer} from 'contracts/utils/CreateDeployer.sol';
 import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
-import {ICreateX} from 'interfaces/external/ICreateX.sol';
 
 /**
  * @title L1OpUSDCFactory
  * @notice Factory contract to deploy and setup the `L1OpUSDCBridgeAdapter` contract on L1, the
  * `L2OpUSDCBridgeAdapter` and USDC proxy and implementation contracts on L2 on a single transaction.
  */
-contract L2OpUSDCFactory is CreateDeployer, IL2OpUSDCFactory {
+contract L2OpUSDCFactory is IL2OpUSDCFactory {
   event DeployedUSDCProxy(address usdc);
   event DeployedUSDCImpl(address usdc);
   event DeployedL2Adapter(address l2Adapter);
