@@ -213,10 +213,10 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
    * @notice Send a message to the linked adapter to call receiveStopMessaging() and stop outgoing messages.
    * @dev Only callable by the owner of the adapter
    * @dev Setting isMessagingDisabled to true is an irreversible operation
+   *
    * @param _minGasLimit Minimum gas limit that the message can be executed with
-   * @param _messenger The address of the messenger contract to send through
    */
-  function stopMessaging(uint32 _minGasLimit, address _messenger) external onlyUpgradeManager {
+  function stopMessaging(address _messenger, uint32 _minGasLimit) external onlyUpgradeManager {
     // Ensure messaging is enabled
     if (messengerStatus[_messenger] != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 

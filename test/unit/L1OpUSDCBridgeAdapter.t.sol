@@ -534,7 +534,7 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
     // Execute
     vm.prank(_user);
     vm.expectRevert(abi.encodeWithSelector(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector));
-    adapter.stopMessaging(0, _messenger);
+    adapter.stopMessaging(_messenger, 0);
   }
 
   /**
@@ -544,7 +544,7 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
     // Execute
     vm.prank(_upgradeManager);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
-    adapter.stopMessaging(_minGasLimit, _messenger);
+    adapter.stopMessaging(_messenger, _minGasLimit);
   }
 
   /**
@@ -563,7 +563,7 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
 
     // Execute
     vm.prank(_upgradeManager);
-    adapter.stopMessaging(_minGasLimit, _messenger);
+    adapter.stopMessaging(_messenger, _minGasLimit);
     assertEq(
       uint256(adapter.messengerStatus(_messenger)),
       uint256(IL1OpUSDCBridgeAdapter.Status.Paused),
@@ -592,7 +592,7 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
 
     // Execute
     vm.prank(_upgradeManager);
-    adapter.stopMessaging(_minGasLimit, _messenger);
+    adapter.stopMessaging(_messenger, _minGasLimit);
   }
 }
 

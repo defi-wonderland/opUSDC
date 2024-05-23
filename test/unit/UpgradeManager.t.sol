@@ -259,7 +259,7 @@ contract UpgradeManager_Unit_StopMessaging is Base {
   function test_stopMessaging(uint32 _minGasLimit, address _messenger) public {
     _mockAndExpect(
       _l1Adapter,
-      abi.encodeWithSelector(IL1OpUSDCBridgeAdapter.stopMessaging.selector, _minGasLimit, _messenger),
+      abi.encodeWithSelector(IL1OpUSDCBridgeAdapter.stopMessaging.selector, _messenger, _minGasLimit),
       abi.encode()
     );
 
