@@ -109,6 +109,7 @@ interface IL1OpUSDCBridgeAdapter {
    * @param _amount The amount of tokens to send
    * @param _messenger The address of the messenger contract to send through
    * @param _signature The signature of the user
+   * @param _deadline The deadline for the message to be executed
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function sendMessage(
@@ -117,6 +118,7 @@ interface IL1OpUSDCBridgeAdapter {
     uint256 _amount,
     address _messenger,
     bytes calldata _signature,
+    uint256 _deadline,
     uint32 _minGasLimit
   ) external;
 

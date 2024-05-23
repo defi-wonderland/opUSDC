@@ -74,6 +74,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
    * @param _signature The signature of the user
+   * @param _deadline The deadline for the message to be executed
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function sendMessage(
@@ -81,10 +82,14 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
     address _to,
     uint256 _amount,
     bytes calldata _signature,
+    uint256 _deadline,
     uint32 _minGasLimit
   ) external override {
     // Ensure messaging is enabled
     if (isMessagingDisabled) revert IOpUSDCBridgeAdapter_MessagingDisabled();
+
+    // Ensure the deadline has not passed
+    if (block.timestamp > _deadline) revert IOpUSDCBridgeAdapter_MessageExpired();
 
     // Hash the message
     bytes32 _messageHash = keccak256(abi.encode(address(this), block.chainid, _to, _amount, userNonce[_signer]++));

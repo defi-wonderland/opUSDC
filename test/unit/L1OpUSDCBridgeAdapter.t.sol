@@ -319,18 +319,41 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     address _to,
     uint256 _amount,
     bytes memory _signature,
+    uint256 _deadline,
     uint32 _minGasLimit
   ) external {
     // Execute
     vm.prank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
-    adapter.sendMessage(_signerAd, _to, _amount, _messenger, _signature, _minGasLimit);
+    adapter.sendMessage(_signerAd, _to, _amount, _messenger, _signature, _deadline, _minGasLimit);
+  }
+
+  /**
+   * @notice Check that the function reverts if the deadline is in the past
+   */
+  function test_revertOnMessengerExpired(
+    address _to,
+    uint256 _amount,
+    bytes memory _signature,
+    uint256 _timestamp,
+    uint256 _deadline,
+    uint32 _minGasLimit
+  ) external {
+    vm.assume(_timestamp > _deadline);
+    vm.warp(_timestamp);
+
+    adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessageExpired.selector);
+    adapter.sendMessage(_signerAd, _to, _amount, _messenger, _signature, _deadline, _minGasLimit);
   }
 
   /**
    * @notice Check that the function reverts on invalid signature
    */
-  function test_invalidSiganture(address _to, uint256 _amount, uint32 _minGasLimit) external {
+  function test_invalidSiganture(address _to, uint256 _amount, uint256 _deadline, uint32 _minGasLimit) external {
+    vm.assume(_deadline >= block.timestamp);
     uint256 _nonce = adapter.userNonce(_signerAd);
     (address _notSignerAd, uint256 _notSignerPk) = makeAddrAndKey('notSigner');
     bytes memory _signature = _generateSignature(_to, _amount, _nonce, _notSignerAd, _notSignerPk, address(adapter));
@@ -339,13 +362,44 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     // Execute
     vm.prank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSignature.selector);
-    adapter.sendMessage(_signerAd, _to, _amount, _messenger, _signature, _minGasLimit);
+    adapter.sendMessage(_signerAd, _to, _amount, _messenger, _signature, _deadline, _minGasLimit);
+  }
+
+  /**
+   * @notice Check nonce increment
+   */
+  function test_nonceIncrement(address _to, uint256 _amount, uint256 _deadline, uint32 _minGasLimit) external {
+    vm.assume(_deadline >= block.timestamp);
+    uint256 _nonce = adapter.userNonce(_signerAd);
+    bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
+    adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
+    vm.mockCall(
+      address(_usdc),
+      abi.encodeWithSignature('transferFrom(address,address,uint256)', _signerAd, address(adapter), _amount),
+      abi.encode(true)
+    );
+    vm.mockCall(
+      address(_messenger),
+      abi.encodeWithSignature(
+        'sendMessage(address,bytes,uint32)',
+        _linkedAdapter,
+        abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount),
+        _minGasLimit
+      ),
+      abi.encode()
+    );
+
+    // Execute
+    vm.prank(_user);
+    adapter.sendMessage(_signerAd, _to, _amount, _messenger, _signature, _deadline, _minGasLimit);
+    assertEq(adapter.userNonce(_signerAd), _nonce + 1, 'Nonce should be incremented');
   }
 
   /**
    * @notice Check that transferFrom and sendMessage are called as expected
    */
-  function test_expectedCall(address _to, uint256 _amount, uint32 _minGasLimit) external {
+  function test_expectedCall(address _to, uint256 _amount, uint256 _deadline, uint32 _minGasLimit) external {
+    vm.assume(_deadline >= block.timestamp);
     uint256 _nonce = adapter.userNonce(_signerAd);
     bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
     adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
@@ -367,13 +421,14 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
 
     // Execute
     vm.prank(_user);
-    adapter.sendMessage(_signerAd, _to, _amount, _messenger, _signature, _minGasLimit);
+    adapter.sendMessage(_signerAd, _to, _amount, _messenger, _signature, _deadline, _minGasLimit);
   }
 
   /**
    * @notice Check that the event is emitted as expected
    */
-  function test_emitEvent(address _to, uint256 _amount, uint32 _minGasLimit) external {
+  function test_emitEvent(address _to, uint256 _amount, uint256 _deadline, uint32 _minGasLimit) external {
+    vm.assume(_deadline >= block.timestamp);
     uint256 _nonce = adapter.userNonce(_signerAd);
     bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
     adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
@@ -398,7 +453,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     emit MessageSent(_signerAd, _to, _amount, _messenger, _minGasLimit);
     // Execute
     vm.prank(_user);
-    adapter.sendMessage(_signerAd, _to, _amount, _messenger, _signature, _minGasLimit);
+    adapter.sendMessage(_signerAd, _to, _amount, _messenger, _signature, _deadline, _minGasLimit);
   }
 }
 

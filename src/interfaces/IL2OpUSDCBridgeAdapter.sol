@@ -24,6 +24,7 @@ interface IL2OpUSDCBridgeAdapter {
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
    * @param _signature The signature of the user
+   * @param _deadline The deadline for the message to be executed
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function sendMessage(
@@ -31,6 +32,7 @@ interface IL2OpUSDCBridgeAdapter {
     address _to,
     uint256 _amount,
     bytes calldata _signature,
+    uint256 _deadline,
     uint32 _minGasLimit
   ) external;
 

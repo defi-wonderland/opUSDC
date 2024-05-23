@@ -157,6 +157,7 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
    * @param _amount The amount of tokens to send
    * @param _messenger The address of the messenger contract to send through
    * @param _signature The signature of the user
+   * @param _deadline The deadline for the message to be executed
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function sendMessage(
@@ -165,10 +166,14 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
     uint256 _amount,
     address _messenger,
     bytes calldata _signature,
+    uint256 _deadline,
     uint32 _minGasLimit
   ) external override {
     // Ensure messaging is enabled
     if (messengerStatus[_messenger] != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
+
+    // Ensure the deadline has not passed
+    if (block.timestamp > _deadline) revert IOpUSDCBridgeAdapter_MessageExpired();
 
     // Hash the message
     bytes32 _messageHash = keccak256(abi.encode(address(this), block.chainid, _to, _amount, userNonce[_signer]++));

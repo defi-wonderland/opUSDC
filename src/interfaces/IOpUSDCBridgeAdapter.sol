@@ -49,6 +49,11 @@ interface IOpUSDCBridgeAdapter {
    */
   error IOpUSDCBridgeAdapter_InvalidSignature();
 
+  /**
+   * @notice Error when the deadline has passed
+   */
+  error IOpUSDCBridgeAdapter_MessageExpired();
+
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   //////////////////////////////////////////////////////////////*/
