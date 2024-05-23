@@ -102,6 +102,26 @@ interface IL1OpUSDCBridgeAdapter {
    */
   function sendMessage(address _to, uint256 _amount, address _messenger, uint32 _minGasLimit) external;
 
+  /**
+   * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
+   * @param _signer The address of the user sending the message
+   * @param _to The target address on the destination chain
+   * @param _amount The amount of tokens to send
+   * @param _messenger The address of the messenger contract to send through
+   * @param _signature The signature of the user
+   * @param _deadline The deadline for the message to be executed
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  function sendMessage(
+    address _signer,
+    address _to,
+    uint256 _amount,
+    address _messenger,
+    bytes calldata _signature,
+    uint256 _deadline,
+    uint32 _minGasLimit
+  ) external;
+
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
   //////////////////////////////////////////////////////////////*/

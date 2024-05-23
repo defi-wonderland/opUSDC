@@ -3,6 +3,9 @@ pragma solidity 0.8.25;
 
 import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import {ECDSA} from '@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
+import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
+import {SignatureChecker} from '@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol';
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
@@ -10,6 +13,9 @@ import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSDCBridgeAdapter {
   using SafeERC20 for IUSDC;
+  using ECDSA for bytes32;
+  using MessageHashUtils for bytes32;
+  using SignatureChecker for address;
 
   /// @inheritdoc IL1OpUSDCBridgeAdapter
   address public immutable UPGRADE_MANAGER;
@@ -142,6 +148,50 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
     );
 
     emit MessageSent(msg.sender, _to, _amount, _messenger, _minGasLimit);
+  }
+
+  /**
+   * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
+   * @param _signer The address of the user sending the message
+   * @param _to The target address on the destination chain
+   * @param _amount The amount of tokens to send
+   * @param _messenger The address of the messenger contract to send through
+   * @param _signature The signature of the user
+   * @param _deadline The deadline for the message to be executed
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  function sendMessage(
+    address _signer,
+    address _to,
+    uint256 _amount,
+    address _messenger,
+    bytes calldata _signature,
+    uint256 _deadline,
+    uint32 _minGasLimit
+  ) external override {
+    // Ensure messaging is enabled
+    if (messengerStatus[_messenger] != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
+
+    // Ensure the deadline has not passed
+    if (block.timestamp > _deadline) revert IOpUSDCBridgeAdapter_MessageExpired();
+
+    // Hash the message
+    bytes32 _messageHash = keccak256(abi.encode(address(this), block.chainid, _to, _amount, userNonce[_signer]++));
+
+    _messageHash = _messageHash.toEthSignedMessageHash();
+
+    // Check from is the signer
+    if (!_signer.isValidSignatureNow(_messageHash, _signature)) revert IOpUSDCBridgeAdapter_InvalidSignature();
+
+    // Transfer the tokens to the contract
+    IUSDC(USDC).safeTransferFrom(_signer, address(this), _amount);
+
+    // Send the message to the linked adapter
+    ICrossDomainMessenger(_messenger).sendMessage(
+      LINKED_ADAPTER, abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount), _minGasLimit
+    );
+
+    emit MessageSent(_signer, _to, _amount, _messenger, _minGasLimit);
   }
 
   /**
