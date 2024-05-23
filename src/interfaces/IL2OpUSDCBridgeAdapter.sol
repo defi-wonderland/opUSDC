@@ -18,6 +18,11 @@ interface IL2OpUSDCBridgeAdapter {
    */
   function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external;
 
+  /**
+   * @notice Resume messaging after it was stopped
+   */
+  function receiveResumeMessaging() external;
+
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
   //////////////////////////////////////////////////////////////*/

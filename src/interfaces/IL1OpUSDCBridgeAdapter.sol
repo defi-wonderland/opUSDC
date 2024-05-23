@@ -60,6 +60,11 @@ interface IL1OpUSDCBridgeAdapter {
    */
   error IL1OpUSDCBridgeAdapter_MessengerAlreadyInitialized();
 
+  /**
+   * @notice Error when the messenger is not paused
+   */
+  error IL1OpUSDCBridgeAdapter_MessengerNotPaused();
+
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   //////////////////////////////////////////////////////////////*/
@@ -85,6 +90,15 @@ interface IL1OpUSDCBridgeAdapter {
    * @param _messenger The address of the L2 messenger to stop messaging with
    */
   function stopMessaging(uint32 _minGasLimit, address _messenger) external;
+
+  /**
+   * @notice Resume messaging on the messenger
+   * @dev Only callable by the UpgradeManager
+   * @dev Cant resume deprecated messengers
+   * @param _messenger The address of the messenger to resume
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  function resumeMessaging(address _messenger, uint32 _minGasLimit) external;
 
   /**
    * @notice Initiates the process to migrate the bridged USDC to native USDC

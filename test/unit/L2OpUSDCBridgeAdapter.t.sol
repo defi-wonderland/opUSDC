@@ -266,6 +266,64 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveStopMessaging is Base {
   }
 }
 
+contract L2OpUSDCBridgeAdapter_Unit_ReceiveResumeMessaging is Base {
+  event MessagingResumed(address _messenger);
+
+  /**
+   * @notice Check that the function reverts if the sender is not the messenger
+   */
+  function test_wrongMessenger(address _notMessenger) public {
+    vm.assume(_notMessenger != _messenger);
+
+    // Execute
+    vm.prank(_notMessenger);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
+    adapter.receiveResumeMessaging();
+  }
+
+  /**
+   * @notice Check that the function reverts if the linked adapter didn't send the message
+   */
+  function test_wrongLinkedAdapter() public {
+    address _notLinkedAdapter = makeAddr('notLinkedAdapter');
+
+    _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_notLinkedAdapter));
+
+    // Execute
+    vm.prank(_messenger);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
+    adapter.receiveResumeMessaging();
+  }
+
+  /**
+   * @notice Check that isMessagingDisabled is set to false
+   */
+  function test_setIsMessagingDisabledToFalse() public {
+    _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveResumeMessaging();
+    assertEq(adapter.isMessagingDisabled(), false, 'Messaging should be disabled');
+  }
+
+  /**
+   * @notice Check that the event is emitted as expected
+   */
+  function test_emitEvent() public {
+    // Mock calls
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+
+    // Expect events
+    vm.expectEmit(true, true, true, true);
+    emit MessagingResumed(_messenger);
+
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveResumeMessaging();
+  }
+}
+
 contract L1OpUSDCBridgeAdapter_AuthorizeUpgrade is Base {
   /**
    * @notice Check that the authorizeUpgrade function reverts if the sender is not MESSENGER

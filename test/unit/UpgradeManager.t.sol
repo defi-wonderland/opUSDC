@@ -218,6 +218,56 @@ contract UpgradeManager_Unit_PrepareMigrateToNative is Base {
   }
 }
 
+contract UpgradeManager_Unit_ResumeMessaging is Base {
+  /**
+   * @notice Check that the resumeMessaging function reverts when called by an unauthorized account
+   */
+  function test_revertIfNotOwner(address _messenger, uint32 _minGasLimit) public {
+    vm.prank(_user);
+    vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, _user));
+    upgradeManager.resumeMessaging(_messenger, _minGasLimit);
+  }
+
+  /**
+   * @notice Check that the resumeMessaging function works as expected
+   */
+  function test_resumeMessaging(address _messenger, uint32 _minGasLimit) public {
+    _mockAndExpect(
+      _l1Adapter,
+      abi.encodeWithSelector(IL1OpUSDCBridgeAdapter.resumeMessaging.selector, _messenger, _minGasLimit),
+      abi.encode()
+    );
+
+    vm.prank(_owner);
+    upgradeManager.resumeMessaging(_messenger, _minGasLimit);
+  }
+}
+
+contract UpgradeManager_Unit_StopMessaging is Base {
+  /**
+   * @notice Check that the stopMessaging function reverts when called by an unauthorized account
+   */
+  function test_revertIfNotOwner(uint32 _minGasLimit, address _messenger) public {
+    vm.prank(_user);
+    vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, _user));
+    upgradeManager.stopMessaging(_messenger, _minGasLimit);
+  }
+
+  /**
+   * @notice Check that the stopMessaging function works as expected
+   */
+  function test_stopMessaging(uint32 _minGasLimit, address _messenger) public {
+    _mockAndExpect(
+      _l1Adapter,
+      abi.encodeWithSelector(IL1OpUSDCBridgeAdapter.stopMessaging.selector, _minGasLimit, _messenger),
+      abi.encode()
+    );
+
+    vm.prank(_owner);
+    upgradeManager.stopMessaging(_messenger, _minGasLimit);
+  }
+}
+
 contract UpgradeManager_Unit_ExecuteMigration is Base {
   /**
    * @notice Check that the executeMigration function reverts if the migration is not prepared

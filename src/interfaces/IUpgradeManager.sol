@@ -115,6 +115,24 @@ interface IUpgradeManager {
    */
   function executeMigration(address _l1Messenger) external;
 
+  /**
+   * @notice Stop messaging on the messenger
+   * @dev Only callable by the owner of the adapter.
+   * @dev Setting isMessagingDisabled to true is an irreversible operation.
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   * @param _messenger The address of the L2 messenger to stop messaging with
+   */
+  function stopMessaging(address _messenger, uint32 _minGasLimit) external;
+
+  /**
+   * @notice Resume messaging on the messenger
+   * @dev Only callable by the UpgradeManager
+   * @dev Cant resume deprecated messengers
+   * @param _messenger The address of the messenger to resume
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  function resumeMessaging(address _messenger, uint32 _minGasLimit) external;
+
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
   //////////////////////////////////////////////////////////////*/

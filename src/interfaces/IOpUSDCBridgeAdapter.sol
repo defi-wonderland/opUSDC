@@ -30,6 +30,12 @@ interface IOpUSDCBridgeAdapter {
    */
   event MessageReceived(address _user, uint256 _amount, address _messenger);
 
+  /**
+   * @notice Emitted when messaging is resumed
+   * @param _messenger The address of the messenger that was resumed
+   */
+  event MessagingResumed(address _messenger);
+
   /*///////////////////////////////////////////////////////////////
                             ERRORS
   //////////////////////////////////////////////////////////////*/
