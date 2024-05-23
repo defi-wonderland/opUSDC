@@ -192,7 +192,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
   /**
    * @notice Check that the function reverts on invalid signature
    */
-  function test_invalidSiganture(address _to, uint256 _amount, uint256 _deadline, uint32 _minGasLimit) external {
+  function test_invalidSignature(address _to, uint256 _amount, uint256 _deadline, uint32 _minGasLimit) external {
     vm.assume(_deadline >= block.timestamp);
     uint256 _nonce = adapter.userNonce(_signerAd);
     (address _notSignerAd, uint256 _notSignerPk) = makeAddrAndKey('notSigner');
