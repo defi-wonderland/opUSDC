@@ -30,6 +30,12 @@ interface IOpUSDCBridgeAdapter {
    */
   event MessageReceived(address _user, uint256 _amount, address _messenger);
 
+  /**
+   * @notice Emitted when messaging is resumed
+   * @param _messenger The address of the messenger that was resumed
+   */
+  event MessagingResumed(address _messenger);
+
   /*///////////////////////////////////////////////////////////////
                             ERRORS
   //////////////////////////////////////////////////////////////*/
@@ -43,6 +49,16 @@ interface IOpUSDCBridgeAdapter {
    * @notice Error when the caller is not the linked adapter
    */
   error IOpUSDCBridgeAdapter_InvalidSender();
+
+  /**
+   * @notice Error when the signature is invalid
+   */
+  error IOpUSDCBridgeAdapter_InvalidSignature();
+
+  /**
+   * @notice Error when the deadline has passed
+   */
+  error IOpUSDCBridgeAdapter_MessageExpired();
 
   /*///////////////////////////////////////////////////////////////
                             LOGIC
@@ -73,4 +89,11 @@ interface IOpUSDCBridgeAdapter {
    */
   // solhint-disable-next-line func-name-mixedcase
   function LINKED_ADAPTER() external view returns (address _linkedAdapter);
+
+  /**
+   * @notice Returns the nonce of a given user to avoid replay attacks
+   * @param _user The user to fetch the nonce for
+   * @return _nonce The nonce of the user
+   */
+  function userNonce(address _user) external view returns (uint256 _nonce);
 }

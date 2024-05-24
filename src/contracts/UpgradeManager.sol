@@ -111,6 +111,28 @@ contract UpgradeManager is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
   }
 
   /**
+   * @notice Resume messaging on the messenger
+   * @dev Only callable by the UpgradeManager
+   * @dev Cant resume deprecated messengers
+   * @param _messenger The address of the messenger to resume
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  function resumeMessaging(address _messenger, uint32 _minGasLimit) external onlyOwner {
+    IL1OpUSDCBridgeAdapter(L1_ADAPTER).resumeMessaging(_messenger, _minGasLimit);
+  }
+
+  /**
+   * @notice Stop messaging on the messenger
+   * @dev Only callable by the owner of the adapter.
+   * @dev Setting isMessagingDisabled to true is an irreversible operation.
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   * @param _messenger The address of the L2 messenger to stop messaging with
+   */
+  function stopMessaging(address _messenger, uint32 _minGasLimit) external onlyOwner {
+    IL1OpUSDCBridgeAdapter(L1_ADAPTER).stopMessaging(_messenger, _minGasLimit);
+  }
+
+  /**
    * @notice Execute the migration of the L1 Adapter to the native chain
    * @param _l1Messenger The address of the L1 messenger
    */

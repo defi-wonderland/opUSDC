@@ -10,6 +10,9 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
   /// @inheritdoc IOpUSDCBridgeAdapter
   address public immutable LINKED_ADAPTER;
 
+  /// @inheritdoc IOpUSDCBridgeAdapter
+  mapping(address _user => uint256 _nonce) public userNonce;
+
   /**
    * @notice Construct the OpUSDCBridgeAdapter contract
    * @param _usdc The address of the USDC Contract to be used by the adapter
