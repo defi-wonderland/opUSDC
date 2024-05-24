@@ -160,15 +160,15 @@ contract L1OpUSDCFactory_Unit_DeployL2UsdcAndAdapter is Base {
    * @notice Check the `deployL2UsdcAndAdapter` function calls the `bridgedUSDCImplementation` correctly
    */
   function test_callBridgedUSDCImplementation(address _portal, uint32 _minGasLimit) public {
-    // Mock all the `deployL2UsdcAndAdapter` function calls
-    _mockDeployFunctionCalls(_portal);
-
     // Expect the `bridgedUSDCImplementation` to be properly called
     _mockAndExpect(
       _upgradeManager,
       abi.encodeWithSelector(IUpgradeManager.bridgedUSDCImplementation.selector),
       abi.encode(_bridgedUsdcImplementation)
     );
+
+    // Mock all the `deployL2UsdcAndAdapter` function calls
+    _mockDeployFunctionCalls(_portal);
 
     // Execute
     vm.prank(_user);
@@ -179,15 +179,15 @@ contract L1OpUSDCFactory_Unit_DeployL2UsdcAndAdapter is Base {
    * @notice Check the `deployL2UsdcAndAdapter` function calls the `l2AdapterImplementation` correctly
    */
   function test_callL2AdapterImplementation(address _portal, uint32 _minGasLimit) public {
-    // Mock all the `deployL2UsdcAndAdapter` function calls
-    _mockDeployFunctionCalls(_portal);
-
     // Expect the `l2AdapterImplementation` to be properly called
     _mockAndExpect(
       _upgradeManager,
       abi.encodeWithSelector(IUpgradeManager.l2AdapterImplementation.selector),
       abi.encode(_l2AdapterImplementation)
     );
+
+    // Mock all the `deployL2UsdcAndAdapter` function calls
+    _mockDeployFunctionCalls(_portal);
 
     // Execute
     vm.prank(_user);
@@ -198,12 +198,12 @@ contract L1OpUSDCFactory_Unit_DeployL2UsdcAndAdapter is Base {
    * @notice Check the `deployL2UsdcAndAdapter` function calls the `portal` correctly
    */
   function test_callDepositTransaction(address _portal, uint32 _minGasLimit) public {
-    // Mock all the `deployL2UsdcAndAdapter` function calls
-    _mockDeployFunctionCalls(_portal);
-
     // TODO: Pass the args to the expected call
     // Expect the `depositTransaction` to be properly called
     _mockAndExpect(_portal, abi.encodeWithSelector(IOptimismPortal.depositTransaction.selector), abi.encode(''));
+
+    // Mock all the `deployL2UsdcAndAdapter` function calls
+    _mockDeployFunctionCalls(_portal);
 
     // Execute
     vm.prank(_user);
