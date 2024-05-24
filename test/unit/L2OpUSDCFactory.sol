@@ -149,8 +149,8 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
    * @notice Check the USDC implementation initialization transactions were correctly executed
    */
   function test_callUsdcImplementationInitTxs() public {
-    // vm.mockCall(_usdcImplementation, _initTxs[0], abi.encode(true));
-    // vm.mockCall(_usdcImplementation, _initTxs[1], abi.encode(true));
+    vm.mockCall(_usdcImplementation, _initTxs[0], abi.encode(true));
+    vm.mockCall(_usdcImplementation, _initTxs[1], abi.encode(true));
 
     vm.prank(_deployer);
     new L2OpUSDCFactoryTest(_usdcProxyInitCode, _usdcImplBytecode, _initTxs, _l2AdapterBytecode, _emptyInitTxs);
@@ -165,8 +165,8 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
    * @notice Check the L2 adapter initialization transactions were correctly executed
    */
   function test_callL2AdapterInitTxs() public {
-    // vm.mockCall(_l2Adapter, _initTxs[0], abi.encode(true));
-    // vm.mockCall(_l2Adapter, _initTxs[1], abi.encode(true));
+    vm.mockCall(_l2Adapter, _initTxs[0], abi.encode(true));
+    vm.mockCall(_l2Adapter, _initTxs[1], abi.encode(true));
 
     vm.prank(_deployer);
     new L2OpUSDCFactoryTest(_usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _initTxs);
