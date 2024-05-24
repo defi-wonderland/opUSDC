@@ -29,7 +29,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
 
   address public immutable ALIASED_SELF = AddressAliasHelper.applyL1ToL2Alias(address(this));
 
-  IL1OpUSDCBridgeAdapter public immutable L1_ADAPTER;
+  address public immutable L1_ADAPTER;
 
   IUpgradeManager public immutable UPGRADE_MANAGER;
 
@@ -42,7 +42,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   constructor(address _usdc, address _owner) {
     // Calculate l1 adapter
     uint256 _thisNonceFirstTx = 1;
-    L1_ADAPTER = IL1OpUSDCBridgeAdapter(_precalculateCreateAddress(address(this), _thisNonceFirstTx));
+    L1_ADAPTER = _precalculateCreateAddress(address(this), _thisNonceFirstTx);
 
     // Calculate l2 factory address
     uint256 _aliasedAddressFirstNonce = 0;
@@ -61,10 +61,10 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
 
     // Deploy the L1 adapter
     new L1OpUSDCBridgeAdapter(_usdc, L2_ADAPTER, address(UPGRADE_MANAGER), address(this));
-    emit L1AdapterDeployed(address(L1_ADAPTER));
+    emit L1AdapterDeployed(L1_ADAPTER);
 
     // Deploy the upgrade manager implementation
-    address _upgradeManagerImplementation = address(new UpgradeManager(address(L1_ADAPTER)));
+    address _upgradeManagerImplementation = address(new UpgradeManager(L1_ADAPTER));
     // Deploy and initialize the upgrade manager proxy
     bytes memory _initializeTx = abi.encodeWithSelector(IUpgradeManager.initialize.selector, _owner);
     UpgradeManager(address(new ERC1967Proxy(address(_upgradeManagerImplementation), _initializeTx)));
@@ -95,6 +95,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
       _l2AdapterBytecode,
       _l2AdapterImplementation.initTxs
     );
+
     bytes memory _l2FactoryInitCode = bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs);
 
     // Deploy L2 op usdc factory through portal

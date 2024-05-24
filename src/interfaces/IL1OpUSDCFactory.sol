@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
@@ -24,7 +23,7 @@ interface IL1OpUSDCFactory {
   /**
    * @return _l1Adapter The address of the L1OpUSDCBridgeAdapter contract
    */
-  function L1_ADAPTER() external view returns (IL1OpUSDCBridgeAdapter _l1Adapter);
+  function L1_ADAPTER() external view returns (address _l1Adapter);
 
   /**
    * @return _l2Adapter The address of the L2OpUSDCBridgeAdapter contract
