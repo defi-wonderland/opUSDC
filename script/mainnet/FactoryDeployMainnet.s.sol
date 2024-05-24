@@ -7,7 +7,7 @@ import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.s
 import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
 
 contract FactoryDeployMainnet is Script {
-  address public constant L1_CROSS_DOMAIN_MESSENGER = 0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1;
+  address public constant PORTAL = 0xbEb5Fc579115071764c7423A4f12eDde41f106Ed;
   uint32 public constant MIN_GAS_LIMIT = 8_000_000;
   IL1OpUSDCFactory public immutable L1_FACTORY = IL1OpUSDCFactory(vm.envAddress('L1_FACTORY_MAINNET'));
   address public deployer = vm.rememberKey(vm.envUint('MAINNET_DEPLOYER_PK'));
@@ -15,7 +15,7 @@ contract FactoryDeployMainnet is Script {
   function run() public {
     vm.startBroadcast(deployer);
     // Deploy the L2 contracts
-    L1_FACTORY.deployL2UsdcAndAdapter(L1_CROSS_DOMAIN_MESSENGER, MIN_GAS_LIMIT);
+    L1_FACTORY.deployL2UsdcAndAdapter(PORTAL, MIN_GAS_LIMIT);
     vm.stopBroadcast();
   }
 }

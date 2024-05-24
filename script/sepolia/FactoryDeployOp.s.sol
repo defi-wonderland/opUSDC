@@ -8,7 +8,7 @@ import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 
 contract FactoryDeployOp is Script {
-  address public constant L1_CROSS_DOMAIN_MESSENGER = 0x58Cc85b8D04EA49cC6DBd3CbFFd00B4B8D6cb3ef;
+  address public constant PORTAL = 0x16Fc5058F25648194471939df75CF27A2fdC48BC;
   uint32 public constant MIN_GAS_LIMIT = 12_000_000;
   IL1OpUSDCFactory public immutable L1_FACTORY = IL1OpUSDCFactory(vm.envAddress('L1_FACTORY_SEPOLIA'));
 
@@ -17,7 +17,7 @@ contract FactoryDeployOp is Script {
   function run() public {
     vm.startBroadcast(deployer);
     // Deploy the L2 contracts
-    L1_FACTORY.deployL2UsdcAndAdapter(L1_CROSS_DOMAIN_MESSENGER, MIN_GAS_LIMIT);
+    L1_FACTORY.deployL2UsdcAndAdapter(PORTAL, MIN_GAS_LIMIT);
     vm.stopBroadcast();
   }
 }
