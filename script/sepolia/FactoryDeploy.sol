@@ -25,7 +25,6 @@ contract FactoryDeploy is Script {
     console.log('L2OpUSDCBridgeAdapter deployment address:', _l1Factory.L2_ADAPTER());
     console.log('L2 USDC proxy deployed deployment address:', _l1Factory.L2_USDC_PROXY());
     console.log('L2 USDC implementation deployed deployment address:', _l1Factory.L2_USDC_IMPLEMENTATION());
-    console.log('L2OpUSDCFactory deployed at:', _l1Factory.L2_FACTORY());
 
     vm.stopBroadcast();
   }
