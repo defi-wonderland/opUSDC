@@ -6,9 +6,25 @@ import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.s
 import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
 
 interface IL1OpUSDCFactory {
+  /*///////////////////////////////////////////////////////////////
+                            EVENTS
+  //////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice Emitted when the `L1OpUSDCBridgeAdapter` is deployed
+   * @param _l1Adapter The address of the L1 adapter
+   */
   event L1AdapterDeployed(address _l1Adapter);
 
+  /**
+   * @notice Emitted when the `UpgradeManager` is deployed
+   * @param _upgradeManager The address of the upgrade manager
+   */
   event UpgradeManagerDeployed(address _upgradeManager);
+
+  /*///////////////////////////////////////////////////////////////
+                            LOGIC
+  //////////////////////////////////////////////////////////////*/
 
   /**
    * @return _l2Messenger The address of the L2 messenger
@@ -48,5 +64,10 @@ interface IL1OpUSDCFactory {
    */
   function ALIASED_SELF() external view returns (address _aliasedSelf);
 
-  function deployL2UsdcAndAdapter(address _l1Messenger, uint32 _minGasLimit) external;
+  /**
+   * @notice Sends the L2 factory creation tx along with the L2 deployments to be done on it through the portal
+   * @param _portal The address of the portal contract for the respective L2 chain
+   * @param _minGasLimit The minimum gas limit for the L2 deployment
+   */
+  function deployL2UsdcAndAdapter(address _portal, uint32 _minGasLimit) external;
 }

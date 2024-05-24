@@ -2,16 +2,22 @@
 pragma solidity 0.8.25;
 
 import {BytecodeDeployer} from 'contracts/BytecodeDeployer.sol';
-import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
-import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 
 /**
- * @title L1OpUSDCFactory
- * @notice Factory contract to deploy and setup the `L1OpUSDCBridgeAdapter` contract on L1, the
- * `L2OpUSDCBridgeAdapter` and USDC proxy and implementation contracts on L2 on a single transaction.
+ * @title L2OpUSDCFactory
+ * @notice Factory contract for deploying the L2 USDC implementation, proxy, and `L2OpUSDCBridgeAdapter` contracts all
+ * at once on the constructor
  */
 contract L2OpUSDCFactory is IL2OpUSDCFactory {
+  /**
+   * @notice Deploys the USDC implementation, proxy, and L2 adapter contracts
+   * @param _usdcProxyInitCode The creation code plus the constructor arguments for the USDC proxy contract
+   * @param _usdcImplBytecode The bytecode for the USDC implementation contract
+   * @param _usdcImplInitTxs The initialization transactions for the USDC implementation contract
+   * @param _l2AdapterBytecode The bytecode for the L2 adapter contract
+   * @param _l2AdapterInitTxs The initialization transactions for the L2 adapter contract
+   */
   constructor(
     bytes memory _usdcProxyInitCode,
     bytes memory _usdcImplBytecode,
@@ -27,7 +33,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     address _usdcProxy = _createDeploy(_usdcProxyInitCode);
     emit DeployedUSDCProxy(_usdcProxy);
 
-    // Deploy l2 adapter
+    // Deploy L2 adapter
     address _adapter = address(new BytecodeDeployer(_l2AdapterBytecode));
     emit DeployedL2Adapter(_adapter);
 
@@ -44,7 +50,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
 
     // Execute the L2 Adapter initialization transactions
     if (_l2AdapterInitTxs.length > 0) {
-      // Initialize l2 adapter
+      // Initialize L2 adapter
       for (uint256 i = 0; i < _l2AdapterInitTxs.length; i++) {
         (bool _success,) = _adapter.call(_l2AdapterInitTxs[i]);
         if (!_success) {

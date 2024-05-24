@@ -1,22 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
-import {L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
-
-import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
-
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
-import {UpgradeManager} from 'contracts/UpgradeManager.sol';
-import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
-import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {Test} from 'forge-std/Test.sol';
-import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
-import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
-import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
-import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
-import {AddressAliasHelper} from 'test/utils/AddressAliasHelper.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
 import 'forge-std/Test.sol';
@@ -30,7 +17,7 @@ contract L2OpUSDCFactoryTest is L2OpUSDCFactory {
     bytes[] memory _l2AdapterInitTxs
   ) L2OpUSDCFactory(_usdcProxyInitCode, _usdcImplBytecode, _usdcImplInitTxs, _l2AdapterBytecode, _l2AdapterInitTxs) {}
 
-  function createDeploy(bytes memory _initCode) public returns (address _newContract) {
+  function forTest_createDeploy(bytes memory _initCode) public returns (address _newContract) {
     _newContract = _createDeploy(_initCode);
   }
 }
@@ -74,7 +61,7 @@ contract Base is Test, Helpers {
     console.log('factory: ', factory);
     console.log('usdc implementation: ', _usdcImplementation);
     console.log('usdc proxy: ', _usdcProxy);
-    console.log('l2 adapter: ', _l2Adapter);
+    console.log('L2 adapter: ', _l2Adapter);
   }
 
   /**
@@ -111,9 +98,10 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
   event DeployedUSDCProxy(address _usdcProxy);
   event DeployedL2Adapter(address _l2Adapter);
 
+  /**
+   * @notice Check the USDC implementation contract was correctly deployed and the event was emitted
+   */
   function test_deployUsdcImplementationAndEmit() public {
-    console.log('usdc implementation address: ', _usdcImplementation);
-
     vm.expectEmit(true, true, true, true);
     emit DeployedUSDCImpl(_usdcImplementation);
 
@@ -124,9 +112,10 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
     assertGt(_usdcImplementation.code.length, 0);
   }
 
+  /**
+   * @notice Check the USDC proxy contract was correctly deployed and the event was emitted
+   */
   function test_deployUsdcProxyAndEmit() public {
-    console.log('usdc proxy address: ', _usdcProxy);
-
     vm.expectEmit(true, true, true, true);
     emit DeployedUSDCProxy(_usdcProxy);
 
@@ -137,9 +126,10 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
     assertGt(_usdcProxy.code.length, 0);
   }
 
+  /**
+   * @notice Check the L2 adapter contract was correctly deployed and the event was emitted
+   */
   function test_deployL2AdapterAndEmit() public {
-    console.log('l2 adapter address: ', _l2Adapter);
-
     vm.expectEmit(true, true, true, true);
     emit DeployedL2Adapter(_l2Adapter);
 
@@ -150,6 +140,14 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
     assertGt(_l2Adapter.code.length, 0);
   }
 
+  /**
+   * @notice Check the USDC implementation calls revert on bad transactions
+   */
+  function test_revertOnUSDCImplementationBadTxs() public {}
+
+  /**
+   * @notice Check the USDC implementation initialization transactions were correctly executed
+   */
   function test_callUsdcImplementationInitTxs() public {
     // vm.mockCall(_usdcImplementation, _initTxs[0], abi.encode(true));
     // vm.mockCall(_usdcImplementation, _initTxs[1], abi.encode(true));
@@ -158,6 +156,14 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
     new L2OpUSDCFactoryTest(_usdcProxyInitCode, _usdcImplBytecode, _initTxs, _l2AdapterBytecode, _emptyInitTxs);
   }
 
+  /**
+   * @notice Check the L2 adapter calls revert on bad transactions
+   */
+  function test_revertOnL2AdapterBadTxs() public {}
+
+  /**
+   * @notice Check the L2 adapter initialization transactions were correctly executed
+   */
   function test_callL2AdapterInitTxs() public {
     // vm.mockCall(_l2Adapter, _initTxs[0], abi.encode(true));
     // vm.mockCall(_l2Adapter, _initTxs[1], abi.encode(true));
@@ -172,30 +178,43 @@ contract L2OpUSDCFactory_Unit_CreateDeploy is Base {
 
   function setUp() public override {
     super.setUp();
+    // Deploy the factory for the next tests
     _factory =
       new L2OpUSDCFactoryTest(_usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _emptyInitTxs);
   }
 
-  function test_createDeploy(address _usdcImplementation) public {
-    vm.prank(_deployer);
-
+  /**
+   * @notice Check the factory correctly deploys a new contract through the `CREATE` opcode
+   */
+  function test_createDeploy() public {
+    // Get the init code with the USDC proxy creation code plus the USDC implementation address
     bytes memory _initCode = bytes.concat(_usdcProxyInitCode, abi.encode(_usdcImplementation));
+    // Precalculate the address of the contract that will be deployed
     uint256 _nonce = 4;
     address _expectedAddress = _precalculateCreateAddress(address(_factory), _nonce);
-    address _newContract = _factory.createDeploy(_initCode);
+
+    // Execute
+    vm.prank(_deployer);
+    address _newContract = _factory.forTest_createDeploy(_initCode);
 
     // Assert the deployed contract has code
     assertEq(_newContract, _expectedAddress);
     assertGt(_newContract.code.length, 0);
   }
 
+  /**
+   * @notice Check the factory reverts if the deployment failed
+   * @dev It only works with creation code, but not with bytecode so it should revert when using bytecode
+   */
   function test_revertIfDeploymentFailed() public {
-    // It only works with creation code, but not with bytecode
     vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_CreateDeploymentFailed.selector);
-    _factory.createDeploy(_bytecode);
+    _factory.forTest_createDeploy(_bytecode);
   }
 }
 
+/**
+ * @notice Dummy contract used only for testing purposes
+ */
 contract ForTestDummyContract {
   function dummyFunction() public pure returns (bool) {
     return true;

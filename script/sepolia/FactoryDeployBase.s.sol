@@ -14,7 +14,7 @@ contract FactoryDeployBase is Script {
 
   function run() public {
     vm.startBroadcast(deployer);
-    // Deploy the l2 contracts
+    // Deploy the L2 contracts
     L1_FACTORY.deployL2UsdcAndAdapter(L1_CROSS_DOMAIN_MESSENGER, MIN_GAS_LIMIT);
     vm.stopBroadcast();
   }
