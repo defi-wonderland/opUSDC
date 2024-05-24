@@ -2,7 +2,7 @@
 pragma solidity 0.8.25;
 
 import {BytecodeDeployer} from 'contracts/BytecodeDeployer.sol';
-import {USDC_PROXY_BYTECODE} from 'contracts/utils/USDCCreationCode.sol';
+import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 
@@ -85,7 +85,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   function deployL2UsdcAndAdapter(address _l1Messenger, uint32 _minGasLimit) external {
     // Get the l2 usdc proxy init code
     bytes memory _usdcProxyCArgs = abi.encode(L2_USDC_IMPLEMENTATION);
-    bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_BYTECODE, _usdcProxyCArgs);
+    bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);
 
     // Get the bytecode of the l2 usdc implementation and the l2 adapter
     IUpgradeManager.Implementation memory _l2UsdcImplementation = UPGRADE_MANAGER.bridgedUSDCImplementation();
