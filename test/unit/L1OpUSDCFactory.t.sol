@@ -3,7 +3,9 @@ pragma solidity 0.8.25;
 
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
+import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
 import {UpgradeManager} from 'contracts/UpgradeManager.sol';
+import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {Test} from 'forge-std/Test.sol';
 import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
 import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
@@ -198,12 +200,37 @@ contract L1OpUSDCFactory_Unit_DeployL2UsdcAndAdapter is Base {
    * @notice Check the `deployL2UsdcAndAdapter` function calls the `portal` correctly
    */
   function test_callDepositTransaction(address _portal, uint32 _minGasLimit) public {
-    // TODO: Pass the args to the expected call
-    // Expect the `depositTransaction` to be properly called
-    _mockAndExpect(_portal, abi.encodeWithSelector(IOptimismPortal.depositTransaction.selector), abi.encode(''));
-
     // Mock all the `deployL2UsdcAndAdapter` function calls
     _mockDeployFunctionCalls(_portal);
+
+    // Get the L2 usdc proxy init code
+    bytes memory _usdcProxyCArgs = abi.encode(_bridgedUsdcImplementation.implementation);
+    bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);
+
+    // Get the bytecode of the L2 usdc implementation
+    bytes memory _l2UsdcImplementationBytecode = _bridgedUsdcImplementation.implementation.code;
+    // Get the bytecode of the he L2 adapter
+    bytes memory _l2AdapterBytecode = _l2AdapterImplementation.implementation.code;
+
+    // Get the L2 factory init code
+    bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
+
+    bytes memory _l2FactoryCArgs = abi.encode(
+      _usdcProxyInitCode,
+      _l2UsdcImplementationBytecode,
+      _bridgedUsdcImplementation.initTxs,
+      _l2AdapterBytecode,
+      _l2AdapterImplementation.initTxs
+    );
+    bytes memory _l2FactoryInitCode = bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs);
+
+    _mockAndExpect(
+      _portal,
+      abi.encodeWithSelector(
+        IOptimismPortal.depositTransaction.selector, address(0), 0, _minGasLimit, true, _l2FactoryInitCode
+      ),
+      abi.encode('')
+    );
 
     // Execute
     vm.prank(_user);
