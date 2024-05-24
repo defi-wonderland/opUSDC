@@ -15,8 +15,6 @@ import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
 import {AddressAliasHelper} from 'test/utils/AddressAliasHelper.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
-import 'forge-std/Test.sol';
-
 contract L1OpUSDCFactoryForTest is L1OpUSDCFactory {
   constructor(address _usdc, address _owner) L1OpUSDCFactory(_usdc, _owner) {}
 
@@ -223,6 +221,7 @@ contract L1OpUSDCFactory_Unit_DeployL2UsdcAndAdapter is Base {
 
 contract L1OpUSDCFactory_Unit_PrecalculateCreateAddress is Base {
   function test_precalculateCreateAddress(address _deployer) public {
+    vm.assume(vm.getNonce(_deployer) == 0);
     for (uint256 i = 0; i < 127; i++) {
       // Precalculate the address
       address _precalculatedAddress = factory.forTest_precalculateCreateAddress(_deployer, i);

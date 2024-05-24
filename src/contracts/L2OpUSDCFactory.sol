@@ -24,7 +24,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     emit DeployedUSDCImpl(_usdcImplementation);
 
     // Deploy usdc proxy
-    address _usdcProxy = createDeploy(_usdcProxyInitCode);
+    address _usdcProxy = _createDeploy(_usdcProxyInitCode);
     emit DeployedUSDCProxy(_usdcProxy);
 
     // Deploy l2 adapter
@@ -37,7 +37,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
       for (uint256 i = 0; i < _usdcImplInitTxs.length; i++) {
         (bool _success,) = _usdcImplementation.call(_usdcImplInitTxs[i]);
         if (!_success) {
-          revert IL2OpUSDCBridgeAdapter_UsdcInitializationFailed();
+          revert IL2OpUSDCFactory_UsdcInitializationFailed();
         }
       }
     }
@@ -48,7 +48,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
       for (uint256 i = 0; i < _l2AdapterInitTxs.length; i++) {
         (bool _success,) = _adapter.call(_l2AdapterInitTxs[i]);
         if (!_success) {
-          revert IL2OpUSDCBridgeAdapter_AdapterInitializationFailed();
+          revert IL2OpUSDCFactory_AdapterInitializationFailed();
         }
       }
     }
@@ -59,12 +59,12 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
    * @param _initCode The creation bytecode (contract initialization code + constructor arguments)
    * @return _newContract The address where the contract was deployed
    */
-  function createDeploy(bytes memory _initCode) public returns (address _newContract) {
+  function _createDeploy(bytes memory _initCode) internal returns (address _newContract) {
     assembly ("memory-safe") {
       _newContract := create(0, add(_initCode, 0x20), mload(_initCode))
     }
     if (_newContract == address(0) || _newContract.code.length == 0) {
-      revert IL2OpUSDCBridgeAdapter_CreateDeploymentFailed();
+      revert IL2OpUSDCFactory_CreateDeploymentFailed();
     }
   }
 }
