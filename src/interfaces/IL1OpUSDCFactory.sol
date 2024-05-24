@@ -5,24 +5,11 @@ import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
-import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 interface IL1OpUSDCFactory {
-  /**
-   * @notice Deployment addresses of the contracts deployed by the `deploy()` function
-   * @param l2Factory The address of the L2OpUSDCFactory contract
-   * @param l1Adapter The address of the L1OpUSDCAdapter contract
-   * @param l2Adapter The address of the L2OpUSDCAdapter contract
-   * @param l2UsdcImplementation The address of the USDC implementation contract on L2
-   * @param l2UsdcProxy The address of the USDC proxy contract on L2
-   */
-  struct DeploymentAddresses {
-    address l2Factory;
-    address l1Adapter;
-    address l2Adapter;
-    address l2UsdcImplementation;
-    address l2UsdcProxy;
-  }
+  event L1AdapterDeployed(address _l1Adapter);
+
+  event UpgradeManagerDeployed(address _upgradeManager);
 
   /**
    * @return _l2Messenger The address of the L2 messenger
@@ -38,11 +25,6 @@ interface IL1OpUSDCFactory {
    * @return _l1Adapter The address of the L1OpUSDCBridgeAdapter contract
    */
   function L1_ADAPTER() external view returns (IL1OpUSDCBridgeAdapter _l1Adapter);
-
-  /**
-   * @return _usdc The address of the USDC contract on L1
-   */
-  function USDC() external view returns (IUSDC _usdc);
 
   /**
    * @return _l2Factory The address of the L2OpUSDCFactory contract
@@ -73,8 +55,4 @@ interface IL1OpUSDCFactory {
   function ALIASED_SELF() external view returns (address _aliasedSelf);
 
   function deployL2UsdcAndAdapter(address _l1Messenger, uint32 _minGasLimit) external;
-
-  event L1AdapterDeployed(address _l1Adapter);
-
-  event UpgradeManagerDeployed(address _upgradeManager);
 }

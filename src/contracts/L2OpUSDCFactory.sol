@@ -12,18 +12,46 @@ import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
  * `L2OpUSDCBridgeAdapter` and USDC proxy and implementation contracts on L2 on a single transaction.
  */
 contract L2OpUSDCFactory is IL2OpUSDCFactory {
-  constructor(bytes memory _l2AdapterBytecode, bytes memory _usdcProxyInitCode, bytes memory _usdcImplBytecode) {
+  constructor(
+    bytes memory _usdcProxyInitCode,
+    bytes memory _usdcImplBytecode,
+    bytes[] memory _usdcImplInitTxs,
+    bytes memory _l2AdapterBytecode,
+    bytes[] memory _l2AdapterInitTxs
+  ) {
     // Deploy usdc implementation
-    address _implt = address(new BytecodeDeployer(_usdcImplBytecode));
-    emit DeployedUSDCImpl(_implt);
+    address _usdcImplementation = address(new BytecodeDeployer(_usdcImplBytecode));
+    emit DeployedUSDCImpl(_usdcImplementation);
 
     // Deploy usdc proxy
-    address _proxy = createDeploy(_usdcProxyInitCode);
-    emit DeployedUSDCProxy(_proxy);
+    address _usdcProxy = createDeploy(_usdcProxyInitCode);
+    emit DeployedUSDCProxy(_usdcProxy);
 
     // Deploy l2 adapter
     address _adapter = address(new BytecodeDeployer(_l2AdapterBytecode));
     emit DeployedL2Adapter(_adapter);
+
+    // Execute the USDC initialization transactions
+    if (_usdcImplInitTxs.length > 0) {
+      // Initialize usdc implementation
+      for (uint256 i = 0; i < _usdcImplInitTxs.length; i++) {
+        (bool _success,) = _usdcImplementation.call(_usdcImplInitTxs[i]);
+        if (!_success) {
+          revert IL2OpUSDCBridgeAdapter_UsdcInitializationFailed();
+        }
+      }
+    }
+
+    // Execute the L2 Adapter initialization transactions
+    if (_l2AdapterInitTxs.length > 0) {
+      // Initialize l2 adapter
+      for (uint256 i = 0; i < _l2AdapterInitTxs.length; i++) {
+        (bool _success,) = _adapter.call(_l2AdapterInitTxs[i]);
+        if (!_success) {
+          revert IL2OpUSDCBridgeAdapter_AdapterInitializationFailed();
+        }
+      }
+    }
   }
 
   /**
