@@ -6,8 +6,6 @@ import {Test} from 'forge-std/Test.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
-import 'forge-std/Test.sol';
-
 contract L2OpUSDCFactoryTest is L2OpUSDCFactory {
   constructor(
     bytes memory _usdcProxyInitCode,
@@ -33,18 +31,21 @@ contract Base is Test, Helpers {
   address internal _usdcProxy;
   address internal _l2Adapter;
 
-  bytes internal _bytecode;
   bytes[] internal _emptyInitTxs;
   bytes[] internal _initTxs;
   bytes[] internal _badInitTxs;
 
+  bytes internal _initTxOne;
+  bytes internal _initTxTwo;
+
   function setUp() public virtual {
     address _dummyContract = address(new ForTestDummyContract());
-    _bytecode = _dummyContract.code;
     _usdcProxyInitCode = type(ForTestDummyContract).creationCode;
+    _usdcImplBytecode = _dummyContract.code;
+    _l2AdapterBytecode = _dummyContract.code;
 
-    bytes memory _initTxOne = abi.encodeWithSignature('dummyFunction()');
-    bytes memory _initTxTwo = abi.encodeWithSignature('dummyFunctionTwo()');
+    _initTxOne = abi.encodeWithSignature('dummyFunction()');
+    _initTxTwo = abi.encodeWithSignature('dummyFunctionTwo()');
     _initTxs = new bytes[](2);
     _initTxs[0] = _initTxOne;
     _initTxs[1] = _initTxTwo;
@@ -57,11 +58,6 @@ contract Base is Test, Helpers {
     _usdcImplementation = _precalculateCreateAddress(factory, 1);
     _usdcProxy = _precalculateCreateAddress(factory, 2);
     _l2Adapter = _precalculateCreateAddress(factory, 3);
-
-    console.log('factory: ', factory);
-    console.log('usdc implementation: ', _usdcImplementation);
-    console.log('usdc proxy: ', _usdcProxy);
-    console.log('L2 adapter: ', _l2Adapter);
   }
 
   /**
@@ -143,14 +139,17 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
   /**
    * @notice Check the USDC implementation calls revert on bad transactions
    */
-  function test_revertOnUSDCImplementationBadTxs() public {}
+  function test_revertOnUSDCImplementationBadTxs() public {
+    vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_UsdcInitializationFailed.selector);
+    new L2OpUSDCFactoryTest(_usdcProxyInitCode, _usdcImplBytecode, _badInitTxs, _l2AdapterBytecode, _emptyInitTxs);
+  }
 
   /**
    * @notice Check the USDC implementation initialization transactions were correctly executed
    */
   function test_callUsdcImplementationInitTxs() public {
-    vm.mockCall(_usdcImplementation, _initTxs[0], abi.encode(true));
-    vm.mockCall(_usdcImplementation, _initTxs[1], abi.encode(true));
+    vm.expectCall(_usdcImplementation, _initTxs[0]);
+    vm.expectCall(_usdcImplementation, _initTxs[1]);
 
     vm.prank(_deployer);
     new L2OpUSDCFactoryTest(_usdcProxyInitCode, _usdcImplBytecode, _initTxs, _l2AdapterBytecode, _emptyInitTxs);
@@ -159,14 +158,17 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
   /**
    * @notice Check the L2 adapter calls revert on bad transactions
    */
-  function test_revertOnL2AdapterBadTxs() public {}
+  function test_revertOnL2AdapterBadTxs() public {
+    vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_AdapterInitializationFailed.selector);
+    new L2OpUSDCFactoryTest(_usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _badInitTxs);
+  }
 
   /**
    * @notice Check the L2 adapter initialization transactions were correctly executed
    */
   function test_callL2AdapterInitTxs() public {
-    vm.mockCall(_l2Adapter, _initTxs[0], abi.encode(true));
-    vm.mockCall(_l2Adapter, _initTxs[1], abi.encode(true));
+    vm.expectCall(_l2Adapter, _initTxOne);
+    vm.expectCall(_l2Adapter, _initTxTwo);
 
     vm.prank(_deployer);
     new L2OpUSDCFactoryTest(_usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _initTxs);
@@ -208,7 +210,7 @@ contract L2OpUSDCFactory_Unit_CreateDeploy is Base {
    */
   function test_revertIfDeploymentFailed() public {
     vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_CreateDeploymentFailed.selector);
-    _factory.forTest_createDeploy(_bytecode);
+    _factory.forTest_createDeploy(_usdcImplBytecode);
   }
 }
 
