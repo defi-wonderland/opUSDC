@@ -91,16 +91,16 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * @param _minGasLimit The minimum gas limit for the L2 deployment
    */
   function deployL2UsdcAndAdapter(address _portal, uint32 _minGasLimit) external {
+    // Get the L2 usdc proxy init code
+    bytes memory _usdcProxyCArgs = abi.encode(L2_USDC_IMPLEMENTATION);
+    bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);
+
     // Get the bytecode of the L2 usdc implementation
     IUpgradeManager.Implementation memory _l2UsdcImplementation = UPGRADE_MANAGER.bridgedUSDCImplementation();
     bytes memory _l2UsdcImplementationBytecode = _l2UsdcImplementation.implementation.code;
     // Get the bytecode of the he L2 adapter
     IUpgradeManager.Implementation memory _l2AdapterImplementation = UPGRADE_MANAGER.l2AdapterImplementation();
     bytes memory _l2AdapterBytecode = _l2AdapterImplementation.implementation.code;
-
-    // Get the L2 usdc proxy init code
-    bytes memory _usdcProxyCArgs = abi.encode(_l2UsdcImplementation.implementation);
-    bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);
 
     // Get the L2 factory init code
     bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;

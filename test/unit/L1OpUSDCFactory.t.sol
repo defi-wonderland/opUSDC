@@ -204,7 +204,7 @@ contract L1OpUSDCFactory_Unit_DeployL2UsdcAndAdapter is Base {
     _mockDeployFunctionCalls(_portal);
 
     // Get the L2 usdc proxy init code
-    bytes memory _usdcProxyCArgs = abi.encode(_bridgedUsdcImplementation.implementation);
+    bytes memory _usdcProxyCArgs = abi.encode(factory.L2_USDC_IMPLEMENTATION());
     bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);
 
     // Get the bytecode of the L2 usdc implementation
@@ -214,7 +214,6 @@ contract L1OpUSDCFactory_Unit_DeployL2UsdcAndAdapter is Base {
 
     // Get the L2 factory init code
     bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
-
     bytes memory _l2FactoryCArgs = abi.encode(
       _usdcProxyInitCode,
       _l2UsdcImplementationBytecode,
@@ -224,10 +223,19 @@ contract L1OpUSDCFactory_Unit_DeployL2UsdcAndAdapter is Base {
     );
     bytes memory _l2FactoryInitCode = bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs);
 
+    // Expect the `depositTransaction` to be properly called
+    address _zeroAddress = address(0);
+    uint256 _zeroValue = 0;
+    bool _isCreation = true;
     _mockAndExpect(
       _portal,
       abi.encodeWithSelector(
-        IOptimismPortal.depositTransaction.selector, address(0), 0, _minGasLimit, true, _l2FactoryInitCode
+        IOptimismPortal.depositTransaction.selector,
+        _zeroAddress,
+        _zeroValue,
+        _minGasLimit,
+        _isCreation,
+        _l2FactoryInitCode
       ),
       abi.encode('')
     );
