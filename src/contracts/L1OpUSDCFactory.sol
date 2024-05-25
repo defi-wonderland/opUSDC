@@ -7,10 +7,8 @@ import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
 import {UpgradeManager} from 'contracts/UpgradeManager.sol';
 import {AddressAliasHelper} from 'contracts/utils/AddressAliasHelper.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
-import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
-import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
 
 /**

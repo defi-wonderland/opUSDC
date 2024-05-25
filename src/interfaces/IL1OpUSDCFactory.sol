@@ -2,8 +2,6 @@
 pragma solidity 0.8.25;
 
 import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
-import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
-import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
 
 interface IL1OpUSDCFactory {
   /*///////////////////////////////////////////////////////////////
