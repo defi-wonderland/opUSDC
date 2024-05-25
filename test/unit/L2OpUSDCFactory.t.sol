@@ -21,7 +21,7 @@ contract L2OpUSDCFactoryTest is L2OpUSDCFactory {
 }
 
 contract Base is Test, Helpers {
-  address public factory;
+  L2OpUSDCFactoryTest public factory;
 
   address internal _deployer = makeAddr('deployer');
   bytes internal _usdcProxyInitCode;
@@ -54,10 +54,10 @@ contract Base is Test, Helpers {
     _badInitTxs = new bytes[](1);
     _badInitTxs[0] = _badInitTx;
 
-    factory = _precalculateCreateAddress(_deployer, 0);
-    _usdcImplementation = _precalculateCreateAddress(factory, 1);
-    _usdcProxy = _precalculateCreateAddress(factory, 2);
-    _l2Adapter = _precalculateCreateAddress(factory, 3);
+    factory = L2OpUSDCFactoryTest(_precalculateCreateAddress(_deployer, 0));
+    _usdcImplementation = _precalculateCreateAddress(address(factory), 1);
+    _usdcProxy = _precalculateCreateAddress(address(factory), 2);
+    _l2Adapter = _precalculateCreateAddress(address(factory), 3);
   }
 
   /**

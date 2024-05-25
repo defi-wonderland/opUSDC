@@ -12,8 +12,10 @@ sort_imports = true
 via_ir = true
 out = 'out-via-ir'
 
-[profile.default.optimizer_details]
-yul = false
+[profile.default]
+solc_version = '0.8.25'
+libs = ['node_modules']
+optimizer_runs = 10_000
 
 [profile.test]
 via_ir = true
