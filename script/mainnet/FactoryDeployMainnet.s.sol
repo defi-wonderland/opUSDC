@@ -3,8 +3,6 @@ pragma solidity 0.8.25;
 
 import {Script} from 'forge-std/Script.sol';
 import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
-import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
-import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
 
 contract FactoryDeployMainnet is Script {
   address public constant L1_MESSENGER = 0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1;

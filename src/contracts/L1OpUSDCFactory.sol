@@ -18,6 +18,8 @@ import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
  * L2OpUSDCFactory on L2 - setting up the L2 deployments on a single transaction.
  */
 contract L1OpUSDCFactory is IL1OpUSDCFactory {
+  using AddressAliasHelper for address;
+
   /// @notice Zero value constant to be used on portal interaction
   uint256 internal constant _ZERO_VALUE = 0;
 
@@ -31,7 +33,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   address public constant L2_MESSENGER = 0x4200000000000000000000000000000000000007;
 
   /// @inheritdoc IL1OpUSDCFactory
-  address public immutable ALIASED_SELF = AddressAliasHelper.applyL1ToL2Alias(address(this));
+  address public immutable ALIASED_SELF = address(this).applyL1ToL2Alias();
 
   /// @inheritdoc IL1OpUSDCFactory
   address public immutable L1_ADAPTER;
