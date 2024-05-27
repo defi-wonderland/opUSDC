@@ -39,6 +39,8 @@ abstract contract Base is Test, Helpers {
   bytes internal _l2AdapterBytecode = '0x608061111111';
   bytes internal _l2UsdcProxyCreationCode = '0x6080222222';
   bytes internal _l2UsdcImplementationBytecode = '0x6080333333';
+  // cant fuzz this because of foundry's VM
+  address internal _l1Messenger = makeAddr('messenger');
 
   address internal _l2AdapterImplAddress = makeAddr('l2AdapterImpl');
   address internal _l2UsdcImplAddress = makeAddr('bridgedUsdcImpl');
@@ -168,9 +170,9 @@ contract L1OpUSDCFactory_Unit_DeployL2UsdcAndAdapter is Base {
   /**
    * @notice Check the `deployL2UsdcAndAdapter` function calls the `bridgedUSDCImplementation` correctly
    */
-  function test_callBridgedUSDCImplementation(address _l1Messenger, uint32 _minGasLimit) public {
+  function test_callBridgedUSDCImplementation(uint32 _minGasLimit) public {
     // Mock all the `deployL2UsdcAndAdapter` function calls
-    _mockDeployFunctionCalls(_l1Messenger);
+    _mockDeployFunctionCalls();
 
     // Expect the `bridgedUSDCImplementation` to be properly called
     vm.expectCall(_upgradeManager, abi.encodeWithSelector(IUpgradeManager.bridgedUSDCImplementation.selector));
@@ -183,9 +185,9 @@ contract L1OpUSDCFactory_Unit_DeployL2UsdcAndAdapter is Base {
   /**
    * @notice Check the `deployL2UsdcAndAdapter` function calls the `l2AdapterImplementation` correctly
    */
-  function test_callL2AdapterImplementation(address _l1Messenger, uint32 _minGasLimit) public {
+  function test_callL2AdapterImplementation(uint32 _minGasLimit) public {
     // Mock all the `deployL2UsdcAndAdapter` function calls
-    _mockDeployFunctionCalls(_l1Messenger);
+    _mockDeployFunctionCalls();
 
     // Expect the `l2AdapterImplementation` to be properly called
     vm.expectCall(_upgradeManager, abi.encodeWithSelector(IUpgradeManager.l2AdapterImplementation.selector));
@@ -195,9 +197,9 @@ contract L1OpUSDCFactory_Unit_DeployL2UsdcAndAdapter is Base {
     factory.deployL2UsdcAndAdapter(_l1Messenger, _minGasLimit);
   }
 
-  function test_callPortal(address _l1Messenger, uint32 _minGasLimit) public {
+  function test_callPortal(uint32 _minGasLimit) public {
     // Mock all the `deployL2UsdcAndAdapter` function calls
-    _mockDeployFunctionCalls(_l1Messenger);
+    _mockDeployFunctionCalls();
 
     // Expect the `portal` function to be properly called
     vm.expectCall(_l1Messenger, abi.encodeWithSelector(ICrossDomainMessenger.portal.selector));
@@ -210,7 +212,7 @@ contract L1OpUSDCFactory_Unit_DeployL2UsdcAndAdapter is Base {
   /**
    * @notice Check the `deployL2UsdcAndAdapter` function calls the `portal` correctly
    */
-  function test_callDepositTransaction(address _l1Messenger, uint32 _minGasLimit) public {
+  function test_callDepositTransaction(uint32 _minGasLimit) public {
     // Get the L2 usdc proxy init code
     bytes memory _usdcProxyCArgs = abi.encode(factory.L2_USDC_IMPLEMENTATION());
     bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);
@@ -246,7 +248,7 @@ contract L1OpUSDCFactory_Unit_DeployL2UsdcAndAdapter is Base {
     );
 
     // Mock all the `deployL2UsdcAndAdapter` function calls
-    _mockDeployFunctionCalls(_l1Messenger);
+    _mockDeployFunctionCalls();
 
     // Execute
     vm.prank(_user);
@@ -255,9 +257,8 @@ contract L1OpUSDCFactory_Unit_DeployL2UsdcAndAdapter is Base {
 
   /**
    * @notice Helper function to mock all the function calls that will be made in the `deployL2UsdcAndAdapter` function
-   * @param _l1Messenger The address of the L1 messenger
    */
-  function _mockDeployFunctionCalls(address _l1Messenger) internal {
+  function _mockDeployFunctionCalls() internal {
     // Mock the call over the `bridgedUSDCImplementation` function
     vm.mockCall(
       _upgradeManager,

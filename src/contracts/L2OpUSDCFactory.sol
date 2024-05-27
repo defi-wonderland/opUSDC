@@ -46,7 +46,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     // Execute the USDC initialization transactions
     if (_usdcImplInitTxs.length > 0) {
       // Initialize usdc implementation
-      for (uint256 i = 0; i < _usdcImplInitTxs.length; i++) {
+      for (uint256 i; i < _usdcImplInitTxs.length; i++) {
         (bool _success,) = _usdcImplementation.call(_usdcImplInitTxs[i]);
         if (!_success) {
           revert IL2OpUSDCFactory_UsdcInitializationFailed();
