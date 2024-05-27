@@ -102,10 +102,17 @@ interface IL1OpUSDCBridgeAdapter {
 
   /**
    * @notice Initiates the process to migrate the bridged USDC to native USDC
-   * @param _l1Messenger The address of the L1 messenger
+   * @param _messenger The address of the L1 messenger
    * @param _circle The address to transfer ownerships to
+   * @param _minGasLimitReceiveOnL2 Minimum gas limit that the message can be executed with on L2
+   * @param _minGasLimitSetBurnAmount Minimum gas limit that the message can be executed with to set the burn amount
    */
-  function migrateToNative(address _l1Messenger, address _circle) external;
+  function migrateToNative(
+    address _messenger,
+    address _circle,
+    uint32 _minGasLimitReceiveOnL2,
+    uint32 _minGasLimitSetBurnAmount
+  ) external;
 
   /**
    * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain

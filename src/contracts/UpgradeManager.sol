@@ -115,8 +115,14 @@ contract UpgradeManager is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
   /**
    * @notice Execute the migration of the L1 Adapter to the native chain
    * @param _l1Messenger The address of the L1 messenger
+   * @param _minGasLimitReceiveOnL2 Minimum gas limit that the message can be executed with on L2
+   * @param _minGasLimitSetBurnAmount Minimum gas limit that the message can be executed with to set the burn amount
    */
-  function executeMigration(address _l1Messenger) external {
+  function executeMigration(
+    address _l1Messenger,
+    uint32 _minGasLimitReceiveOnL2,
+    uint32 _minGasLimitSetBurnAmount
+  ) external {
     Migration memory _migration = migrations[_l1Messenger];
 
     // Check the migration is prepared, not executed and is being called by the executor
@@ -127,7 +133,9 @@ contract UpgradeManager is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
     if (msg.sender != _migration.executor) revert IUpgradeManager_NotExecutor();
 
     // Migrate
-    IL1OpUSDCBridgeAdapter(L1_ADAPTER).migrateToNative(_l1Messenger, _migration.circle);
+    IL1OpUSDCBridgeAdapter(L1_ADAPTER).migrateToNative(
+      _l1Messenger, _migration.circle, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount
+    );
 
     migrations[_l1Messenger].executed = true;
 

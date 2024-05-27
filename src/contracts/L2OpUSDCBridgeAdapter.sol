@@ -142,6 +142,27 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
   }
 
   /**
+   * @notice Initiates the process to migrate the bridged USDC to native USDC
+   * @dev This only starts the process, full migration cant finish until L1 receives the message for setting the burn amount
+   * @param _newOwner The address to transfer ownerships to
+   * @param _setBurnAmountMinGasLimit Minimum gas limit that the setBurnAmount message we are sending can be executed on L1
+   */
+  function receiveMigrateToNative(address _newOwner, uint32 _setBurnAmountMinGasLimit) external checkSender {
+    // Transfer ownership of the USDC contract to the circle
+    IUSDC(USDC).transferOwnership(_newOwner);
+
+    uint256 _burnAmount = IUSDC(USDC).totalSupply();
+
+    ICrossDomainMessenger(MESSENGER).sendMessage(
+      LINKED_ADAPTER, abi.encodeWithSignature('setBurnAmount(uint256)', _burnAmount), _setBurnAmountMinGasLimit
+    );
+
+    isMessagingDisabled = true;
+
+    emit MigratingToNative(MESSENGER, _newOwner);
+  }
+
+  /**
    * @notice Authorize the upgrade of the implementation of the contract
    * @param _newImplementation The address of the new implementation
    */
