@@ -82,13 +82,15 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
     address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), 1);
     address _l2UsdcImplAddress = factory.forTest_precalculateCreateAddress(_l2Factory, 1);
     address _l2UsdcProxyAddress = factory.forTest_precalculateCreateAddress(_l2Factory, 2);
-    address _l2Adapter = factory.forTest_precalculateCreateAddress(_l2Factory, 3);
+    address _l2AdapterImpl = factory.forTest_precalculateCreateAddress(_l2Factory, 3);
+    address _l2AdapterProxy = factory.forTest_precalculateCreateAddress(_l2Factory, 4);
     address _upgradeManager = factory.forTest_precalculateCreateAddress(address(factory), 3);
 
     // Assert
     assertEq(factory.ALIASED_SELF(), _aliasedSelf, 'Invalid aliasedSelf address');
     assertEq(factory.L1_ADAPTER(), _l1Adapter, 'Invalid l1Adapter address');
-    assertEq(factory.L2_ADAPTER(), _l2Adapter, 'Invalid l2Adapter address');
+    assertEq(factory.L2_ADAPTER_IMPLEMENTATION(), _l2AdapterImpl, 'Invalid l2Adapter implementation address');
+    assertEq(factory.L2_ADAPTER_PROXY(), _l2AdapterProxy, 'Invalid l2Adapter proxy address');
     assertEq(factory.L2_USDC_PROXY(), _l2UsdcProxyAddress, 'Invalid l2UsdcProxy address');
     assertEq(factory.L2_USDC_IMPLEMENTATION(), _l2UsdcImplAddress, 'Invalid l2UsdcImplementation address');
     assertEq(address(factory.UPGRADE_MANAGER()), _upgradeManager, 'Invalid upgradeManager address');
@@ -102,7 +104,7 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
   function test_deployL1Adapter() public {
     L1OpUSDCBridgeAdapter _l1Adapter = L1OpUSDCBridgeAdapter(factory.L1_ADAPTER());
     assertEq(_l1Adapter.USDC(), _usdc, 'Invalid owner');
-    assertEq(_l1Adapter.LINKED_ADAPTER(), factory.L2_ADAPTER(), 'Invalid l2Adapter');
+    assertEq(_l1Adapter.LINKED_ADAPTER(), factory.L2_ADAPTER_PROXY(), 'Invalid l2Adapter');
     assertEq(address(_l1Adapter.UPGRADE_MANAGER()), address(factory.UPGRADE_MANAGER()), 'Invalid upgradeManager');
     assertEq(_l1Adapter.FACTORY(), address(factory), 'Invalid owner');
   }

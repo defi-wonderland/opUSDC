@@ -40,7 +40,10 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   IUpgradeManager public immutable UPGRADE_MANAGER;
 
   /// @inheritdoc IL1OpUSDCFactory
-  address public immutable L2_ADAPTER;
+  address public immutable L2_ADAPTER_IMPLEMENTATION;
+
+  /// @inheritdoc IL1OpUSDCFactory
+  address public immutable L2_ADAPTER_PROXY;
 
   /// @inheritdoc IL1OpUSDCFactory
   address public immutable L2_USDC_PROXY;
@@ -68,14 +71,16 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     uint256 _l2FactorySecondNonce = 2;
     L2_USDC_PROXY = _precalculateCreateAddress(_l2Factory, _l2FactorySecondNonce);
     uint256 _l2FactoryThirdNonce = 3;
-    L2_ADAPTER = _precalculateCreateAddress(_l2Factory, _l2FactoryThirdNonce);
+    L2_ADAPTER_IMPLEMENTATION = _precalculateCreateAddress(_l2Factory, _l2FactoryThirdNonce);
+    uint256 _l2FactoryFourthNonce = 4;
+    L2_ADAPTER_PROXY = _precalculateCreateAddress(_l2Factory, _l2FactoryFourthNonce);
 
     // Calculate the upgrade manager using 3 as nonce since first the L1 adapter and its implementation will be deployed
     uint256 _thisNonceThirdTx = 3;
     UPGRADE_MANAGER = IUpgradeManager(_precalculateCreateAddress(address(this), _thisNonceThirdTx));
 
     // Deploy the L1 adapter
-    new L1OpUSDCBridgeAdapter(_usdc, L2_ADAPTER, address(UPGRADE_MANAGER), address(this));
+    new L1OpUSDCBridgeAdapter(_usdc, L2_ADAPTER_PROXY, address(UPGRADE_MANAGER), address(this));
     emit L1AdapterDeployed(L1_ADAPTER);
 
     // Deploy the upgrade manager implementation
@@ -92,6 +97,9 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * @param _minGasLimit The minimum gas limit for the L2 deployment
    */
   function deployL2UsdcAndAdapter(address _l1Messenger, uint32 _minGasLimit) external {
+    // TODO: When using `CREATE2` to deploy on L2, we'll need to deploy the proxies with the 0 address as implementation
+    // and then upgrade them with the actual implementation. This is because the `CREATE2` opcode is dependant on the
+    // creation code and a different implementation would result in a different address.
     // Get the L2 usdc proxy init code
     bytes memory _usdcProxyCArgs = abi.encode(L2_USDC_IMPLEMENTATION);
     bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);

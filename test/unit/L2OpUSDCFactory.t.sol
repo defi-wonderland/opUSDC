@@ -29,7 +29,8 @@ contract Base is Test, Helpers {
   bytes internal _l2AdapterBytecode;
   address internal _usdcImplementation;
   address internal _usdcProxy;
-  address internal _l2Adapter;
+  address internal _l2AdapterImplementation;
+  address internal _l2AdapterProxy;
 
   bytes[] internal _emptyInitTxs;
   bytes[] internal _initTxs;
@@ -51,13 +52,15 @@ contract Base is Test, Helpers {
     _initTxs[1] = _initTxTwo;
 
     bytes memory _badInitTx = abi.encodeWithSignature('nonExistentFunction()');
-    _badInitTxs = new bytes[](1);
-    _badInitTxs[0] = _badInitTx;
+    _badInitTxs = new bytes[](2);
+    _badInitTxs[0] = '';
+    _badInitTxs[1] = _badInitTx;
 
     factory = L2OpUSDCFactoryTest(_precalculateCreateAddress(_deployer, 0));
     _usdcImplementation = _precalculateCreateAddress(address(factory), 1);
     _usdcProxy = _precalculateCreateAddress(address(factory), 2);
-    _l2Adapter = _precalculateCreateAddress(address(factory), 3);
+    _l2AdapterImplementation = _precalculateCreateAddress(address(factory), 3);
+    _l2AdapterProxy = _precalculateCreateAddress(address(factory), 4);
   }
 
   /**
@@ -92,7 +95,8 @@ contract Base is Test, Helpers {
 contract L2OpUSDCFactory_Unit_Constructor is Base {
   event DeployedUSDCImpl(address _usdcImplementation);
   event DeployedUSDCProxy(address _usdcProxy);
-  event DeployedL2Adapter(address _l2Adapter);
+  event DeployedL2AdapterImplementation(address _l2AdapterImplementation);
+  event DeployedL2AdapterProxy(address _l2AdapterProxy);
 
   /**
    * @notice Check the USDC implementation contract was correctly deployed and the event was emitted
@@ -125,15 +129,26 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
   /**
    * @notice Check the L2 adapter contract was correctly deployed and the event was emitted
    */
-  function test_deployL2AdapterAndEmit() public {
+  function test_deployL2AdapterImplementationAndEmit() public {
     vm.expectEmit(true, true, true, true);
-    emit DeployedL2Adapter(_l2Adapter);
+    emit DeployedL2AdapterImplementation(_l2AdapterImplementation);
 
     vm.prank(_deployer);
     new L2OpUSDCFactoryTest(_usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _emptyInitTxs);
 
     // Assert the deployed contract has code
-    assertGt(_l2Adapter.code.length, 0);
+    assertGt(_l2AdapterImplementation.code.length, 0);
+  }
+
+  function test_deployL2AdapterProxyAndEmit() public {
+    vm.expectEmit(true, true, true, true);
+    emit DeployedL2AdapterProxy(_l2AdapterProxy);
+
+    vm.prank(_deployer);
+    new L2OpUSDCFactoryTest(_usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _emptyInitTxs);
+
+    // Assert the deployed contract has code
+    assertGt(_l2AdapterProxy.code.length, 0);
   }
 
   /**
@@ -167,8 +182,8 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
    * @notice Check the L2 adapter initialization transactions were correctly executed
    */
   function test_callL2AdapterInitTxs() public {
-    vm.expectCall(_l2Adapter, _initTxOne);
-    vm.expectCall(_l2Adapter, _initTxTwo);
+    vm.expectCall(_l2AdapterProxy, _initTxOne);
+    vm.expectCall(_l2AdapterProxy, _initTxTwo);
 
     vm.prank(_deployer);
     new L2OpUSDCFactoryTest(_usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _initTxs);
@@ -191,8 +206,8 @@ contract L2OpUSDCFactory_Unit_CreateDeploy is Base {
   function test_createDeploy() public {
     // Get the init code with the USDC proxy creation code plus the USDC implementation address
     bytes memory _initCode = bytes.concat(_usdcProxyInitCode, abi.encode(_usdcImplementation));
-    // Precalculate the address of the contract that will be deployed
-    uint256 _nonce = 4;
+    // Precalculate the address of the contract that will be deployed with the current factory's nonce
+    uint256 _nonce = vm.getNonce(address(_factory));
     address _expectedAddress = _precalculateCreateAddress(address(_factory), _nonce);
 
     // Execute

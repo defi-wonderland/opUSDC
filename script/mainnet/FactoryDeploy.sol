@@ -21,7 +21,8 @@ contract FactoryDeploy is Script {
     console.log('L1 UpgradeManager deployed at:', address(_l1Factory.UPGRADE_MANAGER()));
     console.log('-----');
     console.log('aliased L1 factory deployment address:', _l1Factory.ALIASED_SELF());
-    console.log('L2OpUSDCBridgeAdapter deployment address:', _l1Factory.L2_ADAPTER());
+    console.log('L2OpUSDCBridgeAdapter impl deployment address:', _l1Factory.L2_ADAPTER_IMPLEMENTATION());
+    console.log('L2OpUSDCBridgeAdapter proxy deployment address:', _l1Factory.L2_ADAPTER_PROXY());
     console.log('L2 USDC proxy deployed deployment address:', _l1Factory.L2_USDC_PROXY());
     console.log('L2 USDC implementation deployed deployment address:', _l1Factory.L2_USDC_IMPLEMENTATION());
 

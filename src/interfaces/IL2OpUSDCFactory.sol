@@ -37,8 +37,14 @@ interface IL2OpUSDCFactory {
   event DeployedUSDCProxy(address _usdcProxy);
 
   /**
-   * @notice Emitted when the `L2OpUSDCBridgeAdapter` is deployed
-   * @param _l2Adapter The address of the L2 adapter
+   * @notice Emitted when the `L2OpUSDCBridgeAdapter` implementation is deployed
+   * @param _l2AdapterImplementation The address of the L2 adapter implementation
    */
-  event DeployedL2Adapter(address _l2Adapter);
+  event DeployedL2AdapterImplementation(address _l2AdapterImplementation);
+
+  /**
+   * @notice Emitted when the `L2OpUSDCBridgeAdapter` proxy is deployed
+   * @param _l2AdapterProxy The address of the L2 adapter proxy
+   */
+  event DeployedL2AdapterProxy(address _l2AdapterProxy);
 }

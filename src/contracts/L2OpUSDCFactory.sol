@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
+import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
 import {BytecodeDeployer} from 'contracts/utils/BytecodeDeployer.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 
@@ -33,9 +34,14 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     address _usdcProxy = _createDeploy(_usdcProxyInitCode);
     emit DeployedUSDCProxy(_usdcProxy);
 
-    // Deploy L2 adapter
-    address _adapter = address(new BytecodeDeployer(_l2AdapterBytecode));
-    emit DeployedL2Adapter(_adapter);
+    // Deploy L2 adapter implementation
+    address _adapterImplementation = address(new BytecodeDeployer(_l2AdapterBytecode));
+    emit DeployedL2AdapterImplementation(_adapterImplementation);
+
+    // Deploy L2 adapter proxy
+    bytes memory _adapterInitTx = _l2AdapterInitTxs.length > 0 ? _l2AdapterInitTxs[0] : bytes('');
+    address _adapterProxy = address(new ERC1967Proxy(_adapterImplementation, _adapterInitTx));
+    emit DeployedL2AdapterProxy(_adapterProxy);
 
     // Execute the USDC initialization transactions
     if (_usdcImplInitTxs.length > 0) {
@@ -49,10 +55,10 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     }
 
     // Execute the L2 Adapter initialization transactions
-    if (_l2AdapterInitTxs.length > 0) {
+    if (_l2AdapterInitTxs.length > 1) {
       // Initialize L2 adapter
-      for (uint256 i = 0; i < _l2AdapterInitTxs.length; i++) {
-        (bool _success,) = _adapter.call(_l2AdapterInitTxs[i]);
+      for (uint256 i = 1; i < _l2AdapterInitTxs.length; i++) {
+        (bool _success,) = _adapterProxy.call(_l2AdapterInitTxs[i]);
         if (!_success) {
           revert IL2OpUSDCFactory_AdapterInitializationFailed();
         }

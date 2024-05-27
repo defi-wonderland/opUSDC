@@ -40,9 +40,14 @@ interface IL1OpUSDCFactory {
   function L1_ADAPTER() external view returns (address _l1Adapter);
 
   /**
-   * @return _l2Adapter The address of the L2OpUSDCBridgeAdapter contract
+   * @return _l2AdapterImplementation The address of the L2OpUSDCBridgeAdapter implementation contract
    */
-  function L2_ADAPTER() external view returns (address _l2Adapter);
+  function L2_ADAPTER_IMPLEMENTATION() external view returns (address _l2AdapterImplementation);
+
+  /**
+   * @return _l2AdapterProxy The address of the L2OpUSDCBridgeAdapter proxy contract
+   */
+  function L2_ADAPTER_PROXY() external view returns (address _l2AdapterProxy);
 
   /**
    * @return _l2UsdcProxy The address of the USDC proxy contract on L2
