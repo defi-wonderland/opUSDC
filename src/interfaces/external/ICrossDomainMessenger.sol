@@ -1,5 +1,7 @@
 pragma solidity 0.8.25;
 
+import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
+
 interface ICrossDomainMessenger {
   /// @notice Sends a message to some target address on the other chain. Note that if the call
   ///         always reverts, then the message will be unrelayable, and any ETH sent will be
@@ -15,4 +17,7 @@ interface ICrossDomainMessenger {
   ///         currently being executed. Allows the recipient of a call to see who triggered it.
   /// @return _sender Address of the sender of the currently executing message on the other chain.
   function xDomainMessageSender() external view returns (address _sender);
+
+  /// @return _portal The address of the L2 portal contract.
+  function portal() external view returns (IOptimismPortal _portal);
 }
