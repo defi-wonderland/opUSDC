@@ -2,11 +2,21 @@
 pragma solidity 0.8.25;
 
 interface IUpgradeManager {
-  // NOTE: Style guide says structs go under errors, but linter was complaining, which is correct?
+  // NOTE: Style guide says structs go under errors, but linter was complaining, which is correct? -> Linter
 
   /*///////////////////////////////////////////////////////////////
                             STRUCTS
   //////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice The values used for an implementation
+   * @param implementation The address of the implementation
+   * @param initTxs The transactions to run on initialization
+   */
+  struct Implementation {
+    address implementation;
+    bytes[] initTxs;
+  }
 
   /**
    * @notice The values used for a migration
@@ -88,18 +98,26 @@ interface IUpgradeManager {
   //////////////////////////////////////////////////////////////*/
 
   /**
+   * @notice Initialize the contract
+   * @param _initialOwner The address of the initial owner of the contract
+   */
+  function initialize(address _initialOwner) external;
+
+  /**
    * @notice Set the implementation of the L2 Adapter
    * @dev Only callable by the owner
-   * @param _newImplementation The address of the new implementation
+   * @param _newImplementation The address of the new L2 adapter implementation
+   * @param _initTxs The transactions to run on the deployed implementation
    */
-  function setL2AdapterImplementation(address _newImplementation) external;
+  function setL2AdapterImplementation(address _newImplementation, bytes[] memory _initTxs) external;
 
   /**
    * @notice Set the implementation of the Bridged USDC token
    * @dev Only callable by the owner
-   * @param _newImplementation The address of the new implementation
+   * @param _newImplementation The address of the new L2 Bridged USDC implementation
+   * @param _initTxs The transactions to run on the deployed implementation
    */
-  function setBridgedUSDCImplementation(address _newImplementation) external;
+  function setBridgedUSDCImplementation(address _newImplementation, bytes[] memory _initTxs) external;
 
   /**
    * @notice Prepare the migration of the L1 Adapter to the native chain
@@ -138,16 +156,16 @@ interface IUpgradeManager {
   //////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Fetches the address of the L2 Adapter implementation
-   * @return _implementation The address of the L2 Adapter implementation
+   * @notice Get the implementation of the L2 Adapter
+   * @return _implementation The address and initialization transactions of the L2 Adapter implementation
    */
-  function l2AdapterImplementation() external view returns (address _implementation);
+  function l2AdapterImplementation() external view returns (Implementation memory _implementation);
 
   /**
    * @notice Fetches the address of the Bridged USDC implementation
-   * @return _implementation The address of the Bridged USDC implementation
+   * @return _implementation The address and initialization transactions of the L2 Bridged USDC implementation
    */
-  function bridgedUSDCImplementation() external view returns (address _implementation);
+  function bridgedUSDCImplementation() external view returns (Implementation memory _implementation);
 
   /**
    * @notice Fetches the migration details for a given L1 Messenger

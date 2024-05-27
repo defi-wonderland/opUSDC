@@ -8,14 +8,12 @@ number_underscore = 'thousands'
 multiline_func_header = 'params_first'
 sort_imports = true
 
-[profile.default]
-solc_version = '0.8.25'
-libs = ['node_modules']
-optimizer_runs = 10_000
-
 [profile.optimized]
 via_ir = true
 out = 'out-via-ir'
+
+[profile.default.optimizer_details]
+yul = false
 
 [profile.test]
 via_ir = true

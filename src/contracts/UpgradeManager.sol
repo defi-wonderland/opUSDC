@@ -15,11 +15,11 @@ contract UpgradeManager is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
   /// @inheritdoc IUpgradeManager
   address public immutable L1_ADAPTER;
 
-  /// @inheritdoc IUpgradeManager
-  address public l2AdapterImplementation;
+  /// @notice The address and initialization transactions of the L2 Adapter implementation
+  Implementation internal _l2AdapterImplementation;
 
-  /// @inheritdoc IUpgradeManager
-  address public bridgedUSDCImplementation;
+  /// @notice The address and initialization transactions of the Bridged USDC implementation
+  Implementation internal _bridgedUSDCImplementation;
 
   /// @inheritdoc IUpgradeManager
   mapping(address _l1Messenger => Migration migration) public migrations;
@@ -47,10 +47,12 @@ contract UpgradeManager is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
   /**
    * @notice Set the implementation of the L2 Adapter
    * @dev Only callable by the owner
-   * @param _newImplementation The address of the new implementation
+   * @param _newImplementation The address of the new L2 adapter implementation
+   * @param _initTxs The transactions to run on the deployed implementation
    */
-  function setL2AdapterImplementation(address _newImplementation) external onlyOwner {
-    l2AdapterImplementation = _newImplementation;
+  function setL2AdapterImplementation(address _newImplementation, bytes[] memory _initTxs) external onlyOwner {
+    _l2AdapterImplementation.implementation = _newImplementation;
+    _l2AdapterImplementation.initTxs = _initTxs;
 
     emit L2AdapterImplementationSet(_newImplementation);
   }
@@ -58,10 +60,12 @@ contract UpgradeManager is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
   /**
    * @notice Set the implementation of the Bridged USDC token
    * @dev Only callable by the owner
-   * @param _newImplementation The address of the new implementation
+   * @param _newImplementation The address of the new L2 Bridged USDC implementation
+   * @param _initTxs The transactions to run on the deployed implementation
    */
-  function setBridgedUSDCImplementation(address _newImplementation) external onlyOwner {
-    bridgedUSDCImplementation = _newImplementation;
+  function setBridgedUSDCImplementation(address _newImplementation, bytes[] memory _initTxs) external onlyOwner {
+    _bridgedUSDCImplementation.implementation = _newImplementation;
+    _bridgedUSDCImplementation.initTxs = _initTxs;
 
     emit BridgedUSDCImplementationSet(_newImplementation);
   }
@@ -132,6 +136,22 @@ contract UpgradeManager is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
     migrations[_l1Messenger].executed = true;
 
     emit MigrationExecuted(_l1Messenger, _migration.circle, _migration.executor);
+  }
+
+  /**
+   * @notice Get the implementation of the L2 Adapter
+   * @return _implementation The address and initialization transactions of the L2 Adapter implementation
+   */
+  function l2AdapterImplementation() external view returns (Implementation memory _implementation) {
+    _implementation = _l2AdapterImplementation;
+  }
+
+  /**
+   * @notice Fetches the address of the Bridged USDC implementation
+   * @return _implementation The address and initialization transactions of the L2 Bridged USDC implementation
+   */
+  function bridgedUSDCImplementation() external view returns (Implementation memory _implementation) {
+    _implementation = _bridgedUSDCImplementation;
   }
 
   /**

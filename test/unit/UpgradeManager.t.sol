@@ -78,33 +78,39 @@ contract UpgradeManager_Unit_SetL2AdapterImplementation is Base {
   /**
    * @notice Check that the setL2AdapterImplementation function reverts when called by an unauthorized account
    */
-  function test_revertIfNotOwner(address _newImplementation) public {
+  function test_revertIfNotOwner(address _newImplementation, bytes[] memory _initTxs) public {
     vm.prank(_user);
     vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, _user));
-    upgradeManager.setL2AdapterImplementation(_newImplementation);
+    upgradeManager.setL2AdapterImplementation(_newImplementation, _initTxs);
   }
 
   /**
    * @notice Check that the setL2AdapterImplementation function works as expected
    */
-  function test_setL2AdapterImplementation(address _newImplementation) public {
+  function test_setL2AdapterImplementation(address _newImplementation, bytes[] memory _initTxs) public {
     vm.prank(_owner);
-    upgradeManager.setL2AdapterImplementation(_newImplementation);
+    upgradeManager.setL2AdapterImplementation(_newImplementation, _initTxs);
+
+    address _returnedImplementation = upgradeManager.l2AdapterImplementation().implementation;
     assertEq(
-      upgradeManager.l2AdapterImplementation(),
-      _newImplementation,
-      'L2 Adapter Implementation should be set to the provided address'
+      _returnedImplementation, _newImplementation, 'L2 Adapter Implementation should be set to the provided address'
+    );
+    bytes[] memory _returnedInitTxs = upgradeManager.l2AdapterImplementation().initTxs;
+    assertEq(
+      abi.encode(_returnedInitTxs),
+      abi.encode(_initTxs),
+      'L2 Adapter Initialization transactions should be set to the provided transactions'
     );
   }
 
   /**
    * @notice Check that the setL2AdapterImplementation function emits the expected event
    */
-  function test_emitsEvent(address _newImplementation) public {
+  function test_emitsEvent(address _newImplementation, bytes[] memory _initTxs) public {
     vm.prank(_owner);
     vm.expectEmit(true, true, true, true);
     emit L2AdapterImplementationSet(_newImplementation);
-    upgradeManager.setL2AdapterImplementation(_newImplementation);
+    upgradeManager.setL2AdapterImplementation(_newImplementation, _initTxs);
   }
 }
 
@@ -112,33 +118,39 @@ contract UpgradeManager_Unit_SetBridgedUSDCImplementation is Base {
   /**
    * @notice Check that the setBridgedUSDCImplementation function reverts when called by an unauthorized account
    */
-  function test_revertIfNotOwner(address _newImplementation) public {
+  function test_revertIfNotOwner(address _newImplementation, bytes[] memory _initTxs) public {
     vm.prank(_user);
     vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, _user));
-    upgradeManager.setBridgedUSDCImplementation(_newImplementation);
+    upgradeManager.setBridgedUSDCImplementation(_newImplementation, _initTxs);
   }
 
   /**
    * @notice Check that the setBridgedUSDCImplementation function works as expected
    */
-  function test_setBridgedUSDCImplementation(address _newImplementation) public {
+  function test_setBridgedUSDCImplementation(address _newImplementation, bytes[] memory _initTxs) public {
     vm.prank(_owner);
-    upgradeManager.setBridgedUSDCImplementation(_newImplementation);
+    upgradeManager.setBridgedUSDCImplementation(_newImplementation, _initTxs);
+
+    address _returnedImplementation = upgradeManager.bridgedUSDCImplementation().implementation;
     assertEq(
-      upgradeManager.bridgedUSDCImplementation(),
-      _newImplementation,
-      'Bridged USDC Implementation should be set to the provided address'
+      _returnedImplementation, _newImplementation, 'Bridged USDC Implementation should be set to the provided address'
+    );
+    bytes[] memory _returnedInitTxs = upgradeManager.bridgedUSDCImplementation().initTxs;
+    assertEq(
+      abi.encode(_returnedInitTxs),
+      abi.encode(_initTxs),
+      'Bridged USDC Initialization transactions should be set to the provided transactions'
     );
   }
 
   /**
    * @notice Check that the setBridgedUSDCImplementation function emits the expected event
    */
-  function test_emitsEvent(address _newImplementation) public {
+  function test_emitsEvent(address _newImplementation, bytes[] memory _initTxs) public {
     vm.prank(_owner);
     vm.expectEmit(true, true, true, true);
     emit BridgedUSDCImplementationSet(_newImplementation);
-    upgradeManager.setBridgedUSDCImplementation(_newImplementation);
+    upgradeManager.setBridgedUSDCImplementation(_newImplementation, _initTxs);
   }
 }
 
