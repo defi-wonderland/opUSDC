@@ -8,6 +8,8 @@ import {UpgradeManager} from 'contracts/UpgradeManager.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {Test} from 'forge-std/Test.sol';
 import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
+
+import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
 import {AddressAliasHelper} from 'test/utils/AddressAliasHelper.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
@@ -24,6 +26,9 @@ contract L1OpUSDCFactoryForTest is L1OpUSDCFactory {
 }
 
 abstract contract Base is Test, Helpers {
+  address internal constant _ZERO_ADDRESS = address(0);
+  uint256 internal constant _ZERO_VALUE = 0;
+
   L1OpUSDCFactoryForTest public factory;
 
   address internal _owner = makeAddr('owner');
@@ -161,47 +166,51 @@ contract L1OpUSDCFactory_Unit_DeployL2UsdcAndAdapter is Base {
   /**
    * @notice Check the `deployL2UsdcAndAdapter` function calls the `bridgedUSDCImplementation` correctly
    */
-  function test_callBridgedUSDCImplementation(address _portal, uint32 _minGasLimit) public {
+  function test_callBridgedUSDCImplementation(address _l1Messenger, uint32 _minGasLimit) public {
     // Expect the `bridgedUSDCImplementation` to be properly called
-    _mockAndExpect(
-      _upgradeManager,
-      abi.encodeWithSelector(IUpgradeManager.bridgedUSDCImplementation.selector),
-      abi.encode(_bridgedUsdcImplementation)
-    );
+    vm.expectCall(_upgradeManager, abi.encodeWithSelector(IUpgradeManager.bridgedUSDCImplementation.selector));
 
     // Mock all the `deployL2UsdcAndAdapter` function calls
-    _mockDeployFunctionCalls(_portal);
+    _mockDeployFunctionCalls(_l1Messenger);
 
     // Execute
     vm.prank(_user);
-    factory.deployL2UsdcAndAdapter(_portal, _minGasLimit);
+    factory.deployL2UsdcAndAdapter(_l1Messenger, _minGasLimit);
   }
 
   /**
    * @notice Check the `deployL2UsdcAndAdapter` function calls the `l2AdapterImplementation` correctly
    */
-  function test_callL2AdapterImplementation(address _portal, uint32 _minGasLimit) public {
+  function test_callL2AdapterImplementation(address _l1Messenger, uint32 _minGasLimit) public {
     // Expect the `l2AdapterImplementation` to be properly called
-    _mockAndExpect(
-      _upgradeManager,
-      abi.encodeWithSelector(IUpgradeManager.l2AdapterImplementation.selector),
-      abi.encode(_l2AdapterImplementation)
-    );
+    vm.expectCall(_upgradeManager, abi.encodeWithSelector(IUpgradeManager.l2AdapterImplementation.selector));
 
     // Mock all the `deployL2UsdcAndAdapter` function calls
-    _mockDeployFunctionCalls(_portal);
+    _mockDeployFunctionCalls(_l1Messenger);
 
     // Execute
     vm.prank(_user);
-    factory.deployL2UsdcAndAdapter(_portal, _minGasLimit);
+    factory.deployL2UsdcAndAdapter(_l1Messenger, _minGasLimit);
+  }
+
+  function test_callPortal(address _l1Messenger, uint32 _minGasLimit) public {
+    // Expect the `portal` function to be properly called
+    vm.expectCall(_l1Messenger, abi.encodeWithSelector(ICrossDomainMessenger.portal.selector));
+
+    // Mock all the `deployL2UsdcAndAdapter` function calls
+    _mockDeployFunctionCalls(_l1Messenger);
+
+    // Execute
+    vm.prank(_user);
+    factory.deployL2UsdcAndAdapter(_l1Messenger, _minGasLimit);
   }
 
   /**
    * @notice Check the `deployL2UsdcAndAdapter` function calls the `portal` correctly
    */
-  function test_callDepositTransaction(address _portal, uint32 _minGasLimit) public {
+  function test_callDepositTransaction(address _l1Messenger, uint32 _minGasLimit) public {
     // Mock all the `deployL2UsdcAndAdapter` function calls
-    _mockDeployFunctionCalls(_portal);
+    _mockDeployFunctionCalls(_l1Messenger);
 
     // Get the L2 usdc proxy init code
     bytes memory _usdcProxyCArgs = abi.encode(factory.L2_USDC_IMPLEMENTATION());
@@ -224,47 +233,47 @@ contract L1OpUSDCFactory_Unit_DeployL2UsdcAndAdapter is Base {
     bytes memory _l2FactoryInitCode = bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs);
 
     // Expect the `depositTransaction` to be properly called
-    address _zeroAddress = address(0);
-    uint256 _zeroValue = 0;
     bool _isCreation = true;
-    _mockAndExpect(
+    vm.expectCall(
       _portal,
       abi.encodeWithSelector(
         IOptimismPortal.depositTransaction.selector,
-        _zeroAddress,
-        _zeroValue,
+        _ZERO_ADDRESS,
+        _ZERO_VALUE,
         _minGasLimit,
         _isCreation,
         _l2FactoryInitCode
-      ),
-      abi.encode('')
+      )
     );
 
     // Execute
     vm.prank(_user);
-    factory.deployL2UsdcAndAdapter(_portal, _minGasLimit);
+    factory.deployL2UsdcAndAdapter(_l1Messenger, _minGasLimit);
   }
 
   /**
    * @notice Helper function to mock all the function calls that will be made in the `deployL2UsdcAndAdapter` function
-   * @param _portal The address of the portal contract
+   * @param _l1Messenger The address of the L1 messenger
    */
-  function _mockDeployFunctionCalls(address _portal) internal {
-    // Mock the call over the `deployL2UsdcAndAdapter` function
+  function _mockDeployFunctionCalls(address _l1Messenger) internal {
+    // Mock the call over the `bridgedUSDCImplementation` function
     vm.mockCall(
       _upgradeManager,
       abi.encodeWithSelector(IUpgradeManager.bridgedUSDCImplementation.selector),
       abi.encode(_bridgedUsdcImplementation)
     );
 
-    // Mock the call over the `deployL2UsdcAndAdapter` function
+    // Mock the call over the `l2AdapterImplementation` function
     vm.mockCall(
       _upgradeManager,
       abi.encodeWithSelector(IUpgradeManager.l2AdapterImplementation.selector),
       abi.encode(_l2AdapterImplementation)
     );
 
-    // Mock the call over the `deployL2UsdcAndAdapter` function
+    // Mock the call over the `portal` function on the L1 messenger
+    vm.mockCall(_l1Messenger, abi.encodeWithSelector(ICrossDomainMessenger.portal.selector), abi.encode(_portal));
+
+    // Mock the call over the `depositTransaction` function on the portal
     vm.mockCall(_portal, abi.encodeWithSelector(IOptimismPortal.depositTransaction.selector), abi.encode(true));
   }
 }

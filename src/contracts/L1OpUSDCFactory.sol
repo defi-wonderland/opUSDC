@@ -9,6 +9,7 @@ import {AddressAliasHelper} from 'contracts/utils/AddressAliasHelper.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
+import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
 
 /**
@@ -87,10 +88,10 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
 
   /**
    * @notice Sends the L2 factory creation tx along with the L2 deployments to be done on it through the portal
-   * @param _portal The address of the portal contract for the respective L2 chain
+   * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
    * @param _minGasLimit The minimum gas limit for the L2 deployment
    */
-  function deployL2UsdcAndAdapter(address _portal, uint32 _minGasLimit) external {
+  function deployL2UsdcAndAdapter(address _l1Messenger, uint32 _minGasLimit) external {
     // Get the L2 usdc proxy init code
     bytes memory _usdcProxyCArgs = abi.encode(L2_USDC_IMPLEMENTATION);
     bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);
@@ -104,7 +105,6 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
 
     // Get the L2 factory init code
     bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
-
     bytes memory _l2FactoryCArgs = abi.encode(
       _usdcProxyInitCode,
       _l2UsdcImplementationBytecode,
@@ -115,9 +115,8 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     bytes memory _l2FactoryInitCode = bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs);
 
     // Deploy L2 op usdc factory through portal
-    IOptimismPortal(_portal).depositTransaction(
-      _ZERO_ADDRESS, _ZERO_VALUE, _minGasLimit, _IS_CREATION, _l2FactoryInitCode
-    );
+    IOptimismPortal _portal = ICrossDomainMessenger(_l1Messenger).portal();
+    _portal.depositTransaction(_ZERO_ADDRESS, _ZERO_VALUE, _minGasLimit, _IS_CREATION, _l2FactoryInitCode);
   }
 
   /**
