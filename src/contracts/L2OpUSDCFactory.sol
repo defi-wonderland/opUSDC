@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {BytecodeDeployer} from 'contracts/BytecodeDeployer.sol';
+import {BytecodeDeployer} from 'contracts/utils/BytecodeDeployer.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 
 /**

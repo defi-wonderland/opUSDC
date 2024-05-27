@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
+/**
+ * @title BytecodeDeployer
+ * @notice Wrapper to deploy a contract with the given bytecode
+ */
 contract BytecodeDeployer {
   /**
    * @notice Deploys the contract with the given bytecode

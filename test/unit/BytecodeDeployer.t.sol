@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {BytecodeDeployer} from 'contracts/BytecodeDeployer.sol';
+import {BytecodeDeployer} from 'contracts/utils/BytecodeDeployer.sol';
 import {Test} from 'forge-std/Test.sol';
 
 contract BytecodeDeployer_Unit_Deployment is Test {
