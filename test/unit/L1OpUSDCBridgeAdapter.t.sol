@@ -676,6 +676,20 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
   }
 
   /**
+   * @notice Check that the function reverts if a messenger is not active
+   */
+  function test_revertIfMessengerNotActive(
+    address _newOwner,
+    uint32 _minGasLimitReceiveOnL2,
+    uint32 _minGasLimitSetBurnAmount
+  ) external {
+    // Execute
+    vm.prank(_upgradeManager);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
+    adapter.migrateToNative(_messenger, _newOwner, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
+  }
+
+  /**
    * @notice Check that the function reverts if a migration is in progress
    */
   function test_revertIfMigrationInProgress(
@@ -754,7 +768,11 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
   /**
    * @notice Check that the event is emitted as expected
    */
-  function test_emitEvent(address _newOwner, uint32 _minGasLimitReceiveOnL2, uint32 _minGasLimitSetBurnAmount) external {
+  function test_emitEventMigrating(
+    address _newOwner,
+    uint32 _minGasLimitReceiveOnL2,
+    uint32 _minGasLimitSetBurnAmount
+  ) external {
     adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
 
     // Mock calls
@@ -773,6 +791,34 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
     vm.expectEmit(true, true, true, true);
     emit MigratingToNative(_messenger, _newOwner);
 
+    // Execute
+    vm.prank(_upgradeManager);
+    adapter.migrateToNative(_messenger, _newOwner, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
+  }
+
+  /**
+   * @notice Check that the event is emitted as expected
+   */
+  function test_emitEventCircleSet(
+    address _newOwner,
+    uint32 _minGasLimitReceiveOnL2,
+    uint32 _minGasLimitSetBurnAmount
+  ) external {
+    adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
+
+    // Mock calls
+    vm.mockCall(
+      address(_messenger),
+      abi.encodeWithSignature(
+        'sendMessage(address,bytes,uint32)',
+        _linkedAdapter,
+        abi.encodeWithSignature('receiveMigrateToNative(address,uint32)', _newOwner, _minGasLimitSetBurnAmount),
+        _minGasLimitReceiveOnL2
+      ),
+      abi.encode()
+    );
+
+    // Expect events
     vm.expectEmit(true, true, true, true);
     emit CircleSet(_newOwner);
 
