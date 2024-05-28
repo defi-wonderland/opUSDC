@@ -70,7 +70,7 @@ contract L1OpUSDCBridgeAdapter_Unit_Constructor is Base {
 
 contract L1OpUSDCBridgeAdapter_Unit_SetBurnAmount is Base {
   /**
-   * @notice Check that the function reverts if the sender is not in a upgrading state
+   * @notice Check that the function reverts if the messenger is not in an upgrading state
    */
   function test_revertIfMessengerNotUpgrading(uint256 _amount) external {
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
