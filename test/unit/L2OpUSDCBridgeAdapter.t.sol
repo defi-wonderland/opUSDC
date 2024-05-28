@@ -44,7 +44,6 @@ abstract contract Base is Helpers {
     adapter = ForTestL2OpUSDCBridgeAdapter(address(new ERC1967Proxy(_implementation, '')));
 
     _l2AdapterBytecode = type(ForTestL2OpUSDCBridgeAdapter).creationCode;
-    _l2AdapterInitTxs.push(_l2AdapterInitTx);
   }
 }
 
