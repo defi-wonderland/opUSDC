@@ -770,6 +770,33 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
   }
 
   /**
+   * @notice Check that we can recall the function if its upgrading
+   */
+  function test_recallWhenUpgrading(
+    address _newOwner,
+    uint32 _minGasLimitReceiveOnL2,
+    uint32 _minGasLimitSetBurnAmount
+  ) external {
+    adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Upgrading);
+    adapter.forTest_setCircle(_newOwner);
+
+    _mockAndExpect(
+      address(_messenger),
+      abi.encodeWithSignature(
+        'sendMessage(address,bytes,uint32)',
+        _linkedAdapter,
+        abi.encodeWithSignature('receiveMigrateToNative(address,uint32)', _newOwner, _minGasLimitSetBurnAmount),
+        _minGasLimitReceiveOnL2
+      ),
+      abi.encode()
+    );
+
+    // Execute
+    vm.prank(_upgradeManager);
+    adapter.migrateToNative(_messenger, _newOwner, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
+  }
+
+  /**
    * @notice Check that the event is emitted as expected
    */
   function test_emitEventMigrating(

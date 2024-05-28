@@ -265,7 +265,9 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
     if (messengerStatus[_messenger] != Status.Active && messengerStatus[_messenger] != Status.Upgrading) {
       revert IOpUSDCBridgeAdapter_MessagingDisabled();
     }
-    if (circle != address(0)) revert IOpUSDCBridgeAdapter_MigrationInProgress();
+    if (circle != address(0) && messengerStatus[_messenger] != Status.Upgrading) {
+      revert IOpUSDCBridgeAdapter_MigrationInProgress();
+    }
 
     circle = _circle;
     messengerStatus[_messenger] = Status.Upgrading;
