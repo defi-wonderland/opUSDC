@@ -43,7 +43,7 @@ abstract contract Base is Helpers {
     address _implementation = address(new ForTestL2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter));
     adapter = ForTestL2OpUSDCBridgeAdapter(address(new ERC1967Proxy(_implementation, '')));
 
-    _l2AdapterBytecode = _implementation.code;
+    _l2AdapterBytecode = type(ForTestL2OpUSDCBridgeAdapter).creationCode;
     _l2AdapterInitTxs.push(_l2AdapterInitTx);
   }
 }
@@ -474,6 +474,10 @@ contract L1OpUSDCBridgeAdapter_ReceiveAdapterUpgrade is Base {
     // Execute
     vm.prank(_messenger);
     adapter.receiveAdapterUpgrade(_l2AdapterBytecode, _l2AdapterInitTxs);
+
+    assertEq(adapter.USDC(), _usdc, 'USDC should be set to the provided address');
+    assertEq(adapter.MESSENGER(), _messenger, 'Messenger should be set to the provided address');
+    assertEq(adapter.LINKED_ADAPTER(), _linkedAdapter, 'Linked adapter should be set to the provided address');
   }
 }
 

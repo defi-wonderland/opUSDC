@@ -153,25 +153,31 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
     bytes[] calldata _l2AdapterInitTxs
   ) external checkSender {
     // Deploy L2 adapter implementation
-    address _adapterImplementation = address(new BytecodeDeployer(_l2AdapterBytecode));
+    address _adapterImplementation;
+    bytes memory _bytecode = abi.encodePacked(_l2AdapterBytecode, abi.encode(USDC, MESSENGER, LINKED_ADAPTER));
+    assembly {
+      _adapterImplementation := create(0, add(_bytecode, 0x20), mload(_bytecode))
+      if iszero(extcodesize(_adapterImplementation)) { revert(0, 0) }
+    }
+    // address _adapterImplementation = address(new BytecodeDeployer(_bytecode));
     emit IL2OpUSDCFactory.DeployedL2AdapterImplementation(_adapterImplementation);
 
     //Upgrade to the new implementation
-    upgradeToAndCall(_adapterImplementation, _l2AdapterInitTxs[0]);
+    upgradeToAndCall(_adapterImplementation, '');
 
-    // Cache intialization transactions length
-    uint256 _l2AdapterInitTxsLength = _l2AdapterInitTxs.length;
+    // // Cache intialization transactions length
+    // uint256 _l2AdapterInitTxsLength = _l2AdapterInitTxs.length;
 
-    //Execute the initialization transactions
-    if (_l2AdapterInitTxsLength > 1) {
-      // Initialize L2 adapter
-      for (uint256 i = 1; i < _l2AdapterInitTxsLength; i++) {
-        (bool _success,) = address(this).call(_l2AdapterInitTxs[i]);
-        if (!_success) {
-          revert L2OpUSDCBridgeAdapter_AdapterInitializationFailed();
-        }
-      }
-    }
+    // //Execute the initialization transactions
+    // if (_l2AdapterInitTxsLength > 1) {
+    //   // Initialize L2 adapter
+    //   for (uint256 i = 1; i < _l2AdapterInitTxsLength; i++) {
+    //     (bool _success,) = address(this).call(_l2AdapterInitTxs[i]);
+    //     if (!_success) {
+    //       revert L2OpUSDCBridgeAdapter_AdapterInitializationFailed();
+    //     }
+    //   }
+    // }
   }
 
   /**
