@@ -34,10 +34,9 @@ interface IL1OpUSDCBridgeAdapter {
    * @notice Emitted when L2 upgrade method is called
    * @param _newImplementation The address of the new implementation
    * @param _messenger The address of the messenger
-   * @param _data The data to be sent to the new implementation
    * @param _minGasLimit The minimum gas limit for the message
    */
-  event L2AdapterUpgradeSent(address _newImplementation, address _messenger, bytes _data, uint32 _minGasLimit);
+  event L2AdapterUpgradeSent(address _newImplementation, address _messenger, uint32 _minGasLimit);
 
   /**
    * @notice Emitted when circle is set

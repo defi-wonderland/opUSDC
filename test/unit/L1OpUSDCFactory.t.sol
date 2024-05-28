@@ -8,7 +8,6 @@ import {UpgradeManager} from 'contracts/UpgradeManager.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {Test} from 'forge-std/Test.sol';
 import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
-
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
 import {AddressAliasHelper} from 'test/utils/AddressAliasHelper.sol';

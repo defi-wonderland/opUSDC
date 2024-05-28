@@ -31,6 +31,10 @@ abstract contract Base is Helpers {
   address internal _messenger = makeAddr('messenger');
   address internal _linkedAdapter = makeAddr('linkedAdapter');
 
+  bytes internal _l2AdapterBytecode;
+  bytes internal _l2AdapterInitTx = 'tx2';
+  bytes[] internal _l2AdapterInitTxs;
+
   event MessageSent(address _user, address _to, uint256 _amount, address _messenger, uint32 _minGasLimit);
   event MessageReceived(address _user, uint256 _amount, address _messenger);
 
@@ -38,6 +42,9 @@ abstract contract Base is Helpers {
     (_signerAd, _signerPk) = makeAddrAndKey('signer');
     address _implementation = address(new ForTestL2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter));
     adapter = ForTestL2OpUSDCBridgeAdapter(address(new ERC1967Proxy(_implementation, '')));
+
+    _l2AdapterBytecode = _implementation.code;
+    _l2AdapterInitTxs.push(_l2AdapterInitTx);
   }
 }
 
@@ -457,6 +464,16 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveResumeMessaging is Base {
     // Execute
     vm.prank(_messenger);
     adapter.receiveResumeMessaging();
+  }
+}
+
+contract L1OpUSDCBridgeAdapter_ReceiveAdapterUpgrade is Base {
+  function test_receiveAdapterUpgrade() external {
+    // Mock calls
+    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveAdapterUpgrade(_l2AdapterBytecode, _l2AdapterInitTxs);
   }
 }
 

@@ -7,7 +7,9 @@ import {ECDSA} from '@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
 import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
 import {SignatureChecker} from '@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol';
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
+import {BytecodeDeployer} from 'contracts/utils/BytecodeDeployer.sol';
 import {IL2OpUSDCBridgeAdapter} from 'interfaces/IL2OpUSDCBridgeAdapter.sol';
+import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
@@ -139,6 +141,37 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
     isMessagingDisabled = false;
 
     emit MessagingResumed(MESSENGER);
+  }
+
+  /**
+   * @notice Receive the creation code from the linked adapter, deploy the new implementation and upgrade
+   * @param _l2AdapterBytecode The bytecode for the new L2 adapter implementation
+   * @param _l2AdapterInitTxs The initialization transactions for the new L2 adapter implementation
+   */
+  function receiveAdapterUpgrade(
+    bytes calldata _l2AdapterBytecode,
+    bytes[] calldata _l2AdapterInitTxs
+  ) external checkSender {
+    // Deploy L2 adapter implementation
+    address _adapterImplementation = address(new BytecodeDeployer(_l2AdapterBytecode));
+    emit IL2OpUSDCFactory.DeployedL2AdapterImplementation(_adapterImplementation);
+
+    //Upgrade to the new implementation
+    upgradeToAndCall(_adapterImplementation, _l2AdapterInitTxs[0]);
+
+    // Cache intialization transactions length
+    uint256 _l2AdapterInitTxsLength = _l2AdapterInitTxs.length;
+
+    //Execute the initialization transactions
+    if (_l2AdapterInitTxsLength > 1) {
+      // Initialize L2 adapter
+      for (uint256 i = 1; i < _l2AdapterInitTxsLength; i++) {
+        (bool _success,) = address(this).call(_l2AdapterInitTxs[i]);
+        if (!_success) {
+          revert L2OpUSDCBridgeAdapter_AdapterInitializationFailed();
+        }
+      }
+    }
   }
 
   /**

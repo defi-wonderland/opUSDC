@@ -3,11 +3,20 @@ pragma solidity 0.8.25;
 
 interface IL2OpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
+                            ERRORS
+  //////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice Error when the adapter initialization fails
+   */
+  error L2OpUSDCBridgeAdapter_AdapterInitializationFailed();
+  /*///////////////////////////////////////////////////////////////
                             LOGIC
   //////////////////////////////////////////////////////////////*/
   /**
    * @notice Receive the stop messaging message from the linked adapter and stop outgoing messages
    */
+
   function receiveStopMessaging() external;
 
   /**
