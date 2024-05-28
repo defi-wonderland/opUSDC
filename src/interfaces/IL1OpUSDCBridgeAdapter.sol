@@ -11,12 +11,14 @@ interface IL1OpUSDCBridgeAdapter {
    * @param Uninitialized  The messenger is Uninitialized
    * @param Active The messenger is active
    * @param Paused The messenger is paused
+   * @param Upgrading The messenger is upgrading
    * @param Deprecated The messenger is deprecated
    */
   enum Status {
     Uninitialized,
     Active,
     Paused,
+    Upgrading,
     Deprecated
   }
 
@@ -38,12 +40,6 @@ interface IL1OpUSDCBridgeAdapter {
    * @param _minGasLimit The minimum gas limit for the message
    */
   event L2AdapterUpgradeSent(address _newImplementation, address _messenger, bytes _data, uint32 _minGasLimit);
-
-  /**
-   * @notice Emitted when circle is set
-   * @param _circle The address of the Circle contract
-   */
-  event CircleSet(address _circle);
 
   /**
    * @notice Emitted when a new messenger is initialized
@@ -78,7 +74,7 @@ interface IL1OpUSDCBridgeAdapter {
   /**
    * @notice Sets the amount of USDC tokens that will be burned when the burnLockedUSDC function is called
    * @param _amount The amount of USDC tokens that will be burned
-   * @dev Only callable by the owner
+   * @dev Only callable by a whitelisted messenger during its migration process
    */
   function setBurnAmount(uint256 _amount) external;
 

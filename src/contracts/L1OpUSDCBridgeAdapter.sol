@@ -82,13 +82,14 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
    */
   function setBurnAmount(uint256 _amount) external {
     if (
-      messengerStatus[msg.sender] != Status.Deprecated
+      messengerStatus[msg.sender] != Status.Upgrading
         || ICrossDomainMessenger(msg.sender).xDomainMessageSender() != LINKED_ADAPTER
     ) {
       revert IOpUSDCBridgeAdapter_InvalidSender();
     }
 
     burnAmount = _amount;
+    messengerStatus[msg.sender] = Status.Deprecated;
 
     emit BurnAmountSet(_amount);
   }
@@ -260,11 +261,14 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
     uint32 _minGasLimitSetBurnAmount
   ) external onlyUpgradeManager {
     // Ensure messaging is enabled
-    if (messengerStatus[_messenger] != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
+    // Leave this flow open to resend upgrading flow incase message fails on L2
+    if (messengerStatus[_messenger] != Status.Active && messengerStatus[_messenger] != Status.Upgrading) {
+      revert IOpUSDCBridgeAdapter_MessagingDisabled();
+    }
     if (circle != address(0)) revert IOpUSDCBridgeAdapter_MigrationInProgress();
 
     circle = _circle;
-    messengerStatus[_messenger] = Status.Deprecated;
+    messengerStatus[_messenger] = Status.Upgrading;
 
     ICrossDomainMessenger(_messenger).sendMessage(
       LINKED_ADAPTER,
@@ -273,7 +277,6 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
     );
 
     emit MigratingToNative(_messenger, _circle);
-    emit CircleSet(_circle);
   }
 
   /**

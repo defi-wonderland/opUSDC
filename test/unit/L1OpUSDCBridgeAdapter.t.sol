@@ -45,7 +45,6 @@ abstract contract Base is Helpers {
   event MessageReceived(address _user, uint256 _amount, address _messenger);
   event BurnAmountSet(uint256 _burnAmount);
   event L2AdapterUpgradeSent(address _newImplementation, address _messenger, bytes _data, uint32 _minGasLimit);
-  event CircleSet(address _circle);
   event MessengerInitialized(address _messenger);
   event MigratingToNative(address _messenger, address _newOwner);
 
@@ -71,9 +70,9 @@ contract L1OpUSDCBridgeAdapter_Unit_Constructor is Base {
 
 contract L1OpUSDCBridgeAdapter_Unit_SetBurnAmount is Base {
   /**
-   * @notice Check that the function reverts if the sender is not in a deprecated state
+   * @notice Check that the function reverts if the sender is not in a upgrading state
    */
-  function test_revertIfMessengerNotDeprecated(uint256 _amount) external {
+  function test_revertIfMessengerNotUpgrading(uint256 _amount) external {
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
     // Execute
     vm.prank(_messenger);
@@ -99,7 +98,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SetBurnAmount is Base {
    * @notice Check that the burn amount is set as expected
    */
   function test_setAmount(uint256 _burnAmount) external {
-    adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Deprecated);
+    adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Upgrading);
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
     // Execute
@@ -108,13 +107,18 @@ contract L1OpUSDCBridgeAdapter_Unit_SetBurnAmount is Base {
 
     // Assert
     assertEq(adapter.burnAmount(), _burnAmount, 'Burn amount should be set');
+    assertEq(
+      uint256(adapter.messengerStatus(_messenger)),
+      uint256(IL1OpUSDCBridgeAdapter.Status.Deprecated),
+      'Messenger should be set to deprecated'
+    );
   }
 
   /**
    * @notice Check that the event is emitted as expected
    */
   function test_emitEvent(uint256 _burnAmount) external {
-    adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Deprecated);
+    adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Upgrading);
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
     // Execute
@@ -676,9 +680,9 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
   }
 
   /**
-   * @notice Check that the function reverts if a messenger is not active
+   * @notice Check that the function reverts if a messenger is not active or upgrading
    */
-  function test_revertIfMessengerNotActive(
+  function test_revertIfMessengerNotActiveOrUpgrading(
     address _newOwner,
     uint32 _minGasLimitReceiveOnL2,
     uint32 _minGasLimitSetBurnAmount
@@ -734,7 +738,7 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
     assertEq(adapter.circle(), _newOwner, 'Circle should be set to the new owner');
     assertEq(
       uint256(adapter.messengerStatus(_messenger)),
-      uint256(IL1OpUSDCBridgeAdapter.Status.Deprecated),
+      uint256(IL1OpUSDCBridgeAdapter.Status.Upgrading),
       'Messenger should be set to deprecated'
     );
   }
@@ -747,7 +751,7 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
     uint32 _minGasLimitReceiveOnL2,
     uint32 _minGasLimitSetBurnAmount
   ) external {
-    adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
+    adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Upgrading);
 
     _mockAndExpect(
       address(_messenger),
@@ -790,37 +794,6 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
     // Expect events
     vm.expectEmit(true, true, true, true);
     emit MigratingToNative(_messenger, _newOwner);
-
-    // Execute
-    vm.prank(_upgradeManager);
-    adapter.migrateToNative(_messenger, _newOwner, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
-  }
-
-  /**
-   * @notice Check that the event is emitted as expected
-   */
-  function test_emitEventCircleSet(
-    address _newOwner,
-    uint32 _minGasLimitReceiveOnL2,
-    uint32 _minGasLimitSetBurnAmount
-  ) external {
-    adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
-
-    // Mock calls
-    vm.mockCall(
-      address(_messenger),
-      abi.encodeWithSignature(
-        'sendMessage(address,bytes,uint32)',
-        _linkedAdapter,
-        abi.encodeWithSignature('receiveMigrateToNative(address,uint32)', _newOwner, _minGasLimitSetBurnAmount),
-        _minGasLimitReceiveOnL2
-      ),
-      abi.encode()
-    );
-
-    // Expect events
-    vm.expectEmit(true, true, true, true);
-    emit CircleSet(_newOwner);
 
     // Execute
     vm.prank(_upgradeManager);
