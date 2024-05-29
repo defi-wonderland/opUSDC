@@ -12,9 +12,10 @@ contract BytecodeDeployer {
    */
   constructor(bytes memory _bytecode) {
     assembly {
-      let _dataStart := add(_bytecode, 32)
-      let _dataEnd := sub(msize(), _dataStart)
-      return(_dataStart, _dataEnd)
+      let _bytecodeSize := mload(_bytecode)
+      let _bytecodeStart := add(_bytecode, 0x20)
+      let _bytecodeEnd := add(_bytecodeStart, _bytecodeSize)
+      return(_bytecodeStart, _bytecodeSize)
     }
   }
 }

@@ -3,6 +3,7 @@ pragma solidity 0.8.25;
 
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
+import {ERC1967Utils} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol';
 import {ECDSA} from '@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
 import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
 import {SignatureChecker} from '@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol';
@@ -153,31 +154,27 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
     bytes[] calldata _l2AdapterInitTxs
   ) external checkSender {
     // Deploy L2 adapter implementation
-    address _adapterImplementation;
-    bytes memory _bytecode = abi.encodePacked(_l2AdapterBytecode, abi.encode(USDC, MESSENGER, LINKED_ADAPTER));
-    assembly {
-      _adapterImplementation := create(0, add(_bytecode, 0x20), mload(_bytecode))
-      if iszero(extcodesize(_adapterImplementation)) { revert(0, 0) }
-    }
-    // address _adapterImplementation = address(new BytecodeDeployer(_bytecode));
+    address _adapterImplementation = address(new BytecodeDeployer(_l2AdapterBytecode));
     emit IL2OpUSDCFactory.DeployedL2AdapterImplementation(_adapterImplementation);
 
-    //Upgrade to the new implementation
-    upgradeToAndCall(_adapterImplementation, '');
+    // Store the implementation in the contract
+    bytes32 _implementation_slot = ERC1967Utils.IMPLEMENTATION_SLOT;
+    assembly {
+      sstore(_implementation_slot, _adapterImplementation)
+    }
 
-    // // Cache intialization transactions length
-    // uint256 _l2AdapterInitTxsLength = _l2AdapterInitTxs.length;
+    uint256 _l2AdapterInitTxsLength = _l2AdapterInitTxs.length;
 
-    // //Execute the initialization transactions
-    // if (_l2AdapterInitTxsLength > 1) {
-    //   // Initialize L2 adapter
-    //   for (uint256 i = 1; i < _l2AdapterInitTxsLength; i++) {
-    //     (bool _success,) = address(this).call(_l2AdapterInitTxs[i]);
-    //     if (!_success) {
-    //       revert L2OpUSDCBridgeAdapter_AdapterInitializationFailed();
-    //     }
-    //   }
-    // }
+    //Execute the initialization transactions
+    if (_l2AdapterInitTxsLength > 1) {
+      // Initialize L2 adapter
+      for (uint256 i = 1; i < _l2AdapterInitTxsLength; i++) {
+        (bool _success,) = address(this).call(_l2AdapterInitTxs[i]);
+        if (!_success) {
+          revert L2OpUSDCBridgeAdapter_AdapterInitializationFailed();
+        }
+      }
+    }
   }
 
   /**
