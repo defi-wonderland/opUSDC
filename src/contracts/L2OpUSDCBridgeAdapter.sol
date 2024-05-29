@@ -163,13 +163,12 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
       sstore(_implementationSlot, _adapterImplementation)
     }
 
-    // Cache the length of the initialization transactions
-    uint256 _l2AdapterInitTxsLength = _l2AdapterInitTxs.length;
-
     //Execute the initialization transactions
-    if (_l2AdapterInitTxsLength > 1) {
+    if (_l2AdapterInitTxs.length > 0) {
+      // Cache the length of the initialization transactions
+      uint256 _l2AdapterInitTxsLength = _l2AdapterInitTxs.length;
       // Initialize L2 adapter
-      for (uint256 i = 1; i < _l2AdapterInitTxsLength; i++) {
+      for (uint256 i; i < _l2AdapterInitTxsLength; i++) {
         (bool _success,) = address(this).call(_l2AdapterInitTxs[i]);
         if (!_success) {
           revert L2OpUSDCBridgeAdapter_AdapterInitializationFailed();

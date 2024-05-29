@@ -2,6 +2,7 @@ pragma solidity ^0.8.25;
 
 import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
+import {IL2OpUSDCBridgeAdapter} from 'interfaces/IL2OpUSDCBridgeAdapter.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
@@ -12,12 +13,24 @@ contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
     address _linkedAdapter
   ) L2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
 
+  uint256 public calls;
+
   function forTest_setIsMessagingDisabled() external {
     isMessagingDisabled = true;
   }
 
   function forTest_authorizeUpgrade(address _newImplementation) external {
     _authorizeUpgrade(_newImplementation);
+  }
+
+  function forTest_dummy() external {
+    calls++;
+  }
+
+  function forTest_dummyRevert() external pure {
+    assembly {
+      revert(0, 0)
+    }
   }
 }
 
@@ -32,7 +45,7 @@ abstract contract Base is Helpers {
   address internal _linkedAdapter = makeAddr('linkedAdapter');
 
   bytes internal _l2AdapterBytecode;
-  bytes internal _l2AdapterInitTx = 'tx2';
+  bytes internal _l2AdapterInitTx = abi.encodeWithSignature('forTest_dummy()');
   bytes[] internal _l2AdapterInitTxs;
 
   event MessageSent(address _user, address _to, uint256 _amount, address _messenger, uint32 _minGasLimit);
@@ -466,7 +479,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveResumeMessaging is Base {
   }
 }
 
-contract L1OpUSDCBridgeAdapter_ReceiveAdapterUpgrade is Base {
+contract L2OpUSDCBridgeAdapter_ReceiveAdapterUpgrade is Base {
   /**
    * @notice Check that the receiveAdapterUpgrade function reverts if the sender is not MESSENGER
    */
@@ -519,7 +532,9 @@ contract L1OpUSDCBridgeAdapter_ReceiveAdapterUpgrade is Base {
 
     address _realImplementation = address(new ForTestL2OpUSDCBridgeAdapter(_newUsdc, _newMessenger, _newLinkedAdapter));
     _l2AdapterBytecode = _realImplementation.code;
-    _l2AdapterInitTxs.push(_l2AdapterInitTx);
+    for (uint256 i; i < 5; i++) {
+      _l2AdapterInitTxs.push(_l2AdapterInitTx);
+    }
 
     // Mock calls
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
@@ -529,6 +544,27 @@ contract L1OpUSDCBridgeAdapter_ReceiveAdapterUpgrade is Base {
     assertEq(adapter.USDC(), _newUsdc, 'USDC should be set to the provided address');
     assertEq(adapter.MESSENGER(), _newMessenger, 'Messenger should be set to the provided address');
     assertEq(adapter.LINKED_ADAPTER(), _newLinkedAdapter, 'Linked adapter should be set to the provided address');
+    assertEq(adapter.calls(), 5, 'Calls should be incremented');
+  }
+
+  /**
+   * @notice Check revert on invalid transaction
+   */
+  function test_revertOnInitTx(address _newUsdc, address _newMessenger, address _newLinkedAdapter) external {
+    vm.assume(_newUsdc != _usdc);
+    vm.assume(_newMessenger != _messenger);
+    vm.assume(_newLinkedAdapter != _linkedAdapter);
+
+    address _realImplementation = address(new ForTestL2OpUSDCBridgeAdapter(_newUsdc, _newMessenger, _newLinkedAdapter));
+    _l2AdapterBytecode = _realImplementation.code;
+    _l2AdapterInitTxs.push(abi.encodeWithSignature('forTest_dummyRevert()'));
+
+    // Mock calls
+    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    // Execute
+    vm.prank(_messenger);
+    vm.expectRevert(IL2OpUSDCBridgeAdapter.L2OpUSDCBridgeAdapter_AdapterInitializationFailed.selector);
+    adapter.receiveAdapterUpgrade(_l2AdapterBytecode, _l2AdapterInitTxs);
   }
 
   /**
@@ -556,7 +592,7 @@ contract L1OpUSDCBridgeAdapter_ReceiveAdapterUpgrade is Base {
   }
 }
 
-contract L1OpUSDCBridgeAdapter_AuthorizeUpgrade is Base {
+contract L2OpUSDCBridgeAdapter_AuthorizeUpgrade is Base {
   /**
    * @notice Check that the authorizeUpgrade function reverts if the sender is not MESSENGER
    */
