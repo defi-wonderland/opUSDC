@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
+import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
 
 interface IL1OpUSDCFactory {
@@ -10,15 +11,17 @@ interface IL1OpUSDCFactory {
 
   /**
    * @notice Emitted when the `L1OpUSDCBridgeAdapter` is deployed
-   * @param _l1Adapter The address of the L1 adapter
+   * @param _l1AdapterProxy The address of the L1 adapter proxy
+   * @param _l1AdapterImplementation The address of the L1 adapter implementation
    */
-  event L1AdapterDeployed(address _l1Adapter);
+  event L1AdapterDeployed(address _l1AdapterProxy, address _l1AdapterImplementation);
 
   /**
    * @notice Emitted when the `UpgradeManager` is deployed
-   * @param _upgradeManager The address of the upgrade manager
+   * @param _upgradeManagerProxy The address of the upgrade manager proxy
+   * @param _upgradeManagerImplementation The address of the upgrade manager implementation
    */
-  event UpgradeManagerDeployed(address _upgradeManager);
+  event UpgradeManagerDeployed(address _upgradeManagerProxy, address _upgradeManagerImplementation);
 
   /*///////////////////////////////////////////////////////////////
                             LOGIC
@@ -35,14 +38,9 @@ interface IL1OpUSDCFactory {
   function UPGRADE_MANAGER() external view returns (IUpgradeManager _upgradeManager);
 
   /**
-   * @return _l1Adapter The address of the L1OpUSDCBridgeAdapter contract
+   * @return _l1AdapterProxy The address of the L1OpUSDCBridgeAdapter proxy  contract
    */
-  function L1_ADAPTER() external view returns (address _l1Adapter);
-
-  /**
-   * @return _l2AdapterImplementation The address of the L2OpUSDCBridgeAdapter implementation contract
-   */
-  function L2_ADAPTER_IMPLEMENTATION() external view returns (address _l2AdapterImplementation);
+  function L1_ADAPTER_PROXY() external view returns (L1OpUSDCBridgeAdapter _l1AdapterProxy);
 
   /**
    * @return _l2AdapterProxy The address of the L2OpUSDCBridgeAdapter proxy contract
@@ -53,13 +51,6 @@ interface IL1OpUSDCFactory {
    * @return _l2UsdcProxy The address of the USDC proxy contract on L2
    */
   function L2_USDC_PROXY() external view returns (address _l2UsdcProxy);
-
-  /**
-   * @return _l2UsdcImplementation The address of the USDC implementation contract on L2
-   * @dev This is the first USDC implementation address deployed by the L2 factory. However, if then it gets updated,
-   * the implementation address will be another one.
-   */
-  function L2_USDC_IMPLEMENTATION() external view returns (address _l2UsdcImplementation);
 
   /**
    * @return _aliasedSelf The aliased address of the L1 factory contract on L2

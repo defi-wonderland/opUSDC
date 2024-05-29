@@ -82,19 +82,15 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
     address _aliasedSelf = AddressAliasHelper.applyL1ToL2Alias(address(factory));
     address _l2Factory = factory.forTest_precalculateCreateAddress(_aliasedSelf, 0);
     address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), 1);
-    address _l2UsdcImplAddress = factory.forTest_precalculateCreateAddress(_l2Factory, 1);
     address _l2UsdcProxyAddress = factory.forTest_precalculateCreateAddress(_l2Factory, 2);
-    address _l2AdapterImpl = factory.forTest_precalculateCreateAddress(_l2Factory, 3);
     address _l2AdapterProxy = factory.forTest_precalculateCreateAddress(_l2Factory, 4);
     address _upgradeManager = factory.forTest_precalculateCreateAddress(address(factory), 3);
 
     // Assert
     assertEq(factory.ALIASED_SELF(), _aliasedSelf, 'Invalid aliasedSelf address');
-    assertEq(factory.L1_ADAPTER(), _l1Adapter, 'Invalid l1Adapter address');
-    assertEq(factory.L2_ADAPTER_IMPLEMENTATION(), _l2AdapterImpl, 'Invalid l2Adapter implementation address');
+    assertEq(address(factory.L1_ADAPTER_PROXY()), _l1Adapter, 'Invalid l1Adapter address');
     assertEq(factory.L2_ADAPTER_PROXY(), _l2AdapterProxy, 'Invalid l2Adapter proxy address');
     assertEq(factory.L2_USDC_PROXY(), _l2UsdcProxyAddress, 'Invalid l2UsdcProxy address');
-    assertEq(factory.L2_USDC_IMPLEMENTATION(), _l2UsdcImplAddress, 'Invalid l2UsdcImplementation address');
     assertEq(address(factory.UPGRADE_MANAGER()), _upgradeManager, 'Invalid upgradeManager address');
   }
 
@@ -104,7 +100,7 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
    * contract constructor values were properly set.
    */
   function test_deployL1Adapter() public {
-    L1OpUSDCBridgeAdapter _l1Adapter = L1OpUSDCBridgeAdapter(factory.L1_ADAPTER());
+    L1OpUSDCBridgeAdapter _l1Adapter = L1OpUSDCBridgeAdapter(factory.L1_ADAPTER_PROXY());
     assertEq(_l1Adapter.USDC(), _usdc, 'Invalid owner');
     assertEq(_l1Adapter.LINKED_ADAPTER(), factory.L2_ADAPTER_PROXY(), 'Invalid l2Adapter');
     assertEq(address(_l1Adapter.UPGRADE_MANAGER()), address(factory.UPGRADE_MANAGER()), 'Invalid upgradeManager');
@@ -134,7 +130,7 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
    */
   function test_deployUpgradeManagerImplementation() public {
     IUpgradeManager _upgradeManager = IUpgradeManager(address(factory.UPGRADE_MANAGER()));
-    assertEq(_upgradeManager.L1_ADAPTER(), factory.L1_ADAPTER(), 'Invalid l1Adapter');
+    assertEq(_upgradeManager.L1_ADAPTER(), address(factory.L1_ADAPTER_PROXY()), 'Invalid l1Adapter');
   }
 
   /**
@@ -214,7 +210,7 @@ contract L1OpUSDCFactory_Unit_DeployL2UsdcAndAdapter is Base {
    */
   function test_callDepositTransaction(uint32 _minGasLimit) public {
     // Get the L2 usdc proxy init code
-    bytes memory _usdcProxyCArgs = abi.encode(factory.L2_USDC_IMPLEMENTATION());
+    bytes memory _usdcProxyCArgs = abi.encode(address(0));
     bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);
 
     // Get the bytecode of the L2 usdc implementation

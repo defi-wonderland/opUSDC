@@ -36,13 +36,10 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   address public immutable ALIASED_SELF = address(this).applyL1ToL2Alias();
 
   /// @inheritdoc IL1OpUSDCFactory
-  address public immutable L1_ADAPTER;
+  L1OpUSDCBridgeAdapter public immutable L1_ADAPTER_PROXY;
 
   /// @inheritdoc IL1OpUSDCFactory
   IUpgradeManager public immutable UPGRADE_MANAGER;
-
-  /// @inheritdoc IL1OpUSDCFactory
-  address public immutable L2_ADAPTER_IMPLEMENTATION;
 
   /// @inheritdoc IL1OpUSDCFactory
   address public immutable L2_ADAPTER_PROXY;
@@ -50,8 +47,8 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   /// @inheritdoc IL1OpUSDCFactory
   address public immutable L2_USDC_PROXY;
 
-  /// @inheritdoc IL1OpUSDCFactory
-  address public immutable L2_USDC_IMPLEMENTATION;
+  // TODO: update with some tamper data maybe?
+  bytes32 internal constant SALT = bytes32('1');
 
   /**
    * @notice Constructs the L1 factory contract, deploys the L1 adapter and the upgrade manager and precalculates the
@@ -60,51 +57,45 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * @param _owner The owner of the upgrade manager
    */
   constructor(address _usdc, address _owner) {
-    // Calculate L1 adapter
-    uint256 _thisNonceFirstTx = 1;
-    L1_ADAPTER = _precalculateCreateAddress(address(this), _thisNonceFirstTx);
-
     // Calculate L2 factory address
     uint256 _aliasedAddressFirstNonce = 0;
     address _l2Factory = _precalculateCreateAddress(ALIASED_SELF, _aliasedAddressFirstNonce);
-    // Calculate the L2 deployments using the L2 factory
-    uint256 _l2FactoryFirstNonce = 1;
-    L2_USDC_IMPLEMENTATION = _precalculateCreateAddress(_l2Factory, _l2FactoryFirstNonce);
-    uint256 _l2FactorySecondNonce = 2;
-    L2_USDC_PROXY = _precalculateCreateAddress(_l2Factory, _l2FactorySecondNonce);
-    uint256 _l2FactoryThirdNonce = 3;
-    L2_ADAPTER_IMPLEMENTATION = _precalculateCreateAddress(_l2Factory, _l2FactoryThirdNonce);
-    uint256 _l2FactoryFourthNonce = 4;
-    L2_ADAPTER_PROXY = _precalculateCreateAddress(_l2Factory, _l2FactoryFourthNonce);
+    // Calculate the L2 USDC proxy address
+    bytes32 _l2UsdcProxyInitCodeHash = keccak256(bytes.concat(USDC_PROXY_CREATION_CODE, abi.encode(address(0))));
+    L2_USDC_PROXY = _precalculateCreate2Address(SALT, _l2UsdcProxyInitCodeHash, _l2Factory);
+    // Calculate the L2 adapter proxy address
+    bytes32 _l2AdapterProxyInitCodeHash =
+      keccak256(bytes.concat(type(ERC1967Proxy).creationCode, abi.encode(address(0), '')));
+    L2_ADAPTER_PROXY = _precalculateCreate2Address(SALT, _l2AdapterProxyInitCodeHash, _l2Factory);
 
-    // Calculate the upgrade manager using 3 as nonce since first the L1 adapter and its implementation will be deployed
-    uint256 _thisNonceThirdTx = 3;
-    UPGRADE_MANAGER = IUpgradeManager(_precalculateCreateAddress(address(this), _thisNonceThirdTx));
+    // Calculate the upgrade manager using 4 as nonce since first the L1 adapter and its implementation will be deployed
+    uint256 _thisNonceFourthTx = 4;
+    UPGRADE_MANAGER = IUpgradeManager(_precalculateCreateAddress(address(this), _thisNonceFourthTx));
 
-    // Deploy the L1 adapter
-    new L1OpUSDCBridgeAdapter(_usdc, L2_ADAPTER_PROXY, address(UPGRADE_MANAGER), address(this));
-    emit L1AdapterDeployed(L1_ADAPTER);
+    // Deploy the L1 adapter implementation
+    address _l1AdapterImplementation =
+      address(new L1OpUSDCBridgeAdapter(_usdc, L2_ADAPTER_PROXY, address(UPGRADE_MANAGER), address(this)));
+    // Deploy the L1 adapter proxy
+    L1_ADAPTER_PROXY = L1OpUSDCBridgeAdapter(address(new ERC1967Proxy(_l1AdapterImplementation, '')));
+    emit L1AdapterDeployed(address(L1_ADAPTER_PROXY), _l1AdapterImplementation);
 
     // Deploy the upgrade manager implementation
-    address _upgradeManagerImplementation = address(new UpgradeManager(L1_ADAPTER));
+    address _upgradeManagerImplementation = address(new UpgradeManager(address(L1_ADAPTER_PROXY)));
     // Deploy and initialize the upgrade manager proxy
     bytes memory _initializeTx = abi.encodeWithSelector(IUpgradeManager.initialize.selector, _owner);
     UpgradeManager(address(new ERC1967Proxy(address(_upgradeManagerImplementation), _initializeTx)));
-    emit UpgradeManagerDeployed(address(UPGRADE_MANAGER));
+    emit UpgradeManagerDeployed(address(UPGRADE_MANAGER), _upgradeManagerImplementation);
   }
 
   /**
    * @notice Sends the L2 factory creation tx along with the L2 deployments to be done on it through the portal
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
    * @param _minGasLimit The minimum gas limit for the L2 deployment
+   * @dev We deploy the proxies with the 0 address as implementation and then upgrade them with the actual
+   * implementation because the `CREATE2` opcode is dependent on the creation code and a different implementation
    */
   function deployL2UsdcAndAdapter(address _l1Messenger, uint32 _minGasLimit) external {
-    // TODO: When using `CREATE2` to deploy on L2, we'll need to deploy the proxies with the 0 address as implementation
-    // and then upgrade them with the actual implementation. This is because the `CREATE2` opcode is dependant on the
-    // creation code and a different implementation would result in a different address.
-    // Get the L2 usdc proxy init code
-    bytes memory _usdcProxyCArgs = abi.encode(L2_USDC_IMPLEMENTATION);
-    bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);
+    L1_ADAPTER_PROXY.initalizeNewMessenger(_l1Messenger);
 
     // Get the bytecode of the L2 usdc implementation
     IUpgradeManager.Implementation memory _l2UsdcImplementation = UPGRADE_MANAGER.bridgedUSDCImplementation();
@@ -116,7 +107,8 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     // Get the L2 factory init code
     bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
     bytes memory _l2FactoryCArgs = abi.encode(
-      _usdcProxyInitCode,
+      SALT,
+      USDC_PROXY_CREATION_CODE,
       _l2UsdcImplementationBytecode,
       _l2UsdcImplementation.initTxs,
       _l2AdapterBytecode,
@@ -128,6 +120,8 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     IOptimismPortal _portal = ICrossDomainMessenger(_l1Messenger).portal();
     _portal.depositTransaction(_ZERO_ADDRESS, _ZERO_VALUE, _minGasLimit, _IS_CREATION, _l2FactoryInitCode);
   }
+
+  // TODO: Create deployments lib
 
   /**
    * @notice Precalculates the address of a contract that will be deployed thorugh `CREATE` opcode
@@ -155,5 +149,40 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     }
 
     _precalculatedAddress = address(uint160(uint256(keccak256(data))));
+  }
+
+  /**
+   * @dev Returns the address where a contract will be stored if deployed via `deployer` using
+   * the `CREATE2` opcode. Any change in the `initCodeHash` or `salt` values will result in a new
+   * destination address. This implementation is based on OpenZeppelin:
+   * https://web.archive.org/web/20230921113703/https://raw.githubusercontent.com/OpenZeppelin/openzeppelin-contracts/181d518609a9f006fcb97af63e6952e603cf100e/contracts/utils/Create2.sol.
+   * @param salt The 32-byte random value used to create the contract address.
+   * @param initCodeHash The 32-byte bytecode digest of the contract creation bytecode.
+   * @param deployer The 20-byte deployer address.
+   * @return computedAddress The 20-byte address where a contract will be stored.
+   */
+  function _precalculateCreate2Address(
+    bytes32 salt,
+    bytes32 initCodeHash,
+    address deployer
+  ) public pure returns (address computedAddress) {
+    assembly ("memory-safe") {
+      // |                      | ↓ ptr ...  ↓ ptr + 0x0B (start) ...  ↓ ptr + 0x20 ...  ↓ ptr + 0x40 ...   |
+      // |----------------------|---------------------------------------------------------------------------|
+      // | initCodeHash         |                                                        CCCCCCCCCCCCC...CC |
+      // | salt                 |                                      BBBBBBBBBBBBB...BB                   |
+      // | deployer             | 000000...0000AAAAAAAAAAAAAAAAAAA...AA                                     |
+      // | 0xFF                 |            FF                                                             |
+      // |----------------------|---------------------------------------------------------------------------|
+      // | memory               | 000000...00FFAAAAAAAAAAAAAAAAAAA...AABBBBBBBBBBBBB...BBCCCCCCCCCCCCC...CC |
+      // | keccak256(start, 85) |            ↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑ |
+      let ptr := mload(0x40)
+      mstore(add(ptr, 0x40), initCodeHash)
+      mstore(add(ptr, 0x20), salt)
+      mstore(ptr, deployer)
+      let start := add(ptr, 0x0b)
+      mstore8(start, 0xff)
+      computedAddress := keccak256(start, 85)
+    }
   }
 }

@@ -8,21 +8,25 @@ import {Helpers} from 'test/utils/Helpers.sol';
 
 contract L2OpUSDCFactoryTest is L2OpUSDCFactory {
   constructor(
+    bytes32 _salt,
     bytes memory _usdcProxyInitCode,
     bytes memory _usdcImplBytecode,
     bytes[] memory _usdcImplInitTxs,
     bytes memory _l2AdapterBytecode,
     bytes[] memory _l2AdapterInitTxs
-  ) L2OpUSDCFactory(_usdcProxyInitCode, _usdcImplBytecode, _usdcImplInitTxs, _l2AdapterBytecode, _l2AdapterInitTxs) {}
+  )
+    L2OpUSDCFactory(_salt, _usdcProxyInitCode, _usdcImplBytecode, _usdcImplInitTxs, _l2AdapterBytecode, _l2AdapterInitTxs)
+  {}
 
-  function forTest_createDeploy(bytes memory _initCode) public returns (address _newContract) {
-    _newContract = _createDeploy(_initCode);
+  function forTest_deployCreate2(bytes32 _salt, bytes memory _initCode) public returns (address _newContract) {
+    _newContract = _deployCreate2(_salt, _initCode);
   }
 }
 
 contract Base is Test, Helpers {
   L2OpUSDCFactoryTest public factory;
 
+  bytes32 internal _salt = bytes32('1');
   address internal _deployer = makeAddr('deployer');
   bytes internal _usdcProxyInitCode;
   bytes internal _usdcImplBytecode;
@@ -106,7 +110,9 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
     emit DeployedUSDCImpl(_usdcImplementation);
 
     vm.prank(_deployer);
-    new L2OpUSDCFactoryTest(_usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _emptyInitTxs);
+    new L2OpUSDCFactoryTest(
+      _salt, _usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _emptyInitTxs
+    );
 
     // Assert the deployed contract has code
     assertGt(_usdcImplementation.code.length, 0);
@@ -120,7 +126,9 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
     emit DeployedUSDCProxy(_usdcProxy);
 
     vm.prank(_deployer);
-    new L2OpUSDCFactoryTest(_usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _emptyInitTxs);
+    new L2OpUSDCFactoryTest(
+      _salt, _usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _emptyInitTxs
+    );
 
     // Assert the deployed contract has code
     assertGt(_usdcProxy.code.length, 0);
@@ -134,7 +142,9 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
     emit DeployedL2AdapterImplementation(_l2AdapterImplementation);
 
     vm.prank(_deployer);
-    new L2OpUSDCFactoryTest(_usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _emptyInitTxs);
+    new L2OpUSDCFactoryTest(
+      _salt, _usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _emptyInitTxs
+    );
 
     // Assert the deployed contract has code
     assertGt(_l2AdapterImplementation.code.length, 0);
@@ -145,7 +155,9 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
     emit DeployedL2AdapterProxy(_l2AdapterProxy);
 
     vm.prank(_deployer);
-    new L2OpUSDCFactoryTest(_usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _emptyInitTxs);
+    new L2OpUSDCFactoryTest(
+      _salt, _usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _emptyInitTxs
+    );
 
     // Assert the deployed contract has code
     assertGt(_l2AdapterProxy.code.length, 0);
@@ -155,8 +167,10 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
    * @notice Check the USDC implementation calls revert on bad transactions
    */
   function test_revertOnUSDCImplementationBadTxs() public {
-    vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_UsdcInitializationFailed.selector);
-    new L2OpUSDCFactoryTest(_usdcProxyInitCode, _usdcImplBytecode, _badInitTxs, _l2AdapterBytecode, _emptyInitTxs);
+    vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InitializationFailed.selector);
+    new L2OpUSDCFactoryTest(
+      _salt, _usdcProxyInitCode, _usdcImplBytecode, _badInitTxs, _l2AdapterBytecode, _emptyInitTxs
+    );
   }
 
   /**
@@ -167,15 +181,17 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
     vm.expectCall(_usdcImplementation, _initTxs[1]);
 
     vm.prank(_deployer);
-    new L2OpUSDCFactoryTest(_usdcProxyInitCode, _usdcImplBytecode, _initTxs, _l2AdapterBytecode, _emptyInitTxs);
+    new L2OpUSDCFactoryTest(_salt, _usdcProxyInitCode, _usdcImplBytecode, _initTxs, _l2AdapterBytecode, _emptyInitTxs);
   }
 
   /**
    * @notice Check the L2 adapter calls revert on bad transactions
    */
   function test_revertOnL2AdapterBadTxs() public {
-    vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_AdapterInitializationFailed.selector);
-    new L2OpUSDCFactoryTest(_usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _badInitTxs);
+    vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InitializationFailed.selector);
+    new L2OpUSDCFactoryTest(
+      _salt, _usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _badInitTxs
+    );
   }
 
   /**
@@ -186,7 +202,7 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
     vm.expectCall(_l2AdapterProxy, _initTxTwo);
 
     vm.prank(_deployer);
-    new L2OpUSDCFactoryTest(_usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _initTxs);
+    new L2OpUSDCFactoryTest(_salt, _usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _initTxs);
   }
 }
 
@@ -196,8 +212,9 @@ contract L2OpUSDCFactory_Unit_CreateDeploy is Base {
   function setUp() public override {
     super.setUp();
     // Deploy the factory for the next tests
-    _factory =
-      new L2OpUSDCFactoryTest(_usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _emptyInitTxs);
+    _factory = new L2OpUSDCFactoryTest(
+      _salt, _usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _emptyInitTxs
+    );
   }
 
   /**
@@ -212,7 +229,7 @@ contract L2OpUSDCFactory_Unit_CreateDeploy is Base {
 
     // Execute
     vm.prank(_deployer);
-    address _newContract = _factory.forTest_createDeploy(_initCode);
+    address _newContract = _factory.forTest_deployCreate2(_salt, _initCode);
 
     // Assert the deployed contract has code
     assertEq(_newContract, _expectedAddress);
@@ -224,8 +241,8 @@ contract L2OpUSDCFactory_Unit_CreateDeploy is Base {
    * @dev It only works with creation code, but not with bytecode so it should revert when using bytecode
    */
   function test_revertIfDeploymentFailed() public {
-    vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_CreateDeploymentFailed.selector);
-    _factory.forTest_createDeploy(_usdcImplBytecode);
+    vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_Create2DeploymentFailed.selector);
+    _factory.forTest_deployCreate2(_salt, _usdcImplBytecode);
   }
 }
 

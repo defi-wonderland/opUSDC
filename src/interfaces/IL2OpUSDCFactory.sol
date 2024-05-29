@@ -8,43 +8,29 @@ interface IL2OpUSDCFactory {
   /**
    * @notice Thrown when the deployment failed
    */
-  error IL2OpUSDCFactory_CreateDeploymentFailed();
+  error IL2OpUSDCFactory_Create2DeploymentFailed();
 
   /**
    * @notice Thrown when an USDC initialization tx failed
    */
-  error IL2OpUSDCFactory_UsdcInitializationFailed();
-
-  /**
-   * @notice Thrown when an adapter initialization tx failed
-   */
-  error IL2OpUSDCFactory_AdapterInitializationFailed();
+  error IL2OpUSDCFactory_InitializationFailed();
 
   /*///////////////////////////////////////////////////////////////
                             EVENTS
   //////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Emitted when the USDC implementation is deployed
-   * @param _usdcImplementation The address of the USDC implementation
-   */
-  event DeployedUSDCImpl(address _usdcImplementation);
-
-  /**
+   * /**
    * @notice Emitted when the USDC proxy is deployed
    * @param _usdcProxy The address of the USDC proxy
+   * @param _usdcImplementation The address of the USDC implementation
    */
-  event DeployedUSDCProxy(address _usdcProxy);
+  event USDCDeployed(address _usdcProxy, address _usdcImplementation);
 
   /**
-   * @notice Emitted when the `L2OpUSDCBridgeAdapter` implementation is deployed
-   * @param _l2AdapterImplementation The address of the L2 adapter implementation
+   * @notice Emitted when the L2 adapter proxy is deployed
+   * @param _adapterProxy The address of the L2 adapter proxy
+   * @param _adapterImplementation The address of the L2 adapter implementation
    */
-  event DeployedL2AdapterImplementation(address _l2AdapterImplementation);
-
-  /**
-   * @notice Emitted when the `L2OpUSDCBridgeAdapter` proxy is deployed
-   * @param _l2AdapterProxy The address of the L2 adapter proxy
-   */
-  event DeployedL2AdapterProxy(address _l2AdapterProxy);
+  event AdapterDeployed(address _adapterProxy, address _adapterImplementation);
 }
