@@ -2,6 +2,7 @@
 pragma solidity 0.8.25;
 
 import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
+import {ERC1967Utils} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol';
 import {BytecodeDeployer} from 'contracts/utils/BytecodeDeployer.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 
@@ -35,10 +36,10 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     bytes memory _l2AdapterBytecode,
     bytes[] memory _l2AdapterInitTxs
   ) {
-    // Deploy usdc implementation
     bytes memory _bytecodeDeployerCreationCode = type(BytecodeDeployer).creationCode;
     address _usdcImplementation;
     {
+      // Deploy usdc implementation
       bytes memory _usdcImplInitCode = bytes.concat(_bytecodeDeployerCreationCode, _usdcImplBytecode);
       _usdcImplementation = _deployCreate2(_salt, _usdcImplInitCode);
       // Deploy usdc proxy
@@ -60,7 +61,11 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
       bytes memory _adapterProxyInitCode =
         bytes.concat(_bytecodeDeployerCreationCode, type(ERC1967Proxy).creationCode, _proxyCArgs);
       _adapterProxy = _deployCreate2(_salt, _adapterProxyInitCode);
-      IProxy(_adapterProxy).upgradeTo(_adapterImplementation);
+      // Store the implementation in the proxy contract
+      bytes32 _implementationSlot = ERC1967Utils.IMPLEMENTATION_SLOT;
+      assembly {
+        sstore(_implementationSlot, _adapterImplementation)
+      }
       emit AdapterDeployed(_adapterProxy, _adapterImplementation);
     }
 
@@ -93,13 +98,10 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
   }
 
   /**
-   * @dev Deploys a new contract via calling the `CREATE2` opcode and using the salt value `salt`,
-   * the creation bytecode `initCode`, and `msg.value` as inputs. In order to save deployment costs,
-   * we do not sanity check the `initCode` length. Note that if `msg.value` is non-zero, `initCode`
-   * must have a `payable` constructor.
-   * @param _salt The 32-byte random value used to create the contract address.
-   * @param _initCode The creation bytecode.
-   * @return _newContract The 20-byte address where the contract was deployed.
+   * @notice Deploys a contract using the `CREATE2` opcode
+   * @param _salt The random value to be used to create the contract address
+   * @param _initCode The creation bytecode
+   * @return _newContract The address where the contract was deployed
    */
   function _deployCreate2(bytes32 _salt, bytes memory _initCode) public payable returns (address _newContract) {
     assembly ("memory-safe") {
