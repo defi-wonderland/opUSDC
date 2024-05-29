@@ -2,7 +2,6 @@ pragma solidity ^0.8.25;
 
 import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
-import {BytecodeDeployer} from 'contracts/utils/BytecodeDeployer.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
@@ -39,6 +38,7 @@ abstract contract Base is Helpers {
   event MessageSent(address _user, address _to, uint256 _amount, address _messenger, uint32 _minGasLimit);
   event MessageReceived(address _user, uint256 _amount, address _messenger);
   event MigratingToNative(address _messenger, address _newOwner);
+  event DeployedL2AdapterImplementation(address _adapterImplementation);
 
   function setUp() public virtual {
     (_signerAd, _signerPk) = makeAddrAndKey('signer');
@@ -467,7 +467,52 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveResumeMessaging is Base {
 }
 
 contract L1OpUSDCBridgeAdapter_ReceiveAdapterUpgrade is Base {
+  /**
+   * @notice Check that the receiveAdapterUpgrade function reverts if the sender is not MESSENGER
+   */
+  function test_wrongMessenger(address _notMessenger) public {
+    vm.assume(_notMessenger != _messenger);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
+    adapter.receiveAdapterUpgrade(_l2AdapterBytecode, _l2AdapterInitTxs);
+  }
+
+  /**
+   * @notice Check that the receiveAdapterUpgrade function reverts if the sender is not Linked Adapter
+   */
+  function test_wrongLinkedAdapter(address _notLinkedAdapter) public {
+    vm.assume(_notLinkedAdapter != _linkedAdapter);
+    // Mock calls
+    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_notLinkedAdapter));
+
+    // Execute
+    vm.prank(_messenger);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
+    adapter.receiveAdapterUpgrade(_l2AdapterBytecode, _l2AdapterInitTxs);
+  }
+
+  /**
+   * @notice Check the expected calls
+   */
   function test_receiveAdapterUpgrade(address _newUsdc, address _newMessenger, address _newLinkedAdapter) external {
+    vm.assume(_newUsdc != _usdc);
+    vm.assume(_newMessenger != _messenger);
+    vm.assume(_newLinkedAdapter != _linkedAdapter);
+
+    address _realImplementation = address(new ForTestL2OpUSDCBridgeAdapter(_newUsdc, _newMessenger, _newLinkedAdapter));
+    _l2AdapterBytecode = _realImplementation.code;
+    _l2AdapterInitTxs.push(_l2AdapterInitTx);
+
+    // Mock calls
+    _mockAndExpect(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveAdapterUpgrade(_l2AdapterBytecode, _l2AdapterInitTxs);
+  }
+
+  /**
+   * @notice Check that the immutable variables are set as expected
+   */
+  function test_setVariables(address _newUsdc, address _newMessenger, address _newLinkedAdapter) external {
     vm.assume(_newUsdc != _usdc);
     vm.assume(_newMessenger != _messenger);
     vm.assume(_newLinkedAdapter != _linkedAdapter);
@@ -481,10 +526,33 @@ contract L1OpUSDCBridgeAdapter_ReceiveAdapterUpgrade is Base {
     // Execute
     vm.prank(_messenger);
     adapter.receiveAdapterUpgrade(_l2AdapterBytecode, _l2AdapterInitTxs);
-
     assertEq(adapter.USDC(), _newUsdc, 'USDC should be set to the provided address');
     assertEq(adapter.MESSENGER(), _newMessenger, 'Messenger should be set to the provided address');
     assertEq(adapter.LINKED_ADAPTER(), _newLinkedAdapter, 'Linked adapter should be set to the provided address');
+  }
+
+  /**
+   * @notice Check that the event is emitted as expected
+   */
+  function test_emitEvent(address _newUsdc, address _newMessenger, address _newLinkedAdapter) external {
+    vm.assume(_newUsdc != _usdc);
+    vm.assume(_newMessenger != _messenger);
+    vm.assume(_newLinkedAdapter != _linkedAdapter);
+    uint64 _nonce = vm.getNonce(address(adapter));
+
+    address _realImplementation = address(new ForTestL2OpUSDCBridgeAdapter(_newUsdc, _newMessenger, _newLinkedAdapter));
+    _l2AdapterBytecode = _realImplementation.code;
+    _l2AdapterInitTxs.push(_l2AdapterInitTx);
+
+    // Mock calls
+    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    // Expect events
+    vm.expectEmit(true, true, true, true);
+    emit DeployedL2AdapterImplementation(_computeCreateAddress(address(adapter), _nonce));
+
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveAdapterUpgrade(_l2AdapterBytecode, _l2AdapterInitTxs);
   }
 }
 

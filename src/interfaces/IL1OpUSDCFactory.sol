@@ -27,31 +27,37 @@ interface IL1OpUSDCFactory {
   /**
    * @return _l2Messenger The address of the L2 messenger
    */
+  // solhint-disable-next-line func-name-mixedcase
   function L2_MESSENGER() external view returns (address _l2Messenger);
 
   /**
    * @return _upgradeManager The address of the UpgradeManager contract
    */
+  // solhint-disable-next-line func-name-mixedcase
   function UPGRADE_MANAGER() external view returns (IUpgradeManager _upgradeManager);
 
   /**
    * @return _l1Adapter The address of the L1OpUSDCBridgeAdapter contract
    */
+  // solhint-disable-next-line func-name-mixedcase
   function L1_ADAPTER() external view returns (address _l1Adapter);
 
   /**
    * @return _l2AdapterImplementation The address of the L2OpUSDCBridgeAdapter implementation contract
    */
+  // solhint-disable-next-line func-name-mixedcase
   function L2_ADAPTER_IMPLEMENTATION() external view returns (address _l2AdapterImplementation);
 
   /**
    * @return _l2AdapterProxy The address of the L2OpUSDCBridgeAdapter proxy contract
    */
+  // solhint-disable-next-line func-name-mixedcase
   function L2_ADAPTER_PROXY() external view returns (address _l2AdapterProxy);
 
   /**
    * @return _l2UsdcProxy The address of the USDC proxy contract on L2
    */
+  // solhint-disable-next-line func-name-mixedcase
   function L2_USDC_PROXY() external view returns (address _l2UsdcProxy);
 
   /**
@@ -59,12 +65,14 @@ interface IL1OpUSDCFactory {
    * @dev This is the first USDC implementation address deployed by the L2 factory. However, if then it gets updated,
    * the implementation address will be another one.
    */
+  // solhint-disable-next-line func-name-mixedcase
   function L2_USDC_IMPLEMENTATION() external view returns (address _l2UsdcImplementation);
 
   /**
    * @return _aliasedSelf The aliased address of the L1 factory contract on L2
    * @dev This is the `msg.sender` that will deploy the L2 factory
    */
+  // solhint-disable-next-line func-name-mixedcase
   function ALIASED_SELF() external view returns (address _aliasedSelf);
 
   /**

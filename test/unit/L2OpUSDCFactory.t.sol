@@ -191,7 +191,7 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
 }
 
 contract L2OpUSDCFactory_Unit_CreateDeploy is Base {
-  L2OpUSDCFactoryTest _factory;
+  L2OpUSDCFactoryTest internal _factory;
 
   function setUp() public override {
     super.setUp();

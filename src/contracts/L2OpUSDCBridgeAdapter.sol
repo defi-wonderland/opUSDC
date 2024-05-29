@@ -163,6 +163,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
       sstore(_implementation_slot, _adapterImplementation)
     }
 
+    // Cache the length of the initialization transactions
     uint256 _l2AdapterInitTxsLength = _l2AdapterInitTxs.length;
 
     //Execute the initialization transactions

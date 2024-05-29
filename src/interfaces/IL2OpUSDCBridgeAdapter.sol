@@ -33,6 +33,13 @@ interface IL2OpUSDCBridgeAdapter {
   function receiveResumeMessaging() external;
 
   /**
+   * @notice Receive the creation code from the linked adapter, deploy the new implementation and upgrade
+   * @param _l2AdapterBytecode The bytecode for the new L2 adapter implementation
+   * @param _l2AdapterInitTxs The initialization transactions for the new L2 adapter implementation
+   */
+  function receiveAdapterUpgrade(bytes calldata _l2AdapterBytecode, bytes[] calldata _l2AdapterInitTxs) external;
+
+  /**
    * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
    * @param _signer The address of the user sending the message
    * @param _to The target address on the destination chain
