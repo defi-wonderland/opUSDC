@@ -95,7 +95,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * implementation because the `CREATE2` opcode is dependent on the creation code and a different implementation
    */
   function deployL2UsdcAndAdapter(address _l1Messenger, uint32 _minGasLimit) external {
-    L1_ADAPTER_PROXY.initalizeNewMessenger(_l1Messenger);
+    L1_ADAPTER_PROXY.initializeNewMessenger(_l1Messenger);
 
     // Get the bytecode of the L2 usdc implementation
     IUpgradeManager.Implementation memory _l2UsdcImplementation = UPGRADE_MANAGER.bridgedUSDCImplementation();
