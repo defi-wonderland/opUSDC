@@ -33,7 +33,7 @@ abstract contract Base is Helpers {
   event MigrationExecuted(address indexed l1Messenger, address indexed circle, address indexed executor);
   event L1AdapterImplementationSet(address indexed implementation);
   event L2AdapterImplementationSet(address indexed implementation);
-  event MessengerWhitelisted(address l1Messenger);
+  event MessengerWhitelistedForDeployment(address l1Messenger, address executor);
   event BridgedUSDCImplementationSet(address indexed implementation);
   event Initialized(uint64);
 
@@ -154,33 +154,33 @@ contract UpgradeManager_Unit_SetBridgedUSDCImplementation is Base {
   }
 }
 
-contract UpgradeManager_Unit_WhitelistMessenger is Base {
+contract UpgradeManager_Unit_PrepareDeploymentForMessenger is Base {
   /**
-   * @notice Check that the whitelistMessenger function reverts when called by an unauthorized account
+   * @notice Check that the prepareDeploymentForMessenger function reverts when called by an unauthorized account
    */
-  function test_revertIfNotOwner(address _newMessenger) public {
+  function test_revertIfNotOwner(address _newMessenger, address _executor) public {
     vm.prank(_user);
     vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, _user));
-    upgradeManager.whitelistMessenger(_newMessenger);
+    upgradeManager.prepareDeploymentForMessenger(_newMessenger, _executor);
   }
 
   /**
-   * @notice Check that the whitelistMessenger function works as expected
+   * @notice Check that the prepareDeploymentForMessenger function works as expected
    */
-  function test_whitelistMessenger(address _newMessenger) public {
+  function test_prepareDeploymentForMessenger(address _newMessenger, address _executor) public {
     vm.prank(_owner);
-    upgradeManager.whitelistMessenger(_newMessenger);
-    assertEq(upgradeManager.isL1MessengerWhitelisted(_newMessenger), true, 'Messenger should be whitelisted');
+    upgradeManager.prepareDeploymentForMessenger(_newMessenger, _executor);
+    assertEq(upgradeManager.messengerDeploymentExecutor(_newMessenger), _executor, 'Messenger should be whitelisted');
   }
 
   /**
-   * @notice Check that the whitelistMessenger function emits the expected event
+   * @notice Check that the prepareDeploymentForMessenger function emits the expected event
    */
-  function test_emitsEvent(address _newMessenger) public {
+  function test_emitsEvent(address _newMessenger, address _executor) public {
     vm.prank(_owner);
     vm.expectEmit(true, true, true, true);
-    emit MessengerWhitelisted(_newMessenger);
-    upgradeManager.whitelistMessenger(_newMessenger);
+    emit MessengerWhitelistedForDeployment(_newMessenger, _executor);
+    upgradeManager.prepareDeploymentForMessenger(_newMessenger, _executor);
   }
 }
 

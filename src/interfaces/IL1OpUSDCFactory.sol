@@ -21,9 +21,33 @@ interface IL1OpUSDCFactory {
   event UpgradeManagerDeployed(address _upgradeManager);
 
   /*///////////////////////////////////////////////////////////////
+                            ERRORS
+  //////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice Error when the messenger already has a protocol deployed for it
+   */
+  error IL1OpUSDCFactory_MessengerAlreadyDeployed();
+
+  /**
+   * @notice Error when the caller is not the executor
+   */
+  error IL1OpUSDCFactory_NotExecutor();
+
+  /*///////////////////////////////////////////////////////////////
                             LOGIC
   //////////////////////////////////////////////////////////////*/
 
+  /**
+   * @notice Sends the L2 factory creation tx along with the L2 deployments to be done on it through the portal
+   * @param _portal The address of the portal contract for the respective L2 chain
+   * @param _minGasLimit The minimum gas limit for the L2 deployment
+   */
+  function deployL2UsdcAndAdapter(address _portal, uint32 _minGasLimit) external;
+
+  /*///////////////////////////////////////////////////////////////
+                            VARIABLES
+  //////////////////////////////////////////////////////////////*/
   /**
    * @return _l2Messenger The address of the L2 messenger
    */
@@ -68,9 +92,9 @@ interface IL1OpUSDCFactory {
   function ALIASED_SELF() external view returns (address _aliasedSelf);
 
   /**
-   * @notice Sends the L2 factory creation tx along with the L2 deployments to be done on it through the portal
-   * @param _portal The address of the portal contract for the respective L2 chain
-   * @param _minGasLimit The minimum gas limit for the L2 deployment
+   * @notice Checks if a messenger has a protocol deployed for it
+   * @param _messenger The address of the L1 messenger
+   * @return _deployed Whether the messenger has a protocol deployed for it
    */
-  function deployL2UsdcAndAdapter(address _portal, uint32 _minGasLimit) external;
+  function isMessengerDeployed(address _messenger) external view returns (bool _deployed);
 }
