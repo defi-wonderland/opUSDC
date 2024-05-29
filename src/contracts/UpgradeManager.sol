@@ -25,7 +25,7 @@ contract UpgradeManager is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
   mapping(address _l1Messenger => Migration migration) public migrations;
 
   /// @inheritdoc IUpgradeManager
-  mapping(address _l1Messenger => bool isWhitelisted) public isL1MessengerWhitelisted;
+  mapping(address _l1Messenger => address _executor) public messengerDeploymentExecutor;
 
   /**
    * @notice Construct the UpgradeManager contract
@@ -71,13 +71,14 @@ contract UpgradeManager is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
   }
 
   /**
-   * @notice Whitelist an L1 Messenger
+   * @notice Whitelist an L1 Messenger for deployment that must be called by executor
    * @param _l1Messenger The address of the L1 Messenger
+   * @param _executor The address that will execute the deployment
    */
-  function whitelistMessenger(address _l1Messenger) external onlyOwner {
-    isL1MessengerWhitelisted[_l1Messenger] = true;
+  function prepareDeploymentForMessenger(address _l1Messenger, address _executor) external onlyOwner {
+    messengerDeploymentExecutor[_l1Messenger] = _executor;
 
-    emit MessengerWhitelisted(_l1Messenger);
+    emit MessengerWhitelistedForDeployment(_l1Messenger, _executor);
   }
 
   /**

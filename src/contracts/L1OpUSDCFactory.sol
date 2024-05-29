@@ -53,6 +53,9 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   /// @inheritdoc IL1OpUSDCFactory
   address public immutable L2_USDC_IMPLEMENTATION;
 
+  /// @inheritdoc IL1OpUSDCFactory
+  mapping(address _l1Messenger => bool _deployed) public isMessengerDeployed;
+
   /**
    * @notice Constructs the L1 factory contract, deploys the L1 adapter and the upgrade manager and precalculates the
    * addresses of the L2 deployments
@@ -99,6 +102,13 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * @param _minGasLimit The minimum gas limit for the L2 deployment
    */
   function deployL2UsdcAndAdapter(address _l1Messenger, uint32 _minGasLimit) external {
+    if (isMessengerDeployed[_l1Messenger]) revert IL1OpUSDCFactory_MessengerAlreadyDeployed();
+    if (IUpgradeManager(UPGRADE_MANAGER).messengerDeploymentExecutor(_l1Messenger) != msg.sender) {
+      revert IL1OpUSDCFactory_NotExecutor();
+    }
+
+    isMessengerDeployed[_l1Messenger] = true;
+
     // TODO: When using `CREATE2` to deploy on L2, we'll need to deploy the proxies with the 0 address as implementation
     // and then upgrade them with the actual implementation. This is because the `CREATE2` opcode is dependant on the
     // creation code and a different implementation would result in a different address.

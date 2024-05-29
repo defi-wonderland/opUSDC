@@ -21,6 +21,20 @@ interface IL1OpUSDCFactory {
   event UpgradeManagerDeployed(address _upgradeManager);
 
   /*///////////////////////////////////////////////////////////////
+                            ERRORS
+  //////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice Error when the messenger already has a protocol deployed for it
+   */
+  error IL1OpUSDCFactory_MessengerAlreadyDeployed();
+
+  /**
+   * @notice Error when the caller is not the executor
+   */
+  error IL1OpUSDCFactory_NotExecutor();
+
+  /*///////////////////////////////////////////////////////////////
                             LOGIC
   //////////////////////////////////////////////////////////////*/
 
@@ -31,6 +45,12 @@ interface IL1OpUSDCFactory {
    */
   function deployL2UsdcAndAdapter(address _portal, uint32 _minGasLimit) external;
 
+  /**
+   * @notice Checks if a messenger has a protocol deployed for it
+   * @param _messenger The address of the L1 messenger
+   * @return _deployed Whether the messenger has a protocol deployed for it
+   */
+  function isMessengerDeployed(address _messenger) external view returns (bool _deployed);
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
   //////////////////////////////////////////////////////////////*/
