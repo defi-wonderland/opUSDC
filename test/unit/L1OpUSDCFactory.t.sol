@@ -16,13 +16,6 @@ import {Helpers} from 'test/utils/Helpers.sol';
 contract ForTestL1OpUSDCFactory is L1OpUSDCFactory {
   constructor(address _usdc, address _owner) L1OpUSDCFactory(_usdc, _owner) {}
 
-  function forTest_precalculateCreateAddress(
-    address _deployer,
-    uint256 _nonce
-  ) public pure returns (address _precalculatedAddress) {
-    _precalculatedAddress = _precalculateCreateAddress(_deployer, _nonce);
-  }
-
   function forTest_setIsMessengerDeployed(address _l1Messenger, bool _deployed) public {
     isMessengerDeployed[_l1Messenger] = _deployed;
   }
@@ -83,13 +76,13 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
   function test_setImmutables() public {
     // Precalculate the addresses
     address _aliasedSelf = AddressAliasHelper.applyL1ToL2Alias(address(factory));
-    address _l2Factory = factory.forTest_precalculateCreateAddress(_aliasedSelf, 0);
-    address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), 1);
-    address _l2UsdcImplAddress = factory.forTest_precalculateCreateAddress(_l2Factory, 1);
-    address _l2UsdcProxyAddress = factory.forTest_precalculateCreateAddress(_l2Factory, 2);
-    address _l2AdapterImpl = factory.forTest_precalculateCreateAddress(_l2Factory, 3);
-    address _l2AdapterProxy = factory.forTest_precalculateCreateAddress(_l2Factory, 4);
-    address _upgradeManager = factory.forTest_precalculateCreateAddress(address(factory), 3);
+    address _l2Factory = _computeCreateAddress(_aliasedSelf, 0);
+    address _l1Adapter = _computeCreateAddress(address(factory), 1);
+    address _l2UsdcImplAddress = _computeCreateAddress(_l2Factory, 1);
+    address _l2UsdcProxyAddress = _computeCreateAddress(_l2Factory, 2);
+    address _l2AdapterImpl = _computeCreateAddress(_l2Factory, 3);
+    address _l2AdapterProxy = _computeCreateAddress(_l2Factory, 4);
+    address _upgradeManager = _computeCreateAddress(address(factory), 3);
 
     // Assert
     assertEq(factory.ALIASED_SELF(), _aliasedSelf, 'Invalid aliasedSelf address');
@@ -119,8 +112,8 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
    */
   function test_emitL1AdapterDeployedEvent() public {
     // Precalculate the L1 adapter address to be emitted
-    address _newFactory = factory.forTest_precalculateCreateAddress(address(this), 2);
-    address _l1Adapter = factory.forTest_precalculateCreateAddress(_newFactory, 1);
+    address _newFactory = _computeCreateAddress(address(this), 2);
+    address _l1Adapter = _computeCreateAddress(_newFactory, 1);
 
     // Expect
     vm.expectEmit(true, true, true, true);
@@ -157,8 +150,8 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
    */
   function test_emitUpgradeManagerDeployedEvent() public {
     // Precalculate the upgrade manager address to be emitted
-    address _newFactory = factory.forTest_precalculateCreateAddress(address(this), 2);
-    address _upgradeManager = factory.forTest_precalculateCreateAddress(_newFactory, 3);
+    address _newFactory = _computeCreateAddress(address(this), 2);
+    address _upgradeManager = _computeCreateAddress(_newFactory, 3);
 
     // Expect
     vm.expectEmit(true, true, true, true);
@@ -346,7 +339,7 @@ contract L1OpUSDCFactory_Unit_PrecalculateCreateAddress is Base {
     vm.assume(vm.getNonce(_deployer) == 0);
     for (uint256 i = 0; i < 127; i++) {
       // Precalculate the address
-      address _precalculatedAddress = factory.forTest_precalculateCreateAddress(_deployer, i);
+      address _precalculatedAddress = _computeCreateAddress(_deployer, i);
 
       // Execute
       vm.prank(_deployer);

@@ -303,6 +303,28 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
   }
 
   /**
+   * @notice Send a message to the linked adapter to upgrade the implementation of the USDC contract
+   * @param _messenger The address of the messenger contract to send through
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  function sendL2UsdcUpgrade(address _messenger, uint32 _minGasLimit) external onlyUpgradeManager {
+    if (messengerStatus[_messenger] != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
+
+    // Get the bytecode of the he L2 adapter
+    IUpgradeManager.Implementation memory _l2UsdcImplementation =
+      IUpgradeManager(UPGRADE_MANAGER).bridgedUSDCImplementation();
+    bytes memory _l2UsdcBytecode = _l2UsdcImplementation.implementation.code;
+
+    ICrossDomainMessenger(_messenger).sendMessage(
+      LINKED_ADAPTER,
+      abi.encodeWithSignature('receiveUsdcUpgrade(bytes,bytes[])', _l2UsdcBytecode, _l2UsdcImplementation.initTxs),
+      _minGasLimit
+    );
+
+    emit L2UsdcUpgradeSent(_l2UsdcImplementation.implementation, _messenger, _minGasLimit);
+  }
+
+  /**
    * @notice Authorize the upgrade of the implementation of the contract
    * @param _newImplementation The address of the new implementation
    */

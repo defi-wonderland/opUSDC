@@ -178,6 +178,20 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
   }
 
   /**
+   * @notice Receive the creation code from the linked adapter, deploy the new implementation and upgrade
+   * @param _l2UsdcBytecode The bytecode for the new L2 adapter implementation
+   * @param _l2UsdcInitTxs The initialization transactions for the new L2 adapter implementation
+   */
+  function receiveUsdcUpgrade(bytes calldata _l2UsdcBytecode, bytes[] memory _l2UsdcInitTxs) external checkSender {
+    // Deploy L2 USDC implementation
+    address _usdcImplementation = address(new BytecodeDeployer(_l2UsdcBytecode));
+    emit DeployedL2UsdcImplementation(_usdcImplementation);
+
+    // Call upgradeToAndCall on the USDC contract
+    UUPSUpgradeable(USDC).upgradeToAndCall(_usdcImplementation, _l2UsdcInitTxs[0]);
+  }
+
+  /**
    * @notice Initiates the process to migrate the bridged USDC to native USDC
    * @dev Full migration cant finish until L1 receives the message for setting the burn amount
    * @param _newOwner The address to transfer ownerships to

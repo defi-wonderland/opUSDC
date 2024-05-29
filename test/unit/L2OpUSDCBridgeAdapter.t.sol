@@ -7,13 +7,14 @@ import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
 contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
+  /// @notice Number of calls to forTest_dummy
+  uint256 public calls;
+
   constructor(
     address _usdc,
     address _messenger,
     address _linkedAdapter
   ) L2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
-
-  uint256 public calls;
 
   function forTest_setIsMessagingDisabled() external {
     isMessagingDisabled = true;

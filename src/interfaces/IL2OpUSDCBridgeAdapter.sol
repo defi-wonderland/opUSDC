@@ -3,6 +3,16 @@ pragma solidity 0.8.25;
 
 interface IL2OpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
+                            EVENTS
+  //////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice Emitted when the new USDC implementation is deployed
+   * @param _l2UsdcImplementation The address of the L2 USDC implementation
+   */
+  event DeployedL2UsdcImplementation(address _l2UsdcImplementation);
+
+  /*///////////////////////////////////////////////////////////////
                             ERRORS
   //////////////////////////////////////////////////////////////*/
 

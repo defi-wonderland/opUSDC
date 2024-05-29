@@ -41,6 +41,14 @@ interface IL1OpUSDCBridgeAdapter {
   event L2AdapterUpgradeSent(address _newImplementation, address _messenger, uint32 _minGasLimit);
 
   /**
+   * @notice Emitted when L2 USDC upgrade method is called
+   * @param _newImplementation The address of the new implementation
+   * @param _messenger The address of the messenger
+   * @param _minGasLimit The minimum gas limit for the message
+   */
+  event L2UsdcUpgradeSent(address _newImplementation, address _messenger, uint32 _minGasLimit);
+
+  /**
    * @notice Emitted when a new messenger is initialized
    * @param _messenger The address of the messenger
    */
@@ -144,6 +152,13 @@ interface IL1OpUSDCBridgeAdapter {
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function sendL2AdapterUpgrade(address _messenger, uint32 _minGasLimit) external;
+
+  /**
+   * @notice Send a message to the linked adapter to upgrade the implementation of the USDC contract
+   * @param _messenger The address of the messenger contract to send through
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  function sendL2UsdcUpgrade(address _messenger, uint32 _minGasLimit) external;
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
