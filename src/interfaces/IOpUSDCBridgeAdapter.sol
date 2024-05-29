@@ -36,6 +36,13 @@ interface IOpUSDCBridgeAdapter {
    */
   event MessagingResumed(address _messenger);
 
+  /**
+   * @notice Emitted when the adapter is migrating usdc to native
+   * @param _messenger The address of the messenger contract that is doing the migration
+   * @param _newOwner The address of the new owner of bridged usdc
+   */
+  event MigratingToNative(address _messenger, address _newOwner);
+
   /*///////////////////////////////////////////////////////////////
                             ERRORS
   //////////////////////////////////////////////////////////////*/
@@ -59,6 +66,11 @@ interface IOpUSDCBridgeAdapter {
    * @notice Error when the deadline has passed
    */
   error IOpUSDCBridgeAdapter_MessageExpired();
+
+  /**
+   * @notice Error when a migration is in progress
+   */
+  error IOpUSDCBridgeAdapter_MigrationInProgress();
 
   /*///////////////////////////////////////////////////////////////
                             LOGIC

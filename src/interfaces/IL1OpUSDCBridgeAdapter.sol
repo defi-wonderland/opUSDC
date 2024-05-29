@@ -11,12 +11,14 @@ interface IL1OpUSDCBridgeAdapter {
    * @param Uninitialized  The messenger is Uninitialized
    * @param Active The messenger is active
    * @param Paused The messenger is paused
+   * @param Upgrading The messenger is upgrading
    * @param Deprecated The messenger is deprecated
    */
   enum Status {
     Uninitialized,
     Active,
     Paused,
+    Upgrading,
     Deprecated
   }
 
@@ -37,12 +39,6 @@ interface IL1OpUSDCBridgeAdapter {
    * @param _minGasLimit The minimum gas limit for the message
    */
   event L2AdapterUpgradeSent(address _newImplementation, address _messenger, uint32 _minGasLimit);
-
-  /**
-   * @notice Emitted when circle is set
-   * @param _circle The address of the Circle contract
-   */
-  event CircleSet(address _circle);
 
   /**
    * @notice Emitted when a new messenger is initialized
@@ -77,7 +73,7 @@ interface IL1OpUSDCBridgeAdapter {
   /**
    * @notice Sets the amount of USDC tokens that will be burned when the burnLockedUSDC function is called
    * @param _amount The amount of USDC tokens that will be burned
-   * @dev Only callable by the owner
+   * @dev Only callable by a whitelisted messenger during its migration process
    */
   function setBurnAmount(uint256 _amount) external;
 
@@ -101,10 +97,17 @@ interface IL1OpUSDCBridgeAdapter {
 
   /**
    * @notice Initiates the process to migrate the bridged USDC to native USDC
-   * @param _l1Messenger The address of the L1 messenger
+   * @param _messenger The address of the L1 messenger
    * @param _circle The address to transfer ownerships to
+   * @param _minGasLimitReceiveOnL2 Minimum gas limit that the message can be executed with on L2
+   * @param _minGasLimitSetBurnAmount Minimum gas limit that the message can be executed with to set the burn amount
    */
-  function migrateToNative(address _l1Messenger, address _circle) external;
+  function migrateToNative(
+    address _messenger,
+    address _circle,
+    uint32 _minGasLimitReceiveOnL2,
+    uint32 _minGasLimitSetBurnAmount
+  ) external;
 
   /**
    * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain

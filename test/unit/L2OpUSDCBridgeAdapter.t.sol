@@ -37,6 +37,7 @@ abstract contract Base is Helpers {
 
   event MessageSent(address _user, address _to, uint256 _amount, address _messenger, uint32 _minGasLimit);
   event MessageReceived(address _user, uint256 _amount, address _messenger);
+  event MigratingToNative(address _messenger, address _newOwner);
 
   function setUp() public virtual {
     (_signerAd, _signerPk) = makeAddrAndKey('signer');
@@ -514,5 +515,106 @@ contract L1OpUSDCBridgeAdapter_AuthorizeUpgrade is Base {
     // Execute
     vm.prank(_messenger);
     adapter.forTest_authorizeUpgrade(_newImplementation);
+  }
+}
+
+contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
+  /**
+   * @notice Check that the upgradeToAndCall function reverts if the sender is not MESSENGER
+   */
+  function test_revertIfNotMessenger(address _newOwner, uint32 _setBurnAmountMinGasLimit) external {
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
+    adapter.receiveMigrateToNative(_newOwner, _setBurnAmountMinGasLimit);
+  }
+
+  /**
+   * @notice Check that the upgradeToAndCall function reverts if the sender is not Linked Adapter
+   */
+  function test_revertIfNotLinkedAdapter(address _newOwner, uint32 _setBurnAmountMinGasLimit) external {
+    // Mock calls
+    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_user));
+
+    // Execute
+    vm.prank(_messenger);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
+    adapter.receiveMigrateToNative(_newOwner, _setBurnAmountMinGasLimit);
+  }
+
+  /**
+   * @notice Check that the upgrade is called as expected
+   */
+  function test_expectCall(address _newOwner, uint32 _setBurnAmountMinGasLimit, uint256 _burnAmount) external {
+    // Mock calls
+    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+
+    _mockAndExpect(address(_usdc), abi.encodeWithSignature('transferOwnership(address)', _newOwner), abi.encode());
+    _mockAndExpect(address(_usdc), abi.encodeWithSignature('totalSupply()'), abi.encode(_burnAmount));
+    _mockAndExpect(
+      address(_messenger),
+      abi.encodeWithSignature(
+        'sendMessage(address,bytes,uint32)',
+        _linkedAdapter,
+        abi.encodeWithSignature('setBurnAmount(uint256)', _burnAmount),
+        _setBurnAmountMinGasLimit
+      ),
+      abi.encode()
+    );
+
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveMigrateToNative(_newOwner, _setBurnAmountMinGasLimit);
+  }
+
+  function test_stateChange(address _newOwner, uint32 _setBurnAmountMinGasLimit) external {
+    // Mock calls
+    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+
+    _mockAndExpect(address(_usdc), abi.encodeWithSignature('transferOwnership(address)', _newOwner), abi.encode());
+    _mockAndExpect(address(_usdc), abi.encodeWithSignature('totalSupply()'), abi.encode(100));
+    _mockAndExpect(
+      address(_messenger),
+      abi.encodeWithSignature(
+        'sendMessage(address,bytes,uint32)',
+        _linkedAdapter,
+        abi.encodeWithSignature('setBurnAmount(uint256)', 100),
+        _setBurnAmountMinGasLimit
+      ),
+      abi.encode()
+    );
+
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveMigrateToNative(_newOwner, _setBurnAmountMinGasLimit);
+    assertEq(adapter.isMessagingDisabled(), true, 'Messaging should be disabled');
+  }
+
+  /**
+   * @notice Check that the event is emitted as expected
+   */
+  function test_emitEvent(address _newOwner, uint32 _setBurnAmountMinGasLimit, uint256 _burnAmount) external {
+    // Mock calls
+    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    vm.mockCall(address(_usdc), abi.encodeWithSignature('transferOwnership(address)', _newOwner), abi.encode());
+    vm.mockCall(address(_usdc), abi.encodeWithSignature('totalSupply()'), abi.encode(_burnAmount));
+    vm.mockCall(
+      address(_messenger),
+      abi.encodeWithSignature(
+        'sendMessage(address,bytes,uint32)',
+        _linkedAdapter,
+        abi.encodeWithSignature('setBurnAmount(uint256)', _burnAmount),
+        _setBurnAmountMinGasLimit
+      ),
+      abi.encode()
+    );
+
+    // Expect events
+    vm.expectEmit(true, true, true, true);
+    emit MigratingToNative(_messenger, _newOwner);
+
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveMigrateToNative(_newOwner, _setBurnAmountMinGasLimit);
   }
 }

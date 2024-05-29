@@ -130,8 +130,14 @@ interface IUpgradeManager {
   /**
    * @notice Execute the migration of the L1 Adapter to the native chain
    * @param _l1Messenger The address of the L1 messenger
+   * @param _minGasLimitReceiveOnL2 Minimum gas limit that the message can be executed with on L2
+   * @param _minGasLimitSetBurnAmount Minimum gas limit that the message can be executed with to set the burn amount
    */
-  function executeMigration(address _l1Messenger) external;
+  function executeMigration(
+    address _l1Messenger,
+    uint32 _minGasLimitReceiveOnL2,
+    uint32 _minGasLimitSetBurnAmount
+  ) external;
 
   /**
    * @notice Stop messaging on the messenger

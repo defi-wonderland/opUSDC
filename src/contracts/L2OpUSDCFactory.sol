@@ -56,10 +56,9 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     }
 
     // Execute the L2 Adapter initialization transactions
-    if (_l2AdapterInitTxs.length > 1) {
-      uint256 _l2AdapterInitTxsLength = _l2AdapterInitTxs.length;
+    if (_l2AdapterInitTxs.length > 0) {
       // Initialize L2 adapter
-      for (uint256 i = 1; i < _l2AdapterInitTxsLength; i++) {
+      for (uint256 i; i < _l2AdapterInitTxs.length; i++) {
         (bool _success,) = _adapterProxy.call(_l2AdapterInitTxs[i]);
         if (!_success) {
           revert IL2OpUSDCFactory_AdapterInitializationFailed();

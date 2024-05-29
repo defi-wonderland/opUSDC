@@ -17,4 +17,10 @@ interface IUSDC is IERC20 {
    * @param _amount Amount of tokens to burn
    */
   function burn(address _account, uint256 _amount) external;
+
+  /**
+   * @notice Transfers USDC ownership  to another address
+   * @param newOwner Address to transfer ownership to
+   */
+  function transferOwnership(address newOwner) external;
 }
