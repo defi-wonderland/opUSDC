@@ -25,7 +25,7 @@ contract UpgradeManager is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
   mapping(address _l1Messenger => Migration migration) public migrations;
 
   /// @inheritdoc IUpgradeManager
-  mapping(address _l1Messenger => bool isWhitelisted) public isL1MessengerWhitelisted;
+  mapping(address _l1Messenger => address _executor) public messengerDeploymentExecutor;
 
   /**
    * @notice Construct the UpgradeManager contract
@@ -71,13 +71,14 @@ contract UpgradeManager is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
   }
 
   /**
-   * @notice Whitelist an L1 Messenger
+   * @notice Whitelist an L1 Messenger for deployment that must be called by executor
    * @param _l1Messenger The address of the L1 Messenger
+   * @param _executor The address that will execute the deployment
    */
-  function whitelistMessenger(address _l1Messenger) external onlyOwner {
-    isL1MessengerWhitelisted[_l1Messenger] = true;
+  function prepareDeploymentForMessenger(address _l1Messenger, address _executor) external onlyOwner {
+    messengerDeploymentExecutor[_l1Messenger] = _executor;
 
-    emit MessengerWhitelisted(_l1Messenger);
+    emit MessengerWhitelistedForDeployment(_l1Messenger, _executor);
   }
 
   /**
@@ -119,8 +120,14 @@ contract UpgradeManager is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
   /**
    * @notice Execute the migration of the L1 Adapter to the native chain
    * @param _l1Messenger The address of the L1 messenger
+   * @param _minGasLimitReceiveOnL2 Minimum gas limit that the message can be executed with on L2
+   * @param _minGasLimitSetBurnAmount Minimum gas limit that the message can be executed with to set the burn amount
    */
-  function executeMigration(address _l1Messenger) external {
+  function executeMigration(
+    address _l1Messenger,
+    uint32 _minGasLimitReceiveOnL2,
+    uint32 _minGasLimitSetBurnAmount
+  ) external {
     Migration memory _migration = migrations[_l1Messenger];
 
     // Check the migration is prepared, not executed and is being called by the executor
@@ -131,7 +138,9 @@ contract UpgradeManager is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
     if (msg.sender != _migration.executor) revert IUpgradeManager_NotExecutor();
 
     // Migrate
-    IL1OpUSDCBridgeAdapter(L1_ADAPTER).migrateToNative(_l1Messenger, _migration.circle);
+    IL1OpUSDCBridgeAdapter(L1_ADAPTER).migrateToNative(
+      _l1Messenger, _migration.circle, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount
+    );
 
     migrations[_l1Messenger].executed = true;
 

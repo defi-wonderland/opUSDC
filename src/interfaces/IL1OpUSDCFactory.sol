@@ -24,39 +24,22 @@ interface IL1OpUSDCFactory {
   event UpgradeManagerDeployed(address _upgradeManagerProxy, address _upgradeManagerImplementation);
 
   /*///////////////////////////////////////////////////////////////
-                            LOGIC
+                            ERRORS
   //////////////////////////////////////////////////////////////*/
 
   /**
-   * @return _l2Messenger The address of the L2 messenger
+   * @notice Error when the messenger already has a protocol deployed for it
    */
-  function L2_MESSENGER() external view returns (address _l2Messenger);
+  error IL1OpUSDCFactory_MessengerAlreadyDeployed();
 
   /**
-   * @return _upgradeManager The address of the UpgradeManager contract
+   * @notice Error when the caller is not the executor
    */
-  function UPGRADE_MANAGER() external view returns (IUpgradeManager _upgradeManager);
+  error IL1OpUSDCFactory_NotExecutor();
 
-  /**
-   * @return _l1AdapterProxy The address of the L1OpUSDCBridgeAdapter proxy  contract
-   */
-  function L1_ADAPTER_PROXY() external view returns (L1OpUSDCBridgeAdapter _l1AdapterProxy);
-
-  /**
-   * @return _l2AdapterProxy The address of the L2OpUSDCBridgeAdapter proxy contract
-   */
-  function L2_ADAPTER_PROXY() external view returns (address _l2AdapterProxy);
-
-  /**
-   * @return _l2UsdcProxy The address of the USDC proxy contract on L2
-   */
-  function L2_USDC_PROXY() external view returns (address _l2UsdcProxy);
-
-  /**
-   * @return _aliasedSelf The aliased address of the L1 factory contract on L2
-   * @dev This is the `msg.sender` that will deploy the L2 factory
-   */
-  function ALIASED_SELF() external view returns (address _aliasedSelf);
+  /*///////////////////////////////////////////////////////////////
+                            LOGIC
+  //////////////////////////////////////////////////////////////*/
 
   /**
    * @notice Sends the L2 factory creation tx along with the L2 deployments to be done on it through the portal
@@ -64,4 +47,52 @@ interface IL1OpUSDCFactory {
    * @param _minGasLimit The minimum gas limit for the L2 deployment
    */
   function deployL2UsdcAndAdapter(address _portal, uint32 _minGasLimit) external;
+
+  /*///////////////////////////////////////////////////////////////
+                            VARIABLES
+  //////////////////////////////////////////////////////////////*/
+
+  /**
+   * @return _l2Messenger The address of the L2 messenger
+   */
+  // solhint-disable-next-line func-name-mixedcase
+  function L2_MESSENGER() external view returns (address _l2Messenger);
+
+  /**
+   * @return _upgradeManager The address of the UpgradeManager contract
+   */
+  // solhint-disable-next-line func-name-mixedcase
+  function UPGRADE_MANAGER() external view returns (IUpgradeManager _upgradeManager);
+
+  /**
+   * @return _l1AdapterProxy The address of the L1OpUSDCBridgeAdapter contract
+   */
+  // solhint-disable-next-line func-name-mixedcase
+  function L1_ADAPTER_PROXY() external view returns (L1OpUSDCBridgeAdapter _l1AdapterProxy);
+
+  /**
+   * @return _l2AdapterProxy The address of the L2OpUSDCBridgeAdapter proxy contract
+   */
+  // solhint-disable-next-line func-name-mixedcase
+  function L2_ADAPTER_PROXY() external view returns (address _l2AdapterProxy);
+
+  /**
+   * @return _l2UsdcProxy The address of the USDC proxy contract on L2
+   */
+  // solhint-disable-next-line func-name-mixedcase
+  function L2_USDC_PROXY() external view returns (address _l2UsdcProxy);
+
+  /**
+   * @return _aliasedSelf The aliased address of the L1 factory contract on L2
+   * @dev This is the `msg.sender` that will deploy the L2 factory
+   */
+  // solhint-disable-next-line func-name-mixedcase
+  function ALIASED_SELF() external view returns (address _aliasedSelf);
+
+  /**
+   * @notice Checks if a messenger has a protocol deployed for it
+   * @param _messenger The address of the L1 messenger
+   * @return _deployed Whether the messenger has a protocol deployed for it
+   */
+  function isMessengerDeployed(address _messenger) external view returns (bool _deployed);
 }

@@ -20,6 +20,10 @@ import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
 contract L1OpUSDCFactory is IL1OpUSDCFactory {
   using AddressAliasHelper for address;
 
+  // TODO: update with some tamper data maybe?
+  /// @notice Salt value to be used to deploy the L2 contracts on the L2 factory
+  bytes32 internal constant _SALT = bytes32('1');
+
   /// @notice Zero value constant to be used on portal interaction
   uint256 internal constant _ZERO_VALUE = 0;
 
@@ -47,8 +51,8 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   /// @inheritdoc IL1OpUSDCFactory
   address public immutable L2_USDC_PROXY;
 
-  // TODO: update with some tamper data maybe?
-  bytes32 internal constant SALT = bytes32('1');
+  /// @inheritdoc IL1OpUSDCFactory
+  mapping(address _l1Messenger => bool _deployed) public isMessengerDeployed;
 
   /**
    * @notice Constructs the L1 factory contract, deploys the L1 adapter and the upgrade manager and precalculates the
@@ -61,12 +65,12 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     uint256 _aliasedAddressFirstNonce = 0;
     address _l2Factory = _precalculateCreateAddress(ALIASED_SELF, _aliasedAddressFirstNonce);
     // Calculate the L2 USDC proxy address
-    bytes32 _l2UsdcProxyInitCodeHash = keccak256(bytes.concat(USDC_PROXY_CREATION_CODE, abi.encode(address(0))));
-    L2_USDC_PROXY = _precalculateCreate2Address(SALT, _l2UsdcProxyInitCodeHash, _l2Factory);
+    bytes32 _l2UsdcProxyInitCodeHash = keccak256(bytes.concat(USDC_PROXY_CREATION_CODE, abi.encode(_ZERO_ADDRESS)));
+    L2_USDC_PROXY = _precalculateCreate2Address(_SALT, _l2UsdcProxyInitCodeHash, _l2Factory);
     // Calculate the L2 adapter proxy address
     bytes32 _l2AdapterProxyInitCodeHash =
-      keccak256(bytes.concat(type(ERC1967Proxy).creationCode, abi.encode(address(0), '')));
-    L2_ADAPTER_PROXY = _precalculateCreate2Address(SALT, _l2AdapterProxyInitCodeHash, _l2Factory);
+      keccak256(bytes.concat(type(ERC1967Proxy).creationCode, abi.encode(_ZERO_ADDRESS, '')));
+    L2_ADAPTER_PROXY = _precalculateCreate2Address(_SALT, _l2AdapterProxyInitCodeHash, _l2Factory);
 
     // Calculate the upgrade manager using 4 as nonce since first the L1 adapter and its implementation will be deployed
     uint256 _thisNonceFourthTx = 4;
@@ -95,7 +99,13 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * implementation because the `CREATE2` opcode is dependent on the creation code and a different implementation
    */
   function deployL2UsdcAndAdapter(address _l1Messenger, uint32 _minGasLimit) external {
+    if (isMessengerDeployed[_l1Messenger]) revert IL1OpUSDCFactory_MessengerAlreadyDeployed();
+    if (IUpgradeManager(UPGRADE_MANAGER).messengerDeploymentExecutor(_l1Messenger) != msg.sender) {
+      revert IL1OpUSDCFactory_NotExecutor();
+    }
+
     L1_ADAPTER_PROXY.initializeNewMessenger(_l1Messenger);
+    isMessengerDeployed[_l1Messenger] = true;
 
     // Get the bytecode of the L2 usdc implementation
     IUpgradeManager.Implementation memory _l2UsdcImplementation = UPGRADE_MANAGER.bridgedUSDCImplementation();
@@ -107,7 +117,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     // Get the L2 factory init code
     bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
     bytes memory _l2FactoryCArgs = abi.encode(
-      SALT,
+      _SALT,
       USDC_PROXY_CREATION_CODE,
       _l2UsdcImplementationBytecode,
       _l2UsdcImplementation.initTxs,
@@ -120,8 +130,6 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     IOptimismPortal _portal = ICrossDomainMessenger(_l1Messenger).portal();
     _portal.depositTransaction(_ZERO_ADDRESS, _ZERO_VALUE, _minGasLimit, _IS_CREATION, _l2FactoryInitCode);
   }
-
-  // TODO: Create deployments lib
 
   /**
    * @notice Precalculates the address of a contract that will be deployed thorugh `CREATE` opcode

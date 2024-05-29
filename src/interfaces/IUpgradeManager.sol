@@ -71,8 +71,9 @@ interface IUpgradeManager {
   /**
    * @notice Emitted when an L1 Messenger is whitelisted
    * @param _l1Messenger The address of the L1 Messenger
+   * @param _executor The address that will execute the deployment
    */
-  event MessengerWhitelisted(address _l1Messenger);
+  event MessengerWhitelistedForDeployment(address _l1Messenger, address _executor);
 
   /*///////////////////////////////////////////////////////////////
                             ERRORS
@@ -120,6 +121,13 @@ interface IUpgradeManager {
   function setBridgedUSDCImplementation(address _newImplementation, bytes[] memory _initTxs) external;
 
   /**
+   * @notice Whitelist an L1 Messenger for deployment that must be called by executor
+   * @param _l1Messenger The address of the L1 Messenger
+   * @param _executor The address that will execute the deployment
+   */
+  function prepareDeploymentForMessenger(address _l1Messenger, address _executor) external;
+
+  /**
    * @notice Prepare the migration of the L1 Adapter to the native chain
    * @param _l1Messenger The address of the L1 messenger
    * @param _newOwner The address to transfer ownership to
@@ -130,8 +138,14 @@ interface IUpgradeManager {
   /**
    * @notice Execute the migration of the L1 Adapter to the native chain
    * @param _l1Messenger The address of the L1 messenger
+   * @param _minGasLimitReceiveOnL2 Minimum gas limit that the message can be executed with on L2
+   * @param _minGasLimitSetBurnAmount Minimum gas limit that the message can be executed with to set the burn amount
    */
-  function executeMigration(address _l1Messenger) external;
+  function executeMigration(
+    address _l1Messenger,
+    uint32 _minGasLimitReceiveOnL2,
+    uint32 _minGasLimitSetBurnAmount
+  ) external;
 
   /**
    * @notice Stop messaging on the messenger
@@ -177,11 +191,11 @@ interface IUpgradeManager {
   function migrations(address _l1Messenger) external view returns (address _circle, address _executor, bool _executed);
 
   /**
-   * @notice Checks if an L1 Messenger is whitelisted
+   * @notice Checks who can deploy the protocol for a given L1 Messenger
    * @param _l1Messenger The address of the L1 Messenger
-   * @return _isWhitelisted Whether the L1 Messenger is whitelisted
+   * @return _executor  The address of the executor
    */
-  function isL1MessengerWhitelisted(address _l1Messenger) external view returns (bool _isWhitelisted);
+  function messengerDeploymentExecutor(address _l1Messenger) external view returns (address _executor);
 
   /**
    * @notice Fetches the address of the L1 Adapter

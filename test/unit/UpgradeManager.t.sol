@@ -33,7 +33,7 @@ abstract contract Base is Helpers {
   event MigrationExecuted(address indexed l1Messenger, address indexed circle, address indexed executor);
   event L1AdapterImplementationSet(address indexed implementation);
   event L2AdapterImplementationSet(address indexed implementation);
-  event MessengerWhitelisted(address l1Messenger);
+  event MessengerWhitelistedForDeployment(address l1Messenger, address executor);
   event BridgedUSDCImplementationSet(address indexed implementation);
   event Initialized(uint64);
 
@@ -154,33 +154,33 @@ contract UpgradeManager_Unit_SetBridgedUSDCImplementation is Base {
   }
 }
 
-contract UpgradeManager_Unit_WhitelistMessenger is Base {
+contract UpgradeManager_Unit_PrepareDeploymentForMessenger is Base {
   /**
-   * @notice Check that the whitelistMessenger function reverts when called by an unauthorized account
+   * @notice Check that the prepareDeploymentForMessenger function reverts when called by an unauthorized account
    */
-  function test_revertIfNotOwner(address _newMessenger) public {
+  function test_revertIfNotOwner(address _newMessenger, address _executor) public {
     vm.prank(_user);
     vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, _user));
-    upgradeManager.whitelistMessenger(_newMessenger);
+    upgradeManager.prepareDeploymentForMessenger(_newMessenger, _executor);
   }
 
   /**
-   * @notice Check that the whitelistMessenger function works as expected
+   * @notice Check that the prepareDeploymentForMessenger function works as expected
    */
-  function test_whitelistMessenger(address _newMessenger) public {
+  function test_prepareDeploymentForMessenger(address _newMessenger, address _executor) public {
     vm.prank(_owner);
-    upgradeManager.whitelistMessenger(_newMessenger);
-    assertEq(upgradeManager.isL1MessengerWhitelisted(_newMessenger), true, 'Messenger should be whitelisted');
+    upgradeManager.prepareDeploymentForMessenger(_newMessenger, _executor);
+    assertEq(upgradeManager.messengerDeploymentExecutor(_newMessenger), _executor, 'Messenger should be whitelisted');
   }
 
   /**
-   * @notice Check that the whitelistMessenger function emits the expected event
+   * @notice Check that the prepareDeploymentForMessenger function emits the expected event
    */
-  function test_emitsEvent(address _newMessenger) public {
+  function test_emitsEvent(address _newMessenger, address _executor) public {
     vm.prank(_owner);
     vm.expectEmit(true, true, true, true);
-    emit MessengerWhitelisted(_newMessenger);
-    upgradeManager.whitelistMessenger(_newMessenger);
+    emit MessengerWhitelistedForDeployment(_newMessenger, _executor);
+    upgradeManager.prepareDeploymentForMessenger(_newMessenger, _executor);
   }
 }
 
@@ -284,29 +284,45 @@ contract UpgradeManager_Unit_ExecuteMigration is Base {
   /**
    * @notice Check that the executeMigration function reverts if the migration is not prepared
    */
-  function test_revertIfMigrationNotPrepared(address _l1Messenger, address _circle) public {
+  function test_revertIfMigrationNotPrepared(
+    address _l1Messenger,
+    address _circle,
+    uint32 _minGasLimitReceiveOnL2,
+    uint32 _minGasLimitSetBurnAmount
+  ) public {
     vm.assume(_circle != address(0));
     upgradeManager.forTest_setMigrationsCircle(_l1Messenger, _circle);
 
     vm.expectRevert(abi.encodeWithSelector(IUpgradeManager.IUpgradeManager_MigrationNotPrepared.selector));
-    upgradeManager.executeMigration(_l1Messenger);
+    upgradeManager.executeMigration(_l1Messenger, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
   }
 
   /**
    * @notice Check that the executeMigration function reverts if the migration is not prepared
    */
-  function test_revertIfMigrationNotPreparedProperly(address _l1Messenger, address _executor) public {
+  function test_revertIfMigrationNotPreparedProperly(
+    address _l1Messenger,
+    address _executor,
+    uint32 _minGasLimitReceiveOnL2,
+    uint32 _minGasLimitSetBurnAmount
+  ) public {
     vm.assume(_executor != address(0));
     upgradeManager.forTest_setMigrationsExecutor(_l1Messenger, _executor);
 
     vm.expectRevert(abi.encodeWithSelector(IUpgradeManager.IUpgradeManager_MigrationNotPrepared.selector));
-    upgradeManager.executeMigration(_l1Messenger);
+    upgradeManager.executeMigration(_l1Messenger, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
   }
 
   /**
    * @notice Check that the executeMigration function reverts if the migration is already executed
    */
-  function test_revertIfMigrationAlreadyExecuted(address _l1Messenger, address _executor, address _circle) public {
+  function test_revertIfMigrationAlreadyExecuted(
+    address _l1Messenger,
+    address _executor,
+    address _circle,
+    uint32 _minGasLimitReceiveOnL2,
+    uint32 _minGasLimitSetBurnAmount
+  ) public {
     vm.assume(_circle != address(0));
     vm.assume(_executor != address(0));
 
@@ -315,13 +331,19 @@ contract UpgradeManager_Unit_ExecuteMigration is Base {
     upgradeManager.forTest_setMigrationsExecuted(_l1Messenger);
 
     vm.expectRevert(abi.encodeWithSelector(IUpgradeManager.IUpgradeManager_MigrationAlreadyExecuted.selector));
-    upgradeManager.executeMigration(_l1Messenger);
+    upgradeManager.executeMigration(_l1Messenger, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
   }
 
   /**
    * @notice Check that the executeMigration function reverts if the caller is not the executor
    */
-  function test_revertIfNotExecutor(address _l1Messenger, address _circle, address _executor) public {
+  function test_revertIfNotExecutor(
+    address _l1Messenger,
+    address _circle,
+    address _executor,
+    uint32 _minGasLimitReceiveOnL2,
+    uint32 _minGasLimitSetBurnAmount
+  ) public {
     vm.assume(_circle != address(0));
     vm.assume(_executor != address(0));
     vm.assume(_executor != _user);
@@ -331,13 +353,19 @@ contract UpgradeManager_Unit_ExecuteMigration is Base {
 
     vm.prank(_user);
     vm.expectRevert(abi.encodeWithSelector(IUpgradeManager.IUpgradeManager_NotExecutor.selector));
-    upgradeManager.executeMigration(_l1Messenger);
+    upgradeManager.executeMigration(_l1Messenger, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
   }
 
   /**
    * @notice Check that the executeMigration function works as expected
    */
-  function test_executeMigration(address _l1Messenger, address _circle, address _executor) public {
+  function test_executeMigration(
+    address _l1Messenger,
+    address _circle,
+    address _executor,
+    uint32 _minGasLimitReceiveOnL2,
+    uint32 _minGasLimitSetBurnAmount
+  ) public {
     vm.assume(_circle != address(0));
     vm.assume(_executor != address(0));
 
@@ -350,7 +378,7 @@ contract UpgradeManager_Unit_ExecuteMigration is Base {
       abi.encode()
     );
     vm.prank(_executor);
-    upgradeManager.executeMigration(_l1Messenger);
+    upgradeManager.executeMigration(_l1Messenger, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
 
     (address _savedCircle, address _savedExecutor, bool _executed) = upgradeManager.migrations(_l1Messenger);
 
@@ -362,7 +390,13 @@ contract UpgradeManager_Unit_ExecuteMigration is Base {
   /**
    * @notice Check that the executeMigration function emits the expected event
    */
-  function test_emitsEvent(address _l1Messenger, address _circle, address _executor) public {
+  function test_emitsEvent(
+    address _l1Messenger,
+    address _circle,
+    address _executor,
+    uint32 _minGasLimitReceiveOnL2,
+    uint32 _minGasLimitSetBurnAmount
+  ) public {
     vm.assume(_circle != address(0));
     vm.assume(_executor != address(0));
 
@@ -377,7 +411,7 @@ contract UpgradeManager_Unit_ExecuteMigration is Base {
     vm.prank(_executor);
     vm.expectEmit(true, true, true, true);
     emit MigrationExecuted(_l1Messenger, _circle, _executor);
-    upgradeManager.executeMigration(_l1Messenger);
+    upgradeManager.executeMigration(_l1Messenger, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
   }
 }
 

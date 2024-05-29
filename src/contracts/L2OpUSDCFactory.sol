@@ -56,7 +56,6 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
       bytes memory _l2AdapterImplInitCode = bytes.concat(_bytecodeDeployerCreationCode, _l2AdapterBytecode);
       address _adapterImplementation = _deployCreate2(_salt, _l2AdapterImplInitCode);
       // Deploy L2 adapter proxy
-      // TODO: Any init tx is needed here?
       bytes memory _proxyCArgs = abi.encode(address(0), '');
       bytes memory _adapterProxyInitCode =
         bytes.concat(_bytecodeDeployerCreationCode, type(ERC1967Proxy).creationCode, _proxyCArgs);

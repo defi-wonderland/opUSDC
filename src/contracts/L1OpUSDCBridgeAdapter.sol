@@ -78,23 +78,20 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
   /**
    * @notice Sets the amount of USDC tokens that will be burned when the burnLockedUSDC function is called
    * @param _amount The amount of USDC tokens that will be burned
-   * @dev Only callable by the UpgradeManager
+   * @dev Only callable by a whitelisted messenger during its migration process
    */
-  function setBurnAmount(uint256 _amount) external onlyUpgradeManager {
+  function setBurnAmount(uint256 _amount) external {
+    if (
+      messengerStatus[msg.sender] != Status.Upgrading
+        || ICrossDomainMessenger(msg.sender).xDomainMessageSender() != LINKED_ADAPTER
+    ) {
+      revert IOpUSDCBridgeAdapter_InvalidSender();
+    }
+
     burnAmount = _amount;
+    messengerStatus[msg.sender] = Status.Deprecated;
 
     emit BurnAmountSet(_amount);
-  }
-
-  /**
-   * @notice Sets the address of the Circle contract
-   * @param _circle The address of the Circle contract
-   * @dev Only callable by the UpgradeManager
-   */
-  function setCircle(address _circle) external onlyUpgradeManager {
-    circle = _circle;
-
-    emit CircleSet(_circle);
   }
 
   /**
@@ -252,11 +249,36 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
 
   /**
    * @notice Initiates the process to migrate the bridged USDC to native USDC
-   * @param _l1Messenger The address of the L1 messenger
+   * @param _messenger The address of the L1 messenger
    * @param _circle The address to transfer ownerships to
+   * @param _minGasLimitReceiveOnL2 Minimum gas limit that the message can be executed with on L2
+   * @param _minGasLimitSetBurnAmount Minimum gas limit that the message can be executed with to set the burn amount
    */
-  function migrateToNative(address _l1Messenger, address _circle) external {
-    // TODO: Implement this in future PR
+  function migrateToNative(
+    address _messenger,
+    address _circle,
+    uint32 _minGasLimitReceiveOnL2,
+    uint32 _minGasLimitSetBurnAmount
+  ) external onlyUpgradeManager {
+    // Ensure messaging is enabled
+    // Leave this flow open to resend upgrading flow incase message fails on L2
+    if (messengerStatus[_messenger] != Status.Active && messengerStatus[_messenger] != Status.Upgrading) {
+      revert IOpUSDCBridgeAdapter_MessagingDisabled();
+    }
+    if (circle != address(0) && messengerStatus[_messenger] != Status.Upgrading) {
+      revert IOpUSDCBridgeAdapter_MigrationInProgress();
+    }
+
+    circle = _circle;
+    messengerStatus[_messenger] = Status.Upgrading;
+
+    ICrossDomainMessenger(_messenger).sendMessage(
+      LINKED_ADAPTER,
+      abi.encodeWithSignature('receiveMigrateToNative(address,uint32)', _circle, _minGasLimitSetBurnAmount),
+      _minGasLimitReceiveOnL2
+    );
+
+    emit MigratingToNative(_messenger, _circle);
   }
 
   /**
