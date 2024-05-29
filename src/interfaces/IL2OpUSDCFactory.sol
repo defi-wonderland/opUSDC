@@ -3,24 +3,6 @@ pragma solidity 0.8.25;
 
 interface IL2OpUSDCFactory {
   /*///////////////////////////////////////////////////////////////
-                            ERRORS
-  //////////////////////////////////////////////////////////////*/
-  /**
-   * @notice Thrown when the deployment failed
-   */
-  error IL2OpUSDCFactory_CreateDeploymentFailed();
-
-  /**
-   * @notice Thrown when an USDC initialization tx failed
-   */
-  error IL2OpUSDCFactory_UsdcInitializationFailed();
-
-  /**
-   * @notice Thrown when an adapter initialization tx failed
-   */
-  error IL2OpUSDCFactory_AdapterInitializationFailed();
-
-  /*///////////////////////////////////////////////////////////////
                             EVENTS
   //////////////////////////////////////////////////////////////*/
 
@@ -47,4 +29,22 @@ interface IL2OpUSDCFactory {
    * @param _l2AdapterProxy The address of the L2 adapter proxy
    */
   event DeployedL2AdapterProxy(address _l2AdapterProxy);
+
+  /*///////////////////////////////////////////////////////////////
+                            ERRORS
+  //////////////////////////////////////////////////////////////*/
+  /**
+   * @notice Thrown when the deployment failed
+   */
+  error IL2OpUSDCFactory_CreateDeploymentFailed();
+
+  /**
+   * @notice Thrown when an USDC initialization tx failed
+   */
+  error IL2OpUSDCFactory_UsdcInitializationFailed();
+
+  /**
+   * @notice Thrown when an adapter initialization tx failed
+   */
+  error IL2OpUSDCFactory_AdapterInitializationFailed();
 }

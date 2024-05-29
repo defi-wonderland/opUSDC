@@ -25,6 +25,16 @@ interface IL1OpUSDCFactory {
   //////////////////////////////////////////////////////////////*/
 
   /**
+   * @notice Sends the L2 factory creation tx along with the L2 deployments to be done on it through the portal
+   * @param _portal The address of the portal contract for the respective L2 chain
+   * @param _minGasLimit The minimum gas limit for the L2 deployment
+   */
+  function deployL2UsdcAndAdapter(address _portal, uint32 _minGasLimit) external;
+
+  /*///////////////////////////////////////////////////////////////
+                            VARIABLES
+  //////////////////////////////////////////////////////////////*/
+  /**
    * @return _l2Messenger The address of the L2 messenger
    */
   // solhint-disable-next-line func-name-mixedcase
@@ -74,11 +84,4 @@ interface IL1OpUSDCFactory {
    */
   // solhint-disable-next-line func-name-mixedcase
   function ALIASED_SELF() external view returns (address _aliasedSelf);
-
-  /**
-   * @notice Sends the L2 factory creation tx along with the L2 deployments to be done on it through the portal
-   * @param _portal The address of the portal contract for the respective L2 chain
-   * @param _minGasLimit The minimum gas limit for the L2 deployment
-   */
-  function deployL2UsdcAndAdapter(address _portal, uint32 _minGasLimit) external;
 }

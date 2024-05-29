@@ -354,7 +354,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveStopMessaging is Base {
   /**
    * @notice Check that the function reverts if the sender is not the messenger
    */
-  function test_wrongMessenger(address _notMessenger) public {
+  function test_wrongMessenger(address _notMessenger) external {
     vm.assume(_notMessenger != _messenger);
 
     // Execute
@@ -367,7 +367,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveStopMessaging is Base {
   /**
    * @notice Check that the function reverts if the linked adapter didn't send the message
    */
-  function test_wrongLinkedAdapter() public {
+  function test_wrongLinkedAdapter() external {
     address _notLinkedAdapter = makeAddr('notLinkedAdapter');
 
     _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_notLinkedAdapter));
@@ -382,7 +382,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveStopMessaging is Base {
   /**
    * @notice Check that isMessagingDisabled is set to true
    */
-  function test_setIsMessagingDisabledToTrue() public {
+  function test_setIsMessagingDisabledToTrue() external {
     _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
     // Execute
@@ -394,7 +394,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveStopMessaging is Base {
   /**
    * @notice Check that the event is emitted as expected
    */
-  function test_emitEvent() public {
+  function test_emitEvent() external {
     // Mock calls
     vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
@@ -414,7 +414,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveResumeMessaging is Base {
   /**
    * @notice Check that the function reverts if the sender is not the messenger
    */
-  function test_wrongMessenger(address _notMessenger) public {
+  function test_wrongMessenger(address _notMessenger) external {
     vm.assume(_notMessenger != _messenger);
 
     // Execute
@@ -426,7 +426,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveResumeMessaging is Base {
   /**
    * @notice Check that the function reverts if the linked adapter didn't send the message
    */
-  function test_wrongLinkedAdapter() public {
+  function test_wrongLinkedAdapter() external {
     address _notLinkedAdapter = makeAddr('notLinkedAdapter');
 
     _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_notLinkedAdapter));
@@ -440,7 +440,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveResumeMessaging is Base {
   /**
    * @notice Check that isMessagingDisabled is set to false
    */
-  function test_setIsMessagingDisabledToFalse() public {
+  function test_setIsMessagingDisabledToFalse() external {
     _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
     // Execute
@@ -452,7 +452,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveResumeMessaging is Base {
   /**
    * @notice Check that the event is emitted as expected
    */
-  function test_emitEvent() public {
+  function test_emitEvent() external {
     // Mock calls
     vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
@@ -470,7 +470,7 @@ contract L1OpUSDCBridgeAdapter_ReceiveAdapterUpgrade is Base {
   /**
    * @notice Check that the receiveAdapterUpgrade function reverts if the sender is not MESSENGER
    */
-  function test_wrongMessenger(address _notMessenger) public {
+  function test_wrongMessenger(address _notMessenger) external {
     vm.assume(_notMessenger != _messenger);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
     adapter.receiveAdapterUpgrade(_l2AdapterBytecode, _l2AdapterInitTxs);
@@ -479,7 +479,7 @@ contract L1OpUSDCBridgeAdapter_ReceiveAdapterUpgrade is Base {
   /**
    * @notice Check that the receiveAdapterUpgrade function reverts if the sender is not Linked Adapter
    */
-  function test_wrongLinkedAdapter(address _notLinkedAdapter) public {
+  function test_wrongLinkedAdapter(address _notLinkedAdapter) external {
     vm.assume(_notLinkedAdapter != _linkedAdapter);
     // Mock calls
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_notLinkedAdapter));

@@ -56,39 +56,11 @@ contract Base is Test, Helpers {
     _badInitTxs[0] = '';
     _badInitTxs[1] = _badInitTx;
 
-    factory = L2OpUSDCFactoryTest(_precalculateCreateAddress(_deployer, 0));
-    _usdcImplementation = _precalculateCreateAddress(address(factory), 1);
-    _usdcProxy = _precalculateCreateAddress(address(factory), 2);
-    _l2AdapterImplementation = _precalculateCreateAddress(address(factory), 3);
-    _l2AdapterProxy = _precalculateCreateAddress(address(factory), 4);
-  }
-
-  /**
-   * @notice Precalculates the address of a contract that will be deployed thorugh `CREATE` opcode
-   * @dev It only works if the for nonces between 0 and 127, which is enough for this use case
-   * @param _deployer The deployer address
-   * @param _nonce The next nonce of the deployer address
-   * @return _precalculatedAddress The address where the contract will be stored
-   */
-  function _precalculateCreateAddress(
-    address _deployer,
-    uint256 _nonce
-  ) internal pure returns (address _precalculatedAddress) {
-    bytes memory data;
-    bytes1 len = bytes1(0x94);
-
-    // The integer zero is treated as an empty byte string and therefore has only one length prefix,
-    // 0x80, which is calculated via 0x80 + 0.
-    if (_nonce == 0x00) {
-      data = abi.encodePacked(bytes1(0xd6), len, _deployer, bytes1(0x80));
-    }
-    // A one-byte integer in the [0x00, 0x7f] range uses its own value as a length prefix, there is no
-    // additional "0x80 + length" prefix that precedes it.
-    else if (_nonce <= 0x7f) {
-      data = abi.encodePacked(bytes1(0xd6), len, _deployer, uint8(_nonce));
-    }
-
-    _precalculatedAddress = address(uint160(uint256(keccak256(data))));
+    factory = L2OpUSDCFactoryTest(_computeCreateAddress(_deployer, 0));
+    _usdcImplementation = _computeCreateAddress(address(factory), 1);
+    _usdcProxy = _computeCreateAddress(address(factory), 2);
+    _l2AdapterImplementation = _computeCreateAddress(address(factory), 3);
+    _l2AdapterProxy = _computeCreateAddress(address(factory), 4);
   }
 }
 
@@ -208,7 +180,7 @@ contract L2OpUSDCFactory_Unit_CreateDeploy is Base {
     bytes memory _initCode = bytes.concat(_usdcProxyInitCode, abi.encode(_usdcImplementation));
     // Precalculate the address of the contract that will be deployed with the current factory's nonce
     uint256 _nonce = vm.getNonce(address(_factory));
-    address _expectedAddress = _precalculateCreateAddress(address(_factory), _nonce);
+    address _expectedAddress = _computeCreateAddress(address(_factory), _nonce);
 
     // Execute
     vm.prank(_deployer);

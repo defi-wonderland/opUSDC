@@ -158,9 +158,9 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
     emit IL2OpUSDCFactory.DeployedL2AdapterImplementation(_adapterImplementation);
 
     // Store the implementation in the contract
-    bytes32 _implementation_slot = ERC1967Utils.IMPLEMENTATION_SLOT;
+    bytes32 _implementationSlot = ERC1967Utils.IMPLEMENTATION_SLOT;
     assembly {
-      sstore(_implementation_slot, _adapterImplementation)
+      sstore(_implementationSlot, _adapterImplementation)
     }
 
     // Cache the length of the initialization transactions

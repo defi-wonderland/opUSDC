@@ -138,6 +138,13 @@ interface IL1OpUSDCBridgeAdapter {
     uint32 _minGasLimit
   ) external;
 
+  /**
+   * @notice Send a message to the linked adapter to upgrade the implementation of the contract
+   * @param _messenger The address of the messenger contract to send through
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  function sendL2AdapterUpgrade(address _messenger, uint32 _minGasLimit) external;
+
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
   //////////////////////////////////////////////////////////////*/
