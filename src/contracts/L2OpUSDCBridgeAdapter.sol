@@ -225,9 +225,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
 
   /**
    * @notice Authorize the upgrade of the implementation of the contract
-   * @param _newImplementation The address of the new implementation
    */
-  function _authorizeUpgrade(address _newImplementation) internal override {
+  function _authorizeUpgrade(address) internal pure override {
     revert L2OpUSDCBridgeAdapter_DisabledFlow();
   }
 }
