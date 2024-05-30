@@ -5,13 +5,12 @@ import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {ERC1967Utils} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol';
 
 import {BytecodeDeployer} from 'contracts/utils/BytecodeDeployer.sol';
+import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
+
+import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
-
-// TODO: Move
-interface IProxy {
-  function upgradeTo(address _implementation) external;
-}
+import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 /**
  * @title L2OpUSDCFactory
@@ -21,9 +20,11 @@ interface IProxy {
 contract L2OpUSDCFactory is IL2OpUSDCFactory {
   address public constant L2_MESSENGER = 0x4200000000000000000000000000000000000007;
 
+  address internal constant _WETH = 0x4200000000000000000000000000000000000007;
+
   address public immutable L1_FACTORY;
 
-  bytes32 public immutable SALT;
+  bytes32 internal immutable _SALT;
 
   // TODO: Add zero address and empty bytes?
 
@@ -32,22 +33,20 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
    * @param _salt The salt value used to deploy the contracts
    */
   constructor(bytes32 _salt, address _l1Factory) {
-    SALT = _salt;
+    _SALT = _salt;
     L1_FACTORY = _l1Factory;
   }
 
   /**
    * @notice Deploys the USDC implementation, proxy, and L2 adapter implementation and proxy contracts
-   * @param _usdcProxyCreationCode The creation code plus the constructor arguments for the USDC proxy contract
    * @param _usdcImplBytecode The bytecode for the USDC implementation contract
    * @param _usdcImplInitTxs The initialization transactions for the USDC implementation contract
    * @param _l2AdapterBytecode The bytecode for the L2 adapter contract
    * @param _l2AdapterInitTxs The initialization transactions for the L2 adapter contract
-   * @dev It always deploys the proxies with zero address as the implementation, and then upgrades them so their address
+   * @dev It always deploys the proxies with WETH as the implementation, and then upgrades them so their address
    * is always the same in all the chains, regardless of the implementation code
    */
   function deploy(
-    bytes memory _usdcProxyCreationCode,
     bytes memory _usdcImplBytecode,
     bytes[] memory _usdcImplInitTxs,
     bytes memory _l2AdapterBytecode,
@@ -64,13 +63,14 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     {
       // Deploy usdc implementation
       bytes memory _usdcImplInitCode = bytes.concat(_bytecodeDeployerCreationCode, abi.encode(_usdcImplBytecode));
-      _usdcImplementation = _deployCreate2(SALT, _usdcImplInitCode);
+      _usdcImplementation = _deployCreate2(_SALT, _usdcImplInitCode);
       // Deploy usdc proxy
-      bytes memory _usdcProxyCArgs = abi.encode(address(0));
+      bytes memory _usdcProxyCArgs = abi.encode(_WETH);
       bytes memory _usdcProxyInitCode =
-        bytes.concat(_bytecodeDeployerCreationCode, abi.encode(_usdcProxyCreationCode, _usdcProxyCArgs));
-      _usdcProxy = _deployCreate2(SALT, _usdcProxyInitCode);
-      IProxy(_usdcProxy).upgradeTo(_usdcImplementation);
+        bytes.concat(_bytecodeDeployerCreationCode, abi.encode(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs));
+      _usdcProxy = _deployCreate2(_SALT, _usdcProxyInitCode);
+      // TODO: Need to have code the impl
+      IUSDC(_usdcProxy).upgradeTo(_usdcImplementation);
       emit USDCDeployed(_usdcProxy, _usdcImplementation);
     }
 
@@ -78,12 +78,12 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     {
       // Deploy L2 adapter implementation
       bytes memory _l2AdapterImplInitCode = bytes.concat(_bytecodeDeployerCreationCode, abi.encode(_l2AdapterBytecode));
-      address _adapterImplementation = _deployCreate2(SALT, _l2AdapterImplInitCode);
+      address _adapterImplementation = _deployCreate2(_SALT, _l2AdapterImplInitCode);
       // Deploy L2 adapter proxy
-      bytes memory _proxyCArgs = abi.encode(address(0), '');
+      bytes memory _proxyCArgs = abi.encode(_WETH, '');
       bytes memory _adapterProxyInitCode =
         bytes.concat(_bytecodeDeployerCreationCode, abi.encode(type(ERC1967Proxy).creationCode, _proxyCArgs));
-      _adapterProxy = _deployCreate2(SALT, _adapterProxyInitCode);
+      _adapterProxy = _deployCreate2(_SALT, _adapterProxyInitCode);
       // Store the implementation in the proxy contract
       bytes32 _implementationSlot = ERC1967Utils.IMPLEMENTATION_SLOT;
       assembly {

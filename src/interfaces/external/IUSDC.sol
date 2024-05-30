@@ -23,4 +23,10 @@ interface IUSDC is IERC20 {
    * @param newOwner Address to transfer ownership to
    */
   function transferOwnership(address newOwner) external;
+
+  /**
+   * @notice Upgrades the USDC contract to a new implementation
+   * @param _implementation Address of the new implementation
+   */
+  function upgradeTo(address _implementation) external;
 }

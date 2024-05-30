@@ -42,14 +42,24 @@ interface IL1OpUSDCFactory {
   //////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Sends the L2 factory creation tx along with the L2 deployments to be done on it through the portal
+   * @notice Sends the L2 factory creation tx along with the L2 deployments to be done on it through the messenger
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
-   * @param _minGasLimitFactory The minimum gas limit for the L2 factory deployment
+   * @param _minGasLimitCreate2Factory The minimum gas limit for the L2 factory deployment
    * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
-   * @dev We deploy the proxies with the 0 address as implementation and then upgrade them with the actual
-   * implementation because the `CREATE2` opcode is dependent on the creation code and a different implementation
    */
-  function deployL2UsdcAndAdapter(address _l1Messenger, uint32 _minGasLimitFactory, uint32 _minGasLimitDeploy) external;
+  function deployL2FactoryAndContracts(
+    address _l1Messenger,
+    uint32 _minGasLimitCreate2Factory,
+    uint32 _minGasLimitDeploy
+  ) external;
+
+  /**
+   * @notice Sends the L2 USDC and adapter deployments tx through the messenger to be executed on the l2 factory
+   * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
+   * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
+   */
+  function deployL2UsdcAndAdapter(address _l1Messenger, uint32 _minGasLimitDeploy) external;
+
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
   //////////////////////////////////////////////////////////////*/

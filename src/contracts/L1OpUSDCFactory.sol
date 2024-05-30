@@ -9,12 +9,8 @@ import {BytecodeDeployer} from 'contracts/utils/BytecodeDeployer.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
+import {ICreate2Deployer} from 'interfaces/external/ICreate2Deployer.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
-
-// TODO: Move
-interface ICreate2Deployer {
-  function deploy(uint256 _value, bytes32 _salt, bytes memory _code) external;
-}
 
 /**
  * @title L1OpUSDCFactory
@@ -108,15 +104,16 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   }
 
   /**
-   * @notice Sends the L2 factory creation tx along with the L2 deployments to be done on it through the portal
+   * @notice Sends the L2 factory creation tx along with the L2 deployments to be done on it through the messenger
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
-   * @param _minGasLimitFactory The minimum gas limit for the L2 factory deployment
+   * @param _minGasLimitCreate2Factory The minimum gas limit for the L2 factory deployment
    * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
-   * @dev We deploy the proxies with the 0 address as implementation and then upgrade them with the actual
-   * implementation because the `CREATE2` opcode is dependent on the creation code and a different implementation
    */
-  //TODO: Split this in 2 differrent functions?
-  function deployL2UsdcAndAdapter(address _l1Messenger, uint32 _minGasLimitFactory, uint32 _minGasLimitDeploy) external {
+  function deployL2FactoryAndContracts(
+    address _l1Messenger,
+    uint32 _minGasLimitCreate2Factory,
+    uint32 _minGasLimitDeploy
+  ) external {
     if (isMessengerDeployed[_l1Messenger]) revert IL1OpUSDCFactory_MessengerAlreadyDeployed();
     if (IUpgradeManager(UPGRADE_MANAGER).messengerDeploymentExecutor(_l1Messenger) != msg.sender) {
       revert IL1OpUSDCFactory_NotExecutor();
@@ -124,31 +121,54 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     isMessengerDeployed[_l1Messenger] = true;
     L1_ADAPTER_PROXY.initializeNewMessenger(_l1Messenger);
 
-    // Get the bytecode of the L2 usdc implementation
-    IUpgradeManager.Implementation memory _l2UsdcImplementation = UPGRADE_MANAGER.bridgedUSDCImplementation();
-    bytes memory _l2UsdcImplementationBytecode = _l2UsdcImplementation.implementation.code;
-    // Get the bytecode of the he L2 adapter
-    IUpgradeManager.Implementation memory _l2AdapterImplementation = UPGRADE_MANAGER.l2AdapterImplementation();
-    bytes memory _l2AdapterBytecode = _l2AdapterImplementation.implementation.code;
-
     // Get the L2 factory init code
     bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
     bytes memory _l2FactoryCArgs = abi.encode(_SALT, address(this));
     bytes memory _l2FactoryInitCode = bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs);
 
     // Send the L2 factory deployment tx
-    bytes memory _l2FactoryDeploymentTx =
+    bytes memory _l2FactoryCreate2Tx =
       abi.encodeWithSelector(ICreate2Deployer.deploy.selector, _ZERO_VALUE, _SALT, _l2FactoryInitCode);
-    ICrossDomainMessenger(_l1Messenger).sendMessage(L2_CREATE2_DEPLOYER, _l2FactoryDeploymentTx, _minGasLimitFactory);
+    ICrossDomainMessenger(_l1Messenger).sendMessage(
+      L2_CREATE2_DEPLOYER, _l2FactoryCreate2Tx, _minGasLimitCreate2Factory
+    );
 
-    // Call the L2 factory `deploy` function
+    // Send the L2 USDC and adapter deployments tx
+    _deployL2UsdcAndAdapter(_l1Messenger, _minGasLimitDeploy);
+  }
+
+  /**
+   * @notice Sends the L2 USDC and adapter deployments tx through the messenger to be executed on the l2 factory
+   * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
+   * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
+   */
+  function deployL2UsdcAndAdapter(address _l1Messenger, uint32 _minGasLimitDeploy) external {
+    if (IUpgradeManager(UPGRADE_MANAGER).messengerDeploymentExecutor(_l1Messenger) != msg.sender) {
+      revert IL1OpUSDCFactory_NotExecutor();
+    }
+    _deployL2UsdcAndAdapter(_l1Messenger, _minGasLimitDeploy);
+  }
+
+  /**
+   * @notice Deploys the L2 USDC implementation and adapter contracts
+   * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
+   * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
+   */
+  function _deployL2UsdcAndAdapter(address _l1Messenger, uint32 _minGasLimitDeploy) internal {
+    // Get the bytecode of the L2 usdc implementation
+    IUpgradeManager.Implementation memory _l2Usdc = UPGRADE_MANAGER.bridgedUSDCImplementation();
+    bytes memory _l2UsdcImplementationBytecode = _l2Usdc.implementation.code;
+    // Get the bytecode of the he L2 adapter
+    IUpgradeManager.Implementation memory _l2Adapter = UPGRADE_MANAGER.l2AdapterImplementation();
+    bytes memory _l2AdapterImplementationBytecode = _l2Adapter.implementation.code;
+
+    // Send the call over the L2 factory `deploy` function message
     bytes memory _l2FactoryDeployTx = abi.encodeWithSelector(
       L2OpUSDCFactory.deploy.selector,
-      USDC_PROXY_CREATION_CODE,
       _l2UsdcImplementationBytecode,
-      _l2UsdcImplementation.initTxs,
-      _l2AdapterBytecode,
-      _l2AdapterImplementation.initTxs
+      _l2Usdc.initTxs,
+      _l2AdapterImplementationBytecode,
+      _l2Adapter.initTxs
     );
     ICrossDomainMessenger(_l1Messenger).sendMessage(L2_FACTORY, _l2FactoryDeployTx, _minGasLimitDeploy);
   }
@@ -164,21 +184,19 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     address _deployer,
     uint256 _nonce
   ) internal pure returns (address _precalculatedAddress) {
-    bytes memory data;
-    bytes1 len = bytes1(0x94);
-
+    bytes memory _data;
+    bytes1 _len = bytes1(0x94);
     // The integer zero is treated as an empty byte string and therefore has only one length prefix,
     // 0x80, which is calculated via 0x80 + 0.
     if (_nonce == 0x00) {
-      data = abi.encodePacked(bytes1(0xd6), len, _deployer, bytes1(0x80));
+      _data = abi.encodePacked(bytes1(0xd6), _len, _deployer, bytes1(0x80));
     }
     // A one-byte integer in the [0x00, 0x7f] range uses its own value as a length prefix, there is no
     // additional "0x80 + length" prefix that precedes it.
     else if (_nonce <= 0x7f) {
-      data = abi.encodePacked(bytes1(0xd6), len, _deployer, uint8(_nonce));
+      _data = abi.encodePacked(bytes1(0xd6), _len, _deployer, uint8(_nonce));
     }
-
-    _precalculatedAddress = address(uint160(uint256(keccak256(data))));
+    _precalculatedAddress = address(uint160(uint256(keccak256(_data))));
   }
 
   /**
