@@ -49,10 +49,15 @@ abstract contract Base is Helpers {
   bytes internal _l2AdapterInitTx = abi.encodeWithSignature('forTest_dummy()');
   bytes[] internal _l2AdapterInitTxs;
 
+  bytes internal _l2UsdcBytecode;
+  bytes internal _l2UsdcInitTx = abi.encodeWithSignature('forTest_dummy()');
+  bytes[] internal _l2UsdcInitTxs;
+
   event MessageSent(address _user, address _to, uint256 _amount, address _messenger, uint32 _minGasLimit);
   event MessageReceived(address _user, uint256 _amount, address _messenger);
   event MigratingToNative(address _messenger, address _newOwner);
   event DeployedL2AdapterImplementation(address _adapterImplementation);
+  event DeployedL2UsdcImplementation(address _adapterImplementation);
 
   function setUp() public virtual {
     (_signerAd, _signerPk) = makeAddrAndKey('signer');
@@ -590,6 +595,96 @@ contract L2OpUSDCBridgeAdapter_ReceiveAdapterUpgrade is Base {
     // Execute
     vm.prank(_messenger);
     adapter.receiveAdapterUpgrade(_l2AdapterBytecode, _l2AdapterInitTxs);
+  }
+}
+
+contract L2OpUSDCBridgeAdapter_ReceiveUsdcUpgrade is Base {
+  /**
+   * @notice Check that the receiveUsdcUpgrade function reverts if the sender is not MESSENGER
+   */
+  function test_wrongMessenger(address _notMessenger) external {
+    vm.assume(_notMessenger != _messenger);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
+    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs);
+  }
+
+  /**
+   * @notice Check that the receiveUsdcUpgrade function reverts if the sender is not Linked Adapter
+   */
+  function test_wrongLinkedAdapter(address _notLinkedAdapter) external {
+    vm.assume(_notLinkedAdapter != _linkedAdapter);
+    // Mock calls
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_notLinkedAdapter));
+
+    // Execute
+    vm.prank(_messenger);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
+    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs);
+  }
+
+  /**
+   * @notice Check the expected calls
+   */
+  function test_receiveUsdcUpgrade() external {
+    uint64 _nonce = vm.getNonce(address(adapter));
+    _l2UsdcInitTxs.push(abi.encodeWithSignature('dummy()'));
+    // Mock calls
+    _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    _mockAndExpect(
+      _usdc,
+      abi.encodeWithSignature('upgradeToAndCall(address,bytes)', _computeCreateAddress(address(adapter), _nonce), ''),
+      abi.encode(true)
+    );
+    _mockAndExpect(_usdc, abi.encodeWithSignature('dummy()'), abi.encode(true));
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs);
+  }
+
+  /**
+   * @notice Revert on invalid transaction
+   */
+  function test_revertOnInitTx() external {
+    uint64 _nonce = vm.getNonce(address(adapter));
+    _l2UsdcInitTxs.push(abi.encodeWithSignature('dummyRevert()'));
+
+    // Mock calls
+    _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    _mockAndExpect(
+      _usdc,
+      abi.encodeWithSignature('upgradeToAndCall(address,bytes)', _computeCreateAddress(address(adapter), _nonce), ''),
+      abi.encode(true)
+    );
+
+    // Mock Revert
+    vm.mockCallRevert(_usdc, abi.encodeWithSignature('dummyRevert()'), abi.encode(''));
+
+    // Execute
+    vm.prank(_messenger);
+    vm.expectRevert(IL2OpUSDCBridgeAdapter.L2OpUSDCBridgeAdapter_UsdcInitializationFailed.selector);
+    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs);
+  }
+
+  /**
+   * @notice Check that the event is emitted as expected
+   */
+  function test_emitEvent() external {
+    uint64 _nonce = vm.getNonce(address(adapter));
+    // Mock calls
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    vm.mockCall(
+      _usdc,
+      abi.encodeWithSignature('upgradeToAndCall(address,bytes)', _computeCreateAddress(address(adapter), _nonce), ''),
+      abi.encode(true)
+    );
+
+    // Expect events
+    vm.expectEmit(true, true, true, true);
+    emit DeployedL2UsdcImplementation(_computeCreateAddress(address(adapter), _nonce));
+
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs);
   }
 }
 

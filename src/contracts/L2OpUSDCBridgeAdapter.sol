@@ -188,7 +188,20 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
     emit DeployedL2UsdcImplementation(_usdcImplementation);
 
     // Call upgradeToAndCall on the USDC contract
-    UUPSUpgradeable(USDC).upgradeToAndCall(_usdcImplementation, _l2UsdcInitTxs[0]);
+    UUPSUpgradeable(USDC).upgradeToAndCall(_usdcImplementation, '');
+
+    //Execute the initialization transactions
+    if (_l2UsdcInitTxs.length > 0) {
+      // Cache the length of the initialization transactions
+      uint256 _l2AdapterInitTxsLength = _l2UsdcInitTxs.length;
+      // Initialize L2 adapter
+      for (uint256 i; i < _l2AdapterInitTxsLength; i++) {
+        (bool _success,) = USDC.call(_l2UsdcInitTxs[i]);
+        if (!_success) {
+          revert L2OpUSDCBridgeAdapter_UsdcInitializationFailed();
+        }
+      }
+    }
   }
 
   /**

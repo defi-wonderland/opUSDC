@@ -20,13 +20,18 @@ interface IL2OpUSDCBridgeAdapter {
    * @notice Error when the adapter initialization fails
    */
   error L2OpUSDCBridgeAdapter_AdapterInitializationFailed();
+
+  /**
+   * @notice Error when the USDC initialization fails
+   */
+  error L2OpUSDCBridgeAdapter_UsdcInitializationFailed();
+
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   //////////////////////////////////////////////////////////////*/
   /**
    * @notice Receive the stop messaging message from the linked adapter and stop outgoing messages
    */
-
   function receiveStopMessaging() external;
 
   /**
@@ -48,6 +53,13 @@ interface IL2OpUSDCBridgeAdapter {
    * @param _l2AdapterInitTxs The initialization transactions for the new L2 adapter implementation
    */
   function receiveAdapterUpgrade(bytes calldata _l2AdapterBytecode, bytes[] calldata _l2AdapterInitTxs) external;
+
+  /**
+   * @notice Receive the creation code from the linked adapter, deploy the new implementation and upgrade
+   * @param _l2UsdcBytecode The bytecode for the new L2 adapter implementation
+   * @param _l2UsdcInitTxs The initialization transactions for the new L2 adapter implementation
+   */
+  function receiveUsdcUpgrade(bytes calldata _l2UsdcBytecode, bytes[] memory _l2UsdcInitTxs) external;
 
   /**
    * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
