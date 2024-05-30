@@ -26,6 +26,11 @@ interface IL2OpUSDCBridgeAdapter {
    */
   error L2OpUSDCBridgeAdapter_UsdcInitializationFailed();
 
+  /**
+   * @notice Error when the flow is disabled
+   */
+  error L2OpUSDCBridgeAdapter_DisabledFlow();
+
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   //////////////////////////////////////////////////////////////*/
