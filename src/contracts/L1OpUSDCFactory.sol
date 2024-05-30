@@ -5,8 +5,6 @@ import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
 import {UpgradeManager} from 'contracts/UpgradeManager.sol';
-import {AddressAliasHelper} from 'contracts/utils/AddressAliasHelper.sol';
-
 import {BytecodeDeployer} from 'contracts/utils/BytecodeDeployer.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
@@ -24,8 +22,6 @@ interface ICreate2Deployer {
  * L2OpUSDCFactory on L2 - setting up the L2 deployments on a single transaction.
  */
 contract L1OpUSDCFactory is IL1OpUSDCFactory {
-  using AddressAliasHelper for address;
-
   /// @notice Zero value constant to be used on portal interaction
   uint256 internal constant _ZERO_VALUE = 0;
 
@@ -38,6 +34,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   /// @inheritdoc IL1OpUSDCFactory
   address public constant L2_MESSENGER = 0x4200000000000000000000000000000000000007;
 
+  /// @inheritdoc IL1OpUSDCFactory
   address public constant L2_CREATE2_DEPLOYER = 0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2;
 
   /// @inheritdoc IL1OpUSDCFactory

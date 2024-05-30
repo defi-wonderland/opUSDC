@@ -11,7 +11,6 @@ import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
 
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
-import {AddressAliasHelper} from 'test/utils/AddressAliasHelper.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
 contract ForTestL1OpUSDCFactory is L1OpUSDCFactory {
@@ -84,15 +83,14 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
    */
   function test_setImmutables() public {
     // Precalculate the addresses
-    address _aliasedSelf = AddressAliasHelper.applyL1ToL2Alias(address(factory));
-    address _l2Factory = factory.forTest_precalculateCreateAddress(_aliasedSelf, 0);
+    // TODO: Fix l2 factory
+    address _l2Factory = factory.forTest_precalculateCreateAddress(address(factory), 0);
     address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), 1);
     address _l2UsdcProxyAddress = factory.forTest_precalculateCreateAddress(_l2Factory, 2);
     address _l2AdapterProxy = factory.forTest_precalculateCreateAddress(_l2Factory, 4);
     address _upgradeManager = factory.forTest_precalculateCreateAddress(address(factory), 3);
 
     // Assert
-    // assertEq(factory.ALIASED_SELF(), _aliasedSelf, 'Invalid aliasedSelf address');
     assertEq(address(factory.L1_ADAPTER_PROXY()), _l1Adapter, 'Invalid l1Adapter address');
     assertEq(factory.L2_ADAPTER_PROXY(), _l2AdapterProxy, 'Invalid l2Adapter proxy address');
     assertEq(factory.L2_USDC_PROXY(), _l2UsdcProxyAddress, 'Invalid l2UsdcProxy address');

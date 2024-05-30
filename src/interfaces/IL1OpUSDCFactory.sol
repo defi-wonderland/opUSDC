@@ -61,6 +61,11 @@ interface IL1OpUSDCFactory {
   function L2_MESSENGER() external view returns (address _l2Messenger);
 
   /**
+   * @return _l2Create2Deployer The address of the `create2Deployer` contract on L2
+   */
+  function L2_CREATE2_DEPLOYER() external view returns (address _l2Create2Deployer);
+
+  /**
    * @return _l2Factory The address of the L1 factory
    */
   // solhint-disable-next-line func-name-mixedcase
