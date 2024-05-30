@@ -179,8 +179,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
 
   /**
    * @notice Receive the creation code from the linked adapter, deploy the new implementation and upgrade
-   * @param _l2UsdcBytecode The bytecode for the new L2 adapter implementation
-   * @param _l2UsdcInitTxs The initialization transactions for the new L2 adapter implementation
+   * @param _l2UsdcBytecode The bytecode for the new L2 USDC implementation
+   * @param _l2UsdcInitTxs The initialization transactions for the new L2 USDC implementation
    */
   function receiveUsdcUpgrade(bytes calldata _l2UsdcBytecode, bytes[] memory _l2UsdcInitTxs) external checkSender {
     // Deploy L2 USDC implementation
@@ -194,7 +194,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
     if (_l2UsdcInitTxs.length > 0) {
       // Cache the length of the initialization transactions
       uint256 _l2AdapterInitTxsLength = _l2UsdcInitTxs.length;
-      // Initialize L2 adapter
+      // Initialize L2 Usdc
       for (uint256 i; i < _l2AdapterInitTxsLength; i++) {
         (bool _success,) = USDC.call(_l2UsdcInitTxs[i]);
         if (!_success) {
