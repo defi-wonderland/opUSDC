@@ -14,15 +14,27 @@ contract FactoryDeploy is Script {
     vm.startBroadcast(deployer);
 
     console.log('Deploying L1OpUSDCFactory ...');
-    IL1OpUSDCFactory _l1Factory = new L1OpUSDCFactory(USDC, deployer);
+    bytes32 _salt = keccak256(abi.encode(block.number, block.timestamp, blockhash(block.number - 1)));
+    IL1OpUSDCFactory _l1Factory = new L1OpUSDCFactory(USDC, _salt, deployer);
     console.log('L1OpUSDCFactory deployed at:', address(_l1Factory));
 
     console.log('L1OpUSDCBridgeAdapter deployed at:', address(_l1Factory.L1_ADAPTER_PROXY()));
     console.log('L1 UpgradeManager deployed at:', address(_l1Factory.UPGRADE_MANAGER()));
     console.log('-----');
-    console.log('aliased L1 factory deployment address:', _l1Factory.ALIASED_SELF());
+    console.log('L2Factory deployment address:', _l1Factory.L2_FACTORY());
     console.log('L2OpUSDCBridgeAdapter proxy deployment address:', _l1Factory.L2_ADAPTER_PROXY());
     console.log('L2 USDC proxy deployed deployment address:', _l1Factory.L2_USDC_PROXY());
+    console.log('-----');
+
+    // TODO: remove from here and create another script well defined
+    console.log('Setting l2 usdc implementation address ...');
+    bytes[] memory _initTxs = new bytes[](1);
+    _l1Factory.UPGRADE_MANAGER().setBridgedUSDCImplementation(USDC, _initTxs);
+    console.log('L2 USDC implementation address set to:', USDC);
+
+    console.log('Setting l2 adapter implementation address ...');
+    _l1Factory.UPGRADE_MANAGER().setL2AdapterImplementation(address(_l1Factory.L1_ADAPTER_PROXY()), _initTxs);
+    console.log('L2 adapter implementation address set to:', address(_l1Factory.L1_ADAPTER_PROXY()));
 
     vm.stopBroadcast();
   }

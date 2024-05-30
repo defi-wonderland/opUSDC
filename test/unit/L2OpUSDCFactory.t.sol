@@ -1,22 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
+import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
+import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {Test} from 'forge-std/Test.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
 contract L2OpUSDCFactoryTest is L2OpUSDCFactory {
-  constructor(
-    bytes32 _salt,
-    bytes memory _usdcProxyInitCode,
-    bytes memory _usdcImplBytecode,
-    bytes[] memory _usdcImplInitTxs,
-    bytes memory _l2AdapterBytecode,
-    bytes[] memory _l2AdapterInitTxs
-  )
-    L2OpUSDCFactory(_salt, _usdcProxyInitCode, _usdcImplBytecode, _usdcImplInitTxs, _l2AdapterBytecode, _l2AdapterInitTxs)
-  {}
+  constructor(bytes32 _salt, address _l1Factory) L2OpUSDCFactory(_salt, _l1Factory) {}
 
   function forTest_deployCreate2(bytes32 _salt, bytes memory _initCode) public returns (address _newContract) {
     _newContract = _deployCreate2(_salt, _initCode);
@@ -27,6 +20,7 @@ contract Base is Test, Helpers {
   L2OpUSDCFactoryTest public factory;
 
   bytes32 internal _salt = bytes32('1');
+  address internal _l1Factory = makeAddr('l1Factory');
   address internal _deployer = makeAddr('deployer');
   bytes internal _usdcProxyInitCode;
   bytes internal _usdcImplBytecode;
@@ -47,7 +41,10 @@ contract Base is Test, Helpers {
     address _dummyContract = address(new ForTestDummyContract());
     _usdcProxyInitCode = type(ForTestDummyContract).creationCode;
     _usdcImplBytecode = _dummyContract.code;
-    _l2AdapterBytecode = _dummyContract.code;
+
+    address _dummyContractTwo = address(new ForTestDummyContractTwo());
+    _l2AdapterBytecode = type(ForTestDummyContractTwo).creationCode;
+    _l2AdapterBytecode = _dummyContractTwo.code;
 
     _initTxOne = abi.encodeWithSignature('dummyFunction()');
     _initTxTwo = abi.encodeWithSignature('dummyFunctionTwo()');
@@ -109,10 +106,12 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
     vm.expectEmit(true, true, true, true);
     emit DeployedUSDCImpl(_usdcImplementation);
 
-    vm.prank(_deployer);
-    new L2OpUSDCFactoryTest(
-      _salt, _usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _emptyInitTxs
-    );
+    bytes memory _l2UsdcProxyInitCodeHash = bytes.concat(USDC_PROXY_CREATION_CODE, abi.encode(address(0)));
+    // Calculate the L2 adapter proxy address
+    bytes memory _l2AdapterProxyInitCodeHash = bytes.concat(type(ERC1967Proxy).creationCode, abi.encode(address(0), ''));
+
+    vm.prank(0x835aA28793d2135a4f6bc3e6b62Aa5aF9e6eAD20);
+    new L2OpUSDCFactoryTest(_salt, _l1Factory);
 
     // Assert the deployed contract has code
     assertGt(_usdcImplementation.code.length, 0);
@@ -126,9 +125,7 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
     emit DeployedUSDCProxy(_usdcProxy);
 
     vm.prank(_deployer);
-    new L2OpUSDCFactoryTest(
-      _salt, _usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _emptyInitTxs
-    );
+    new L2OpUSDCFactoryTest(_salt, _l1Factory);
 
     // Assert the deployed contract has code
     assertGt(_usdcProxy.code.length, 0);
@@ -142,9 +139,7 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
     emit DeployedL2AdapterImplementation(_l2AdapterImplementation);
 
     vm.prank(_deployer);
-    new L2OpUSDCFactoryTest(
-      _salt, _usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _emptyInitTxs
-    );
+    new L2OpUSDCFactoryTest(_salt, _l1Factory);
 
     // Assert the deployed contract has code
     assertGt(_l2AdapterImplementation.code.length, 0);
@@ -155,9 +150,7 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
     emit DeployedL2AdapterProxy(_l2AdapterProxy);
 
     vm.prank(_deployer);
-    new L2OpUSDCFactoryTest(
-      _salt, _usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _emptyInitTxs
-    );
+    new L2OpUSDCFactoryTest(_salt, _l1Factory);
 
     // Assert the deployed contract has code
     assertGt(_l2AdapterProxy.code.length, 0);
@@ -168,9 +161,7 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
    */
   function test_revertOnUSDCImplementationBadTxs() public {
     vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InitializationFailed.selector);
-    new L2OpUSDCFactoryTest(
-      _salt, _usdcProxyInitCode, _usdcImplBytecode, _badInitTxs, _l2AdapterBytecode, _emptyInitTxs
-    );
+    new L2OpUSDCFactoryTest(_salt, _l1Factory);
   }
 
   /**
@@ -181,7 +172,7 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
     vm.expectCall(_usdcImplementation, _initTxs[1]);
 
     vm.prank(_deployer);
-    new L2OpUSDCFactoryTest(_salt, _usdcProxyInitCode, _usdcImplBytecode, _initTxs, _l2AdapterBytecode, _emptyInitTxs);
+    new L2OpUSDCFactoryTest(_salt, _l1Factory);
   }
 
   /**
@@ -189,9 +180,7 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
    */
   function test_revertOnL2AdapterBadTxs() public {
     vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InitializationFailed.selector);
-    new L2OpUSDCFactoryTest(
-      _salt, _usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _badInitTxs
-    );
+    new L2OpUSDCFactoryTest(_salt, _l1Factory);
   }
 
   /**
@@ -202,7 +191,7 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
     vm.expectCall(_l2AdapterProxy, _initTxTwo);
 
     vm.prank(_deployer);
-    new L2OpUSDCFactoryTest(_salt, _usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _initTxs);
+    new L2OpUSDCFactoryTest(_salt, _l1Factory);
   }
 }
 
@@ -212,9 +201,7 @@ contract L2OpUSDCFactory_Unit_CreateDeploy is Base {
   function setUp() public override {
     super.setUp();
     // Deploy the factory for the next tests
-    _factory = new L2OpUSDCFactoryTest(
-      _salt, _usdcProxyInitCode, _usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _emptyInitTxs
-    );
+    _factory = new L2OpUSDCFactoryTest(_salt, _l1Factory);
   }
 
   /**
@@ -256,5 +243,18 @@ contract ForTestDummyContract {
 
   function dummyFunctionTwo() public pure returns (bool) {
     return true;
+  }
+}
+
+/**
+ * @notice Dummy contract used only for testing purposes
+ */
+contract ForTestDummyContractTwo {
+  function dummyFunction() public pure returns (bool) {
+    return false;
+  }
+
+  function dummyFunctionTwo() public pure returns (bool) {
+    return false;
   }
 }

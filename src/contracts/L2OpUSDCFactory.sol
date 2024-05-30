@@ -3,8 +3,11 @@ pragma solidity 0.8.25;
 
 import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
 import {ERC1967Utils} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol';
+
+import {AddressAliasHelper} from 'contracts/utils/AddressAliasHelper.sol';
 import {BytecodeDeployer} from 'contracts/utils/BytecodeDeployer.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
+import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 
 // TODO: Move
 interface IProxy {
@@ -17,9 +20,25 @@ interface IProxy {
  * at once on the constructor
  */
 contract L2OpUSDCFactory is IL2OpUSDCFactory {
+  address public constant L2_MESSENGER = 0x4200000000000000000000000000000000000007;
+
+  address public immutable L1_FACTORY;
+
+  bytes32 public immutable SALT;
+
+  // TODO: Add zero address and empty bytes?
+
   /**
    * @notice Deploys the USDC implementation, proxy, and L2 adapter contracts
    * @param _salt The salt value used to deploy the contracts
+   */
+  constructor(bytes32 _salt, address _l1Factory) {
+    SALT = _salt;
+    L1_FACTORY = _l1Factory;
+  }
+
+  /**
+   * @notice Deploys the USDC implementation, proxy, and L2 adapter implementation and proxy contracts
    * @param _usdcProxyCreationCode The creation code plus the constructor arguments for the USDC proxy contract
    * @param _usdcImplBytecode The bytecode for the USDC implementation contract
    * @param _usdcImplInitTxs The initialization transactions for the USDC implementation contract
@@ -28,25 +47,30 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
    * @dev It always deploys the proxies with zero address as the implementation, and then upgrades them so their address
    * is always the same in all the chains, regardless of the implementation code
    */
-  constructor(
-    bytes32 _salt,
+  function deploy(
     bytes memory _usdcProxyCreationCode,
     bytes memory _usdcImplBytecode,
     bytes[] memory _usdcImplInitTxs,
     bytes memory _l2AdapterBytecode,
     bytes[] memory _l2AdapterInitTxs
-  ) {
+  ) external {
+    // TODO: Only messenger can call
+    if (msg.sender != L2_MESSENGER || ICrossDomainMessenger(L2_MESSENGER).xDomainMessageSender() != L1_FACTORY) {
+      revert IL2OpUSDCFactory_InvalidSender();
+    }
+
     bytes memory _bytecodeDeployerCreationCode = type(BytecodeDeployer).creationCode;
     address _usdcImplementation;
+    address _usdcProxy;
     {
       // Deploy usdc implementation
-      bytes memory _usdcImplInitCode = bytes.concat(_bytecodeDeployerCreationCode, _usdcImplBytecode);
-      _usdcImplementation = _deployCreate2(_salt, _usdcImplInitCode);
+      bytes memory _usdcImplInitCode = bytes.concat(_bytecodeDeployerCreationCode, abi.encode(_usdcImplBytecode));
+      _usdcImplementation = _deployCreate2(SALT, _usdcImplInitCode);
       // Deploy usdc proxy
       bytes memory _usdcProxyCArgs = abi.encode(address(0));
       bytes memory _usdcProxyInitCode =
-        bytes.concat(_bytecodeDeployerCreationCode, _usdcProxyCreationCode, _usdcProxyCArgs);
-      address _usdcProxy = _deployCreate2(_salt, _usdcProxyInitCode);
+        bytes.concat(_bytecodeDeployerCreationCode, abi.encode(_usdcProxyCreationCode, _usdcProxyCArgs));
+      _usdcProxy = _deployCreate2(SALT, _usdcProxyInitCode);
       IProxy(_usdcProxy).upgradeTo(_usdcImplementation);
       emit USDCDeployed(_usdcProxy, _usdcImplementation);
     }
@@ -54,13 +78,13 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     address _adapterProxy;
     {
       // Deploy L2 adapter implementation
-      bytes memory _l2AdapterImplInitCode = bytes.concat(_bytecodeDeployerCreationCode, _l2AdapterBytecode);
-      address _adapterImplementation = _deployCreate2(_salt, _l2AdapterImplInitCode);
+      bytes memory _l2AdapterImplInitCode = bytes.concat(_bytecodeDeployerCreationCode, abi.encode(_l2AdapterBytecode));
+      address _adapterImplementation = _deployCreate2(SALT, _l2AdapterImplInitCode);
       // Deploy L2 adapter proxy
       bytes memory _proxyCArgs = abi.encode(address(0), '');
       bytes memory _adapterProxyInitCode =
-        bytes.concat(_bytecodeDeployerCreationCode, type(ERC1967Proxy).creationCode, _proxyCArgs);
-      _adapterProxy = _deployCreate2(_salt, _adapterProxyInitCode);
+        bytes.concat(_bytecodeDeployerCreationCode, abi.encode(type(ERC1967Proxy).creationCode, _proxyCArgs));
+      _adapterProxy = _deployCreate2(SALT, _adapterProxyInitCode);
       // Store the implementation in the proxy contract
       bytes32 _implementationSlot = ERC1967Utils.IMPLEMENTATION_SLOT;
       assembly {
@@ -73,6 +97,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     uint256 _length = _usdcImplInitTxs.length;
     if (_length > 0) {
       _executeInitTxs(_usdcImplementation, _usdcImplInitTxs, _length);
+      _executeInitTxs(_usdcProxy, _usdcImplInitTxs, _length);
     }
 
     // Execute the L2 adapter initialization transactions, if any

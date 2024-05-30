@@ -43,11 +43,13 @@ interface IL1OpUSDCFactory {
 
   /**
    * @notice Sends the L2 factory creation tx along with the L2 deployments to be done on it through the portal
-   * @param _portal The address of the portal contract for the respective L2 chain
-   * @param _minGasLimit The minimum gas limit for the L2 deployment
+   * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
+   * @param _minGasLimitFactory The minimum gas limit for the L2 factory deployment
+   * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
+   * @dev We deploy the proxies with the 0 address as implementation and then upgrade them with the actual
+   * implementation because the `CREATE2` opcode is dependent on the creation code and a different implementation
    */
-  function deployL2UsdcAndAdapter(address _portal, uint32 _minGasLimit) external;
-
+  function deployL2UsdcAndAdapter(address _l1Messenger, uint32 _minGasLimitFactory, uint32 _minGasLimitDeploy) external;
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
   //////////////////////////////////////////////////////////////*/
@@ -57,6 +59,12 @@ interface IL1OpUSDCFactory {
    */
   // solhint-disable-next-line func-name-mixedcase
   function L2_MESSENGER() external view returns (address _l2Messenger);
+
+  /**
+   * @return _l2Factory The address of the L1 factory
+   */
+  // solhint-disable-next-line func-name-mixedcase
+  function L2_FACTORY() external view returns (address _l2Factory);
 
   /**
    * @return _upgradeManager The address of the UpgradeManager contract
@@ -81,13 +89,6 @@ interface IL1OpUSDCFactory {
    */
   // solhint-disable-next-line func-name-mixedcase
   function L2_USDC_PROXY() external view returns (address _l2UsdcProxy);
-
-  /**
-   * @return _aliasedSelf The aliased address of the L1 factory contract on L2
-   * @dev This is the `msg.sender` that will deploy the L2 factory
-   */
-  // solhint-disable-next-line func-name-mixedcase
-  function ALIASED_SELF() external view returns (address _aliasedSelf);
 
   /**
    * @notice Checks if a messenger has a protocol deployed for it
