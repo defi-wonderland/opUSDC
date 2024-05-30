@@ -605,7 +605,7 @@ contract L2OpUSDCBridgeAdapter_ReceiveUsdcUpgrade is Base {
     _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
     _mockAndExpect(
       _usdc,
-      abi.encodeWithSignature('upgradeToAndCall(address,bytes)', _computeCreateAddress(address(adapter), _nonce), ''),
+      abi.encodeWithSignature('upgradeTo(address)', _computeCreateAddress(address(adapter), _nonce)),
       abi.encode(true)
     );
     _mockAndExpect(_usdc, abi.encodeWithSignature('dummy()'), abi.encode(true));
@@ -625,7 +625,7 @@ contract L2OpUSDCBridgeAdapter_ReceiveUsdcUpgrade is Base {
     _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
     _mockAndExpect(
       _usdc,
-      abi.encodeWithSignature('upgradeToAndCall(address,bytes)', _computeCreateAddress(address(adapter), _nonce), ''),
+      abi.encodeWithSignature('upgradeTo(address)', _computeCreateAddress(address(adapter), _nonce)),
       abi.encode(true)
     );
 
@@ -647,7 +647,7 @@ contract L2OpUSDCBridgeAdapter_ReceiveUsdcUpgrade is Base {
     vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
     vm.mockCall(
       _usdc,
-      abi.encodeWithSignature('upgradeToAndCall(address,bytes)', _computeCreateAddress(address(adapter), _nonce), ''),
+      abi.encodeWithSignature('upgradeTo(address)', _computeCreateAddress(address(adapter), _nonce)),
       abi.encode(true)
     );
 

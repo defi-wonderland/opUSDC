@@ -186,7 +186,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
     emit DeployedL2UsdcImplementation(_usdcImplementation);
 
     // Call upgradeToAndCall on the USDC contract
-    UUPSUpgradeable(USDC).upgradeToAndCall(_usdcImplementation, '');
+    IUSDC(USDC).upgradeTo(_usdcImplementation);
 
     //Execute the initialization transactions
     if (_l2UsdcInitTxs.length > 0) {
