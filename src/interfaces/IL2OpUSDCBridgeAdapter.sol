@@ -56,8 +56,8 @@ interface IL2OpUSDCBridgeAdapter {
 
   /**
    * @notice Receive the creation code from the linked adapter, deploy the new implementation and upgrade
-   * @param _l2UsdcBytecode The bytecode for the new L2 adapter implementation
-   * @param _l2UsdcInitTxs The initialization transactions for the new L2 adapter implementation
+   * @param _l2UsdcBytecode The bytecode for the new L2 USDC implementation
+   * @param _l2UsdcInitTxs The initialization transactions for the new L2 USDC implementation
    */
   function receiveUsdcUpgrade(bytes calldata _l2UsdcBytecode, bytes[] memory _l2UsdcInitTxs) external;
 
