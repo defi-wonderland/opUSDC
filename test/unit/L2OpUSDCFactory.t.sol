@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
+import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
 import {Test} from 'forge-std/Test.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
@@ -32,6 +33,10 @@ contract Base is Test, Helpers {
   address internal _l2AdapterImplementation;
   address internal _l2AdapterProxy;
 
+  address internal _usdc = makeAddr('opUSDC');
+  address internal _messenger = makeAddr('messenger');
+  address internal _linkedAdapter = makeAddr('linkedAdapter');
+
   bytes[] internal _emptyInitTxs;
   bytes[] internal _initTxs;
   bytes[] internal _badInitTxs;
@@ -40,10 +45,9 @@ contract Base is Test, Helpers {
   bytes internal _initTxTwo;
 
   function setUp() public virtual {
-    address _dummyContract = address(new ForTestDummyContract());
     _usdcProxyInitCode = type(ForTestDummyContract).creationCode;
-    _usdcImplBytecode = _dummyContract.code;
-    _l2AdapterBytecode = _dummyContract.code;
+    _usdcImplBytecode = address(new ForTestDummyContract()).code;
+    _l2AdapterBytecode = address(new ForTestL2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter)).code;
 
     _initTxOne = abi.encodeWithSignature('dummyFunction()');
     _initTxTwo = abi.encodeWithSignature('dummyFunctionTwo()');
@@ -212,4 +216,12 @@ contract ForTestDummyContract {
   function dummyFunctionTwo() public pure returns (bool) {
     return true;
   }
+}
+
+contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter, ForTestDummyContract {
+  constructor(
+    address _usdc,
+    address _messenger,
+    address _linkedAdapter
+  ) L2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
 }
