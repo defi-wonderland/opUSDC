@@ -641,6 +641,25 @@ contract L2OpUSDCBridgeAdapter_ReceiveUsdcUpgrade is Base {
   }
 
   /**
+   * @notice Check the expected calls on a second upgrade
+   */
+  function test_revertOnImplementation() external {
+    adapter.forTest_setLastL2UsdcInitTxsLength(1);
+    uint64 _nonce = vm.getNonce(address(adapter));
+    _l2UsdcInitTxs.push(abi.encodeWithSignature('dummyRevert()'));
+    // Mock calls
+    _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    _mockAndExpect(
+      _usdc,
+      abi.encodeWithSignature('upgradeTo(address)', _computeCreateAddress(address(adapter), _nonce)),
+      abi.encode(true)
+    );
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs);
+  }
+
+  /**
    * @notice Revert on invalid transaction
    */
   function test_revertOnInitTx() external {
