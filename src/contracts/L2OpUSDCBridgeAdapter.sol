@@ -23,6 +23,9 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
   /// @inheritdoc IL2OpUSDCBridgeAdapter
   bool public isMessagingDisabled;
 
+  /// @notice amount of initialization transactions executed on the USDC contract
+  uint256 internal _lastL2UsdcInitTxsLength;
+
   /**
    * @notice Modifier to check if the sender is the linked adapter through the messenger
    */
@@ -188,18 +191,19 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
     // Call upgradeToAndCall on the USDC contract
     IUSDC(USDC).upgradeTo(_usdcImplementation);
 
-    //Execute the initialization transactions
-    if (_l2UsdcInitTxs.length > 0) {
-      // Cache the length of the initialization transactions
-      uint256 _l2AdapterInitTxsLength = _l2UsdcInitTxs.length;
-      // Initialize L2 Usdc
-      for (uint256 i; i < _l2AdapterInitTxsLength; i++) {
-        (bool _success,) = USDC.call(_l2UsdcInitTxs[i]);
-        if (!_success) {
-          revert L2OpUSDCBridgeAdapter_UsdcInitializationFailed();
-        }
+    // Cache the length of the initialization transactions
+    uint256 _l2UsdcImpTxsLength = _l2UsdcInitTxs.length;
+
+    // Initialize L2 Usdc
+    bool _success;
+    for (uint256 i; i < _l2UsdcImpTxsLength; i++) {
+      (_success,) = _usdcImplementation.call(_l2UsdcInitTxs[i]);
+      if (i >= _lastL2UsdcInitTxsLength && _success) {
+        (_success,) = USDC.call(_l2UsdcInitTxs[i]);
       }
+      if (!_success) revert L2OpUSDCBridgeAdapter_UsdcInitializationFailed();
     }
+    _lastL2UsdcInitTxsLength = _l2UsdcImpTxsLength;
   }
 
   /**
@@ -221,6 +225,15 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
     isMessagingDisabled = true;
 
     emit MigratingToNative(MESSENGER, _newOwner);
+  }
+
+  /**
+   * @notice Set _lastL2UsdcInitTxsLength to the new value
+   * @param _newLength The new value for _lastL2UsdcInitTxsLength
+   */
+  function setLastL2UsdcInitTxsLength(uint256 _newLength) external {
+    if (_lastL2UsdcInitTxsLength > 0) revert L2OpUSDCBridgeAdapter_InitializationAlreadyExecuted();
+    _lastL2UsdcInitTxsLength = _newLength;
   }
 
   /**

@@ -43,16 +43,25 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     address _adapterProxy = address(new ERC1967Proxy(_adapterImplementation, _adapterInitTx));
     emit DeployedL2AdapterProxy(_adapterProxy);
 
+    bool _success;
+
     // Execute the USDC initialization transactions
     if (_usdcImplInitTxs.length > 0) {
       uint256 _usdcImplInitTxsLength = _usdcImplInitTxs.length;
       // Initialize usdc implementation
       for (uint256 i; i < _usdcImplInitTxsLength; i++) {
-        (bool _success,) = _usdcImplementation.call(_usdcImplInitTxs[i]);
+        (_success,) = _usdcImplementation.call(_usdcImplInitTxs[i]);
         if (!_success) {
           revert IL2OpUSDCFactory_UsdcInitializationFailed();
         }
       }
+    }
+
+    // Set the amunt of txs that the adapter will execute on the USDC implementation
+    (_success,) =
+      _adapterProxy.call(abi.encodeWithSignature('setLastL2UsdcInitTxsLength(uint256)', _usdcImplInitTxs.length));
+    if (!_success) {
+      revert IL2OpUSDCFactory_AdapterInitializationFailed();
     }
 
     // Execute the L2 Adapter initialization transactions
@@ -60,7 +69,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
       uint256 _l2AdapterInitTxsLength = _l2AdapterInitTxs.length;
       // Initialize L2 adapter
       for (uint256 i; i < _l2AdapterInitTxsLength; i++) {
-        (bool _success,) = _adapterProxy.call(_l2AdapterInitTxs[i]);
+        (_success,) = _adapterProxy.call(_l2AdapterInitTxs[i]);
         if (!_success) {
           revert IL2OpUSDCFactory_AdapterInitializationFailed();
         }

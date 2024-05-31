@@ -31,6 +31,11 @@ interface IL2OpUSDCBridgeAdapter {
    */
   error L2OpUSDCBridgeAdapter_DisabledFlow();
 
+  /**
+   * @notice Error when the initialization has already been executed
+   */
+  error L2OpUSDCBridgeAdapter_InitializationAlreadyExecuted();
+
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   //////////////////////////////////////////////////////////////*/
@@ -83,6 +88,12 @@ interface IL2OpUSDCBridgeAdapter {
     uint256 _deadline,
     uint32 _minGasLimit
   ) external;
+
+  /**
+   * @notice Set _lastL2UsdcInitTxsLength to the new value
+   * @param _newLength The new value for _lastL2UsdcInitTxsLength
+   */
+  function setLastL2UsdcInitTxsLength(uint256 _newLength) external;
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
