@@ -5,7 +5,6 @@ import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
 import {UpgradeManager} from 'contracts/UpgradeManager.sol';
-import {BytecodeDeployer} from 'contracts/utils/BytecodeDeployer.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
@@ -65,15 +64,12 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     L2_FACTORY = _precalculateCreate2Address(_SALT, _l2FactoryInitCode, L2_CREATE2_DEPLOYER);
 
     // Calculate the L2 USDC proxy address
-    bytes memory _bytecodeDeployerCreationCode = type(BytecodeDeployer).creationCode;
-    bytes32 _l2UsdcProxyInitCodeHash =
-      keccak256(bytes.concat(_bytecodeDeployerCreationCode, abi.encode(USDC_PROXY_CREATION_CODE, abi.encode(_wethL2))));
+    bytes32 _l2UsdcProxyInitCodeHash = keccak256(abi.encode(USDC_PROXY_CREATION_CODE, abi.encode(_wethL2)));
     L2_USDC_PROXY = _precalculateCreate2Address(_SALT, _l2UsdcProxyInitCodeHash, L2_FACTORY);
 
     // Calculate the L2 adapter proxy address
-    bytes32 _l2AdapterProxyInitCodeHash = keccak256(
-      bytes.concat(_bytecodeDeployerCreationCode, abi.encode(type(ERC1967Proxy).creationCode, abi.encode(_wethL2, '')))
-    );
+    bytes32 _l2AdapterProxyInitCodeHash =
+      keccak256(abi.encode(type(ERC1967Proxy).creationCode, abi.encode(_wethL2, '')));
     L2_ADAPTER_PROXY = _precalculateCreate2Address(_SALT, _l2AdapterProxyInitCodeHash, L2_FACTORY);
 
     // Calculate the upgrade manager using 4 as nonce since first the L1 adapter and its implementation will be deployed

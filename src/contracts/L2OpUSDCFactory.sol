@@ -12,6 +12,8 @@ import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
+import 'forge-std/Test.sol';
+
 /**
  * @title L2OpUSDCFactory
  * @notice Factory contract for deploying the L2 USDC implementation, proxy, and `L2OpUSDCBridgeAdapter` contracts all
@@ -20,17 +22,18 @@ import {IUSDC} from 'interfaces/external/IUSDC.sol';
 contract L2OpUSDCFactory is IL2OpUSDCFactory {
   address public constant L2_MESSENGER = 0x4200000000000000000000000000000000000007;
 
-  address internal constant _WETH = 0x4200000000000000000000000000000000000007;
+  address internal constant _WETH = 0x4200000000000000000000000000000000000006;
 
   address public immutable L1_FACTORY;
 
   bytes32 internal immutable _SALT;
 
-  // TODO: Add zero address and empty bytes?
+  // TODO: Add empty bytes/call?
 
   /**
    * @notice Deploys the USDC implementation, proxy, and L2 adapter contracts
    * @param _salt The salt value used to deploy the contracts
+   * @param _l1Factory The address of the L1 factory contract
    */
   constructor(bytes32 _salt, address _l1Factory) {
     _SALT = _salt;
@@ -44,7 +47,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
    * @param _l2AdapterBytecode The bytecode for the L2 adapter contract
    * @param _l2AdapterInitTxs The initialization transactions for the L2 adapter contract
    * @dev It always deploys the proxies with WETH as the implementation, and then upgrades them so their address
-   * is always the same in all the chains, regardless of the implementation code
+   * is always the same in all the chains, regardless of the implementation code.
    */
   function deploy(
     bytes memory _usdcImplBytecode,
@@ -52,7 +55,6 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     bytes memory _l2AdapterBytecode,
     bytes[] memory _l2AdapterInitTxs
   ) external {
-    // TODO: Only messenger can call
     if (msg.sender != L2_MESSENGER || ICrossDomainMessenger(L2_MESSENGER).xDomainMessageSender() != L1_FACTORY) {
       revert IL2OpUSDCFactory_InvalidSender();
     }
@@ -66,10 +68,8 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
       _usdcImplementation = _deployCreate2(_SALT, _usdcImplInitCode);
       // Deploy usdc proxy
       bytes memory _usdcProxyCArgs = abi.encode(_WETH);
-      bytes memory _usdcProxyInitCode =
-        bytes.concat(_bytecodeDeployerCreationCode, abi.encode(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs));
+      bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);
       _usdcProxy = _deployCreate2(_SALT, _usdcProxyInitCode);
-      // TODO: Need to have code the impl
       IUSDC(_usdcProxy).upgradeTo(_usdcImplementation);
       emit USDCDeployed(_usdcProxy, _usdcImplementation);
     }
@@ -81,14 +81,10 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
       address _adapterImplementation = _deployCreate2(_SALT, _l2AdapterImplInitCode);
       // Deploy L2 adapter proxy
       bytes memory _proxyCArgs = abi.encode(_WETH, '');
-      bytes memory _adapterProxyInitCode =
-        bytes.concat(_bytecodeDeployerCreationCode, abi.encode(type(ERC1967Proxy).creationCode, _proxyCArgs));
+      bytes memory _adapterProxyInitCode = bytes.concat(type(ERC1967Proxy).creationCode, _proxyCArgs);
       _adapterProxy = _deployCreate2(_SALT, _adapterProxyInitCode);
-      // Store the implementation in the proxy contract
-      bytes32 _implementationSlot = ERC1967Utils.IMPLEMENTATION_SLOT;
-      assembly {
-        sstore(_implementationSlot, _adapterImplementation)
-      }
+      // TODO: Update when the new `sstore` version of the upgrade is done
+      UUPSUpgradeable(_adapterProxy).upgradeToAndCall(_adapterImplementation, '');
       emit AdapterDeployed(_adapterProxy, _adapterImplementation);
     }
 
