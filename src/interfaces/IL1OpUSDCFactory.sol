@@ -58,7 +58,7 @@ interface IL1OpUSDCFactory {
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
    * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
    */
-  function deployL2UsdcAndAdapter(address _l1Messenger, uint32 _minGasLimitDeploy) external;
+  function deployL2USDCAndAdapter(address _l1Messenger, uint32 _minGasLimitDeploy) external;
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES

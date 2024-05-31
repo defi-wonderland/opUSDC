@@ -21,12 +21,6 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   /// @notice Zero value constant to be used on portal interaction
   uint256 internal constant _ZERO_VALUE = 0;
 
-  /// @notice Zero address constant to be used on portal interaction
-  address internal constant _ZERO_ADDRESS = address(0);
-
-  /// @notice Flag to indicate that the tx represents a contract creation when interacting with the portal
-  bool internal constant _IS_CREATION = true;
-
   /// @inheritdoc IL1OpUSDCFactory
   address public constant L2_MESSENGER = 0x4200000000000000000000000000000000000007;
 
@@ -62,25 +56,23 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    */
   constructor(address _usdc, bytes32 _salt, address _owner) {
     _SALT = _salt;
+    address _wethL2 = 0x4200000000000000000000000000000000000007;
 
     // Calculate L2 factory address
     bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
     bytes memory _l2FactoryCArgs = abi.encode(_SALT, address(this));
-    bytes memory _l2FactoryInitCode = bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs);
-    L2_FACTORY = _precalculateCreate2Address(_SALT, keccak256(_l2FactoryInitCode), L2_CREATE2_DEPLOYER);
+    bytes32 _l2FactoryInitCode = keccak256(bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs));
+    L2_FACTORY = _precalculateCreate2Address(_SALT, _l2FactoryInitCode, L2_CREATE2_DEPLOYER);
 
     // Calculate the L2 USDC proxy address
     bytes memory _bytecodeDeployerCreationCode = type(BytecodeDeployer).creationCode;
-    bytes32 _l2UsdcProxyInitCodeHash = keccak256(
-      bytes.concat(_bytecodeDeployerCreationCode, abi.encode(USDC_PROXY_CREATION_CODE, abi.encode(_ZERO_ADDRESS)))
-    );
+    bytes32 _l2UsdcProxyInitCodeHash =
+      keccak256(bytes.concat(_bytecodeDeployerCreationCode, abi.encode(USDC_PROXY_CREATION_CODE, abi.encode(_wethL2))));
     L2_USDC_PROXY = _precalculateCreate2Address(_SALT, _l2UsdcProxyInitCodeHash, L2_FACTORY);
 
     // Calculate the L2 adapter proxy address
     bytes32 _l2AdapterProxyInitCodeHash = keccak256(
-      bytes.concat(
-        _bytecodeDeployerCreationCode, abi.encode(type(ERC1967Proxy).creationCode, abi.encode(_ZERO_ADDRESS, ''))
-      )
+      bytes.concat(_bytecodeDeployerCreationCode, abi.encode(type(ERC1967Proxy).creationCode, abi.encode(_wethL2, '')))
     );
     L2_ADAPTER_PROXY = _precalculateCreate2Address(_SALT, _l2AdapterProxyInitCodeHash, L2_FACTORY);
 
@@ -134,7 +126,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     );
 
     // Send the L2 USDC and adapter deployments tx
-    _deployL2UsdcAndAdapter(_l1Messenger, _minGasLimitDeploy);
+    _deployL2USDCAndAdapter(_l1Messenger, _minGasLimitDeploy);
   }
 
   /**
@@ -142,11 +134,11 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
    * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
    */
-  function deployL2UsdcAndAdapter(address _l1Messenger, uint32 _minGasLimitDeploy) external {
+  function deployL2USDCAndAdapter(address _l1Messenger, uint32 _minGasLimitDeploy) external {
     if (IUpgradeManager(UPGRADE_MANAGER).messengerDeploymentExecutor(_l1Messenger) != msg.sender) {
       revert IL1OpUSDCFactory_NotExecutor();
     }
-    _deployL2UsdcAndAdapter(_l1Messenger, _minGasLimitDeploy);
+    _deployL2USDCAndAdapter(_l1Messenger, _minGasLimitDeploy);
   }
 
   /**
@@ -154,7 +146,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
    * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
    */
-  function _deployL2UsdcAndAdapter(address _l1Messenger, uint32 _minGasLimitDeploy) internal {
+  function _deployL2USDCAndAdapter(address _l1Messenger, uint32 _minGasLimitDeploy) internal {
     // Get the bytecode of the L2 usdc implementation
     IUpgradeManager.Implementation memory _l2Usdc = UPGRADE_MANAGER.bridgedUSDCImplementation();
     bytes memory _l2UsdcImplementationBytecode = _l2Usdc.implementation.code;
@@ -163,14 +155,14 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     bytes memory _l2AdapterImplementationBytecode = _l2Adapter.implementation.code;
 
     // Send the call over the L2 factory `deploy` function message
-    bytes memory _l2FactoryDeployTx = abi.encodeWithSelector(
+    bytes memory _l2DeploymentsTx = abi.encodeWithSelector(
       L2OpUSDCFactory.deploy.selector,
       _l2UsdcImplementationBytecode,
       _l2Usdc.initTxs,
       _l2AdapterImplementationBytecode,
       _l2Adapter.initTxs
     );
-    ICrossDomainMessenger(_l1Messenger).sendMessage(L2_FACTORY, _l2FactoryDeployTx, _minGasLimitDeploy);
+    ICrossDomainMessenger(_l1Messenger).sendMessage(L2_FACTORY, _l2DeploymentsTx, _minGasLimitDeploy);
   }
 
   /**
@@ -179,6 +171,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * @param _deployer The deployer address
    * @param _nonce The next nonce of the deployer address
    * @return _precalculatedAddress The address where the contract will be stored
+   * @dev Only works for nonces between 1 and 127, which is enough for this use case
    */
   function _precalculateCreateAddress(
     address _deployer,
@@ -186,16 +179,9 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   ) internal pure returns (address _precalculatedAddress) {
     bytes memory _data;
     bytes1 _len = bytes1(0x94);
-    // The integer zero is treated as an empty byte string and therefore has only one length prefix,
-    // 0x80, which is calculated via 0x80 + 0.
-    if (_nonce == 0x00) {
-      _data = abi.encodePacked(bytes1(0xd6), _len, _deployer, bytes1(0x80));
-    }
     // A one-byte integer in the [0x00, 0x7f] range uses its own value as a length prefix, there is no
     // additional "0x80 + length" prefix that precedes it.
-    else if (_nonce <= 0x7f) {
-      _data = abi.encodePacked(bytes1(0xd6), _len, _deployer, uint8(_nonce));
-    }
+    _data = abi.encodePacked(bytes1(0xd6), _len, _deployer, uint8(_nonce));
     _precalculatedAddress = address(uint160(uint256(keccak256(_data))));
   }
 
