@@ -20,8 +20,16 @@ contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
     isMessagingDisabled = true;
   }
 
-  function forTest_authorizeUpgrade(address _newImplementation) external {
+  function forTest_authorizeUpgrade(address _newImplementation) external pure {
     _authorizeUpgrade(_newImplementation);
+  }
+
+  function forTest_setLastL2UsdcInitTxsLength(uint256 _newLength) external {
+    _lastL2UsdcInitTxsLength = _newLength;
+  }
+
+  function forTest_lastL2UsdcInitTxsLength() external view returns (uint256) {
+    return _lastL2UsdcInitTxsLength;
   }
 
   function forTest_dummy() external {
@@ -600,6 +608,25 @@ contract L2OpUSDCBridgeAdapter_ReceiveUsdcUpgrade is Base {
    */
   function test_receiveUsdcUpgrade() external {
     uint64 _nonce = vm.getNonce(address(adapter));
+    address _implementation = _computeCreateAddress(address(adapter), _nonce);
+    _l2UsdcInitTxs.push(abi.encodeWithSignature('dummy()'));
+
+    // Mock calls
+    _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    _mockAndExpect(_usdc, abi.encodeWithSignature('upgradeTo(address)', _implementation), abi.encode(true));
+
+    _mockAndExpect(_usdc, abi.encodeWithSignature('dummy()'), abi.encode(true));
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs);
+  }
+
+  /**
+   * @notice Check the expected calls on a second upgrade
+   */
+  function test_receive2ndUsdcUpgrade() external {
+    adapter.forTest_setLastL2UsdcInitTxsLength(1);
+    uint64 _nonce = vm.getNonce(address(adapter));
     _l2UsdcInitTxs.push(abi.encodeWithSignature('dummy()'));
     // Mock calls
     _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
@@ -608,7 +635,6 @@ contract L2OpUSDCBridgeAdapter_ReceiveUsdcUpgrade is Base {
       abi.encodeWithSignature('upgradeTo(address)', _computeCreateAddress(address(adapter), _nonce)),
       abi.encode(true)
     );
-    _mockAndExpect(_usdc, abi.encodeWithSignature('dummy()'), abi.encode(true));
     // Execute
     vm.prank(_messenger);
     adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs);
@@ -658,6 +684,25 @@ contract L2OpUSDCBridgeAdapter_ReceiveUsdcUpgrade is Base {
     // Execute
     vm.prank(_messenger);
     adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs);
+  }
+}
+
+contract L2OpUSDCBridgeAdapter_setLastL2UsdcInitTxsLength is Base {
+  /**
+   * @notice Check that _lastL2UsdcInitTxsLength can be set if is 0
+   */
+  function test_setLastL2UsdcInitTxsLength() external {
+    adapter.setLastL2UsdcInitTxsLength(1);
+    assertEq(adapter.forTest_lastL2UsdcInitTxsLength(), 1, 'Last L2 Usdc Init Txs Length should be set to 1');
+  }
+
+  /**
+   * @notice Check that _lastL2UsdcInitTxsLength can not be set if is not 0
+   */
+  function test_revertIfLengthIsNotZero() external {
+    adapter.forTest_setLastL2UsdcInitTxsLength(4);
+    vm.expectRevert(IL2OpUSDCBridgeAdapter.L2OpUSDCBridgeAdapter_InitializationAlreadyExecuted.selector);
+    adapter.setLastL2UsdcInitTxsLength(1);
   }
 }
 
