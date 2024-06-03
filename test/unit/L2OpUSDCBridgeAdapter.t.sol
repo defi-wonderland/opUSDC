@@ -641,7 +641,7 @@ contract L2OpUSDCBridgeAdapter_ReceiveUsdcUpgrade is Base {
   }
 
   /**
-   * @notice Check the expected calls on a second upgrade
+   * @notice Check that reverts if a call to implementation reverts
    */
   function test_revertOnImplementation() external {
     adapter.forTest_setProxyExecutedInitTxs(1);
@@ -708,20 +708,20 @@ contract L2OpUSDCBridgeAdapter_ReceiveUsdcUpgrade is Base {
 
 contract L2OpUSDCBridgeAdapter_setProxyExecutedInitTxs is Base {
   /**
-   * @notice Check that _lastL2UsdcInitTxsLength can be set if is 0
-   */
-  function test_setProxyExecutedInitTxs() external {
-    adapter.setProxyExecutedInitTxs(1);
-    assertEq(adapter.forTest_lastL2UsdcInitTxsLength(), 1, 'Last L2 Usdc Init Txs Length should be set to 1');
-  }
-
-  /**
    * @notice Check that _lastL2UsdcInitTxsLength can not be set if is not 0
    */
   function test_revertIfLengthIsNotZero() external {
     adapter.forTest_setProxyExecutedInitTxs(4);
     vm.expectRevert(IL2OpUSDCBridgeAdapter.L2OpUSDCBridgeAdapter_InitializationAlreadyExecuted.selector);
     adapter.setProxyExecutedInitTxs(1);
+  }
+
+  /**
+   * @notice Check that _lastL2UsdcInitTxsLength can be set if is 0
+   */
+  function test_setProxyExecutedInitTxs() external {
+    adapter.setProxyExecutedInitTxs(1);
+    assertEq(adapter.forTest_lastL2UsdcInitTxsLength(), 1, 'Last L2 Usdc Init Txs Length should be set to 1');
   }
 }
 
