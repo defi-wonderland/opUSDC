@@ -187,7 +187,6 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
   function receiveUsdcUpgrade(bytes calldata _l2UsdcBytecode, bytes[] memory _l2UsdcInitTxs) external checkSender {
     // Deploy L2 USDC implementation
     address _usdcImplementation = address(new BytecodeDeployer(_l2UsdcBytecode));
-    emit DeployedL2UsdcImplementation(_usdcImplementation);
 
     // Call upgradeToAndCall on the USDC contract
     IUSDC(USDC).upgradeTo(_usdcImplementation);
@@ -205,6 +204,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
       if (!_success) revert L2OpUSDCBridgeAdapter_UsdcInitializationFailed();
     }
     _lastL2UsdcInitTxsLength = _l2UsdcImpTxsLength;
+
+    emit DeployedL2UsdcImplementation(_usdcImplementation);
   }
 
   /**
