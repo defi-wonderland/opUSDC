@@ -194,18 +194,17 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
 
     // Cache the length of the initialization transactions
     uint256 _l2UsdcImpTxsLength = _l2UsdcInitTxs.length;
-
+    uint256 _proxyExecutedInitTxs = _lastL2UsdcInitTxsLength;
     // Initialize L2 Usdc
     bool _success;
     for (uint256 i; i < _l2UsdcImpTxsLength; i++) {
       (_success,) = _usdcImplementation.call(_l2UsdcInitTxs[i]);
-      if (i >= _lastL2UsdcInitTxsLength && _success) {
+      if (i >= _proxyExecutedInitTxs && _success) {
         (_success,) = USDC.call(_l2UsdcInitTxs[i]);
       }
       if (!_success) revert L2OpUSDCBridgeAdapter_UsdcInitializationFailed();
     }
     _lastL2UsdcInitTxsLength = _l2UsdcImpTxsLength;
-  }
 
   /**
    * @notice Initiates the process to migrate the bridged USDC to native USDC
