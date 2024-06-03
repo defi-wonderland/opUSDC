@@ -205,6 +205,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
       if (!_success) revert L2OpUSDCBridgeAdapter_UsdcInitializationFailed();
     }
     _lastL2UsdcInitTxsLength = _l2UsdcImpTxsLength;
+  }
 
   /**
    * @notice Initiates the process to migrate the bridged USDC to native USDC
