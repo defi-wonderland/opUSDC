@@ -45,6 +45,12 @@ interface IL1OpUSDCFactory {
    */
   function deployL2UsdcAndAdapter(address _portal, uint32 _minGasLimit) external;
 
+  /**
+   * @notice Checks if a messenger has a protocol deployed for it
+   * @param _messenger The address of the L1 messenger
+   * @return _deployed Whether the messenger has a protocol deployed for it
+   */
+  function isMessengerDeployed(address _messenger) external view returns (bool _deployed);
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
   //////////////////////////////////////////////////////////////*/
@@ -98,11 +104,4 @@ interface IL1OpUSDCFactory {
    */
   // solhint-disable-next-line func-name-mixedcase
   function ALIASED_SELF() external view returns (address _aliasedSelf);
-
-  /**
-   * @notice Checks if a messenger has a protocol deployed for it
-   * @param _messenger The address of the L1 messenger
-   * @return _deployed Whether the messenger has a protocol deployed for it
-   */
-  function isMessengerDeployed(address _messenger) external view returns (bool _deployed);
 }
