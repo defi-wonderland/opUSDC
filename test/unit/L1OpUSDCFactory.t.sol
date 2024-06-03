@@ -118,27 +118,23 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
    * @notice Test the constructor params are correctly set
    */
   function test_setImmutables() public {
+    address _wethL2 = 0x4200000000000000000000000000000000000006;
     // Get the init codes
     bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
     bytes memory _l2FactoryCArgs = abi.encode(_SALT, address(factory));
-    bytes32 _l2FactoryInitCode = keccak256(bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs));
+    bytes32 _l2FactoryInitCodeHash = keccak256(bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs));
+    bytes32 _l2UsdcProxyInitCodeHash = keccak256(bytes.concat(USDC_PROXY_CREATION_CODE, abi.encode(_wethL2)));
+    bytes32 _l2AdapterProxyInitCodeHash =
+      keccak256(bytes.concat(type(ERC1967Proxy).creationCode, abi.encode(_wethL2, '')));
 
-    address _wethL2 = 0x4200000000000000000000000000000000000007;
-    bytes memory _bytecodeDeployerCreationCode = type(BytecodeDeployer).creationCode;
-    bytes32 _l2UsdcProxyInitCode =
-      keccak256(bytes.concat(_bytecodeDeployerCreationCode, abi.encode(USDC_PROXY_CREATION_CODE, abi.encode(_wethL2))));
-
-    bytes32 _l2AdapterProxyInitCodeHash = keccak256(
-      bytes.concat(_bytecodeDeployerCreationCode, abi.encode(type(ERC1967Proxy).creationCode, abi.encode(_wethL2, '')))
-    );
-
-    // Precalculate the addresses
+    // Precalculate the addresses to be deployed using CREATE2
     address _l2Factory =
-      factory.forTest_precalculateCreate2Address(_SALT, _l2FactoryInitCode, factory.L2_CREATE2_DEPLOYER());
+      factory.forTest_precalculateCreate2Address(_SALT, _l2FactoryInitCodeHash, factory.L2_CREATE2_DEPLOYER());
     address _l2UsdcProxyAddress =
-      factory.forTest_precalculateCreate2Address(_SALT, _l2UsdcProxyInitCode, address(_l2Factory));
+      factory.forTest_precalculateCreate2Address(_SALT, _l2UsdcProxyInitCodeHash, address(_l2Factory));
     address _l2AdapterProxy =
       factory.forTest_precalculateCreate2Address(_SALT, _l2AdapterProxyInitCodeHash, address(_l2Factory));
+    // Precalculate the addresses to be deployed using CREATE
     address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), 2);
     address _upgradeManager = factory.forTest_precalculateCreateAddress(address(factory), 4);
 
@@ -146,8 +142,8 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
     assertEq(factory.L2_FACTORY(), _l2Factory, 'Invalid l2Factory address');
     assertEq(factory.L2_USDC_PROXY(), _l2UsdcProxyAddress, 'Invalid l2UsdcProxy address');
     assertEq(factory.L2_ADAPTER_PROXY(), _l2AdapterProxy, 'Invalid l2Adapter proxy address');
-    assertEq(address(factory.L1_ADAPTER_PROXY()), _l1Adapter, 'Invalid l1Adapter address');
     assertEq(address(factory.UPGRADE_MANAGER()), _upgradeManager, 'Invalid upgradeManager address');
+    assertEq(address(factory.L1_ADAPTER_PROXY()), _l1Adapter, 'Invalid l1Adapter address');
   }
 
   /**
@@ -471,7 +467,7 @@ contract L1OpUSDCFactory_Unit_PrecalculateCreateAddress is Base {
     vm.setNonce(_deployer, 1);
     for (uint256 i = 1; i < 127; i++) {
       // Precalculate the address
-      address _precalculatedAddress = _computeCreateAddress(_deployer, i);
+      address _precalculatedAddress = factory.forTest_precalculateCreateAddress(_deployer, i);
 
       // Execute
       vm.prank(_deployer);

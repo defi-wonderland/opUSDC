@@ -82,7 +82,6 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
       bytes memory _proxyCArgs = abi.encode(_WETH, '');
       bytes memory _adapterProxyInitCode = bytes.concat(type(ERC1967Proxy).creationCode, _proxyCArgs);
       _adapterProxy = _deployCreate2(_SALT, _adapterProxyInitCode);
-      // TODO: Update when the new `sstore` version of the upgrade is done
       // Upgrade the proxy and set the number of initialization transactions that will be executed by the USDC proxy
       bytes memory _adapterInitTx = abi.encodeWithSignature('setProxyExecutedInitTxs(uint256)', _length);
       UUPSUpgradeable(_adapterProxy).upgradeToAndCall(_adapterImplementation, _adapterInitTx);
@@ -123,9 +122,9 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
    * @param _initCode The creation bytecode
    * @return _newContract The address where the contract was deployed
    */
-  function _deployCreate2(bytes32 _salt, bytes memory _initCode) public payable returns (address _newContract) {
+  function _deployCreate2(bytes32 _salt, bytes memory _initCode) internal returns (address _newContract) {
     assembly ("memory-safe") {
-      _newContract := create2(callvalue(), add(_initCode, 0x20), mload(_initCode), _salt)
+      _newContract := create2(0x0, add(_initCode, 0x20), mload(_initCode), _salt)
     }
     if (_newContract == address(0) || _newContract.code.length == 0) {
       revert IL2OpUSDCFactory_Create2DeploymentFailed();

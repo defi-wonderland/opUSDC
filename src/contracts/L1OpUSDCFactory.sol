@@ -55,7 +55,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    */
   constructor(address _usdc, bytes32 _salt, address _owner) {
     _SALT = _salt;
-    address _wethL2 = 0x4200000000000000000000000000000000000007;
+    address _wethL2 = 0x4200000000000000000000000000000000000006;
 
     // Calculate L2 factory address
     bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
@@ -64,12 +64,12 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     L2_FACTORY = _precalculateCreate2Address(_SALT, _l2FactoryInitCode, L2_CREATE2_DEPLOYER);
 
     // Calculate the L2 USDC proxy address
-    bytes32 _l2UsdcProxyInitCodeHash = keccak256(abi.encode(USDC_PROXY_CREATION_CODE, abi.encode(_wethL2)));
+    bytes32 _l2UsdcProxyInitCodeHash = keccak256(bytes.concat(USDC_PROXY_CREATION_CODE, abi.encode(_wethL2)));
     L2_USDC_PROXY = _precalculateCreate2Address(_SALT, _l2UsdcProxyInitCodeHash, L2_FACTORY);
 
     // Calculate the L2 adapter proxy address
     bytes32 _l2AdapterProxyInitCodeHash =
-      keccak256(abi.encode(type(ERC1967Proxy).creationCode, abi.encode(_wethL2, '')));
+      keccak256(bytes.concat(type(ERC1967Proxy).creationCode, abi.encode(_wethL2, '')));
     L2_ADAPTER_PROXY = _precalculateCreate2Address(_SALT, _l2AdapterProxyInitCodeHash, L2_FACTORY);
 
     // Calculate the upgrade manager using 4 as nonce since first the L1 adapter and its implementation will be deployed

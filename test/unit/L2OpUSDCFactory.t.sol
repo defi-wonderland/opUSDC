@@ -16,12 +16,16 @@ import {Helpers} from 'test/utils/Helpers.sol';
 contract L2OpUSDCFactoryTest is L2OpUSDCFactory {
   constructor(bytes32 _salt, address _l1Factory) L2OpUSDCFactory(_salt, _l1Factory) {}
 
-  function forTest_getImplementation() public view returns (address __implementation) {
-    __implementation = ERC1967Utils.getImplementation();
-  }
-
   function forTest_deployCreate2(bytes32 _salt, bytes memory _initCode) public returns (address _newContract) {
     _newContract = _deployCreate2(_salt, _initCode);
+  }
+
+  function forTest_executeInitTxs(address _target, bytes[] memory _initTxs, uint256 _length) public {
+    _executeInitTxs(_target, _initTxs, _length);
+  }
+
+  function forTest_getImplementation() public view returns (address __implementation) {
+    __implementation = ERC1967Utils.getImplementation();
   }
 
   function forTest_getSalt() public view returns (bytes32 _salt) {
@@ -52,6 +56,9 @@ contract Base is Test, Helpers {
   address internal _messenger = makeAddr('messenger');
   address internal _linkedAdapter = makeAddr('linkedAdapter');
 
+  address _dummyContract;
+  address _dummyContractTwo;
+
   bytes[] internal _emptyInitTxs;
   bytes[] internal _initTxs;
   bytes[] internal _badInitTxs;
@@ -77,11 +84,11 @@ contract Base is Test, Helpers {
     vm.etch(_weth, _wethBytecode);
 
     // Set the implementations bytecode and init code
-    address _dummyContract = address(new ForTestDummyContract());
+    _dummyContract = address(new ForTestDummyContract());
     _usdcProxyInitCode = type(ForTestDummyContract).creationCode;
     _usdcImplBytecode = _dummyContract.code;
 
-    address _dummyContractTwo = address(new ForTestDummyContractTwo());
+    _dummyContractTwo = address(new ForTestDummyContractTwo());
     _l2AdapterBytecode = type(ForTestDummyContractTwo).creationCode;
     _l2AdapterBytecode = _dummyContractTwo.code;
 
@@ -210,6 +217,61 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     // Deploy the L2 adapter implementation and proxy
     vm.prank(_l2Messenger);
     factory.deploy(_usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _emptyInitTxs);
+  }
+}
+
+contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
+  function test_executeInitTxs() public {
+    // Mock the call to the target contract
+    _mockAndExpect(_dummyContract, _initTxOne, '');
+    _mockAndExpect(_dummyContract, _initTxTwo, '');
+
+    // Execute the initialization transactions
+    factory.forTest_executeInitTxs(_dummyContract, _initTxs, _initTxs.length);
+  }
+
+  function test_revertIfInitTxsFail() public {
+    vm.mockCallRevert(_dummyContract, _badInitTxs[0], '');
+    vm.mockCallRevert(_dummyContract, _badInitTxs[1], '');
+
+    vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InitializationFailed.selector);
+    factory.forTest_executeInitTxs(_dummyContract, _badInitTxs, _badInitTxs.length);
+  }
+}
+
+contract L2OpUSDCFactory_Unit_DeployCreate2 is Base {
+  function test_deployCreate2() public {
+    // Get the init code with the USDC proxy creation code plus the USDC implementation address
+    bytes memory _initCode = bytes.concat(_usdcProxyInitCode, abi.encode(_usdcImplementation));
+    // Precalculate the address of the contract that will be deployed with the current factory's nonce
+    address _expectedAddress = _precalculateCreate2Address(_salt, keccak256(_initCode), address(factory));
+
+    // Execute
+    address _newContract = factory.forTest_deployCreate2(_salt, _initCode);
+
+    // Assert the deployed was deployed at the correct address and contract has code
+    assertEq(_newContract, _expectedAddress);
+    assertGt(_newContract.code.length, 0);
+  }
+
+  function test_create2BytecodeDeployer() public {
+    // Get the creation code of the bytecode deployer with the dummy contract code as constructor argument
+    bytes memory _initCode = bytes.concat(type(BytecodeDeployer).creationCode, abi.encode(_dummyContract.code));
+    address _expectedAddress = _precalculateCreate2Address(_salt, keccak256(_initCode), address(factory));
+
+    // Execute
+    address _newContract = factory.forTest_deployCreate2(_salt, _initCode);
+
+    // Assert the deployed was deployed at the correct address and contract has code
+    assertEq(_newContract, _expectedAddress);
+    assertGt(_expectedAddress.code.length, 0);
+  }
+
+  function test_revertIfDeploymentFailed() public {
+    // Create a bad format for the init code to test the deployment revert
+    bytes memory _badInitCode = '0x0000405060';
+    vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_Create2DeploymentFailed.selector);
+    factory.forTest_deployCreate2(_salt, _badInitCode);
   }
 }
 
