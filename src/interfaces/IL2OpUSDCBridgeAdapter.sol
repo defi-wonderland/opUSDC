@@ -93,7 +93,7 @@ interface IL2OpUSDCBridgeAdapter {
    * @notice Set _lastL2UsdcInitTxsLength to the new value
    * @param _newLength The new value for _lastL2UsdcInitTxsLength
    */
-  function setLastUsdcInitTxsLength(uint256 _newLength) external;
+  function setProxyExecutedInitTxs(uint256 _newLength) external;
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES

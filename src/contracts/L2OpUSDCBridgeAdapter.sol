@@ -232,7 +232,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
    * @notice Set _lastL2UsdcInitTxsLength to the new value
    * @param _newLength The new value for _lastL2UsdcInitTxsLength
    */
-  function setLastUsdcInitTxsLength(uint256 _newLength) external {
+  function setProxyExecutedInitTxs(uint256 _newLength) external {
     if (_lastL2UsdcInitTxsLength != 0) revert L2OpUSDCBridgeAdapter_InitializationAlreadyExecuted();
     _lastL2UsdcInitTxsLength = _newLength;
   }

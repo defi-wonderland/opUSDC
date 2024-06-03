@@ -41,7 +41,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     uint256 _usdcImplInitTxsLength = _usdcImplInitTxs.length;
 
     // Deploy L2 adapter proxy
-    bytes memory _adapterInitTx = abi.encodeWithSignature('setLastUsdcInitTxsLength(uint256)', _usdcImplInitTxsLength);
+    bytes memory _adapterInitTx = abi.encodeWithSignature('setProxyExecutedInitTxs(uint256)', _usdcImplInitTxsLength);
     address _adapterProxy = address(new ERC1967Proxy(_adapterImplementation, _adapterInitTx));
     emit DeployedL2AdapterProxy(_adapterProxy);
 
