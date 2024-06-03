@@ -980,8 +980,18 @@ contract L1OpUSDCBridgeAdapter_Unit_SendL2UsdcUpgrade is Base {
 
 contract L1OpUSDCBridgeAdapter_Unit_UpgradeToAndCall is Base {
   /**
+   * @notice Check that the function reverts if the upgrade is not authorized
+   */
+  function test_revertIfUpgradeNotAuthorized(address _newImplementation) external {
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
+    adapter.upgradeToAndCall(_newImplementation, '');
+  }
+  /**
    * @notice Check that the upgrade is authorized as expected
    */
+
   function test_authorizeUpgrade() external {
     address _newImplementation =
       address(new ForTestL1OpUSDCBridgeAdapter(_usdc, _linkedAdapter, _upgradeManager, _factory));
