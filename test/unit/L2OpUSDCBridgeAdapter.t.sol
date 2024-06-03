@@ -21,15 +21,15 @@ contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
   }
 
   function forTest_setProxyExecutedInitTxs(uint256 _newLength) external {
-    _lastL2UsdcInitTxsLength = _newLength;
+    _proxyExecutedInitTxsLength = _newLength;
   }
 
   function forTest_dummy() external {
     calls++;
   }
 
-  function forTest_lastL2UsdcInitTxsLength() external view returns (uint256) {
-    return _lastL2UsdcInitTxsLength;
+  function forTest_proxyExecutedInitTxsLength() external view returns (uint256) {
+    return _proxyExecutedInitTxsLength;
   }
 
   function forTest_authorizeUpgrade(address _newImplementation) external pure {
@@ -730,7 +730,7 @@ contract L2OpUSDCBridgeAdapter_ReceiveUsdcUpgrade is Base {
 
 contract L2OpUSDCBridgeAdapter_setProxyExecutedInitTxs is Base {
   /**
-   * @notice Check that _lastL2UsdcInitTxsLength can not be set if is not 0
+   * @notice Check that _proxyExecutedInitTxsLength  can not be set if is not 0
    */
   function test_revertIfLengthIsNotZero() external {
     adapter.forTest_setProxyExecutedInitTxs(4);
@@ -739,11 +739,11 @@ contract L2OpUSDCBridgeAdapter_setProxyExecutedInitTxs is Base {
   }
 
   /**
-   * @notice Check that _lastL2UsdcInitTxsLength can be set if is 0
+   * @notice Check that _proxyExecutedInitTxsLength  can be set if is 0
    */
   function test_setProxyExecutedInitTxs() external {
     adapter.setProxyExecutedInitTxs(1);
-    assertEq(adapter.forTest_lastL2UsdcInitTxsLength(), 1, 'Last L2 Usdc Init Txs Length should be set to 1');
+    assertEq(adapter.forTest_proxyExecutedInitTxsLength(), 1, 'Last L2 Usdc Init Txs Length should be set to 1');
   }
 }
 

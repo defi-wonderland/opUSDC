@@ -24,7 +24,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
   bool public isMessagingDisabled;
 
   /// @notice amount of initialization transactions executed on the USDC contract
-  uint256 internal _lastL2UsdcInitTxsLength;
+  uint256 internal _proxyExecutedInitTxsLength;
 
   /**
    * @notice Modifier to check if the sender is the linked adapter through the messenger
@@ -193,7 +193,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
 
     // Cache the length of the initialization transactions
     uint256 _l2UsdcImpTxsLength = _l2UsdcInitTxs.length;
-    uint256 _proxyExecutedInitTxs = _lastL2UsdcInitTxsLength;
+    uint256 _proxyExecutedInitTxs = _proxyExecutedInitTxsLength;
     // Initialize L2 Usdc
     bool _success;
     for (uint256 i; i < _l2UsdcImpTxsLength; i++) {
@@ -203,7 +203,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
       }
       if (!_success) revert L2OpUSDCBridgeAdapter_UsdcInitializationFailed();
     }
-    _lastL2UsdcInitTxsLength = _l2UsdcImpTxsLength;
+    _proxyExecutedInitTxsLength = _l2UsdcImpTxsLength;
 
     emit DeployedL2UsdcImplementation(_usdcImplementation);
   }
@@ -230,12 +230,12 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
   }
 
   /**
-   * @notice Set _lastL2UsdcInitTxsLength to the new value
-   * @param _newLength The new value for _lastL2UsdcInitTxsLength
+   * @notice Set _proxyExecutedInitTxsLength  to the new value
+   * @param _newLength The new value for _proxyExecutedInitTxsLength
    */
   function setProxyExecutedInitTxs(uint256 _newLength) external {
-    if (_lastL2UsdcInitTxsLength != 0) revert L2OpUSDCBridgeAdapter_InitializationAlreadyExecuted();
-    _lastL2UsdcInitTxsLength = _newLength;
+    if (_proxyExecutedInitTxsLength != 0) revert L2OpUSDCBridgeAdapter_InitializationAlreadyExecuted();
+    _proxyExecutedInitTxsLength = _newLength;
   }
 
   /**
