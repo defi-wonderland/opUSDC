@@ -60,7 +60,8 @@ contract Base is Test, Helpers {
   address _dummyContractTwo;
 
   bytes[] internal _emptyInitTxs;
-  bytes[] internal _initTxs;
+  bytes[] internal _initTxsUsdc;
+  bytes[] internal _initTxsAdapter;
   bytes[] internal _badInitTxs;
 
   bytes internal _initTxOne;
@@ -93,10 +94,16 @@ contract Base is Test, Helpers {
     _l2AdapterBytecode = _dummyContractTwo.code;
 
     _initTxOne = abi.encodeWithSignature('dummyFunction()');
-    _initTxTwo = abi.encodeWithSignature('dummyFunctionTwo()');
-    _initTxs = new bytes[](2);
-    _initTxs[0] = _initTxOne;
-    _initTxs[1] = _initTxTwo;
+    _initTxTwo = abi.encodeWithSignature('dummyFunctionFalse()');
+    _initTxsUsdc = new bytes[](2);
+    _initTxsUsdc[0] = _initTxOne;
+    _initTxsUsdc[1] = _initTxTwo;
+
+    _initTxOne = abi.encodeWithSignature('dummyFunctionTwo()');
+    _initTxTwo = abi.encodeWithSignature('dummyFunctionTwoFalse()');
+    _initTxsAdapter = new bytes[](2);
+    _initTxsAdapter[0] = _initTxOne;
+    _initTxsAdapter[1] = _initTxTwo;
 
     // Set the bad init transaction to test when the initialization fails
     bytes memory _badInitTx = abi.encodeWithSignature('nonExistentFunction()');
@@ -149,7 +156,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     vm.assume(_sender != factory.L2_MESSENGER());
     vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InvalidSender.selector);
     vm.prank(_sender);
-    factory.deploy(_usdcImplBytecode, _initTxs, _l2AdapterBytecode, _initTxs);
+    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _l2AdapterBytecode, _initTxsAdapter);
   }
 
   function test_revertIfL1FactoryNotXDomainSender(address _xDomainSender) public {
@@ -163,7 +170,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     vm.prank(factory.L2_MESSENGER());
     vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InvalidSender.selector);
-    factory.deploy(_usdcImplBytecode, _initTxs, _l2AdapterBytecode, _initTxs);
+    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _l2AdapterBytecode, _initTxsAdapter);
   }
 
   function test_deployUsdc() public {
@@ -206,8 +213,10 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
       abi.encode(factory.L1_FACTORY())
     );
 
+    bytes memory _adapterInitTx = abi.encodeWithSignature('setProxyExecutedInitTxs(uint256)', _emptyInitTxs.length);
     vm.expectCall(
-      _l2AdapterProxy, abi.encodeWithSelector(UUPSUpgradeable.upgradeToAndCall.selector, _l2AdapterImplementation, '')
+      _l2AdapterProxy,
+      abi.encodeWithSelector(UUPSUpgradeable.upgradeToAndCall.selector, _l2AdapterImplementation, _adapterInitTx)
     );
 
     // Expect the adapter deployment event to be properly emitted
@@ -218,16 +227,61 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     vm.prank(_l2Messenger);
     factory.deploy(_usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _emptyInitTxs);
   }
+
+  function test_executeUsdcImplInitTxs() public {
+    bytes memory _usdcImplInitCode = bytes.concat(type(BytecodeDeployer).creationCode, abi.encode(_usdcImplBytecode));
+    address _usdcImplementation = _precalculateCreate2Address(_salt, keccak256(_usdcImplInitCode), address(factory));
+    vm.mockCall(
+      _l2Messenger, abi.encodeWithSelector(ICrossDomainMessenger.xDomainMessageSender.selector), abi.encode(_l1Factory)
+    );
+
+    vm.expectCall(_usdcImplementation, _initTxsUsdc[0]);
+    vm.expectCall(_usdcImplementation, _initTxsUsdc[1]);
+
+    vm.prank(_l2Messenger);
+    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _l2AdapterBytecode, _emptyInitTxs);
+  }
+
+  function test_executeUsdcProxyInitTxs() public {
+    bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, abi.encode(_weth));
+    address _usdcProxy = _precalculateCreate2Address(_salt, keccak256(_usdcProxyInitCode), address(factory));
+
+    vm.mockCall(
+      _l2Messenger, abi.encodeWithSelector(ICrossDomainMessenger.xDomainMessageSender.selector), abi.encode(_l1Factory)
+    );
+
+    vm.expectCall(_usdcProxy, _initTxsUsdc[0]);
+    vm.expectCall(_usdcProxy, _initTxsUsdc[1]);
+
+    vm.prank(_l2Messenger);
+    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _l2AdapterBytecode, _emptyInitTxs);
+  }
+
+  function test_executeAdapterInitTxs() public {
+    bytes memory _l2AdapterProxyInitCode = bytes.concat(type(ERC1967Proxy).creationCode, abi.encode(_weth, ''));
+
+    address _l2AdapterProxy = _precalculateCreate2Address(_salt, keccak256(_l2AdapterProxyInitCode), address(factory));
+
+    vm.mockCall(
+      _l2Messenger, abi.encodeWithSelector(ICrossDomainMessenger.xDomainMessageSender.selector), abi.encode(_l1Factory)
+    );
+
+    vm.expectCall(_l2AdapterProxy, _initTxOne);
+    vm.expectCall(_l2AdapterProxy, _initTxTwo);
+
+    vm.prank(_l2Messenger);
+    factory.deploy(_usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _initTxsAdapter);
+  }
 }
 
 contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
   function test_executeInitTxs() public {
     // Mock the call to the target contract
-    _mockAndExpect(_dummyContract, _initTxOne, '');
-    _mockAndExpect(_dummyContract, _initTxTwo, '');
+    _mockAndExpect(_dummyContract, _initTxsUsdc[0], '');
+    _mockAndExpect(_dummyContract, _initTxsUsdc[1], '');
 
     // Execute the initialization transactions
-    factory.forTest_executeInitTxs(_dummyContract, _initTxs, _initTxs.length);
+    factory.forTest_executeInitTxs(_dummyContract, _initTxsUsdc, _initTxsUsdc.length);
   }
 
   function test_revertIfInitTxsFail() public {
@@ -423,7 +477,7 @@ contract ForTestDummyContract {
     return true;
   }
 
-  function dummyFunctionTwo() public pure returns (bool) {
+  function dummyFunctionFalse() public pure returns (bool) {
     return true;
   }
 }
@@ -432,11 +486,11 @@ contract ForTestDummyContract {
  * @notice Dummy contract used only for testing purposes
  */
 contract ForTestDummyContractTwo {
-  function dummyFunction() public pure returns (bool) {
-    return false;
+  function dummyFunctionTwo() public pure returns (bool) {
+    return true;
   }
 
-  function dummyFunctionTwo() public pure returns (bool) {
+  function dummyFunctionTwoFalse() public pure returns (bool) {
     return false;
   }
 }

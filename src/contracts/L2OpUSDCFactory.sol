@@ -50,6 +50,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
   function deploy(
     bytes memory _usdcImplBytecode,
     bytes[] memory _usdcImplInitTxs,
+    // address _usdcAdmin,
     bytes memory _l2AdapterBytecode,
     bytes[] memory _l2AdapterInitTxs
   ) external {
@@ -91,6 +92,8 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     // Execute the USDC initialization transactions, if any
     if (_length > 0) {
       _executeInitTxs(_usdcImplementation, _usdcImplInitTxs, _length);
+      // IUSDC(_usdcProxy).changeAdmin(_usdcAdmin);
+      IUSDC(_usdcProxy).changeAdmin(address(10));
       _executeInitTxs(_usdcProxy, _usdcImplInitTxs, _length);
     }
 

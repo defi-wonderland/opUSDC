@@ -29,4 +29,11 @@ interface IUSDC is IERC20 {
    * @param _implementation Address of the new implementation
    */
   function upgradeTo(address _implementation) external;
+
+  /**
+   * @dev Changes the admin of the proxy.
+   * Only the current admin can call this function.
+   * @param newAdmin Address to transfer proxy administration to.
+   */
+  function changeAdmin(address newAdmin) external;
 }
