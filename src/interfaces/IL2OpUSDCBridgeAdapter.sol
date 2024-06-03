@@ -27,9 +27,9 @@ interface IL2OpUSDCBridgeAdapter {
   error L2OpUSDCBridgeAdapter_UsdcInitializationFailed();
 
   /**
-   * @notice Error when the flow is disabled
+   * @notice Error when using an invalid upgrade flow
    */
-  error L2OpUSDCBridgeAdapter_DisabledFlow();
+  error L2OpUSDCBridgeAdapter_InvalidUpgradeFlow();
 
   /**
    * @notice Error when the initialization has already been executed

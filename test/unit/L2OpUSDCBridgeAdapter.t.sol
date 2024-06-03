@@ -20,10 +20,6 @@ contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
     isMessagingDisabled = true;
   }
 
-  function forTest_authorizeUpgrade(address _newImplementation) external pure {
-    _authorizeUpgrade(_newImplementation);
-  }
-
   function forTest_setLastL2UsdcInitTxsLength(uint256 _newLength) external {
     _lastL2UsdcInitTxsLength = _newLength;
   }
@@ -90,8 +86,10 @@ contract L2OpUSDCBridgeAdapter_Unit_UpgradeToAndCall is Base {
    * @notice Check that the upgrade is called as expected
    */
   function test_callUpgradeToAndCall(address _newImplementation) external {
-    vm.expectRevert(IL2OpUSDCBridgeAdapter.L2OpUSDCBridgeAdapter_DisabledFlow.selector);
-    adapter.forTest_authorizeUpgrade(_newImplementation);
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    vm.startPrank(_messenger);
+    vm.expectRevert(IL2OpUSDCBridgeAdapter.L2OpUSDCBridgeAdapter_InvalidUpgradeFlow.selector);
+    adapter.upgradeToAndCall(_newImplementation, '');
   }
 }
 
@@ -722,16 +720,6 @@ contract L2OpUSDCBridgeAdapter_setLastL2UsdcInitTxsLength is Base {
     adapter.forTest_setLastL2UsdcInitTxsLength(4);
     vm.expectRevert(IL2OpUSDCBridgeAdapter.L2OpUSDCBridgeAdapter_InitializationAlreadyExecuted.selector);
     adapter.setLastL2UsdcInitTxsLength(1);
-  }
-}
-
-contract L2OpUSDCBridgeAdapter_AuthorizeUpgrade is Base {
-  /**
-   * @notice Check that the upgrade is authorized as expected
-   */
-  function test_authorizeUpgrade(address _newImplementation) external {
-    vm.expectRevert(IL2OpUSDCBridgeAdapter.L2OpUSDCBridgeAdapter_DisabledFlow.selector);
-    adapter.forTest_authorizeUpgrade(_newImplementation);
   }
 }
 

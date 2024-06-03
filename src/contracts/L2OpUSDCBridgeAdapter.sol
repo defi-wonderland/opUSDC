@@ -3,6 +3,7 @@ pragma solidity 0.8.25;
 
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
+import {IERC1822Proxiable} from '@openzeppelin/contracts/interfaces/draft-IERC1822.sol';
 import {ERC1967Utils} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol';
 import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
 import {SignatureChecker} from '@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol';
@@ -159,10 +160,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
     emit IL2OpUSDCFactory.DeployedL2AdapterImplementation(_adapterImplementation);
 
     // Store the implementation in the contract
-    bytes32 _implementationSlot = ERC1967Utils.IMPLEMENTATION_SLOT;
-    assembly {
-      sstore(_implementationSlot, _adapterImplementation)
-    }
+    upgradeToAndCall(_adapterImplementation, '');
 
     //Execute the initialization transactions
     if (_l2AdapterInitTxs.length > 0) {
@@ -240,6 +238,18 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
    * @notice Authorize the upgrade of the implementation of the contract
    */
   function _authorizeUpgrade(address) internal pure override {
-    revert L2OpUSDCBridgeAdapter_DisabledFlow();
+    //Allow call only through `receiveAdapterUpgrade` checking the calldata
+    bytes4 _selector = bytes4(msg.data[:4]);
+    if (_selector != bytes4(abi.encodeWithSelector(this.receiveAdapterUpgrade.selector))) {
+      revert L2OpUSDCBridgeAdapter_InvalidUpgradeFlow();
+    }
+  }
+
+  /**
+   * @notice Get the implementation slot of the proxy contract
+   * @dev removed `notDelegate` modifier to allow the function to be called by the linked adapter
+   */
+  function proxiableUUID() external pure override returns (bytes32) {
+    return ERC1967Utils.IMPLEMENTATION_SLOT;
   }
 }
