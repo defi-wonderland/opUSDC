@@ -858,16 +858,6 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
 
 contract L1OpUSDCBridgeAdapter_Unit_SendL2AdapterUpgrade is Base {
   /**
-   * @notice Check that only the owner can send an upgrade message
-   */
-  function test_onlyUpgradeManager(uint32 _minGasLimit) external {
-    // Execute
-    vm.prank(_user);
-    vm.expectRevert(abi.encodeWithSelector(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector));
-    adapter.sendL2AdapterUpgrade(_messenger, _minGasLimit);
-  }
-
-  /**
    * @notice Check that the function reverts if a messenger is unitialized
    */
   function test_revertOnMessagingUnintialized(uint32 _minGasLimit) external {
@@ -929,16 +919,6 @@ contract L1OpUSDCBridgeAdapter_Unit_SendL2AdapterUpgrade is Base {
 
 contract L1OpUSDCBridgeAdapter_Unit_SendL2UsdcUpgrade is Base {
   /**
-   * @notice Check that only the owner can send an upgrade message
-   */
-  function test_onlyUpgradeManager(uint32 _minGasLimit) external {
-    // Execute
-    vm.prank(_user);
-    vm.expectRevert(abi.encodeWithSelector(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector));
-    adapter.sendL2UsdcUpgrade(_messenger, _minGasLimit);
-  }
-
-  /**
    * @notice Check that the function reverts if a messenger is unitialized
    */
   function test_revertOnMessagingUnintialized(uint32 _minGasLimit) external {
@@ -999,16 +979,6 @@ contract L1OpUSDCBridgeAdapter_Unit_SendL2UsdcUpgrade is Base {
 }
 
 contract L1OpUSDCBridgeAdapter_Unit_UpgradeToAndCall is Base {
-  /**
-   * @notice Check that only the owner can upgrade the contract
-   */
-  function test_onlyUpgradeManager(address _newImplementation) external {
-    // Execute
-    vm.prank(_user);
-    vm.expectRevert(abi.encodeWithSelector(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector));
-    adapter.upgradeToAndCall(_newImplementation, '');
-  }
-
   /**
    * @notice Check that the upgrade is authorized as expected
    */

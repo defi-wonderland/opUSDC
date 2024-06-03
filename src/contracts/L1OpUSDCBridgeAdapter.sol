@@ -281,7 +281,7 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
    * @param _messenger The address of the messenger contract to send through
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  function sendL2AdapterUpgrade(address _messenger, uint32 _minGasLimit) external onlyUpgradeManager {
+  function sendL2AdapterUpgrade(address _messenger, uint32 _minGasLimit) external {
     if (messengerStatus[_messenger] != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
     // Get the bytecode of the he L2 adapter
@@ -305,7 +305,7 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
    * @param _messenger The address of the messenger contract to send through
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  function sendL2UsdcUpgrade(address _messenger, uint32 _minGasLimit) external onlyUpgradeManager {
+  function sendL2UsdcUpgrade(address _messenger, uint32 _minGasLimit) external {
     if (messengerStatus[_messenger] != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
     // Get the bytecode of the he L2 adapter
