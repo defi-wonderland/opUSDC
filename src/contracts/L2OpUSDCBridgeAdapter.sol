@@ -156,7 +156,6 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
   ) external checkSender {
     // Deploy L2 adapter implementation
     address _adapterImplementation = address(new BytecodeDeployer(_l2AdapterBytecode));
-    emit IL2OpUSDCFactory.DeployedL2AdapterImplementation(_adapterImplementation);
 
     // Store the implementation in the contract
     bytes32 _implementationSlot = ERC1967Utils.IMPLEMENTATION_SLOT;
@@ -165,7 +164,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
     }
 
     //Execute the initialization transactions
-    if (_l2AdapterInitTxs.length > 0) {
+    if (_l2AdapterInitTxs.length != 0) {
       // Cache the length of the initialization transactions
       uint256 _l2AdapterInitTxsLength = _l2AdapterInitTxs.length;
       // Initialize L2 adapter
@@ -176,6 +175,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
         }
       }
     }
+
+    emit IL2OpUSDCFactory.DeployedL2AdapterImplementation(_adapterImplementation);
   }
 
   /**
@@ -231,8 +232,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
    * @notice Set _lastL2UsdcInitTxsLength to the new value
    * @param _newLength The new value for _lastL2UsdcInitTxsLength
    */
-  function setLastL2UsdcInitTxsLength(uint256 _newLength) external {
-    if (_lastL2UsdcInitTxsLength > 0) revert L2OpUSDCBridgeAdapter_InitializationAlreadyExecuted();
+  function setLastUsdcInitTxsLength(uint256 _newLength) external {
+    if (_lastL2UsdcInitTxsLength != 0) revert L2OpUSDCBridgeAdapter_InitializationAlreadyExecuted();
     _lastL2UsdcInitTxsLength = _newLength;
   }
 
