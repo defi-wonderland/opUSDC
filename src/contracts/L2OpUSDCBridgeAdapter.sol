@@ -237,9 +237,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
    * @notice Authorize the upgrade of the implementation of the contract
    */
   function _authorizeUpgrade(address) internal pure override {
-    //Allow call only through `receiveAdapterUpgrade` checking the calldata
-    bytes4 _selector = bytes4(msg.data[:4]);
-    if (_selector != bytes4(abi.encodeWithSelector(this.receiveAdapterUpgrade.selector))) {
+    //Allow call only through `receiveAdapterUpgrade` by checking the calldata
+    if (bytes4(msg.data) != bytes4(abi.encodeWithSelector(this.receiveAdapterUpgrade.selector))) {
       revert L2OpUSDCBridgeAdapter_InvalidUpgradeFlow();
     }
   }
