@@ -3,16 +3,17 @@ pragma solidity 0.8.25;
 
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
-import {ECDSA} from '@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
+import {ERC1967Utils} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol';
 import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
 import {SignatureChecker} from '@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol';
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
+import {BytecodeDeployer} from 'contracts/utils/BytecodeDeployer.sol';
 import {IL2OpUSDCBridgeAdapter} from 'interfaces/IL2OpUSDCBridgeAdapter.sol';
+import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCBridgeAdapter, UUPSUpgradeable {
-  using ECDSA for bytes32;
   using MessageHashUtils for bytes32;
   using SignatureChecker for address;
 
@@ -21,6 +22,9 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
 
   /// @inheritdoc IL2OpUSDCBridgeAdapter
   bool public isMessagingDisabled;
+
+  /// @notice amount of initialization transactions executed on the USDC contract
+  uint256 internal _proxyExecutedInitTxsLength;
 
   /**
    * @notice Modifier to check if the sender is the linked adapter through the messenger
@@ -142,6 +146,69 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
   }
 
   /**
+   * @notice Receive the creation code from the linked adapter, deploy the new implementation and upgrade
+   * @param _l2AdapterBytecode The bytecode for the new L2 adapter implementation
+   * @param _l2AdapterInitTxs The initialization transactions for the new L2 adapter implementation
+   */
+  function receiveAdapterUpgrade(
+    bytes calldata _l2AdapterBytecode,
+    bytes[] calldata _l2AdapterInitTxs
+  ) external checkSender {
+    // Deploy L2 adapter implementation
+    address _adapterImplementation = address(new BytecodeDeployer(_l2AdapterBytecode));
+
+    // Store the implementation in the contract
+    bytes32 _implementationSlot = ERC1967Utils.IMPLEMENTATION_SLOT;
+    assembly {
+      sstore(_implementationSlot, _adapterImplementation)
+    }
+
+    //Execute the initialization transactions
+    if (_l2AdapterInitTxs.length != 0) {
+      // Cache the length of the initialization transactions
+      uint256 _l2AdapterInitTxsLength = _l2AdapterInitTxs.length;
+      // Initialize L2 adapter
+      for (uint256 i; i < _l2AdapterInitTxsLength; i++) {
+        (bool _success,) = address(this).call(_l2AdapterInitTxs[i]);
+        if (!_success) {
+          revert L2OpUSDCBridgeAdapter_AdapterInitializationFailed();
+        }
+      }
+    }
+
+    emit DeployedL2AdapterImplementation(_adapterImplementation);
+  }
+
+  /**
+   * @notice Receive the creation code from the linked adapter, deploy the new implementation and upgrade
+   * @param _l2UsdcBytecode The bytecode for the new L2 USDC implementation
+   * @param _l2UsdcInitTxs The initialization transactions for the new L2 USDC implementation
+   */
+  function receiveUsdcUpgrade(bytes calldata _l2UsdcBytecode, bytes[] memory _l2UsdcInitTxs) external checkSender {
+    // Deploy L2 USDC implementation
+    address _usdcImplementation = address(new BytecodeDeployer(_l2UsdcBytecode));
+
+    // Call upgradeToAndCall on the USDC contract
+    IUSDC(USDC).upgradeTo(_usdcImplementation);
+
+    // Cache the length of the initialization transactions
+    uint256 _l2UsdcImpTxsLength = _l2UsdcInitTxs.length;
+    uint256 _proxyExecutedInitTxs = _proxyExecutedInitTxsLength;
+    // Initialize L2 Usdc
+    bool _success;
+    for (uint256 i; i < _l2UsdcImpTxsLength; i++) {
+      (_success,) = _usdcImplementation.call(_l2UsdcInitTxs[i]);
+      if (i >= _proxyExecutedInitTxs && _success) {
+        (_success,) = USDC.call(_l2UsdcInitTxs[i]);
+      }
+      if (!_success) revert L2OpUSDCBridgeAdapter_UsdcInitializationFailed();
+    }
+    _proxyExecutedInitTxsLength = _l2UsdcImpTxsLength;
+
+    emit DeployedL2UsdcImplementation(_usdcImplementation);
+  }
+
+  /**
    * @notice Initiates the process to migrate the bridged USDC to native USDC
    * @dev Full migration cant finish until L1 receives the message for setting the burn amount
    * @param _newOwner The address to transfer ownerships to
@@ -163,8 +230,18 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
   }
 
   /**
-   * @notice Authorize the upgrade of the implementation of the contract
-   * @param _newImplementation The address of the new implementation
+   * @notice Set _proxyExecutedInitTxsLength  to the new value
+   * @param _newLength The new value for _proxyExecutedInitTxsLength
    */
-  function _authorizeUpgrade(address _newImplementation) internal override checkSender {}
+  function setProxyExecutedInitTxs(uint256 _newLength) external {
+    if (_proxyExecutedInitTxsLength != 0) revert L2OpUSDCBridgeAdapter_InitializationAlreadyExecuted();
+    _proxyExecutedInitTxsLength = _newLength;
+  }
+
+  /**
+   * @notice Authorize the upgrade of the implementation of the contract
+   */
+  function _authorizeUpgrade(address) internal pure override {
+    revert L2OpUSDCBridgeAdapter_DisabledFlow();
+  }
 }

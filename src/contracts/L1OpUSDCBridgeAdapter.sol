@@ -3,17 +3,16 @@ pragma solidity 0.8.25;
 
 import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
-import {ECDSA} from '@openzeppelin/contracts/utils/cryptography/ECDSA.sol';
 import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
 import {SignatureChecker} from '@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol';
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
+import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSDCBridgeAdapter {
   using SafeERC20 for IUSDC;
-  using ECDSA for bytes32;
   using MessageHashUtils for bytes32;
   using SignatureChecker for address;
 
@@ -211,30 +210,6 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
   }
 
   /**
-   * @notice Send a message to the linked adapter to upgrade the implementation of the contract
-   * @param _newImplementation The address of the new implementation
-   * @param _messenger The address of the messenger contract to send through
-   * @param _data The data to be used in the upgrade call
-   * @param _minGasLimit Minimum gas limit that the message can be executed with
-   */
-  function sendL2AdapterUpgrade(
-    address _newImplementation,
-    address _messenger,
-    bytes calldata _data,
-    uint32 _minGasLimit
-  ) external onlyUpgradeManager {
-    if (messengerStatus[_messenger] != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
-
-    ICrossDomainMessenger(_messenger).sendMessage(
-      LINKED_ADAPTER,
-      abi.encodeWithSignature('upgradeToAndCall(address,bytes)', _newImplementation, _data),
-      _minGasLimit
-    );
-
-    emit L2AdapterUpgradeSent(_newImplementation, _messenger, _data, _minGasLimit);
-  }
-
-  /**
    * @notice Receive the message from the other chain and transfer the tokens to the user
    * @dev This function should only be called when receiving a message to mint the bridged representation
    * @param _user The user to mint the bridged representation for
@@ -299,6 +274,52 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
     messengerStatus[_messenger] = Status.Paused;
 
     emit MessagingStopped(_messenger);
+  }
+
+  /**
+   * @notice Send a message to the linked adapter to upgrade the implementation of the contract
+   * @param _messenger The address of the messenger contract to send through
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  function sendL2AdapterUpgrade(address _messenger, uint32 _minGasLimit) external {
+    if (messengerStatus[_messenger] != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
+
+    // Get the bytecode of the he L2 adapter
+    IUpgradeManager.Implementation memory _l2AdapterImplementation =
+      IUpgradeManager(UPGRADE_MANAGER).l2AdapterImplementation();
+    bytes memory _l2AdapterBytecode = _l2AdapterImplementation.implementation.code;
+
+    ICrossDomainMessenger(_messenger).sendMessage(
+      LINKED_ADAPTER,
+      abi.encodeWithSignature(
+        'receiveAdapterUpgrade(bytes,bytes[])', _l2AdapterBytecode, _l2AdapterImplementation.initTxs
+      ),
+      _minGasLimit
+    );
+
+    emit L2AdapterUpgradeSent(_l2AdapterImplementation.implementation, _messenger, _minGasLimit);
+  }
+
+  /**
+   * @notice Send a message to the linked adapter to upgrade the implementation of the USDC contract
+   * @param _messenger The address of the messenger contract to send through
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  function sendL2UsdcUpgrade(address _messenger, uint32 _minGasLimit) external {
+    if (messengerStatus[_messenger] != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
+
+    // Get the bytecode of the he L2 adapter
+    IUpgradeManager.Implementation memory _l2UsdcImplementation =
+      IUpgradeManager(UPGRADE_MANAGER).bridgedUSDCImplementation();
+    bytes memory _l2UsdcBytecode = _l2UsdcImplementation.implementation.code;
+
+    ICrossDomainMessenger(_messenger).sendMessage(
+      LINKED_ADAPTER,
+      abi.encodeWithSignature('receiveUsdcUpgrade(bytes,bytes[])', _l2UsdcBytecode, _l2UsdcImplementation.initTxs),
+      _minGasLimit
+    );
+
+    emit L2UsdcUpgradeSent(_l2UsdcImplementation.implementation, _messenger, _minGasLimit);
   }
 
   /**

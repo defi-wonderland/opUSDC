@@ -2,7 +2,9 @@ pragma solidity ^0.8.25;
 
 import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
 import {IL1OpUSDCBridgeAdapter, L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
+import {L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
+import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
 contract ForTestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
@@ -29,14 +31,28 @@ contract ForTestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
 abstract contract Base is Helpers {
   ForTestL1OpUSDCBridgeAdapter public adapter;
   ForTestL1OpUSDCBridgeAdapter public implementation;
+  L1OpUSDCFactory public factory;
 
+  bytes32 internal _salt = bytes32('1');
   address internal _user = makeAddr('user');
   address internal _signerAd;
   uint256 internal _signerPk;
   address internal _usdc = makeAddr('opUSDC');
   address internal _linkedAdapter = makeAddr('linkedAdapter');
-  address internal _upgradeManager = makeAddr('upgradeManager');
-  address internal _factory = makeAddr('factory');
+  address internal _upgradeManager;
+  address internal _factory;
+
+  address internal _l2AdapterImplAddress = makeAddr('l2AdapterImpl');
+  bytes internal _l2AdapterBytecode = '0x608061111111';
+  bytes internal _l2AdapterInitTx = 'tx2';
+  bytes[] internal _l2AdapterInitTxs;
+  IUpgradeManager.Implementation internal _l2AdapterImplementation;
+
+  address internal _l2UsdcImplAddress = makeAddr('l2UsdcImpl');
+  bytes internal _l2UsdcBytecode = '0x608061111111';
+  bytes internal _l2UsdcInitTx = 'tx2';
+  bytes[] internal _l2UsdcInitTxs;
+  IUpgradeManager.Implementation internal _l2UsdcImplementation;
 
   // cant fuzz this because of foundry's VM
   address internal _messenger = makeAddr('messenger');
@@ -44,11 +60,27 @@ abstract contract Base is Helpers {
   event MessageSent(address _user, address _to, uint256 _amount, address _messenger, uint32 _minGasLimit);
   event MessageReceived(address _user, uint256 _amount, address _messenger);
   event BurnAmountSet(uint256 _burnAmount);
-  event L2AdapterUpgradeSent(address _newImplementation, address _messenger, bytes _data, uint32 _minGasLimit);
+  event L2AdapterUpgradeSent(address _newImplementation, address _messenger, uint32 _minGasLimit);
+  event L2UsdcUpgradeSent(address _newImplementation, address _messenger, uint32 _minGasLimit);
   event MessengerInitialized(address _messenger);
   event MigratingToNative(address _messenger, address _newOwner);
 
   function setUp() public virtual {
+    // Deploy factory
+    factory = new L1OpUSDCFactory(_usdc, _salt, address(this));
+    _upgradeManager = address(factory.UPGRADE_MANAGER());
+
+    // Set the bytecode to the implementation addresses
+    vm.etch(_l2AdapterImplAddress, _l2AdapterBytecode);
+    vm.etch(_l2UsdcImplAddress, _l2UsdcBytecode);
+
+    // Define the implementation structs info
+    _l2AdapterInitTxs.push(_l2AdapterInitTx);
+    IUpgradeManager(_upgradeManager).setL2AdapterImplementation(_l2AdapterImplAddress, _l2AdapterInitTxs);
+
+    _l2UsdcInitTxs.push(_l2UsdcInitTx);
+    IUpgradeManager(_upgradeManager).setBridgedUSDCImplementation(_l2UsdcImplAddress, _l2UsdcInitTxs);
+
     (_signerAd, _signerPk) = makeAddrAndKey('signer');
     vm.etch(_messenger, 'xDomainMessageSender');
     implementation = new ForTestL1OpUSDCBridgeAdapter(_usdc, _linkedAdapter, _upgradeManager, _factory);
@@ -526,81 +558,6 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
   }
 }
 
-contract L1OpUSDCBridgeAdapter_Unit_SendL2AdapterUpgrade is Base {
-  /**
-   * @notice Check that only the owner can send an upgrade message
-   */
-  function test_onlyUpgradeManager(address _newImplementation, bytes memory _data, uint32 _minGasLimit) external {
-    // Execute
-    vm.prank(_user);
-    vm.expectRevert(abi.encodeWithSelector(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector));
-    adapter.sendL2AdapterUpgrade(_newImplementation, _messenger, _data, _minGasLimit);
-  }
-
-  /**
-   * @notice Check that the function reverts if a messenger is unitialized
-   */
-  function test_revertOnMessagingUnintialized(
-    address _newImplementation,
-    bytes memory _data,
-    uint32 _minGasLimit
-  ) external {
-    // Execute
-    vm.prank(_upgradeManager);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
-    adapter.sendL2AdapterUpgrade(_newImplementation, _messenger, _data, _minGasLimit);
-  }
-
-  /**
-   * @notice Check that the message is sent as expected
-   */
-  function test_expectedCall(address _newImplementation, bytes memory _data, uint32 _minGasLimit) external {
-    adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
-
-    _mockAndExpect(
-      address(_messenger),
-      abi.encodeWithSignature(
-        'sendMessage(address,bytes,uint32)',
-        _linkedAdapter,
-        abi.encodeWithSignature('upgradeToAndCall(address,bytes)', _newImplementation, _data),
-        _minGasLimit
-      ),
-      abi.encode()
-    );
-
-    // Execute
-    vm.prank(_upgradeManager);
-    adapter.sendL2AdapterUpgrade(_newImplementation, _messenger, _data, _minGasLimit);
-  }
-
-  /**
-   * @notice Check that the event is emitted as expected
-   */
-  function test_emitEvent(address _newImplementation, bytes memory _data, uint32 _minGasLimit) external {
-    adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
-
-    // Mock calls
-    vm.mockCall(
-      address(_messenger),
-      abi.encodeWithSignature(
-        'sendMessage(address,bytes,uint32)',
-        _linkedAdapter,
-        abi.encodeWithSignature('upgradeToAndCall(address,bytes)', _newImplementation, _data),
-        _minGasLimit
-      ),
-      abi.encode()
-    );
-
-    // Expect events
-    vm.expectEmit(true, true, true, true);
-    emit L2AdapterUpgradeSent(_newImplementation, _messenger, _data, _minGasLimit);
-
-    // Execute
-    vm.prank(_upgradeManager);
-    adapter.sendL2AdapterUpgrade(_newImplementation, _messenger, _data, _minGasLimit);
-  }
-}
-
 contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
   /**
    * @notice Check that the function reverts if the sender is not the messenger
@@ -900,20 +857,142 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
   }
 }
 
-contract L1OpUSDCBridgeAdapter_Unit_UpgradeToAndCall is Base {
+contract L1OpUSDCBridgeAdapter_Unit_SendL2AdapterUpgrade is Base {
   /**
-   * @notice Check that only the owner can upgrade the contract
+   * @notice Check that the function reverts if a messenger is unitialized
    */
-  function test_onlyUpgradeManager(address _newImplementation) external {
+  function test_revertOnMessagingUnintialized(uint32 _minGasLimit) external {
     // Execute
-    vm.prank(_user);
-    vm.expectRevert(abi.encodeWithSelector(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector));
-    adapter.upgradeToAndCall(_newImplementation, '');
+    vm.prank(_upgradeManager);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
+    adapter.sendL2AdapterUpgrade(_messenger, _minGasLimit);
   }
 
   /**
+   * @notice Check that the message is sent as expected
+   */
+  function test_expectedCall(uint32 _minGasLimit) external {
+    adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
+
+    _mockAndExpect(
+      address(_messenger),
+      abi.encodeWithSignature(
+        'sendMessage(address,bytes,uint32)',
+        _linkedAdapter,
+        abi.encodeWithSignature('receiveAdapterUpgrade(bytes,bytes[])', _l2AdapterBytecode, _l2AdapterInitTxs),
+        _minGasLimit
+      ),
+      abi.encode()
+    );
+
+    // Execute
+    vm.prank(_upgradeManager);
+    adapter.sendL2AdapterUpgrade(_messenger, _minGasLimit);
+  }
+
+  /**
+   * @notice Check that the event is emitted as expected
+   */
+  function test_emitEvent(uint32 _minGasLimit) external {
+    adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
+
+    // Mock calls
+    vm.mockCall(
+      address(_messenger),
+      abi.encodeWithSignature(
+        'sendMessage(address,bytes,uint32)',
+        _linkedAdapter,
+        abi.encodeWithSignature('receiveAdapterUpgrade(bytes,bytes[])', _l2AdapterBytecode, _l2AdapterInitTxs),
+        _minGasLimit
+      ),
+      abi.encode()
+    );
+
+    // Expect events
+    vm.expectEmit(true, true, true, true);
+    emit L2AdapterUpgradeSent(_l2AdapterImplAddress, _messenger, _minGasLimit);
+
+    // Execute
+    vm.prank(_upgradeManager);
+    adapter.sendL2AdapterUpgrade(_messenger, _minGasLimit);
+  }
+}
+
+contract L1OpUSDCBridgeAdapter_Unit_SendL2UsdcUpgrade is Base {
+  /**
+   * @notice Check that the function reverts if a messenger is unitialized
+   */
+  function test_revertOnMessagingUnintialized(uint32 _minGasLimit) external {
+    // Execute
+    vm.prank(_upgradeManager);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
+    adapter.sendL2UsdcUpgrade(_messenger, _minGasLimit);
+  }
+
+  /**
+   * @notice Check that the message is sent as expected
+   */
+  function test_expectedCall(uint32 _minGasLimit) external {
+    adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
+
+    _mockAndExpect(
+      address(_messenger),
+      abi.encodeWithSignature(
+        'sendMessage(address,bytes,uint32)',
+        _linkedAdapter,
+        abi.encodeWithSignature('receiveUsdcUpgrade(bytes,bytes[])', _l2UsdcBytecode, _l2UsdcInitTxs),
+        _minGasLimit
+      ),
+      abi.encode()
+    );
+
+    // Execute
+    vm.prank(_upgradeManager);
+    adapter.sendL2UsdcUpgrade(_messenger, _minGasLimit);
+  }
+
+  /**
+   * @notice Check that the event is emitted as expected
+   */
+  function test_emitEvent(uint32 _minGasLimit) external {
+    adapter.forTest_setMessagerStatus(_messenger, IL1OpUSDCBridgeAdapter.Status.Active);
+
+    // Mock calls
+    vm.mockCall(
+      address(_messenger),
+      abi.encodeWithSignature(
+        'sendMessage(address,bytes,uint32)',
+        _linkedAdapter,
+        abi.encodeWithSignature('receiveUsdcUpgrade(bytes,bytes[])', _l2UsdcBytecode, _l2UsdcInitTxs),
+        _minGasLimit
+      ),
+      abi.encode()
+    );
+
+    // Expect events
+    vm.expectEmit(true, true, true, true);
+    emit L2UsdcUpgradeSent(_l2UsdcImplAddress, _messenger, _minGasLimit);
+
+    // Execute
+    vm.prank(_upgradeManager);
+    adapter.sendL2UsdcUpgrade(_messenger, _minGasLimit);
+  }
+}
+
+contract L1OpUSDCBridgeAdapter_Unit_UpgradeToAndCall is Base {
+  /**
+   * @notice Check that the function reverts if the upgrade is not authorized
+   */
+  function test_revertIfUpgradeNotAuthorized(address _newImplementation) external {
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
+    adapter.upgradeToAndCall(_newImplementation, '');
+  }
+  /**
    * @notice Check that the upgrade is authorized as expected
    */
+
   function test_authorizeUpgrade() external {
     address _newImplementation =
       address(new ForTestL1OpUSDCBridgeAdapter(_usdc, _linkedAdapter, _upgradeManager, _factory));

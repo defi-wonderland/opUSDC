@@ -48,6 +48,10 @@ contract Base is Test, Helpers {
   address internal _usdcProxy;
   address internal _l2AdapterImplementation;
 
+  address internal _usdc = makeAddr('opUSDC');
+  address internal _messenger = makeAddr('messenger');
+  address internal _linkedAdapter = makeAddr('linkedAdapter');
+
   bytes[] internal _emptyInitTxs;
   bytes[] internal _initTxs;
   bytes[] internal _badInitTxs;

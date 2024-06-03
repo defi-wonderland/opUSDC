@@ -471,7 +471,7 @@ contract L1OpUSDCFactory_Unit_PrecalculateCreateAddress is Base {
     vm.setNonce(_deployer, 1);
     for (uint256 i = 1; i < 127; i++) {
       // Precalculate the address
-      address _precalculatedAddress = factory.forTest_precalculateCreateAddress(_deployer, i);
+      address _precalculatedAddress = _computeCreateAddress(_deployer, i);
 
       // Execute
       vm.prank(_deployer);

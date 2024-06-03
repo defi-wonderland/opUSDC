@@ -3,6 +3,46 @@ pragma solidity 0.8.25;
 
 interface IL2OpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
+                            EVENTS
+  //////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice Emitted when the new USDC implementation is deployed
+   * @param _l2UsdcImplementation The address of the L2 USDC implementation
+   */
+  event DeployedL2UsdcImplementation(address _l2UsdcImplementation);
+
+  /**
+   * @notice Emitted when the new L2 adapter implementation is deployed
+   * @param _l2AdapterImplementation The address of the L2 adapter implementation
+   */
+  event DeployedL2AdapterImplementation(address _l2AdapterImplementation);
+
+  /*///////////////////////////////////////////////////////////////
+                            ERRORS
+  //////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice Error when the adapter initialization fails
+   */
+  error L2OpUSDCBridgeAdapter_AdapterInitializationFailed();
+
+  /**
+   * @notice Error when the USDC initialization fails
+   */
+  error L2OpUSDCBridgeAdapter_UsdcInitializationFailed();
+
+  /**
+   * @notice Error when the flow is disabled
+   */
+  error L2OpUSDCBridgeAdapter_DisabledFlow();
+
+  /**
+   * @notice Error when the initialization has already been executed
+   */
+  error L2OpUSDCBridgeAdapter_InitializationAlreadyExecuted();
+
+  /*///////////////////////////////////////////////////////////////
                             LOGIC
   //////////////////////////////////////////////////////////////*/
   /**
@@ -24,6 +64,20 @@ interface IL2OpUSDCBridgeAdapter {
   function receiveResumeMessaging() external;
 
   /**
+   * @notice Receive the creation code from the linked adapter, deploy the new implementation and upgrade
+   * @param _l2AdapterBytecode The bytecode for the new L2 adapter implementation
+   * @param _l2AdapterInitTxs The initialization transactions for the new L2 adapter implementation
+   */
+  function receiveAdapterUpgrade(bytes calldata _l2AdapterBytecode, bytes[] calldata _l2AdapterInitTxs) external;
+
+  /**
+   * @notice Receive the creation code from the linked adapter, deploy the new implementation and upgrade
+   * @param _l2UsdcBytecode The bytecode for the new L2 USDC implementation
+   * @param _l2UsdcInitTxs The initialization transactions for the new L2 USDC implementation
+   */
+  function receiveUsdcUpgrade(bytes calldata _l2UsdcBytecode, bytes[] memory _l2UsdcInitTxs) external;
+
+  /**
    * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
    * @param _signer The address of the user sending the message
    * @param _to The target address on the destination chain
@@ -40,6 +94,12 @@ interface IL2OpUSDCBridgeAdapter {
     uint256 _deadline,
     uint32 _minGasLimit
   ) external;
+
+  /**
+   * @notice Set _proxyExecutedInitTxsLength  to the new value
+   * @param _newLength The new value for _proxyExecutedInitTxsLength
+   */
+  function setProxyExecutedInitTxs(uint256 _newLength) external;
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES

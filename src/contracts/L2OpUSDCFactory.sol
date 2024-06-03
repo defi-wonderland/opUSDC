@@ -28,8 +28,6 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
 
   bytes32 internal immutable _SALT;
 
-  // TODO: Add empty bytes/call?
-
   /**
    * @notice Deploys the USDC implementation, proxy, and L2 adapter contracts
    * @param _salt The salt value used to deploy the contracts
@@ -75,6 +73,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     }
 
     address _adapterProxy;
+    uint256 _length = _usdcImplInitTxs.length;
     {
       // Deploy L2 adapter implementation
       bytes memory _l2AdapterImplInitCode = bytes.concat(_bytecodeDeployerCreationCode, abi.encode(_l2AdapterBytecode));
@@ -84,12 +83,13 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
       bytes memory _adapterProxyInitCode = bytes.concat(type(ERC1967Proxy).creationCode, _proxyCArgs);
       _adapterProxy = _deployCreate2(_SALT, _adapterProxyInitCode);
       // TODO: Update when the new `sstore` version of the upgrade is done
-      UUPSUpgradeable(_adapterProxy).upgradeToAndCall(_adapterImplementation, '');
+      // Upgrade the proxy and set the number of initialization transactions that will be executed by the USDC proxy
+      bytes memory _adapterInitTx = abi.encodeWithSignature('setProxyExecutedInitTxs(uint256)', _length);
+      UUPSUpgradeable(_adapterProxy).upgradeToAndCall(_adapterImplementation, _adapterInitTx);
       emit AdapterDeployed(_adapterProxy, _adapterImplementation);
     }
 
     // Execute the USDC initialization transactions, if any
-    uint256 _length = _usdcImplInitTxs.length;
     if (_length > 0) {
       _executeInitTxs(_usdcImplementation, _usdcImplInitTxs, _length);
       _executeInitTxs(_usdcProxy, _usdcImplInitTxs, _length);
