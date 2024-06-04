@@ -14,7 +14,7 @@ import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.s
 /**
  * @title L1OpUSDCFactory
  * @notice Factory contract to deploy and setup the `L1OpUSDCBridgeAdapter` and `UpgradeManager` contracts on L1, and
- * L2OpUSDCFactory on L2 - setting up the L2 deployments on a single transaction.
+ * precalculates the addresses of the L2 deployments to be done on the L2 factory.
  */
 contract L1OpUSDCFactory is IL1OpUSDCFactory {
   /// @notice Zero value constant to be used on portal interaction
@@ -108,6 +108,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     if (IUpgradeManager(UPGRADE_MANAGER).messengerDeploymentExecutor(_l1Messenger) != msg.sender) {
       revert IL1OpUSDCFactory_NotExecutor();
     }
+    // Set the messenger as deployed and initialize it on the adapter
     isMessengerDeployed[_l1Messenger] = true;
     L1_ADAPTER_PROXY.initializeNewMessenger(_l1Messenger);
 
@@ -123,7 +124,6 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
       L2_CREATE2_DEPLOYER, _l2FactoryCreate2Tx, _minGasLimitCreate2Factory
     );
 
-    // Send the L2 USDC and adapter deployments tx
     _deployL2USDCAndAdapter(_l1Messenger, _usdcAdmin, _minGasLimitDeploy);
   }
 
@@ -149,20 +149,17 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   function _deployL2USDCAndAdapter(address _l1Messenger, address _usdcAdmin, uint32 _minGasLimitDeploy) internal {
     if (_usdcAdmin == L2_FACTORY) revert IL1OpUSDCFactory_InvalidUSDCAdmin();
 
-    // Get the bytecode of the L2 usdc implementation
+    // Get the l2 usdc and adapter implementations
     IUpgradeManager.Implementation memory _l2Usdc = UPGRADE_MANAGER.bridgedUSDCImplementation();
-    bytes memory _l2UsdcImplementationBytecode = _l2Usdc.implementation.code;
-    // Get the bytecode of the he L2 adapter
     IUpgradeManager.Implementation memory _l2Adapter = UPGRADE_MANAGER.l2AdapterImplementation();
-    bytes memory _l2AdapterImplementationBytecode = _l2Adapter.implementation.code;
 
     // Send the call over the L2 factory `deploy` function message
     bytes memory _l2DeploymentsTx = abi.encodeWithSelector(
       L2OpUSDCFactory.deploy.selector,
-      _l2UsdcImplementationBytecode,
+      _l2Usdc.implementation.code,
       _l2Usdc.initTxs,
       _usdcAdmin,
-      _l2AdapterImplementationBytecode,
+      _l2Adapter.implementation.code,
       _l2Adapter.initTxs
     );
     ICrossDomainMessenger(_l1Messenger).sendMessage(L2_FACTORY, _l2DeploymentsTx, _minGasLimitDeploy);

@@ -44,4 +44,18 @@ interface IL2OpUSDCFactory {
    * @param _adapterImplementation The address of the L2 adapter implementation
    */
   event AdapterDeployed(address _adapterProxy, address _adapterImplementation);
+
+  /*///////////////////////////////////////////////////////////////
+                            VARIABLES
+  //////////////////////////////////////////////////////////////*/
+
+  /**
+   * @return _l2Messenger The address of the L2 messenger
+   */
+  function L2_MESSENGER() external view returns (address _l2Messenger);
+
+  /**
+   * @return _l1Factory The address of the L1 factory
+   */
+  function L1_FACTORY() external view returns (address _l1Factory);
 }

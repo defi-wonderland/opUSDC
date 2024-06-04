@@ -1,31 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
+import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
 import {ERC1967Utils} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol';
-
 import {BytecodeDeployer} from 'contracts/utils/BytecodeDeployer.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
-
-import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
-import 'forge-std/Test.sol';
-
 /**
  * @title L2OpUSDCFactory
- * @notice Factory contract for deploying the L2 USDC implementation, proxy, and `L2OpUSDCBridgeAdapter` contracts all
- * at once on the constructor
+ * @notice Factory contract for deploying the L2 USDC implementation, proxy, and `L2OpUSDCBridgeAdapter` implementation
+ * and proxy as well, all at once on the `deploy` function.
  */
 contract L2OpUSDCFactory is IL2OpUSDCFactory {
+  /// @inheritdoc IL2OpUSDCFactory
   address public constant L2_MESSENGER = 0x4200000000000000000000000000000000000007;
 
+  /// @notice The address of the WETH9 predeploy contract that exists on the OP Chains
   address internal constant _WETH = 0x4200000000000000000000000000000000000006;
 
+  /// @inheritdoc IL2OpUSDCFactory
   address public immutable L1_FACTORY;
 
+  /// @notice The salt value used to deploy the contracts
   bytes32 internal immutable _SALT;
 
   /**
