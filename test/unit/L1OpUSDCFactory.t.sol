@@ -37,28 +37,20 @@ contract ForTestL1OpUSDCFactory is L1OpUSDCFactory {
 }
 
 abstract contract Base is Test, Helpers {
-  address internal constant _ZERO_ADDRESS = address(0);
-  uint256 internal constant _ZERO_VALUE = 0;
-  bytes32 internal constant _SALT = bytes32('1');
-
   ForTestL1OpUSDCFactory public factory;
 
+  bytes32 internal _salt = bytes32('1');
   address internal _owner = makeAddr('owner');
   address internal _user = makeAddr('user');
   address internal _usdc = makeAddr('USDC');
   address internal _admin = makeAddr('admin');
-  address internal _l2Messenger = makeAddr('l2Messenger');
-  address internal _portal = makeAddr('portal');
   bytes internal _l2AdapterBytecode = '0x608061111111';
-  bytes internal _l2UsdcProxyCreationCode = '0x6080222222';
   bytes internal _l2UsdcImplementationBytecode = '0x6080333333';
+  address internal _l2AdapterImplAddress = makeAddr('l2AdapterImpl');
+  address internal _l2UsdcImplAddress = makeAddr('bridgedUsdcImpl');
   // cant fuzz this because of foundry's VM
   address internal _l1Messenger = makeAddr('messenger');
 
-  address internal _l2AdapterImplAddress = makeAddr('l2AdapterImpl');
-  address internal _l2UsdcImplAddress = makeAddr('bridgedUsdcImpl');
-  bytes internal _usdcInitTx = 'tx1';
-  bytes internal _l2AdapterInitTx = 'tx2';
   bytes[] internal _usdcImplInitTxs;
   bytes[] internal _l2AdapterInitTxs;
   IUpgradeManager.Implementation internal _bridgedUsdcImplementation;
@@ -67,14 +59,16 @@ abstract contract Base is Test, Helpers {
 
   function setUp() public {
     // Deploy factory
-    factory = new ForTestL1OpUSDCFactory(_usdc, _SALT, _owner);
+    factory = new ForTestL1OpUSDCFactory(_usdc, _salt, _owner);
     _upgradeManager = address(factory.UPGRADE_MANAGER());
 
     vm.etch(_l2AdapterImplAddress, _l2AdapterBytecode);
     vm.etch(_l2UsdcImplAddress, _l2UsdcImplementationBytecode);
 
     // Define the implementation structs info
+    bytes memory _usdcInitTx = 'tx1';
     _usdcImplInitTxs.push(_usdcInitTx);
+    bytes memory _l2AdapterInitTx = 'tx2';
     _l2AdapterInitTxs.push(_l2AdapterInitTx);
     _bridgedUsdcImplementation = IUpgradeManager.Implementation(_l2UsdcImplAddress, _usdcImplInitTxs);
     _l2AdapterImplementation = IUpgradeManager.Implementation(_l2AdapterImplAddress, _l2AdapterInitTxs);
@@ -121,7 +115,7 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
     address _wethL2 = 0x4200000000000000000000000000000000000006;
     // Get the init codes
     bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
-    bytes memory _l2FactoryCArgs = abi.encode(_SALT, address(factory));
+    bytes memory _l2FactoryCArgs = abi.encode(_salt, address(factory));
     bytes32 _l2FactoryInitCodeHash = keccak256(bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs));
     bytes32 _l2UsdcProxyInitCodeHash = keccak256(bytes.concat(USDC_PROXY_CREATION_CODE, abi.encode(_wethL2)));
     bytes32 _l2AdapterProxyInitCodeHash =
@@ -129,11 +123,11 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
 
     // Precalculate the addresses to be deployed using CREATE2
     address _l2Factory =
-      factory.forTest_precalculateCreate2Address(_SALT, _l2FactoryInitCodeHash, factory.L2_CREATE2_DEPLOYER());
+      factory.forTest_precalculateCreate2Address(_salt, _l2FactoryInitCodeHash, factory.L2_CREATE2_DEPLOYER());
     address _l2UsdcProxyAddress =
-      factory.forTest_precalculateCreate2Address(_SALT, _l2UsdcProxyInitCodeHash, address(_l2Factory));
+      factory.forTest_precalculateCreate2Address(_salt, _l2UsdcProxyInitCodeHash, address(_l2Factory));
     address _l2AdapterProxy =
-      factory.forTest_precalculateCreate2Address(_SALT, _l2AdapterProxyInitCodeHash, address(_l2Factory));
+      factory.forTest_precalculateCreate2Address(_salt, _l2AdapterProxyInitCodeHash, address(_l2Factory));
     // Precalculate the addresses to be deployed using CREATE
     address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), 2);
     address _upgradeManager = factory.forTest_precalculateCreateAddress(address(factory), 4);
@@ -174,7 +168,7 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
     emit L1AdapterDeployed(_l1AdapterProxy, _l1AdapterImpl);
 
     // Execute
-    new ForTestL1OpUSDCFactory(_usdc, _SALT, _owner);
+    new ForTestL1OpUSDCFactory(_usdc, _salt, _owner);
   }
 
   /**
@@ -212,7 +206,7 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
     emit UpgradeManagerDeployed(_upgradeManagerProxy, _upgradeManagerImpl);
 
     // Execute
-    new ForTestL1OpUSDCFactory(_usdc, _SALT, _owner);
+    new ForTestL1OpUSDCFactory(_usdc, _salt, _owner);
   }
 }
 
@@ -310,15 +304,16 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
    * @notice Check the `deploy` call over the `create2Deployer` is correctly sent through the messenger
    */
   function test_callSendMessage(uint32 _minGasLimitCreate2Factory, uint32 _minGasLimitDeploy) public {
+    uint256 _zeroValue = 0;
     // Mock all the `deployL2USDCAndAdapter` function calls
     _mockDeployFunctionCalls();
 
     // Get the L2 factory deployment tx
     bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
-    bytes memory _l2FactoryCArgs = abi.encode(_SALT, address(factory));
+    bytes memory _l2FactoryCArgs = abi.encode(_salt, address(factory));
     bytes memory _l2FactoryInitCode = bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs);
     bytes memory _l2FactoryCreate2Tx =
-      abi.encodeWithSelector(ICreate2Deployer.deploy.selector, _ZERO_VALUE, _SALT, _l2FactoryInitCode);
+      abi.encodeWithSelector(ICreate2Deployer.deploy.selector, _zeroValue, _salt, _l2FactoryInitCode);
 
     // Expect the `sendMessage` to be properly called
     vm.expectCall(

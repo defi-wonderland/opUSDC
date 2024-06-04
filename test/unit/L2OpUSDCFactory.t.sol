@@ -24,10 +24,6 @@ contract L2OpUSDCFactoryTest is L2OpUSDCFactory {
     _executeInitTxs(_target, _initTxs, _length);
   }
 
-  function forTest_getImplementation() public view returns (address __implementation) {
-    __implementation = ERC1967Utils.getImplementation();
-  }
-
   function forTest_getSalt() public view returns (bytes32 _salt) {
     _salt = _SALT;
   }
@@ -40,31 +36,22 @@ contract Base is Test, Helpers {
   address internal _l2Messenger = 0x4200000000000000000000000000000000000007;
   bytes32 internal _salt = bytes32('1');
   address internal _l1Factory = makeAddr('l1Factory');
-  address internal _deployer = makeAddr('deployer');
   address internal _owner = makeAddr('owner');
-  address internal _create2Deployer = makeAddr('create2Deployer');
-  bytes internal _wethBytecode = '0x60809020';
-  bytes internal _usdcProxyInitCode;
-  bytes internal _usdcImplBytecode;
-  bytes internal _l2AdapterBytecode;
-  address internal _usdcImplementation;
-  address internal _usdcProxy;
-  address internal _l2AdapterImplementation;
-
   address internal _usdc = makeAddr('opUSDC');
   address internal _messenger = makeAddr('messenger');
   address internal _linkedAdapter = makeAddr('linkedAdapter');
+  address internal _create2Deployer = makeAddr('create2Deployer');
+  bytes internal _wethBytecode = '0x60809020';
 
   address internal _dummyContract;
   address internal _dummyContractTwo;
+  bytes internal _usdcImplBytecode;
+  bytes internal _l2AdapterImplBytecode;
 
   bytes[] internal _emptyInitTxs;
   bytes[] internal _initTxsUsdc;
   bytes[] internal _initTxsAdapter;
   bytes[] internal _badInitTxs;
-
-  bytes internal _initTxOne;
-  bytes internal _initTxTwo;
 
   function setUp() public virtual {
     // Deploy the l2 factory
@@ -85,21 +72,21 @@ contract Base is Test, Helpers {
 
     // Set the implementations bytecode and init code
     _dummyContract = address(new ForTestDummyContract());
-    _usdcProxyInitCode = type(ForTestDummyContract).creationCode;
     _usdcImplBytecode = _dummyContract.code;
 
     _dummyContractTwo = address(new ForTestDummyContractTwo());
-    _l2AdapterBytecode = type(ForTestDummyContractTwo).creationCode;
-    _l2AdapterBytecode = _dummyContractTwo.code;
+    _l2AdapterImplBytecode = _dummyContractTwo.code;
 
-    _initTxOne = abi.encodeWithSignature('dummyFunction()');
-    _initTxTwo = abi.encodeWithSignature('dummyFunctionFalse()');
+    // Set the init txs for the USDC implementation contract (DummyContract)
+    bytes memory _initTxOne = abi.encodeWithSignature('returnTrue()');
+    bytes memory _initTxTwo = abi.encodeWithSignature('returnFalse()');
     _initTxsUsdc = new bytes[](2);
     _initTxsUsdc[0] = _initTxOne;
     _initTxsUsdc[1] = _initTxTwo;
 
-    _initTxOne = abi.encodeWithSignature('dummyFunctionTwo()');
-    _initTxTwo = abi.encodeWithSignature('dummyFunctionTwoFalse()');
+    // Set the init txs for the L2 adapter implementation contract (DummyContractTwo)
+    _initTxOne = abi.encodeWithSignature('returnTrueTwo()');
+    _initTxTwo = abi.encodeWithSignature('returnFalseTwo()');
     _initTxsAdapter = new bytes[](2);
     _initTxsAdapter[0] = _initTxOne;
     _initTxsAdapter[1] = _initTxTwo;
@@ -109,11 +96,6 @@ contract Base is Test, Helpers {
     _badInitTxs = new bytes[](2);
     _badInitTxs[0] = '';
     _badInitTxs[1] = _badInitTx;
-
-    // _usdcImplementation = _precalculateCreate2Address(_salt, address(factory));
-    // _usdcProxy = _precalculateCreate2Address(_salt, address(factory));
-    // _l2AdapterImplementation = _precalculateCreate2Address(_salt, address(factory));
-    // _l2AdapterProxy = _precalculateCreate2Address(_salt, address(factory));
   }
 
   /**
@@ -141,6 +123,9 @@ contract Base is Test, Helpers {
 }
 
 contract L2OpUSDCFactory_Unit_Constructor is Base {
+  /**
+   * @notice Check the immutables are properly set
+   */
   function test_setImmutables() public {
     assertEq(factory.forTest_getSalt(), _salt);
     assertEq(factory.L1_FACTORY(), _l1Factory);
@@ -151,34 +136,49 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
   event USDCDeployed(address _usdcProxy, address _usdcImplementation);
   event AdapterDeployed(address _adapterProxy, address _adapterImplementation);
 
+  /**
+   * @notice Check it reverts if the sender is not the L2 messenger
+   */
   function test_revertIfSenderNotMessenger(address _sender) public {
     vm.assume(_sender != factory.L2_MESSENGER());
     vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InvalidSender.selector);
+    // Execute
     vm.prank(_sender);
-    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _owner, _l2AdapterBytecode, _initTxsAdapter);
+    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _owner, _l2AdapterImplBytecode, _initTxsAdapter);
   }
 
+  /**
+   * @notice Check it reverts if the L1 factory is not the xDomain sender
+   */
   function test_revertIfL1FactoryNotXDomainSender(address _xDomainSender) public {
     vm.assume(_xDomainSender != factory.L1_FACTORY());
 
+    // Mock the call over `xDomainMessageSender` to return and invalid sender
     vm.mockCall(
       factory.L2_MESSENGER(),
       abi.encodeWithSelector(ICrossDomainMessenger.xDomainMessageSender.selector),
       abi.encode(_xDomainSender)
     );
 
+    // Execute
     vm.prank(factory.L2_MESSENGER());
     vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InvalidSender.selector);
-    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _owner, _l2AdapterBytecode, _initTxsAdapter);
+    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _owner, _l2AdapterImplBytecode, _initTxsAdapter);
   }
 
+  /**
+   * @notice Check the deployment of the USDC implementation and proxy is properly done by checking the emitted event
+   * and the 'upgradeTo' call to the proxy
+   */
   function test_deployUsdc() public {
+    // Get the usdc implementation address
     bytes memory _usdcImplInitCode = bytes.concat(type(BytecodeDeployer).creationCode, abi.encode(_usdcImplBytecode));
-    bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, abi.encode(_weth));
-
     address _usdcImplementation = _precalculateCreate2Address(_salt, keccak256(_usdcImplInitCode), address(factory));
+    // Get the usdc proxy address
+    bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, abi.encode(_weth));
     address _usdcProxy = _precalculateCreate2Address(_salt, keccak256(_usdcProxyInitCode), address(factory));
 
+    // Mock the call over `xDomainMessageSender` to return the L1 factory address
     vm.mockCall(
       factory.L2_MESSENGER(),
       abi.encodeWithSelector(ICrossDomainMessenger.xDomainMessageSender.selector),
@@ -192,26 +192,33 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     vm.expectEmit(true, true, true, true);
     emit USDCDeployed(_usdcProxy, _usdcImplementation);
 
-    // Deploy the USDC implementation and proxy
+    // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_usdcImplBytecode, _emptyInitTxs, _owner, _l2AdapterBytecode, _emptyInitTxs);
+    factory.deploy(_usdcImplBytecode, _emptyInitTxs, _owner, _l2AdapterImplBytecode, _emptyInitTxs);
   }
 
+  /**
+   * @notice Check the deployment of the L2 adapter implementation and proxy is properly done by checking the emitted
+   * event and the 'upgradeToAndCall' call to the proxy
+   */
   function test_deployAdapter() public {
+    // Get the L2 adapter implementation address
     bytes memory _l2AdapterImplInitCode =
-      bytes.concat(type(BytecodeDeployer).creationCode, abi.encode(_l2AdapterBytecode));
-    bytes memory _l2AdapterProxyInitCode = bytes.concat(type(ERC1967Proxy).creationCode, abi.encode(_weth, ''));
-
+      bytes.concat(type(BytecodeDeployer).creationCode, abi.encode(_l2AdapterImplBytecode));
     address _l2AdapterImplementation =
       _precalculateCreate2Address(_salt, keccak256(_l2AdapterImplInitCode), address(factory));
+    // Get the L2 adapter proxy address
+    bytes memory _l2AdapterProxyInitCode = bytes.concat(type(ERC1967Proxy).creationCode, abi.encode(_weth, ''));
     address _l2AdapterProxy = _precalculateCreate2Address(_salt, keccak256(_l2AdapterProxyInitCode), address(factory));
 
+    // Mock the call over `xDomainMessageSender` to return the L1 factory address
     vm.mockCall(
       factory.L2_MESSENGER(),
       abi.encodeWithSelector(ICrossDomainMessenger.xDomainMessageSender.selector),
       abi.encode(factory.L1_FACTORY())
     );
 
+    // Mock and expect call over 'upgradeToAndCall' function to be called with the implementation and the correct init tx
     bytes memory _adapterInitTx = abi.encodeWithSignature('setProxyExecutedInitTxs(uint256)', _emptyInitTxs.length);
     vm.expectCall(
       _l2AdapterProxy,
@@ -222,60 +229,83 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     vm.expectEmit(true, true, true, true);
     emit AdapterDeployed(_l2AdapterProxy, _l2AdapterImplementation);
 
-    // Deploy the L2 adapter implementation and proxy
+    // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_usdcImplBytecode, _emptyInitTxs, _owner, _l2AdapterBytecode, _emptyInitTxs);
+    factory.deploy(_usdcImplBytecode, _emptyInitTxs, _owner, _l2AdapterImplBytecode, _emptyInitTxs);
   }
 
+  /**
+   * @notice Check init txs are properly executed over the USDC implementation and proxy
+   */
   function test_executeUsdcImplInitTxs() public {
+    // Get the usdc implementation address
     bytes memory _usdcImplInitCode = bytes.concat(type(BytecodeDeployer).creationCode, abi.encode(_usdcImplBytecode));
     address _usdcImplementation = _precalculateCreate2Address(_salt, keccak256(_usdcImplInitCode), address(factory));
     vm.mockCall(
       _l2Messenger, abi.encodeWithSelector(ICrossDomainMessenger.xDomainMessageSender.selector), abi.encode(_l1Factory)
     );
 
+    // Expect the init txs to be called
     vm.expectCall(_usdcImplementation, _initTxsUsdc[0]);
     vm.expectCall(_usdcImplementation, _initTxsUsdc[1]);
 
+    // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _owner, _l2AdapterBytecode, _emptyInitTxs);
+    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _owner, _l2AdapterImplBytecode, _emptyInitTxs);
   }
 
+  /**
+   * @notice Check init txs are properly executed over the L2 adapter implementation and proxy, and that the
+   * `changeAdmin` function is called on it too.
+   */
   function test_executeUsdcProxyInitTxs() public {
+    // Get the usdc proxy address
     bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, abi.encode(_weth));
     address _usdcProxy = _precalculateCreate2Address(_salt, keccak256(_usdcProxyInitCode), address(factory));
 
+    // Mock the call over `xDomainMessageSender` to return the L1 factory address
     vm.mockCall(
       _l2Messenger, abi.encodeWithSelector(ICrossDomainMessenger.xDomainMessageSender.selector), abi.encode(_l1Factory)
     );
 
+    // Expect the call over 'changeAdmin' function
     vm.expectCall(_usdcProxy, abi.encodeWithSelector(IUSDC.changeAdmin.selector, _owner));
-
+    // Expect the init txs to be called
     vm.expectCall(_usdcProxy, _initTxsUsdc[0]);
     vm.expectCall(_usdcProxy, _initTxsUsdc[1]);
 
+    // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _owner, _l2AdapterBytecode, _emptyInitTxs);
+    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _owner, _l2AdapterImplBytecode, _emptyInitTxs);
   }
 
+  /**
+   * @notice Check init txs are properly executed over the L2 adapter proxy
+   */
   function test_executeAdapterInitTxs() public {
+    // Get the L2 adapter proxy address
     bytes memory _l2AdapterProxyInitCode = bytes.concat(type(ERC1967Proxy).creationCode, abi.encode(_weth, ''));
-
     address _l2AdapterProxy = _precalculateCreate2Address(_salt, keccak256(_l2AdapterProxyInitCode), address(factory));
 
+    // Mock the call over `xDomainMessageSender` to return the L1 factory address
     vm.mockCall(
       _l2Messenger, abi.encodeWithSelector(ICrossDomainMessenger.xDomainMessageSender.selector), abi.encode(_l1Factory)
     );
 
-    vm.expectCall(_l2AdapterProxy, _initTxOne);
-    vm.expectCall(_l2AdapterProxy, _initTxTwo);
+    // Expect the init txs to be called
+    vm.expectCall(_l2AdapterProxy, _initTxsAdapter[0]);
+    vm.expectCall(_l2AdapterProxy, _initTxsAdapter[1]);
 
+    // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_usdcImplBytecode, _emptyInitTxs, _owner, _l2AdapterBytecode, _initTxsAdapter);
+    factory.deploy(_usdcImplBytecode, _emptyInitTxs, _owner, _l2AdapterImplBytecode, _initTxsAdapter);
   }
 }
 
 contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
+  /**
+   * @notice Check the execution of the initialization transactions over a target contract
+   */
   function test_executeInitTxs() public {
     // Mock the call to the target contract
     _mockAndExpect(_dummyContract, _initTxsUsdc[0], '');
@@ -285,19 +315,25 @@ contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
     factory.forTest_executeInitTxs(_dummyContract, _initTxsUsdc, _initTxsUsdc.length);
   }
 
+  /**
+   * @notice Check it reverts if the initialization transactions fail
+   */
   function test_revertIfInitTxsFail() public {
     vm.mockCallRevert(_dummyContract, _badInitTxs[0], '');
     vm.mockCallRevert(_dummyContract, _badInitTxs[1], '');
-
     vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InitializationFailed.selector);
+    // Execute
     factory.forTest_executeInitTxs(_dummyContract, _badInitTxs, _badInitTxs.length);
   }
 }
 
 contract L2OpUSDCFactory_Unit_DeployCreate2 is Base {
+  /**
+   * @notice Check the deployment of a contract using the `CREATE2` opcode is properly done to the expected addrtess
+   */
   function test_deployCreate2() public {
     // Get the init code with the USDC proxy creation code plus the USDC implementation address
-    bytes memory _initCode = bytes.concat(_usdcProxyInitCode, abi.encode(_usdcImplementation));
+    bytes memory _initCode = bytes.concat(USDC_PROXY_CREATION_CODE, abi.encode(_weth));
     // Precalculate the address of the contract that will be deployed with the current factory's nonce
     address _expectedAddress = _precalculateCreate2Address(_salt, keccak256(_initCode), address(factory));
 
@@ -309,6 +345,10 @@ contract L2OpUSDCFactory_Unit_DeployCreate2 is Base {
     assertGt(_newContract.code.length, 0);
   }
 
+  /**
+   * @notice Check correctly deploys when also using the BytecodeDeployer contract as the creation code and the another
+   * contract's bytecode as the constructor argument
+   */
   function test_create2BytecodeDeployer() public {
     // Get the creation code of the bytecode deployer with the dummy contract code as constructor argument
     bytes memory _initCode = bytes.concat(type(BytecodeDeployer).creationCode, abi.encode(_dummyContract.code));
@@ -322,36 +362,44 @@ contract L2OpUSDCFactory_Unit_DeployCreate2 is Base {
     assertGt(_expectedAddress.code.length, 0);
   }
 
+  /**
+   * @notice Check it reverts if the deployment fails
+   */
   function test_revertIfDeploymentFailed() public {
-    // Create a bad format for the init code to test the deployment revert
+    // Create a bad format for the init code to make the deployment revert
     bytes memory _badInitCode = '0x0000405060';
     vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_Create2DeploymentFailed.selector);
+    // Execute
     factory.forTest_deployCreate2(_salt, _badInitCode);
   }
 }
 
 /**
  * @notice Dummy contract used only for testing purposes
+ * @dev Need to create a dummy contract and get its bytecode because you can't mock a call over a contract that's not
+ * deployed yet, so the unique alternative is to call the contract properly.
  */
 contract ForTestDummyContract {
-  function dummyFunction() public pure returns (bool) {
+  function returnTrue() public pure returns (bool) {
     return true;
   }
 
-  function dummyFunctionFalse() public pure returns (bool) {
+  function returnFalse() public pure returns (bool) {
     return true;
   }
 }
 
 /**
  * @notice Dummy contract used only for testing purposes
+ * @dev Need to create a dummy contract and get its bytecode because you can't mock a call over a contract that's not
+ * deployed yet, so the unique alternative is to call the contract properly.
  */
 contract ForTestDummyContractTwo {
-  function dummyFunctionTwo() public pure returns (bool) {
+  function returnTrueTwo() public pure returns (bool) {
     return true;
   }
 
-  function dummyFunctionTwoFalse() public pure returns (bool) {
+  function returnFalseTwo() public pure returns (bool) {
     return false;
   }
 }
