@@ -37,13 +37,12 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
 
   /**
    * @notice Modifier to check if the sender is the linked adapter through the messenger
-   * @param _messenger The address of the messenger contract
    */
-  modifier checkSender(address _messenger) {
+  modifier checkSender() {
     // We should accept incoming messages from all messengers that have been initialized
     if (
-      messengerStatus[_messenger] != Status.Active
-        || ICrossDomainMessenger(_messenger).xDomainMessageSender() != LINKED_ADAPTER
+      messengerStatus[msg.sender] != Status.Active
+        || ICrossDomainMessenger(msg.sender).xDomainMessageSender() != LINKED_ADAPTER
     ) {
       revert IOpUSDCBridgeAdapter_InvalidSender();
     }
@@ -208,7 +207,7 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
    * @param _user The user to mint the bridged representation for
    * @param _amount The amount of tokens to mint
    */
-  function receiveMessage(address _user, uint256 _amount) external override checkSender(msg.sender) {
+  function receiveMessage(address _user, uint256 _amount) external override checkSender {
     // Transfer the tokens to the user
     IUSDC(USDC).safeTransfer(_user, _amount);
 
