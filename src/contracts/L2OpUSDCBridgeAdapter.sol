@@ -8,7 +8,6 @@ import {SignatureChecker} from '@openzeppelin/contracts/utils/cryptography/Signa
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
 import {BytecodeDeployer} from 'contracts/utils/BytecodeDeployer.sol';
 import {IL2OpUSDCBridgeAdapter} from 'interfaces/IL2OpUSDCBridgeAdapter.sol';
-import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
@@ -175,7 +174,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
       }
     }
 
-    emit IL2OpUSDCFactory.DeployedL2AdapterImplementation(_adapterImplementation);
+    emit DeployedL2AdapterImplementation(_adapterImplementation);
   }
 
   /**

@@ -12,6 +12,12 @@ interface IL2OpUSDCBridgeAdapter {
    */
   event DeployedL2UsdcImplementation(address _l2UsdcImplementation);
 
+  /**
+   * @notice Emitted when the `L2OpUSDCBridgeAdapter` implementation is deployed
+   * @param _l2AdapterImplementation The address of the L2 adapter implementation
+   */
+  event DeployedL2AdapterImplementation(address _l2AdapterImplementation);
+
   /*///////////////////////////////////////////////////////////////
                             ERRORS
   //////////////////////////////////////////////////////////////*/

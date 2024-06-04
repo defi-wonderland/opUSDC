@@ -10,7 +10,7 @@ import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
-contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, IL1OpUSDCBridgeAdapter {
+contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   using SafeERC20 for IUSDC;
   using MessageHashUtils for bytes32;
   using SignatureChecker for address;
