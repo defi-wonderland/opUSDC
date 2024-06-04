@@ -30,11 +30,6 @@ interface IL1OpUSDCFactory {
   //////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Thrown when the factory on L2 for the given messenger is already deployed
-   */
-  error IL1OpUSDCFactory_FactoryAlreadyDeployed();
-
-  /**
    * @notice Thrown when the caller is not the executor
    */
   error IL1OpUSDCFactory_NotExecutor();

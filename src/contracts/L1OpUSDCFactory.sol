@@ -106,7 +106,6 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     uint32 _minGasLimitCreate2Factory,
     uint32 _minGasLimitDeploy
   ) external {
-    if (isFactoryDeployed[_l1Messenger]) revert IL1OpUSDCFactory_FactoryAlreadyDeployed();
     if (IUpgradeManager(UPGRADE_MANAGER).messengerDeploymentExecutor(_l1Messenger) != msg.sender) {
       revert IL1OpUSDCFactory_NotExecutor();
     }

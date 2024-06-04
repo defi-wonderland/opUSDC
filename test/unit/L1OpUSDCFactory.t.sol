@@ -212,22 +212,6 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
 
 contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
   /**
-   * @notice Check the `deployL2USDCAndAdapter` function reverts if the messenger already has a protocol deployed for it
-   */
-  function test_revertIfMessengerAlreadyDeployedFor(
-    uint32 _minGasLimitCreate2Factory,
-    uint32 _minGasLimitDeploy
-  ) public {
-    // Mock the `isMessengerDeployed` to return true
-    factory.forTest_setIsFactoryDeployed(_l1Messenger, true);
-
-    // Execute
-    vm.expectRevert(IL1OpUSDCFactory.IL1OpUSDCFactory_FactoryAlreadyDeployed.selector);
-    vm.prank(_user);
-    factory.deployL2FactoryAndContracts(_l1Messenger, _admin, _minGasLimitCreate2Factory, _minGasLimitDeploy);
-  }
-
-  /**
    * @notice Check the `deployL2FactoryAndContracts` function reverts if the caller is not the executor
    */
   function test_revertIfNotExecutor(
@@ -236,9 +220,6 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
     address _executor
   ) public {
     vm.assume(_executor != _user);
-
-    // Mock the `isMessengerDeployed` to return false
-    factory.forTest_setIsFactoryDeployed(_l1Messenger, false);
 
     vm.mockCall(
       _upgradeManager,
