@@ -56,12 +56,13 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   constructor(address _usdc, bytes32 _salt, address _owner) {
     _SALT = _salt;
     address _wethL2 = 0x4200000000000000000000000000000000000006;
+    bytes memory _emptyInitTx = '';
 
     // Calculate L2 factory address
     bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
     bytes memory _l2FactoryCArgs = abi.encode(_SALT, address(this));
-    bytes32 _l2FactoryInitCode = keccak256(bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs));
-    L2_FACTORY = _precalculateCreate2Address(_SALT, _l2FactoryInitCode, L2_CREATE2_DEPLOYER);
+    bytes32 _l2FactoryInitCodeHash = keccak256(bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs));
+    L2_FACTORY = _precalculateCreate2Address(_SALT, _l2FactoryInitCodeHash, L2_CREATE2_DEPLOYER);
 
     // Calculate the L2 USDC proxy address
     bytes32 _l2UsdcProxyInitCodeHash = keccak256(bytes.concat(USDC_PROXY_CREATION_CODE, abi.encode(_wethL2)));
@@ -69,7 +70,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
 
     // Calculate the L2 adapter proxy address
     bytes32 _l2AdapterProxyInitCodeHash =
-      keccak256(bytes.concat(type(ERC1967Proxy).creationCode, abi.encode(_wethL2, '')));
+      keccak256(bytes.concat(type(ERC1967Proxy).creationCode, abi.encode(_wethL2, _emptyInitTx)));
     L2_ADAPTER_PROXY = _precalculateCreate2Address(_SALT, _l2AdapterProxyInitCodeHash, L2_FACTORY);
 
     // Calculate the upgrade manager using 4 as nonce since first the L1 adapter and its implementation will be deployed
@@ -80,7 +81,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     address _l1AdapterImplementation =
       address(new L1OpUSDCBridgeAdapter(_usdc, L2_ADAPTER_PROXY, address(UPGRADE_MANAGER), address(this)));
     // Deploy the L1 adapter proxy
-    L1_ADAPTER_PROXY = L1OpUSDCBridgeAdapter(address(new ERC1967Proxy(_l1AdapterImplementation, '')));
+    L1_ADAPTER_PROXY = L1OpUSDCBridgeAdapter(address(new ERC1967Proxy(_l1AdapterImplementation, _emptyInitTx)));
     emit L1AdapterDeployed(address(L1_ADAPTER_PROXY), _l1AdapterImplementation);
 
     // Deploy the upgrade manager implementation
