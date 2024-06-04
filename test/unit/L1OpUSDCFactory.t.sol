@@ -6,7 +6,6 @@ import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCFactory, L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
 import {UpgradeManager} from 'contracts/UpgradeManager.sol';
-import {BytecodeDeployer} from 'contracts/utils/BytecodeDeployer.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {Test} from 'forge-std/Test.sol';
 import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
@@ -477,6 +476,8 @@ contract L1OpUSDCFactory_Unit_PrecalculateCreateAddress is Base {
    * We are testing the range from 1 to 127 since the function only covers that range which is enough for the factory
    */
   function test_precalculateCreateAddress(address _deployer) public {
+    // Setting a lower nonce than the deployer's current one will revert
+    vm.assume(vm.getNonce(_deployer) <= 1);
     vm.setNonce(_deployer, 1);
     for (uint256 i = 1; i < 127; i++) {
       // Precalculate the address

@@ -196,7 +196,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     bytes32 salt,
     bytes32 initCodeHash,
     address deployer
-  ) public pure returns (address computedAddress) {
+  ) internal pure returns (address computedAddress) {
     assembly ("memory-safe") {
       let ptr := mload(0x40)
       mstore(add(ptr, 0x40), initCodeHash)

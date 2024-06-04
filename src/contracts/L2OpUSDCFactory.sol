@@ -3,7 +3,6 @@ pragma solidity 0.8.25;
 
 import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
-import {ERC1967Utils} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol';
 import {BytecodeDeployer} from 'contracts/utils/BytecodeDeployer.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
@@ -21,6 +20,9 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
 
   /// @notice The address of the WETH9 predeploy contract that exists on the OP Chains
   address internal constant _WETH = 0x4200000000000000000000000000000000000006;
+
+  /// @notice The empty bytes constant
+  bytes internal constant _EMPTY_BYTES = '';
 
   /// @inheritdoc IL2OpUSDCFactory
   address public immutable L1_FACTORY;
@@ -81,7 +83,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
       bytes memory _l2AdapterImplInitCode = bytes.concat(_bytecodeDeployerCreationCode, abi.encode(_l2AdapterBytecode));
       address _adapterImplementation = _deployCreate2(_SALT, _l2AdapterImplInitCode);
       // Deploy L2 adapter proxy
-      bytes memory _proxyCArgs = abi.encode(_WETH, '');
+      bytes memory _proxyCArgs = abi.encode(_WETH, _EMPTY_BYTES);
       bytes memory _adapterProxyInitCode = bytes.concat(type(ERC1967Proxy).creationCode, _proxyCArgs);
       _adapterProxy = _deployCreate2(_SALT, _adapterProxyInitCode);
       // Upgrade the proxy and set the number of initialization transactions that will be executed by the USDC proxy

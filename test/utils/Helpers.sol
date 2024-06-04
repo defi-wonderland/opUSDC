@@ -5,6 +5,8 @@ import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/Messa
 import {Test} from 'forge-std/Test.sol';
 
 contract Helpers is Test {
+  error Create2DeploymentFailed();
+
   using MessageHashUtils for bytes32;
   /**
    * @notice Sets up a mock and expects a call to it
