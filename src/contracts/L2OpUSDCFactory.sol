@@ -42,6 +42,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
    * @notice Deploys the USDC implementation, proxy, and L2 adapter implementation and proxy contracts
    * @param _usdcImplBytecode The bytecode for the USDC implementation contract
    * @param _usdcImplInitTxs The initialization transactions for the USDC implementation contract
+   * @param _usdcAdmin The address of the USDC admin
    * @param _l2AdapterBytecode The bytecode for the L2 adapter contract
    * @param _l2AdapterInitTxs The initialization transactions for the L2 adapter contract
    * @dev It always deploys the proxies with WETH as the implementation, and then upgrades them so their address
@@ -50,7 +51,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
   function deploy(
     bytes memory _usdcImplBytecode,
     bytes[] memory _usdcImplInitTxs,
-    // address _usdcAdmin,
+    address _usdcAdmin,
     bytes memory _l2AdapterBytecode,
     bytes[] memory _l2AdapterInitTxs
   ) external {
@@ -92,8 +93,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     // Execute the USDC initialization transactions, if any
     if (_length > 0) {
       _executeInitTxs(_usdcImplementation, _usdcImplInitTxs, _length);
-      // IUSDC(_usdcProxy).changeAdmin(_usdcAdmin);
-      IUSDC(_usdcProxy).changeAdmin(address(10));
+      IUSDC(_usdcProxy).changeAdmin(_usdcAdmin);
       _executeInitTxs(_usdcProxy, _usdcImplInitTxs, _length);
     }
 

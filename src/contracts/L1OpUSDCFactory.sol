@@ -94,11 +94,13 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   /**
    * @notice Sends the L2 factory creation tx along with the L2 deployments to be done on it through the messenger
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
+   * @param _usdcAdmin The address of the USDC admin
    * @param _minGasLimitCreate2Factory The minimum gas limit for the L2 factory deployment
    * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
    */
   function deployL2FactoryAndContracts(
     address _l1Messenger,
+    address _usdcAdmin,
     uint32 _minGasLimitCreate2Factory,
     uint32 _minGasLimitDeploy
   ) external {
@@ -122,27 +124,31 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     );
 
     // Send the L2 USDC and adapter deployments tx
-    _deployL2USDCAndAdapter(_l1Messenger, _minGasLimitDeploy);
+    _deployL2USDCAndAdapter(_l1Messenger, _usdcAdmin, _minGasLimitDeploy);
   }
 
   /**
    * @notice Sends the L2 USDC and adapter deployments tx through the messenger to be executed on the l2 factory
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
+   * @param _usdcAdmin The address of the USDC admin
    * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
    */
-  function deployL2USDCAndAdapter(address _l1Messenger, uint32 _minGasLimitDeploy) external {
+  function deployL2USDCAndAdapter(address _l1Messenger, address _usdcAdmin, uint32 _minGasLimitDeploy) external {
     if (IUpgradeManager(UPGRADE_MANAGER).messengerDeploymentExecutor(_l1Messenger) != msg.sender) {
       revert IL1OpUSDCFactory_NotExecutor();
     }
-    _deployL2USDCAndAdapter(_l1Messenger, _minGasLimitDeploy);
+    _deployL2USDCAndAdapter(_l1Messenger, _usdcAdmin, _minGasLimitDeploy);
   }
 
   /**
    * @notice Deploys the L2 USDC implementation and adapter contracts
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
+   * @param _usdcAdmin The address of the USDC admin
    * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
    */
-  function _deployL2USDCAndAdapter(address _l1Messenger, uint32 _minGasLimitDeploy) internal {
+  function _deployL2USDCAndAdapter(address _l1Messenger, address _usdcAdmin, uint32 _minGasLimitDeploy) internal {
+    if (_usdcAdmin == L2_FACTORY) revert IL1OpUSDCFactory_InvalidUSDCAdmin();
+
     // Get the bytecode of the L2 usdc implementation
     IUpgradeManager.Implementation memory _l2Usdc = UPGRADE_MANAGER.bridgedUSDCImplementation();
     bytes memory _l2UsdcImplementationBytecode = _l2Usdc.implementation.code;
@@ -155,6 +161,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
       L2OpUSDCFactory.deploy.selector,
       _l2UsdcImplementationBytecode,
       _l2Usdc.initTxs,
+      _usdcAdmin,
       _l2AdapterImplementationBytecode,
       _l2Adapter.initTxs
     );

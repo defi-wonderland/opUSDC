@@ -28,12 +28,17 @@ interface IL1OpUSDCFactory {
   //////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Error when the messenger already has a protocol deployed for it
+   * @notice Thrown when the USDC admin is equal to the L2 factory address
+   */
+  error IL1OpUSDCFactory_InvalidUSDCAdmin();
+
+  /**
+   * @notice Thrown when the messenger already has a protocol deployed for it
    */
   error IL1OpUSDCFactory_MessengerAlreadyDeployed();
 
   /**
-   * @notice Error when the caller is not the executor
+   * @notice Thrown when the caller is not the executor
    */
   error IL1OpUSDCFactory_NotExecutor();
 
@@ -44,11 +49,13 @@ interface IL1OpUSDCFactory {
   /**
    * @notice Sends the L2 factory creation tx along with the L2 deployments to be done on it through the messenger
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
+   * @param _usdcAdmin The address of the USDC admin
    * @param _minGasLimitCreate2Factory The minimum gas limit for the L2 factory deployment
    * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
    */
   function deployL2FactoryAndContracts(
     address _l1Messenger,
+    address _usdcAdmin,
     uint32 _minGasLimitCreate2Factory,
     uint32 _minGasLimitDeploy
   ) external;
@@ -56,9 +63,10 @@ interface IL1OpUSDCFactory {
   /**
    * @notice Sends the L2 USDC and adapter deployments tx through the messenger to be executed on the l2 factory
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
+   * @param _usdcAdmin The address of the USDC admin
    * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
    */
-  function deployL2USDCAndAdapter(address _l1Messenger, uint32 _minGasLimitDeploy) external;
+  function deployL2USDCAndAdapter(address _l1Messenger, address _usdcAdmin, uint32 _minGasLimitDeploy) external;
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES

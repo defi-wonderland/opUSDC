@@ -43,6 +43,7 @@ contract Base is Test, Helpers {
   bytes32 internal _salt = bytes32('1');
   address internal _l1Factory = makeAddr('l1Factory');
   address internal _deployer = makeAddr('deployer');
+  address internal _owner = makeAddr('owner');
   address internal _create2Deployer = makeAddr('create2Deployer');
   bytes internal _wethBytecode = '0x60809020';
   bytes internal _usdcProxyInitCode;
@@ -156,7 +157,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     vm.assume(_sender != factory.L2_MESSENGER());
     vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InvalidSender.selector);
     vm.prank(_sender);
-    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _l2AdapterBytecode, _initTxsAdapter);
+    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _owner, _l2AdapterBytecode, _initTxsAdapter);
   }
 
   function test_revertIfL1FactoryNotXDomainSender(address _xDomainSender) public {
@@ -170,7 +171,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     vm.prank(factory.L2_MESSENGER());
     vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InvalidSender.selector);
-    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _l2AdapterBytecode, _initTxsAdapter);
+    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _owner, _l2AdapterBytecode, _initTxsAdapter);
   }
 
   function test_deployUsdc() public {
@@ -195,7 +196,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Deploy the USDC implementation and proxy
     vm.prank(_l2Messenger);
-    factory.deploy(_usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _emptyInitTxs);
+    factory.deploy(_usdcImplBytecode, _emptyInitTxs, _owner, _l2AdapterBytecode, _emptyInitTxs);
   }
 
   function test_deployAdapter() public {
@@ -225,7 +226,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Deploy the L2 adapter implementation and proxy
     vm.prank(_l2Messenger);
-    factory.deploy(_usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _emptyInitTxs);
+    factory.deploy(_usdcImplBytecode, _emptyInitTxs, _owner, _l2AdapterBytecode, _emptyInitTxs);
   }
 
   function test_executeUsdcImplInitTxs() public {
@@ -239,7 +240,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     vm.expectCall(_usdcImplementation, _initTxsUsdc[1]);
 
     vm.prank(_l2Messenger);
-    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _l2AdapterBytecode, _emptyInitTxs);
+    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _owner, _l2AdapterBytecode, _emptyInitTxs);
   }
 
   function test_executeUsdcProxyInitTxs() public {
@@ -250,11 +251,13 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
       _l2Messenger, abi.encodeWithSelector(ICrossDomainMessenger.xDomainMessageSender.selector), abi.encode(_l1Factory)
     );
 
+    vm.expectCall(_usdcProxy, abi.encodeWithSelector(IUSDC.changeAdmin.selector, _owner));
+
     vm.expectCall(_usdcProxy, _initTxsUsdc[0]);
     vm.expectCall(_usdcProxy, _initTxsUsdc[1]);
 
     vm.prank(_l2Messenger);
-    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _l2AdapterBytecode, _emptyInitTxs);
+    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _owner, _l2AdapterBytecode, _emptyInitTxs);
   }
 
   function test_executeAdapterInitTxs() public {
@@ -270,7 +273,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     vm.expectCall(_l2AdapterProxy, _initTxTwo);
 
     vm.prank(_l2Messenger);
-    factory.deploy(_usdcImplBytecode, _emptyInitTxs, _l2AdapterBytecode, _initTxsAdapter);
+    factory.deploy(_usdcImplBytecode, _emptyInitTxs, _owner, _l2AdapterBytecode, _initTxsAdapter);
   }
 }
 

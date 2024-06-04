@@ -11,11 +11,12 @@ contract FactoryDeployBase is Script {
   IL1OpUSDCFactory public immutable L1_FACTORY = IL1OpUSDCFactory(vm.envAddress('L1_FACTORY_SEPOLIA'));
 
   address public deployer = vm.rememberKey(vm.envUint('SEPOLIA_DEPLOYER_PK'));
+  address public usdcAdmin = vm.envAddress('BASE_SEPOLIA_USDC_ADMIN');
 
   function run() public {
     vm.startBroadcast(deployer);
     // Deploy the L2 contracts
-    L1_FACTORY.deployL2FactoryAndContracts(L1_MESSENGER, MIN_GAS_LIMIT_FACTORY, MIN_GAS_LIMIT_DEPLOY);
+    L1_FACTORY.deployL2FactoryAndContracts(L1_MESSENGER, usdcAdmin, MIN_GAS_LIMIT_FACTORY, MIN_GAS_LIMIT_DEPLOY);
     vm.stopBroadcast();
   }
 }
