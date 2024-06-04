@@ -8,6 +8,8 @@ contract ForTestOpUSDCBridgeAdapter is OpUSDCBridgeAdapter {
   constructor(address _usdc, address _linkedAdapter) OpUSDCBridgeAdapter(_usdc, _linkedAdapter) {}
 
   function receiveMessage(address _user, uint256 _amount) external override {}
+
+  function _authorizeUpgrade(address newImplementation) internal override {}
 }
 
 abstract contract Base is Test {

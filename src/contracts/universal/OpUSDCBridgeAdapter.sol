@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
+import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 
-abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
+abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, UUPSUpgradeable {
   /// @inheritdoc IOpUSDCBridgeAdapter
   address public immutable USDC;
 
