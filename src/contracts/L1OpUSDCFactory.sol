@@ -54,8 +54,9 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * @param _owner The owner of the upgrade manager
    */
   constructor(address _usdc, bytes32 _salt, address _owner) {
-    _SALT = _salt;
+    // The WETH predeploy address on the OP Chains
     address _wethL2 = 0x4200000000000000000000000000000000000006;
+    _SALT = _salt;
     bytes memory _emptyInitTx = '';
 
     // Calculate L2 factory address
@@ -188,24 +189,24 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
 
   /**
    * @notice Precalculate and address to be deployed using the `CREATE2` opcode
-   * @param salt The 32-byte random value used to create the contract address.
-   * @param initCodeHash The 32-byte bytecode digest of the contract creation bytecode.
-   * @param deployer The 20-byte deployer address.
-   * @return computedAddress The 20-byte address where a contract will be stored.
+   * @param _salt The 32-byte random value used to create the contract address.
+   * @param _initCodeHash The 32-byte bytecode digest of the contract creation bytecode.
+   * @param _deployer The 20-byte _deployer address.
+   * @return _computedAddress The 20-byte address where a contract will be stored.
    */
   function _precalculateCreate2Address(
-    bytes32 salt,
-    bytes32 initCodeHash,
-    address deployer
-  ) internal pure returns (address computedAddress) {
+    bytes32 _salt,
+    bytes32 _initCodeHash,
+    address _deployer
+  ) internal pure returns (address _computedAddress) {
     assembly ("memory-safe") {
-      let ptr := mload(0x40)
-      mstore(add(ptr, 0x40), initCodeHash)
-      mstore(add(ptr, 0x20), salt)
-      mstore(ptr, deployer)
-      let start := add(ptr, 0x0b)
-      mstore8(start, 0xff)
-      computedAddress := keccak256(start, 85)
+      let _ptr := mload(0x40)
+      mstore(add(_ptr, 0x40), _initCodeHash)
+      mstore(add(_ptr, 0x20), _salt)
+      mstore(_ptr, _deployer)
+      let _start := add(_ptr, 0x0b)
+      mstore8(_start, 0xff)
+      _computedAddress := keccak256(_start, 85)
     }
   }
 }

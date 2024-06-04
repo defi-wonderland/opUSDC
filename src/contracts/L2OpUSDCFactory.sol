@@ -114,7 +114,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
    * @param _length The number of transactions to execute
    */
   function _executeInitTxs(address _target, bytes[] memory _initTxs, uint256 _length) internal {
-    for (uint256 i = 0; i < _length; i++) {
+    for (uint256 i; i < _length; i++) {
       (bool _success,) = _target.call(_initTxs[i]);
       if (!_success) {
         revert IL2OpUSDCFactory_InitializationFailed();

@@ -3,7 +3,6 @@ pragma solidity 0.8.25;
 
 import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
-import {ERC1967Utils} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol';
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
 import {BytecodeDeployer} from 'contracts/utils/BytecodeDeployer.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
@@ -218,7 +217,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
       abi.encode(factory.L1_FACTORY())
     );
 
-    // Mock and expect call over 'upgradeToAndCall' function to be called with the implementation and the correct init tx
+    // Expect call over 'upgradeToAndCall' function to be called with the implementation and the correct init tx
     bytes memory _adapterInitTx = abi.encodeWithSignature('setProxyExecutedInitTxs(uint256)', _emptyInitTxs.length);
     vm.expectCall(
       _l2AdapterProxy,

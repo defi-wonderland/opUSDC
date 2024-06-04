@@ -5,9 +5,10 @@ import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/Messa
 import {Test} from 'forge-std/Test.sol';
 
 contract Helpers is Test {
+  using MessageHashUtils for bytes32;
+
   error Create2DeploymentFailed();
 
-  using MessageHashUtils for bytes32;
   /**
    * @notice Sets up a mock and expects a call to it
    *
@@ -15,7 +16,6 @@ contract Helpers is Test {
    * @param _calldata The calldata to mock and expect
    * @param _returned The data to return from the mocked call
    */
-
   function _mockAndExpect(address _receiver, bytes memory _calldata, bytes memory _returned) internal {
     vm.mockCall(_receiver, _calldata, _returned);
     vm.expectCall(_receiver, _calldata);
