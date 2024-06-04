@@ -57,7 +57,7 @@ abstract contract Base is Test, Helpers {
   IUpgradeManager.Implementation internal _l2AdapterImplementation;
   address internal _upgradeManager;
 
-  function setUp() public {
+  function setUp() public virtual {
     // Deploy factory
     factory = new ForTestL1OpUSDCFactory(_usdc, _salt, _owner);
     _upgradeManager = address(factory.UPGRADE_MANAGER());
@@ -228,11 +228,11 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
   }
 
   /**
-   * @notice Check the `deployL2USDCAndAdapter` function reverts if the caller is not the executor
+   * @notice Check the `deployL2FactoryAndContracts` function reverts if the caller is not the executor
    */
   function test_revertIfNotExecutor(
-    uint32 _minGasLimitCreate2Factory,
     uint32 _minGasLimitDeploy,
+    uint32 _minGasLimitCreate2Factory,
     address _executor
   ) public {
     vm.assume(_executor != _user);
@@ -253,10 +253,10 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
   }
 
   /**
-   * @notice Check the `deployL2USDCAndAdapter` function calls the `messengerDeploymentExecutor` correctly
+   * @notice Check the `deployL2FactoryAndContracts` function calls the `messengerDeploymentExecutor` correctly
    */
   function test_callMessengerDeploymentExecutor(uint32 _minGasLimitCreate2Factory, uint32 _minGasLimitDeploy) public {
-    // Mock all the `deployL2USDCAndAdapter` function calls
+    // Mock all the `deployL2FactoryAndContracts` function calls
     _mockDeployFunctionCalls();
 
     // Expect the `bridgedUSDCImplementation` to be properly called
@@ -271,7 +271,7 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
    * @notice Check the messenger is set as deployed on the `isMessengerDeployed` mapping
    */
   function test_setMessengerDeployed(uint32 _minGasLimitCreate2Factory, uint32 _minGasLimitDeploy) public {
-    // Mock all the `deployL2USDCAndAdapter` function calls
+    // Mock all the `deployL2FactoryAndContracts` function calls
     _mockDeployFunctionCalls();
 
     // Execute
@@ -283,10 +283,10 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
   }
 
   /**
-   * @notice Check the `deployL2USDCAndAdapter` function calls the `initializeNewMessenger` correctly
+   * @notice Check the `deployL2FactoryAndContracts` function calls the `initializeNewMessenger` correctly
    */
   function test_callInitializeMessenger(uint32 _minGasLimitCreate2Factory, uint32 _minGasLimitDeploy) public {
-    // Mock all the `deployL2USDCAndAdapter` function calls
+    // Mock all the `deployL2FactoryAndContracts` function calls
     _mockDeployFunctionCalls();
 
     // Expect the `initializeMessenger` to be properly called
@@ -305,7 +305,7 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
    */
   function test_callSendMessage(uint32 _minGasLimitCreate2Factory, uint32 _minGasLimitDeploy) public {
     uint256 _zeroValue = 0;
-    // Mock all the `deployL2USDCAndAdapter` function calls
+    // Mock all the `deployL2FactoryAndContracts` function calls
     _mockDeployFunctionCalls();
 
     // Get the L2 factory deployment tx
@@ -332,11 +332,11 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
   }
 
   /**
-   * @notice Check the `_deployL2USDCAndAdapter` function is called on the `deployL2USDCAndAdapter` function by checking
+   * @notice Check the `deployL2USDCAndAdapter` function is called on the `deployL2USDCAndAdapter` function by checking
    * that the message to deploy those L2 contracts is properly sent
    */
   function test_callDeployL2USDCAndAdapter(uint32 _minGasLimitCreate2Factory, uint32 _minGasLimitDeploy) public {
-    // Mock all the `deployL2USDCAndAdapter` function calls
+    // Mock all the `deployL2FactoryAndContracts` function calls
     _mockDeployFunctionCalls();
 
     // Expect the `sendMessage` to be properly called
@@ -362,6 +362,12 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
 }
 
 contract L1OpUSDCFactory_Unit_DeployL2USDCAndAdapter is Base {
+  function setUp() public override {
+    super.setUp();
+    // Set the L2 factory as deployed for the L1 messenger
+    factory.forTest_setIsFactoryDeployed(_l1Messenger, true);
+  }
+
   function test_revertIfFactoryAlreadyDeployed() public {
     uint32 _minGasLimit = 0;
     // Mock the `isMessengerDeployed` to return true
@@ -379,8 +385,8 @@ contract L1OpUSDCFactory_Unit_DeployL2USDCAndAdapter is Base {
   function test_revertIfNotExecutor(uint32 _minGasLimitDeploy, address _executor) public {
     vm.assume(_executor != _user);
 
-    // Mock the `isMessengerDeployed` to return false
-    factory.forTest_setIsFactoryDeployed(_l1Messenger, false);
+    // Mock the `isMessengerDeployed` to return true
+    factory.forTest_setIsFactoryDeployed(_l1Messenger, true);
 
     vm.mockCall(
       _upgradeManager,
@@ -409,14 +415,14 @@ contract L1OpUSDCFactory_Unit_DeployL2USDCAndAdapter is Base {
     factory.deployL2USDCAndAdapter(_l1Messenger, _admin, _minGasLimitDeploy);
   }
 
-  function test_revertIfInvalidUSDCAdmin(uint32 _minGasLimitCreate2Factory, uint32 _minGasLimitDeploy) public {
+  function test_revertIfInvalidUSDCAdmin(uint32 _minGasLimitDeploy) public {
     // Mock all the `deployL2USDCAndAdapter` function calls
     _mockDeployFunctionCalls();
 
-    address _admin2 = factory.L2_FACTORY();
+    address _admin = factory.L2_FACTORY();
     vm.expectRevert(IL1OpUSDCFactory.IL1OpUSDCFactory_InvalidUSDCAdmin.selector);
     vm.prank(_user);
-    factory.deployL2FactoryAndContracts(_l1Messenger, _admin2, _minGasLimitCreate2Factory, _minGasLimitDeploy);
+    factory.deployL2USDCAndAdapter(_l1Messenger, _admin, _minGasLimitDeploy);
   }
 
   function test_callBridgedUSDCImplementation(uint32 _minGasLimitDeploy) public {
