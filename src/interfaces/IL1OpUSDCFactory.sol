@@ -30,19 +30,25 @@ interface IL1OpUSDCFactory {
   //////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Thrown when the USDC admin is equal to the L2 factory address
+   * @notice Thrown when the factory on L2 for the given messenger is already deployed
    */
-  error IL1OpUSDCFactory_InvalidUSDCAdmin();
-
-  /**
-   * @notice Thrown when the messenger already has a protocol deployed for it
-   */
-  error IL1OpUSDCFactory_MessengerAlreadyDeployed();
+  error IL1OpUSDCFactory_FactoryAlreadyDeployed();
 
   /**
    * @notice Thrown when the caller is not the executor
    */
   error IL1OpUSDCFactory_NotExecutor();
+
+  /**
+   * @notice Thrown when the factory on L2 for the given messenger is not deployed and the `deployL2USDCAndAdapter` is
+   * called
+   */
+  error IL1OpUSDCFactory_FactoryNotDeployed();
+
+  /**
+   * @notice Thrown when the USDC admin is equal to the L2 factory address
+   */
+  error IL1OpUSDCFactory_InvalidUSDCAdmin();
 
   /*///////////////////////////////////////////////////////////////
                             LOGIC
@@ -110,9 +116,9 @@ interface IL1OpUSDCFactory {
   function L2_USDC_PROXY() external view returns (address _l2UsdcProxy);
 
   /**
-   * @notice Checks if a messenger has a protocol deployed for it
-   * @param _messenger The address of the L1 messenger
-   * @return _deployed Whether the messenger has a protocol deployed for it
+   * @notice Checks if the `L2OpUSDCFactory` has been deployed on L2 by the given messenger
+   * @param _l1Messenger The address of the L1 messenger
+   * @return _deployed Whether the messenger has a factory deployed for it on L2
    */
-  function isMessengerDeployed(address _messenger) external view returns (bool _deployed);
+  function isFactoryDeployed(address _l1Messenger) external view returns (bool _deployed);
 }

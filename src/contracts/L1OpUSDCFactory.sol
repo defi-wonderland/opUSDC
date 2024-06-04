@@ -45,7 +45,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   bytes32 internal immutable _SALT;
 
   /// @inheritdoc IL1OpUSDCFactory
-  mapping(address _l1Messenger => bool _deployed) public isMessengerDeployed;
+  mapping(address _l1Messenger => bool _deployed) public isFactoryDeployed;
 
   /**
    * @notice Constructs the L1 factory contract, deploys the L1 adapter and the upgrade manager and precalculates the
@@ -106,12 +106,12 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     uint32 _minGasLimitCreate2Factory,
     uint32 _minGasLimitDeploy
   ) external {
-    if (isMessengerDeployed[_l1Messenger]) revert IL1OpUSDCFactory_MessengerAlreadyDeployed();
+    if (isFactoryDeployed[_l1Messenger]) revert IL1OpUSDCFactory_FactoryAlreadyDeployed();
     if (IUpgradeManager(UPGRADE_MANAGER).messengerDeploymentExecutor(_l1Messenger) != msg.sender) {
       revert IL1OpUSDCFactory_NotExecutor();
     }
     // Set the messenger as deployed and initialize it on the adapter
-    isMessengerDeployed[_l1Messenger] = true;
+    isFactoryDeployed[_l1Messenger] = true;
     L1_ADAPTER_PROXY.initializeNewMessenger(_l1Messenger);
 
     // Get the L2 factory init code
@@ -136,6 +136,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
    */
   function deployL2USDCAndAdapter(address _l1Messenger, address _usdcAdmin, uint32 _minGasLimitDeploy) external {
+    if (isFactoryDeployed[_l1Messenger]) revert IL1OpUSDCFactory_FactoryNotDeployed();
     if (IUpgradeManager(UPGRADE_MANAGER).messengerDeploymentExecutor(_l1Messenger) != msg.sender) {
       revert IL1OpUSDCFactory_NotExecutor();
     }

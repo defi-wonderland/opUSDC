@@ -16,8 +16,8 @@ import {Helpers} from 'test/utils/Helpers.sol';
 contract ForTestL1OpUSDCFactory is L1OpUSDCFactory {
   constructor(address _usdc, bytes32 _salt, address _owner) L1OpUSDCFactory(_usdc, _salt, _owner) {}
 
-  function forTest_setIsMessengerDeployed(address _l1Messenger, bool _deployed) public {
-    isMessengerDeployed[_l1Messenger] = _deployed;
+  function forTest_setIsFactoryDeployed(address _l1Messenger, bool _deployed) public {
+    isFactoryDeployed[_l1Messenger] = _deployed;
   }
 
   function forTest_precalculateCreateAddress(
@@ -219,10 +219,10 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
     uint32 _minGasLimitDeploy
   ) public {
     // Mock the `isMessengerDeployed` to return true
-    factory.forTest_setIsMessengerDeployed(_l1Messenger, true);
+    factory.forTest_setIsFactoryDeployed(_l1Messenger, true);
 
     // Execute
-    vm.expectRevert(IL1OpUSDCFactory.IL1OpUSDCFactory_MessengerAlreadyDeployed.selector);
+    vm.expectRevert(IL1OpUSDCFactory.IL1OpUSDCFactory_FactoryAlreadyDeployed.selector);
     vm.prank(_user);
     factory.deployL2FactoryAndContracts(_l1Messenger, _admin, _minGasLimitCreate2Factory, _minGasLimitDeploy);
   }
@@ -238,7 +238,7 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
     vm.assume(_executor != _user);
 
     // Mock the `isMessengerDeployed` to return false
-    factory.forTest_setIsMessengerDeployed(_l1Messenger, false);
+    factory.forTest_setIsFactoryDeployed(_l1Messenger, false);
 
     vm.mockCall(
       _upgradeManager,
@@ -279,7 +279,7 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
     factory.deployL2FactoryAndContracts(_l1Messenger, _admin, _minGasLimitCreate2Factory, _minGasLimitDeploy);
 
     // Assert
-    assertTrue(factory.isMessengerDeployed(_l1Messenger), 'Messenger not deployed');
+    assertTrue(factory.isFactoryDeployed(_l1Messenger), 'Messenger not deployed');
   }
 
   /**
@@ -362,6 +362,17 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
 }
 
 contract L1OpUSDCFactory_Unit_DeployL2USDCAndAdapter is Base {
+  function test_revertIfFactoryAlreadyDeployed() public {
+    uint32 _minGasLimit = 0;
+    // Mock the `isMessengerDeployed` to return true
+    factory.forTest_setIsFactoryDeployed(_l1Messenger, true);
+
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(IL1OpUSDCFactory.IL1OpUSDCFactory_FactoryNotDeployed.selector);
+    factory.deployL2USDCAndAdapter(_l1Messenger, _admin, _minGasLimit);
+  }
+
   /**
    * @notice Check the `deployL2USDCAndAdapter` function reverts if the caller is not the executor
    */
@@ -369,7 +380,7 @@ contract L1OpUSDCFactory_Unit_DeployL2USDCAndAdapter is Base {
     vm.assume(_executor != _user);
 
     // Mock the `isMessengerDeployed` to return false
-    factory.forTest_setIsMessengerDeployed(_l1Messenger, false);
+    factory.forTest_setIsFactoryDeployed(_l1Messenger, false);
 
     vm.mockCall(
       _upgradeManager,
