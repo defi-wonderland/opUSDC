@@ -19,3 +19,6 @@ broadcast/*/*/*
 
 # Out dir
 out
+
+# Coverage
+lcov.info

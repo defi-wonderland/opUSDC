@@ -235,6 +235,27 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
   }
 
   /**
+   * @notice Check the `changeAdmin` function is called on the USDC proxy
+   */
+  function test_callChangeAdmin() public {
+    // Get the usdc proxy address
+    bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, abi.encode(_weth));
+    address _usdcProxy = _precalculateCreate2Address(_salt, keccak256(_usdcProxyInitCode), address(factory));
+
+    // Mock the call over `xDomainMessageSender` to return the L1 factory address
+    vm.mockCall(
+      _l2Messenger, abi.encodeWithSelector(ICrossDomainMessenger.xDomainMessageSender.selector), abi.encode(_l1Factory)
+    );
+
+    // Expect the call over 'changeAdmin' function
+    vm.expectCall(_usdcProxy, abi.encodeWithSelector(IUSDC.changeAdmin.selector, _owner));
+
+    // Execute
+    vm.prank(_l2Messenger);
+    factory.deploy(_usdcImplBytecode, _emptyInitTxs, _owner, _l2AdapterImplBytecode, _emptyInitTxs);
+  }
+
+  /**
    * @notice Check init txs are properly executed over the USDC implementation and proxy
    */
   function test_executeUsdcImplInitTxs() public {
