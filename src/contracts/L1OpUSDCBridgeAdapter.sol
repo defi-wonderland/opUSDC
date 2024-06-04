@@ -3,8 +3,6 @@ pragma solidity 0.8.25;
 
 import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
-import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
-import {SignatureChecker} from '@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol';
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
@@ -13,8 +11,6 @@ import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSDCBridgeAdapter {
   using SafeERC20 for IUSDC;
-  using MessageHashUtils for bytes32;
-  using SignatureChecker for address;
 
   /// @inheritdoc IL1OpUSDCBridgeAdapter
   address public immutable UPGRADE_MANAGER;
@@ -193,10 +189,7 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
     // Hash the message
     bytes32 _messageHash = keccak256(abi.encode(address(this), block.chainid, _to, _amount, userNonce[_signer]++));
 
-    _messageHash = _messageHash.toEthSignedMessageHash();
-
-    // Check from is the signer
-    if (!_signer.isValidSignatureNow(_messageHash, _signature)) revert IOpUSDCBridgeAdapter_InvalidSignature();
+    _checkSignature(_signer, _messageHash, _signature);
 
     // Transfer the tokens to the contract
     IUSDC(USDC).safeTransferFrom(_signer, address(this), _amount);
