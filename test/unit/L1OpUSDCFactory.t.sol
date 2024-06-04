@@ -365,7 +365,7 @@ contract L1OpUSDCFactory_Unit_DeployL2USDCAndAdapter is Base {
   function test_revertIfFactoryAlreadyDeployed() public {
     uint32 _minGasLimit = 0;
     // Mock the `isMessengerDeployed` to return true
-    factory.forTest_setIsFactoryDeployed(_l1Messenger, true);
+    factory.forTest_setIsFactoryDeployed(_l1Messenger, false);
 
     // Execute
     vm.prank(_user);
