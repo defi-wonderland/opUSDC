@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
+import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
+import {SignatureChecker} from '@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 
 abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
+  using MessageHashUtils for bytes32;
+  using SignatureChecker for address;
+
   /// @inheritdoc IOpUSDCBridgeAdapter
   address public immutable USDC;
 
@@ -50,5 +55,17 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
    */
   function _xDomainMessageSender(address _messenger) internal view returns (address _sender) {
     _sender = ICrossDomainMessenger(_messenger).xDomainMessageSender();
+  }
+
+  /**
+   * @notice Check the signature of a message
+   * @param _signer the address that signed the message
+   * @param _messageHash the hash of the message that was signed
+   * @param _signature the signature of the message
+   */
+  function _checkSignature(address _signer, bytes32 _messageHash, bytes memory _signature) internal view {
+    _messageHash = _messageHash.toEthSignedMessageHash();
+
+    if (!_signer.isValidSignatureNow(_messageHash, _signature)) revert IOpUSDCBridgeAdapter_InvalidSignature();
   }
 }
