@@ -2,6 +2,7 @@
 pragma solidity 0.8.25;
 
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
+import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 
 abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
   /// @inheritdoc IOpUSDCBridgeAdapter
@@ -30,4 +31,24 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
    * @param _amount The amount of tokens to mint
    */
   function receiveMessage(address _user, uint256 _amount) external virtual;
+
+  /**
+   * @notice Send a message to the other chain
+   * @param _messenger The address of the messenger contract
+   * @param _target The address of the target contract on the other chain
+   * @param _message The message to send
+   * @param _minGasLimit The minimum gas limit for the message
+   */
+  function _xDomainMessage(address _messenger, address _target, bytes memory _message, uint32 _minGasLimit) internal {
+    ICrossDomainMessenger(_messenger).sendMessage(_target, _message, _minGasLimit);
+  }
+
+  /**
+   * @notice Returns the sender of the message from the other chain
+   * @param _messenger The address of the messenger contract on the current chain
+   * @return _sender The address of the sender of the message from the other chain
+   */
+  function _xDomainMessageSender(address _messenger) internal view returns (address _sender) {
+    _sender = ICrossDomainMessenger(_messenger).xDomainMessageSender();
+  }
 }

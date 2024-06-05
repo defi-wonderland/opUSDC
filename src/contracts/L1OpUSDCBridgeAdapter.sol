@@ -8,7 +8,6 @@ import {SignatureChecker} from '@openzeppelin/contracts/utils/cryptography/Signa
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
-import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSDCBridgeAdapter {
@@ -45,10 +44,7 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
    */
   modifier checkSender(address _messenger) {
     // We should accept incoming messages from all messengers that have been initialized
-    if (
-      messengerStatus[_messenger] != Status.Active
-        || ICrossDomainMessenger(_messenger).xDomainMessageSender() != LINKED_ADAPTER
-    ) {
+    if (messengerStatus[_messenger] != Status.Active || _xDomainMessageSender(_messenger) != LINKED_ADAPTER) {
       revert IOpUSDCBridgeAdapter_InvalidSender();
     }
     _;
@@ -80,10 +76,7 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
    * @dev Only callable by a whitelisted messenger during its migration process
    */
   function setBurnAmount(uint256 _amount) external {
-    if (
-      messengerStatus[msg.sender] != Status.Upgrading
-        || ICrossDomainMessenger(msg.sender).xDomainMessageSender() != LINKED_ADAPTER
-    ) {
+    if (messengerStatus[msg.sender] != Status.Upgrading || _xDomainMessageSender(msg.sender) != LINKED_ADAPTER) {
       revert IOpUSDCBridgeAdapter_InvalidSender();
     }
 
@@ -105,9 +98,7 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
 
     messengerStatus[_messenger] = Status.Active;
 
-    ICrossDomainMessenger(_messenger).sendMessage(
-      LINKED_ADAPTER, abi.encodeWithSignature('receiveResumeMessaging()'), _minGasLimit
-    );
+    _xDomainMessage(_messenger, LINKED_ADAPTER, abi.encodeWithSignature('receiveResumeMessaging()'), _minGasLimit);
 
     emit MessagingResumed(_messenger);
   }
@@ -158,8 +149,8 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
     IUSDC(USDC).safeTransferFrom(msg.sender, address(this), _amount);
 
     // Send the message to the linked adapter
-    ICrossDomainMessenger(_messenger).sendMessage(
-      LINKED_ADAPTER, abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount), _minGasLimit
+    _xDomainMessage(
+      _messenger, LINKED_ADAPTER, abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount), _minGasLimit
     );
 
     emit MessageSent(msg.sender, _to, _amount, _messenger, _minGasLimit);
@@ -202,8 +193,8 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
     IUSDC(USDC).safeTransferFrom(_signer, address(this), _amount);
 
     // Send the message to the linked adapter
-    ICrossDomainMessenger(_messenger).sendMessage(
-      LINKED_ADAPTER, abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount), _minGasLimit
+    _xDomainMessage(
+      _messenger, LINKED_ADAPTER, abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount), _minGasLimit
     );
 
     emit MessageSent(_signer, _to, _amount, _messenger, _minGasLimit);
@@ -247,7 +238,8 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
     circle = _circle;
     messengerStatus[_messenger] = Status.Upgrading;
 
-    ICrossDomainMessenger(_messenger).sendMessage(
+    _xDomainMessage(
+      _messenger,
       LINKED_ADAPTER,
       abi.encodeWithSignature('receiveMigrateToNative(address,uint32)', _circle, _minGasLimitSetBurnAmount),
       _minGasLimitReceiveOnL2
@@ -267,9 +259,7 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
     // Ensure messaging is enabled
     if (messengerStatus[_messenger] != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
-    ICrossDomainMessenger(_messenger).sendMessage(
-      LINKED_ADAPTER, abi.encodeWithSignature('receiveStopMessaging()'), _minGasLimit
-    );
+    _xDomainMessage(_messenger, LINKED_ADAPTER, abi.encodeWithSignature('receiveStopMessaging()'), _minGasLimit);
 
     messengerStatus[_messenger] = Status.Paused;
 
@@ -289,7 +279,8 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
       IUpgradeManager(UPGRADE_MANAGER).l2AdapterImplementation();
     bytes memory _l2AdapterBytecode = _l2AdapterImplementation.implementation.code;
 
-    ICrossDomainMessenger(_messenger).sendMessage(
+    _xDomainMessage(
+      _messenger,
       LINKED_ADAPTER,
       abi.encodeWithSignature(
         'receiveAdapterUpgrade(bytes,bytes[])', _l2AdapterBytecode, _l2AdapterImplementation.initTxs
@@ -313,7 +304,8 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
       IUpgradeManager(UPGRADE_MANAGER).bridgedUSDCImplementation();
     bytes memory _l2UsdcBytecode = _l2UsdcImplementation.implementation.code;
 
-    ICrossDomainMessenger(_messenger).sendMessage(
+    _xDomainMessage(
+      _messenger,
       LINKED_ADAPTER,
       abi.encodeWithSignature('receiveUsdcUpgrade(bytes,bytes[])', _l2UsdcBytecode, _l2UsdcImplementation.initTxs),
       _minGasLimit

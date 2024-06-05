@@ -10,7 +10,6 @@ import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
 import {BytecodeDeployer} from 'contracts/utils/BytecodeDeployer.sol';
 import {IL2OpUSDCBridgeAdapter} from 'interfaces/IL2OpUSDCBridgeAdapter.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
-import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCBridgeAdapter, UUPSUpgradeable {
@@ -30,7 +29,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
    * @notice Modifier to check if the sender is the linked adapter through the messenger
    */
   modifier checkSender() {
-    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != LINKED_ADAPTER) {
+    if (msg.sender != MESSENGER || _xDomainMessageSender(MESSENGER) != LINKED_ADAPTER) {
       revert IOpUSDCBridgeAdapter_InvalidSender();
     }
     _;
@@ -65,8 +64,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
     IUSDC(USDC).burn(msg.sender, _amount);
 
     // Send the message to the linked adapter
-    ICrossDomainMessenger(MESSENGER).sendMessage(
-      LINKED_ADAPTER, abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount), _minGasLimit
+    _xDomainMessage(
+      MESSENGER, LINKED_ADAPTER, abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount), _minGasLimit
     );
 
     emit MessageSent(msg.sender, _to, _amount, MESSENGER, _minGasLimit);
@@ -107,8 +106,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
     IUSDC(USDC).burn(_signer, _amount);
 
     // Send the message to the linked adapter
-    ICrossDomainMessenger(MESSENGER).sendMessage(
-      LINKED_ADAPTER, abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount), _minGasLimit
+    _xDomainMessage(
+      MESSENGER, LINKED_ADAPTER, abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount), _minGasLimit
     );
 
     emit MessageSent(_signer, _to, _amount, MESSENGER, _minGasLimit);
@@ -220,8 +219,11 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
 
     uint256 _burnAmount = IUSDC(USDC).totalSupply();
 
-    ICrossDomainMessenger(MESSENGER).sendMessage(
-      LINKED_ADAPTER, abi.encodeWithSignature('setBurnAmount(uint256)', _burnAmount), _setBurnAmountMinGasLimit
+    _xDomainMessage(
+      MESSENGER,
+      LINKED_ADAPTER,
+      abi.encodeWithSignature('setBurnAmount(uint256)', _burnAmount),
+      _setBurnAmountMinGasLimit
     );
 
     isMessagingDisabled = true;
