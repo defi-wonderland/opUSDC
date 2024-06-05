@@ -1,20 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
-import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
-import {SignatureChecker} from '@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol';
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
-contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSDCBridgeAdapter {
+contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   using SafeERC20 for IUSDC;
-  using MessageHashUtils for bytes32;
-  using SignatureChecker for address;
 
   /// @inheritdoc IL1OpUSDCBridgeAdapter
   address public immutable UPGRADE_MANAGER;
@@ -41,13 +36,12 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
 
   /**
    * @notice Modifier to check if the sender is the linked adapter through the messenger
-   * @param _messenger The address of the messenger contract
    */
-  modifier checkSender(address _messenger) {
+  modifier checkSender() {
     // We should accept incoming messages from all messengers that have been initialized
     if (
-      messengerStatus[_messenger] != Status.Active
-        || ICrossDomainMessenger(_messenger).xDomainMessageSender() != LINKED_ADAPTER
+      messengerStatus[msg.sender] != Status.Active
+        || ICrossDomainMessenger(msg.sender).xDomainMessageSender() != LINKED_ADAPTER
     ) {
       revert IOpUSDCBridgeAdapter_InvalidSender();
     }
@@ -193,10 +187,7 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
     // Hash the message
     bytes32 _messageHash = keccak256(abi.encode(address(this), block.chainid, _to, _amount, userNonce[_signer]++));
 
-    _messageHash = _messageHash.toEthSignedMessageHash();
-
-    // Check from is the signer
-    if (!_signer.isValidSignatureNow(_messageHash, _signature)) revert IOpUSDCBridgeAdapter_InvalidSignature();
+    _checkSignature(_signer, _messageHash, _signature);
 
     // Transfer the tokens to the contract
     IUSDC(USDC).safeTransferFrom(_signer, address(this), _amount);
@@ -215,7 +206,7 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
    * @param _user The user to mint the bridged representation for
    * @param _amount The amount of tokens to mint
    */
-  function receiveMessage(address _user, uint256 _amount) external override checkSender(msg.sender) {
+  function receiveMessage(address _user, uint256 _amount) external override checkSender {
     // Transfer the tokens to the user
     IUSDC(USDC).safeTransfer(_user, _amount);
 

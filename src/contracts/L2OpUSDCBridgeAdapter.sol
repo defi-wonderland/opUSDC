@@ -2,20 +2,14 @@
 pragma solidity 0.8.25;
 
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
-import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import {ERC1967Utils} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol';
-import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
-import {SignatureChecker} from '@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol';
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
 import {BytecodeDeployer} from 'contracts/utils/BytecodeDeployer.sol';
 import {IL2OpUSDCBridgeAdapter} from 'interfaces/IL2OpUSDCBridgeAdapter.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
-contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCBridgeAdapter, UUPSUpgradeable {
-  using MessageHashUtils for bytes32;
-  using SignatureChecker for address;
-
+contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCBridgeAdapter {
   /// @inheritdoc IL2OpUSDCBridgeAdapter
   address public immutable MESSENGER;
 
@@ -97,10 +91,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
     // Hash the message
     bytes32 _messageHash = keccak256(abi.encode(address(this), block.chainid, _to, _amount, userNonce[_signer]++));
 
-    _messageHash = _messageHash.toEthSignedMessageHash();
-
-    // Check from is the signer
-    if (!_signer.isValidSignatureNow(_messageHash, _signature)) revert IOpUSDCBridgeAdapter_InvalidSignature();
+    _checkSignature(_signer, _messageHash, _signature);
 
     // Burn the tokens
     IUSDC(USDC).burn(_signer, _amount);
