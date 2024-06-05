@@ -70,6 +70,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
       bytes memory _usdcProxyCArgs = abi.encode(_WETH);
       bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);
       _usdcProxy = _deployCreate2(_SALT, _usdcProxyInitCode);
+      // Upgrade the proxy to the implementation
       IUSDC(_usdcProxy).upgradeTo(_usdcImplementation);
       emit USDCDeployed(_usdcProxy, _usdcImplementation);
     }
