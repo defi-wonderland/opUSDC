@@ -229,11 +229,12 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
   ) external onlyUpgradeManager {
     // Ensure messaging is enabled
     // Leave this flow open to resend upgrading flow incase message fails on L2
-    if (messengerStatus[_messenger] != Status.Active && messengerStatus[_messenger] != Status.Upgrading) {
-      revert IOpUSDCBridgeAdapter_MessagingDisabled();
-    }
-    if (circle != address(0) && messengerStatus[_messenger] != Status.Upgrading) {
-      revert IOpUSDCBridgeAdapter_MigrationInProgress();
+    if (messengerStatus[_messenger] != Status.Upgrading) {
+      if (messengerStatus[_messenger] != Status.Active) {
+        revert IOpUSDCBridgeAdapter_MessagingDisabled();
+      } else if (circle != address(0)) {
+        revert IOpUSDCBridgeAdapter_MigrationInProgress();
+      }
     }
 
     circle = _circle;
@@ -252,7 +253,7 @@ contract L1OpUSDCBridgeAdapter is OpUSDCBridgeAdapter, UUPSUpgradeable, IL1OpUSD
    * @notice Send a message to the linked adapter to call receiveStopMessaging() and stop outgoing messages.
    * @dev Only callable by the owner of the adapter
    * @dev Setting isMessagingDisabled to true is an irreversible operation
-   *  @param _messenger The address of the L2 messenger to stop messaging with
+   * @param _messenger The address of the L2 messenger to stop messaging with
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function stopMessaging(address _messenger, uint32 _minGasLimit) external onlyUpgradeManager {

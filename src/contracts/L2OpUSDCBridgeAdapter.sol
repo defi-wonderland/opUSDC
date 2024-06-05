@@ -180,16 +180,15 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
     // Deploy L2 USDC implementation
     address _usdcImplementation = address(new BytecodeDeployer(_l2UsdcBytecode));
 
-    // Call upgradeToAndCall on the USDC contract
+    // Call upgradeTo on the USDC contract
     IUSDC(USDC).upgradeTo(_usdcImplementation);
 
     // Cache the length of the initialization transactions
     uint256 _l2UsdcImpTxsLength = _l2UsdcInitTxs.length;
     uint256 _proxyExecutedInitTxs = _proxyExecutedInitTxsLength;
     // Initialize L2 Usdc
-    bool _success;
     for (uint256 i; i < _l2UsdcImpTxsLength; i++) {
-      (_success,) = _usdcImplementation.call(_l2UsdcInitTxs[i]);
+      (bool _success,) = _usdcImplementation.call(_l2UsdcInitTxs[i]);
       if (i >= _proxyExecutedInitTxs && _success) {
         (_success,) = USDC.call(_l2UsdcInitTxs[i]);
       }
