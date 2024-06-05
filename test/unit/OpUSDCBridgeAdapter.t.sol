@@ -14,6 +14,8 @@ contract ForTestOpUSDCBridgeAdapter is OpUSDCBridgeAdapter {
   function forTest_checkSignature(address _signer, bytes32 _messageHash, bytes memory _signature) public view {
     _checkSignature(_signer, _messageHash, _signature);
   }
+
+  function _authorizeUpgrade(address newImplementation) internal override {}
 }
 
 abstract contract Base is Test {
