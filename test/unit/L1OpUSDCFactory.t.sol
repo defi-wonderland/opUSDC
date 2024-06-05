@@ -43,7 +43,6 @@ abstract contract Base is Test, Helpers {
   address internal _owner = makeAddr('owner');
   address internal _user = makeAddr('user');
   address internal _usdc = makeAddr('USDC');
-  address internal _admin = makeAddr('admin');
   bytes internal _l2AdapterBytecode = '0x608061111111';
   bytes internal _l2UsdcImplementationBytecode = '0x6080333333';
   address internal _l2AdapterImplAddress = makeAddr('l2AdapterImpl');
@@ -230,7 +229,7 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
     // Execute
     vm.expectRevert(IL1OpUSDCFactory.IL1OpUSDCFactory_NotExecutor.selector);
     vm.prank(_user);
-    factory.deployL2FactoryAndContracts(_l1Messenger, _admin, _minGasLimitCreate2Factory, _minGasLimitDeploy);
+    factory.deployL2FactoryAndContracts(_l1Messenger, _minGasLimitCreate2Factory, _minGasLimitDeploy);
   }
 
   /**
@@ -245,7 +244,7 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
 
     // Execute
     vm.prank(_user);
-    factory.deployL2FactoryAndContracts(_l1Messenger, _admin, _minGasLimitCreate2Factory, _minGasLimitDeploy);
+    factory.deployL2FactoryAndContracts(_l1Messenger, _minGasLimitCreate2Factory, _minGasLimitDeploy);
   }
 
   /**
@@ -257,7 +256,7 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
 
     // Execute
     vm.prank(_user);
-    factory.deployL2FactoryAndContracts(_l1Messenger, _admin, _minGasLimitCreate2Factory, _minGasLimitDeploy);
+    factory.deployL2FactoryAndContracts(_l1Messenger, _minGasLimitCreate2Factory, _minGasLimitDeploy);
 
     // Assert
     assertTrue(factory.isFactoryDeployed(_l1Messenger), 'Messenger not deployed');
@@ -278,7 +277,7 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
 
     // Execute
     vm.prank(_user);
-    factory.deployL2FactoryAndContracts(_l1Messenger, _admin, _minGasLimitCreate2Factory, _minGasLimitDeploy);
+    factory.deployL2FactoryAndContracts(_l1Messenger, _minGasLimitCreate2Factory, _minGasLimitDeploy);
   }
 
   /**
@@ -309,7 +308,7 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
 
     // Execute
     vm.prank(_user);
-    factory.deployL2FactoryAndContracts(_l1Messenger, _admin, _minGasLimitCreate2Factory, _minGasLimitDeploy);
+    factory.deployL2FactoryAndContracts(_l1Messenger, _minGasLimitCreate2Factory, _minGasLimitDeploy);
   }
 
   /**
@@ -325,7 +324,6 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
       L2OpUSDCFactory.deploy.selector,
       _l2UsdcImplementationBytecode,
       _usdcImplInitTxs,
-      _admin,
       _l2AdapterBytecode,
       _l2AdapterInitTxs
     );
@@ -338,7 +336,7 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
 
     // Execute
     vm.prank(_user);
-    factory.deployL2FactoryAndContracts(_l1Messenger, _admin, _minGasLimitCreate2Factory, _minGasLimitDeploy);
+    factory.deployL2FactoryAndContracts(_l1Messenger, _minGasLimitCreate2Factory, _minGasLimitDeploy);
   }
 }
 
@@ -357,7 +355,7 @@ contract L1OpUSDCFactory_Unit_DeployL2USDCAndAdapter is Base {
     // Execute
     vm.prank(_user);
     vm.expectRevert(IL1OpUSDCFactory.IL1OpUSDCFactory_FactoryNotDeployed.selector);
-    factory.deployL2USDCAndAdapter(_l1Messenger, _admin, _minGasLimit);
+    factory.deployL2USDCAndAdapter(_l1Messenger, _minGasLimit);
   }
 
   /**
@@ -378,7 +376,7 @@ contract L1OpUSDCFactory_Unit_DeployL2USDCAndAdapter is Base {
     // Execute
     vm.expectRevert(IL1OpUSDCFactory.IL1OpUSDCFactory_NotExecutor.selector);
     vm.prank(_user);
-    factory.deployL2USDCAndAdapter(_l1Messenger, _admin, _minGasLimitDeploy);
+    factory.deployL2USDCAndAdapter(_l1Messenger, _minGasLimitDeploy);
   }
 
   /**
@@ -393,17 +391,7 @@ contract L1OpUSDCFactory_Unit_DeployL2USDCAndAdapter is Base {
 
     // Execute
     vm.prank(_user);
-    factory.deployL2USDCAndAdapter(_l1Messenger, _admin, _minGasLimitDeploy);
-  }
-
-  function test_revertIfInvalidUSDCAdmin(uint32 _minGasLimitDeploy) public {
-    // Mock all the `deployL2USDCAndAdapter` function calls
-    _mockDeployFunctionCalls();
-
-    address _admin = factory.L2_FACTORY();
-    vm.expectRevert(IL1OpUSDCFactory.IL1OpUSDCFactory_InvalidUSDCAdmin.selector);
-    vm.prank(_user);
-    factory.deployL2USDCAndAdapter(_l1Messenger, _admin, _minGasLimitDeploy);
+    factory.deployL2USDCAndAdapter(_l1Messenger, _minGasLimitDeploy);
   }
 
   function test_callBridgedUSDCImplementation(uint32 _minGasLimitDeploy) public {
@@ -415,7 +403,7 @@ contract L1OpUSDCFactory_Unit_DeployL2USDCAndAdapter is Base {
 
     // Execute
     vm.prank(_user);
-    factory.deployL2USDCAndAdapter(_l1Messenger, _admin, _minGasLimitDeploy);
+    factory.deployL2USDCAndAdapter(_l1Messenger, _minGasLimitDeploy);
   }
 
   /**
@@ -430,7 +418,7 @@ contract L1OpUSDCFactory_Unit_DeployL2USDCAndAdapter is Base {
 
     // Execute
     vm.prank(_user);
-    factory.deployL2USDCAndAdapter(_l1Messenger, _admin, _minGasLimitDeploy);
+    factory.deployL2USDCAndAdapter(_l1Messenger, _minGasLimitDeploy);
   }
 
   /**
@@ -446,7 +434,6 @@ contract L1OpUSDCFactory_Unit_DeployL2USDCAndAdapter is Base {
       L2OpUSDCFactory.deploy.selector,
       _l2UsdcImplementationBytecode,
       _usdcImplInitTxs,
-      _admin,
       _l2AdapterBytecode,
       _l2AdapterInitTxs
     );
@@ -459,7 +446,7 @@ contract L1OpUSDCFactory_Unit_DeployL2USDCAndAdapter is Base {
 
     // Execute
     vm.prank(_user);
-    factory.deployL2USDCAndAdapter(_l1Messenger, _admin, _minGasLimitDeploy);
+    factory.deployL2USDCAndAdapter(_l1Messenger, _minGasLimitDeploy);
   }
 }
 

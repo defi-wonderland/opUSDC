@@ -10,12 +10,11 @@ contract FactoryDeployMainnet is Script {
   uint32 public constant MIN_GAS_LIMIT_DEPLOY = 6_000_000;
   IL1OpUSDCFactory public immutable L1_FACTORY = IL1OpUSDCFactory(vm.envAddress('L1_FACTORY_MAINNET'));
   address public deployer = vm.rememberKey(vm.envUint('MAINNET_DEPLOYER_PK'));
-  address public usdcAdmin = vm.envAddress('OP_USDC_ADMIN');
 
   function run() public {
     vm.startBroadcast(deployer);
     // Deploy the L2 contracts
-    L1_FACTORY.deployL2FactoryAndContracts(L1_MESSENGER, usdcAdmin, MIN_GAS_LIMIT_FACTORY, MIN_GAS_LIMIT_DEPLOY);
+    L1_FACTORY.deployL2FactoryAndContracts(L1_MESSENGER, MIN_GAS_LIMIT_FACTORY, MIN_GAS_LIMIT_DEPLOY);
     vm.stopBroadcast();
   }
 }

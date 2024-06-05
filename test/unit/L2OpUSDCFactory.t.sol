@@ -35,10 +35,9 @@ contract Base is Test, Helpers {
   address internal _l2Messenger = 0x4200000000000000000000000000000000000007;
   bytes32 internal _salt = bytes32('1');
   address internal _l1Factory = makeAddr('l1Factory');
-  address internal _owner = makeAddr('owner');
   address internal _usdc = makeAddr('opUSDC');
   address internal _messenger = makeAddr('messenger');
-  address internal _linkedAdapter = makeAddr('linkedAdapter');
+  address internal _l2AdapterProxy = makeAddr('_l2AdapterProxy');
   address internal _create2Deployer = makeAddr('create2Deployer');
   bytes internal _wethBytecode = '0x60809020';
 
@@ -68,6 +67,10 @@ contract Base is Test, Helpers {
 
     // Set the weth bytecode
     vm.etch(_weth, _wethBytecode);
+
+    // Precalculate the address of the L2 adapter proxy
+    bytes memory _l2AdapterProxyInitCode = bytes.concat(type(ERC1967Proxy).creationCode, abi.encode(_weth, ''));
+    _l2AdapterProxy = _precalculateCreate2Address(_salt, keccak256(_l2AdapterProxyInitCode), address(factory));
 
     // Set the implementations bytecode and init code
     _dummyContract = address(new ForTestDummyContract());
@@ -143,7 +146,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InvalidSender.selector);
     // Execute
     vm.prank(_sender);
-    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _owner, _l2AdapterImplBytecode, _initTxsAdapter);
+    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _l2AdapterImplBytecode, _initTxsAdapter);
   }
 
   /**
@@ -162,7 +165,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     // Execute
     vm.prank(factory.L2_MESSENGER());
     vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InvalidSender.selector);
-    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _owner, _l2AdapterImplBytecode, _initTxsAdapter);
+    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _l2AdapterImplBytecode, _initTxsAdapter);
   }
 
   /**
@@ -193,7 +196,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_usdcImplBytecode, _emptyInitTxs, _owner, _l2AdapterImplBytecode, _emptyInitTxs);
+    factory.deploy(_usdcImplBytecode, _emptyInitTxs, _l2AdapterImplBytecode, _emptyInitTxs);
   }
 
   /**
@@ -230,7 +233,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_usdcImplBytecode, _emptyInitTxs, _owner, _l2AdapterImplBytecode, _emptyInitTxs);
+    factory.deploy(_usdcImplBytecode, _emptyInitTxs, _l2AdapterImplBytecode, _emptyInitTxs);
   }
 
   /**
@@ -247,11 +250,11 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     );
 
     // Expect the call over 'changeAdmin' function
-    vm.expectCall(_usdcProxy, abi.encodeWithSelector(IUSDC.changeAdmin.selector, _owner));
+    vm.expectCall(_usdcProxy, abi.encodeWithSelector(IUSDC.changeAdmin.selector, address(_l2AdapterProxy)));
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_usdcImplBytecode, _emptyInitTxs, _owner, _l2AdapterImplBytecode, _emptyInitTxs);
+    factory.deploy(_usdcImplBytecode, _emptyInitTxs, _l2AdapterImplBytecode, _emptyInitTxs);
   }
 
   /**
@@ -271,7 +274,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _owner, _l2AdapterImplBytecode, _emptyInitTxs);
+    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _l2AdapterImplBytecode, _emptyInitTxs);
   }
 
   /**
@@ -289,14 +292,14 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     );
 
     // Expect the call over 'changeAdmin' function
-    vm.expectCall(_usdcProxy, abi.encodeWithSelector(IUSDC.changeAdmin.selector, _owner));
+    vm.expectCall(_usdcProxy, abi.encodeWithSelector(IUSDC.changeAdmin.selector, _l2AdapterProxy));
     // Expect the init txs to be called
     vm.expectCall(_usdcProxy, _initTxsUsdc[0]);
     vm.expectCall(_usdcProxy, _initTxsUsdc[1]);
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _owner, _l2AdapterImplBytecode, _emptyInitTxs);
+    factory.deploy(_usdcImplBytecode, _initTxsUsdc, _l2AdapterImplBytecode, _emptyInitTxs);
   }
 
   /**
@@ -318,7 +321,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_usdcImplBytecode, _emptyInitTxs, _owner, _l2AdapterImplBytecode, _initTxsAdapter);
+    factory.deploy(_usdcImplBytecode, _emptyInitTxs, _l2AdapterImplBytecode, _initTxsAdapter);
   }
 }
 
