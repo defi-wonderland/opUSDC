@@ -7,15 +7,17 @@ import {Test} from 'forge-std/Test.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 
 contract ForTestOpUSDCBridgeAdapter is OpUSDCBridgeAdapter {
-  constructor(address _usdc, address _linkedAdapter) OpUSDCBridgeAdapter(_usdc, _linkedAdapter) {}
+  constructor(
+    address _usdc,
+    address _messenger,
+    address _linkedAdapter
+  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
 
   function receiveMessage(address _user, uint256 _amount) external override {}
 
   function forTest_checkSignature(address _signer, bytes32 _messageHash, bytes memory _signature) public view {
     _checkSignature(_signer, _messageHash, _signature);
   }
-
-  function _authorizeUpgrade(address newImplementation) internal override {}
 }
 
 abstract contract Base is Test {
@@ -27,10 +29,11 @@ abstract contract Base is Test {
   uint256 internal _signerPk;
   address internal _notSignerAd;
   uint256 internal _notSignerPk;
+  address internal _messenger = makeAddr('messenger');
 
   function setUp() public virtual {
     (_signerAd, _signerPk) = makeAddrAndKey('signer');
-    adapter = new ForTestOpUSDCBridgeAdapter(_usdc, _linkedAdapter);
+    adapter = new ForTestOpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter);
   }
 }
 

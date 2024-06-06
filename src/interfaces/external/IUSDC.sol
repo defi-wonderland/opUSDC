@@ -29,4 +29,10 @@ interface IUSDC is IERC20 {
    * @param _newImplementation Address of the new implementation
    */
   function upgradeTo(address _newImplementation) external;
+
+  /**
+   * @notice Returns the current implementation address
+   * @return _implementation Address of the current implementation
+   */
+  function implementation() external view returns (address _implementation);
 }

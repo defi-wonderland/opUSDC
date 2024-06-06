@@ -103,8 +103,6 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
     L1OpUSDCBridgeAdapter _l1Adapter = L1OpUSDCBridgeAdapter(factory.L1_ADAPTER());
     assertEq(_l1Adapter.USDC(), _usdc, 'Invalid owner');
     assertEq(_l1Adapter.LINKED_ADAPTER(), factory.L2_ADAPTER_PROXY(), 'Invalid l2Adapter');
-    assertEq(address(_l1Adapter.UPGRADE_MANAGER()), address(factory.UPGRADE_MANAGER()), 'Invalid upgradeManager');
-    assertEq(_l1Adapter.FACTORY(), address(factory), 'Invalid owner');
   }
 
   /**

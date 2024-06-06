@@ -12,12 +12,6 @@ interface IL2OpUSDCBridgeAdapter {
    */
   event DeployedL2UsdcImplementation(address _l2UsdcImplementation);
 
-  /**
-   * @notice Emitted when the `L2OpUSDCBridgeAdapter` implementation is deployed
-   * @param _l2AdapterImplementation The address of the L2 adapter implementation
-   */
-  event DeployedL2AdapterImplementation(address _l2AdapterImplementation);
-
   /*///////////////////////////////////////////////////////////////
                             ERRORS
   //////////////////////////////////////////////////////////////*/
@@ -31,11 +25,6 @@ interface IL2OpUSDCBridgeAdapter {
    * @notice Error when the USDC initialization fails
    */
   error L2OpUSDCBridgeAdapter_UsdcInitializationFailed();
-
-  /**
-   * @notice Error when the flow is disabled
-   */
-  error L2OpUSDCBridgeAdapter_DisabledFlow();
 
   /**
    * @notice Error when the initialization has already been executed
@@ -62,13 +51,6 @@ interface IL2OpUSDCBridgeAdapter {
    * @notice Resume messaging after it was stopped
    */
   function receiveResumeMessaging() external;
-
-  /**
-   * @notice Receive the creation code from the linked adapter, deploy the new implementation and upgrade
-   * @param _l2AdapterBytecode The bytecode for the new L2 adapter implementation
-   * @param _l2AdapterInitTxs The initialization transactions for the new L2 adapter implementation
-   */
-  function receiveAdapterUpgrade(bytes calldata _l2AdapterBytecode, bytes[] calldata _l2AdapterInitTxs) external;
 
   /**
    * @notice Receive the creation code from the linked adapter, deploy the new implementation and upgrade
@@ -100,20 +82,4 @@ interface IL2OpUSDCBridgeAdapter {
    * @param _newLength The new value for _proxyExecutedInitTxsLength
    */
   function setProxyExecutedInitTxs(uint256 _newLength) external;
-
-  /*///////////////////////////////////////////////////////////////
-                            VARIABLES
-  //////////////////////////////////////////////////////////////*/
-  /**
-   * @notice Fetches address of the CrossDomainMessenger to send messages to L1 <-> L2
-   * @return _messenger Address of the messenger
-   */
-  // solhint-disable-next-line func-name-mixedcase
-  function MESSENGER() external view returns (address _messenger);
-
-  /**
-   * @notice Fetches whether messaging is disabled
-   * @return _isMessagingDisabled Whether messaging is disabled
-   */
-  function isMessagingDisabled() external view returns (bool _isMessagingDisabled);
 }

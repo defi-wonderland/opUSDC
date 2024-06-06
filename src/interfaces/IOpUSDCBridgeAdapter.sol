@@ -72,6 +72,11 @@ interface IOpUSDCBridgeAdapter {
    */
   error IOpUSDCBridgeAdapter_MigrationInProgress();
 
+  /**
+   * @notice Error when the contract is not in the upgrading state
+   */
+  error IOpUSDCBridgeAdapter_NotUpgrading();
+
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   //////////////////////////////////////////////////////////////*/
@@ -101,6 +106,19 @@ interface IOpUSDCBridgeAdapter {
    */
   // solhint-disable-next-line func-name-mixedcase
   function LINKED_ADAPTER() external view returns (address _linkedAdapter);
+
+  /**
+   * @notice Fetches address of the CrossDomainMessenger to send messages to L1 <-> L2
+   * @return _messenger Address of the messenger
+   */
+  // solhint-disable-next-line func-name-mixedcase
+  function MESSENGER() external view returns (address _messenger);
+
+  /**
+   * @notice Fetches whether messaging is disabled
+   * @return _isMessagingDisabled Whether messaging is disabled
+   */
+  function isMessagingDisabled() external view returns (bool _isMessagingDisabled);
 
   /**
    * @notice Returns the nonce of a given user to avoid replay attacks

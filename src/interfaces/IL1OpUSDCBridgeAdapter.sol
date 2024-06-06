@@ -33,14 +33,6 @@ interface IL1OpUSDCBridgeAdapter {
   event BurnAmountSet(uint256 _burnAmount);
 
   /**
-   * @notice Emitted when L2 upgrade method is called
-   * @param _newImplementation The address of the new implementation
-   * @param _messenger The address of the messenger
-   * @param _minGasLimit The minimum gas limit for the message
-   */
-  event L2AdapterUpgradeSent(address _newImplementation, address _messenger, uint32 _minGasLimit);
-
-  /**
    * @notice Emitted when L2 USDC upgrade method is called
    * @param _newImplementation The address of the new implementation
    * @param _messenger The address of the messenger
@@ -147,34 +139,15 @@ interface IL1OpUSDCBridgeAdapter {
   ) external;
 
   /**
-   * @notice Send a message to the linked adapter to upgrade the implementation of the contract
-   * @param _messenger The address of the messenger contract to send through
-   * @param _minGasLimit Minimum gas limit that the message can be executed with
-   */
-  function sendL2AdapterUpgrade(address _messenger, uint32 _minGasLimit) external;
-
-  /**
    * @notice Send a message to the linked adapter to upgrade the implementation of the USDC contract
    * @param _messenger The address of the messenger contract to send through
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  function sendL2UsdcUpgrade(address _messenger, uint32 _minGasLimit) external;
+  function sendL2UsdcUpgrade(address _messenger, bytes[] memory _initTxs, uint32 _minGasLimit) external;
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
   //////////////////////////////////////////////////////////////*/
-
-  /**
-   * @return _upgradeManager The address of the Upgrade Manager contract
-   */
-  // solhint-disable-next-line func-name-mixedcase
-  function UPGRADE_MANAGER() external view returns (address _upgradeManager);
-
-  /**
-   * @return _factory The address of the factory contract
-   */
-  // solhint-disable-next-line func-name-mixedcase
-  function FACTORY() external view returns (address _factory);
 
   /**
    * @notice Fetches the amount of USDC tokens that will be burned when the burnLockedUSDC function is called
@@ -183,15 +156,14 @@ interface IL1OpUSDCBridgeAdapter {
   function burnAmount() external view returns (uint256 _burnAmount);
 
   /**
+   * @notice Fetches the status of the L2 USDC upgrade
+   * @return _isUpgrading The status of the L2 USDC upgrade
+   */
+  function isUpgrading() external view returns (bool _isUpgrading);
+
+  /**
    * @notice Fetches the address of the Circle contract
    * @return _circle The address of the Circle contract
    */
   function circle() external view returns (address _circle);
-
-  /**
-   * @notice Fetches the status of an L1 messenger
-   * @param _l1Messenger The address of the L1 messenger
-   * @return _status The status of the messenger
-   */
-  function messengerStatus(address _l1Messenger) external view returns (Status _status);
 }

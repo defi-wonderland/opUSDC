@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
 import {SignatureChecker} from '@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 
-abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, UUPSUpgradeable {
+abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
   using MessageHashUtils for bytes32;
   using SignatureChecker for address;
 
@@ -17,6 +16,12 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, UUPSUpgradeable {
   address public immutable LINKED_ADAPTER;
 
   /// @inheritdoc IOpUSDCBridgeAdapter
+  address public immutable MESSENGER;
+
+  /// @inheritdoc IOpUSDCBridgeAdapter
+  bool public isMessagingDisabled;
+
+  /// @inheritdoc IOpUSDCBridgeAdapter
   mapping(address _user => uint256 _nonce) public userNonce;
 
   /**
@@ -24,8 +29,9 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, UUPSUpgradeable {
    * @param _usdc The address of the USDC Contract to be used by the adapter
    * @param _linkedAdapter The address of the linked adapter
    */
-  constructor(address _usdc, address _linkedAdapter) {
+  constructor(address _usdc, address _messenger, address _linkedAdapter) {
     USDC = _usdc;
+    MESSENGER = _messenger;
     LINKED_ADAPTER = _linkedAdapter;
   }
 

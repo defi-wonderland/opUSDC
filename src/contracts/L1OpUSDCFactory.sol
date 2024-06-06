@@ -85,7 +85,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     UPGRADE_MANAGER = IUpgradeManager(_precalculateCreateAddress(address(this), _thisNonceThirdTx));
 
     // Deploy the L1 adapter
-    new L1OpUSDCBridgeAdapter(_usdc, L2_ADAPTER_PROXY, address(UPGRADE_MANAGER), address(this));
+    //new L1OpUSDCBridgeAdapter(_usdc, L2_ADAPTER_PROXY, address(UPGRADE_MANAGER), address(this));
     emit L1AdapterDeployed(L1_ADAPTER);
 
     // Deploy the upgrade manager implementation
