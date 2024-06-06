@@ -16,7 +16,6 @@ contract DeployBase is Script {
     vm.startBroadcast(deployer);
     // Deploy the L2 contracts
     L1_FACTORY.deployL2FactoryAndContracts(L1_MESSENGER, MIN_GAS_LIMIT_FACTORY, MIN_GAS_LIMIT_DEPLOY);
-    // L1_FACTORY.deployL2USDCAndAdapter(L1_MESSENGER, MIN_GAS_LIMIT_DEPLOY);
     vm.stopBroadcast();
   }
 }
