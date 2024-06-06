@@ -143,6 +143,9 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function resumeMessaging(address _messenger, uint32 _minGasLimit) external onlyOwner {
+    // Ensure messaging is disabled
+    if (!isMessagingDisabled) revert IOpUSDCBridgeAdapter_MessagingEnabled();
+
     // TODO: block this function after burnLockedUSDC is called
     isMessagingDisabled = false;
 

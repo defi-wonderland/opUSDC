@@ -53,6 +53,11 @@ interface IOpUSDCBridgeAdapter {
   error IOpUSDCBridgeAdapter_MessagingDisabled();
 
   /**
+   * @notice Error when messaging is enabled
+   */
+  error IOpUSDCBridgeAdapter_MessagingEnabled();
+
+  /**
    * @notice Error when the caller is not the linked adapter
    */
   error IOpUSDCBridgeAdapter_InvalidSender();
