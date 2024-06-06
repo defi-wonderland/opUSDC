@@ -14,7 +14,6 @@ contract L1FactoryDeployAndSetup is Script, FactoryDeployAndSetup {
   address public constant L1_MESSENGER_BASE = 0xC34855F4De64F1840e5686e64278da901e261f20;
   address public deployer = vm.rememberKey(vm.envUint('SEPOLIA_DEPLOYER_PK'));
   address public usdcImplementation = vm.envAddress('SEPOLIA_USDC_IMPLEMENTATION');
-  address public adapterImplementation = vm.envAddress('SEPOLIA_ADAPTER_IMPLEMENTATION');
   bytes32 public salt = vm.envBytes32('SALT');
 
   function run() public {
@@ -27,9 +26,7 @@ contract L1FactoryDeployAndSetup is Script, FactoryDeployAndSetup {
     // TODO: Add proper init txs arrays for both USDC and adapter
     bytes[] memory _initTxs = new bytes[](0);
 
-    _deployFactoryAndSetup(
-      deployer, USDC, usdcImplementation, _initTxs, adapterImplementation, _initTxs, salt, _messengersExecutors
-    );
+    _deployFactoryAndSetup(deployer, USDC, usdcImplementation, _initTxs, _initTxs, salt, _messengersExecutors);
 
     vm.stopBroadcast();
   }

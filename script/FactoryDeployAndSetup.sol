@@ -5,8 +5,9 @@ import {L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
 import {console} from 'forge-std/Test.sol';
 import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
+import {DeployAndSetAdapterImplementation} from 'script/DeployAndSetAdapterImplementation.sol';
 
-contract FactoryDeployAndSetup {
+contract FactoryDeployAndSetup is DeployAndSetAdapterImplementation {
   struct MessengerExecutor {
     address l1Messenger;
     address executor;
@@ -17,7 +18,6 @@ contract FactoryDeployAndSetup {
     address _usdc,
     address _usdcImplementation,
     bytes[] memory _initTxsUsdc,
-    address _adapterImplementation,
     bytes[] memory _initTxsAdapter,
     bytes32 _salt,
     MessengerExecutor[] memory _messengersExecutors
@@ -44,11 +44,13 @@ contract FactoryDeployAndSetup {
       console.log('USDC implementation address set to:', _usdcImplementation);
     }
 
-    if (_adapterImplementation != address(0)) {
-      console.log('Setting adapter implementation address ...');
-      _l1Factory.UPGRADE_MANAGER().setL2AdapterImplementation(_adapterImplementation, _initTxsAdapter);
-      console.log('Adapter implementation address set to:', _adapterImplementation);
-    }
+    _deployAndSetAdapterImplementation(
+      _l1Factory.L2_USDC_PROXY(),
+      _l1Factory.L2_MESSENGER(),
+      address(_l1Factory.L1_ADAPTER_PROXY()),
+      _l1Factory.UPGRADE_MANAGER(),
+      _initTxsAdapter
+    );
 
     uint256 _messengersLength = _messengersExecutors.length;
     if (_messengersLength > 0) {
