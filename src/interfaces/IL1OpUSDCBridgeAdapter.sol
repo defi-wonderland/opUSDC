@@ -118,6 +118,13 @@ interface IL1OpUSDCBridgeAdapter {
   ) external;
 
   /**
+   * @notice Initialize a new messenger
+   * @param _l1Messenger The address of the L1 messenger
+   * @dev Only callable by the factory, will be called at deployment of the corresponding chains adapter
+   */
+  function initializeNewMessenger(address _l1Messenger) external;
+
+  /**
    * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send

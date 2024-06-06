@@ -126,7 +126,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _l1Messenger The address of the L1 messenger
    * @dev Only callable by the factory, will be called at deployment of the corresponding chains adapter
    */
-  function initalizeNewMessenger(address _l1Messenger) external {
+  function initializeNewMessenger(address _l1Messenger) external {
     if (msg.sender != FACTORY) revert IOpUSDCBridgeAdapter_InvalidSender();
     if (messengerStatus[_l1Messenger] != Status.Uninitialized) {
       revert IL1OpUSDCBridgeAdapter_MessengerAlreadyInitialized();

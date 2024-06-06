@@ -33,6 +33,7 @@ abstract contract Base is Helpers {
   ForTestL1OpUSDCBridgeAdapter public implementation;
   L1OpUSDCFactory public factory;
 
+  bytes32 internal _salt = bytes32('1');
   address internal _user = makeAddr('user');
   address internal _signerAd;
   uint256 internal _signerPk;
@@ -66,7 +67,7 @@ abstract contract Base is Helpers {
 
   function setUp() public virtual {
     // Deploy factory
-    factory = new L1OpUSDCFactory(_usdc, address(this));
+    factory = new L1OpUSDCFactory(_usdc, _salt, address(this));
     _upgradeManager = address(factory.UPGRADE_MANAGER());
 
     // Set the bytecode to the implementation addresses
@@ -290,7 +291,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
   }
 }
 
-contract L1OpUSDCBridgeAdapter_Unit_InitalizeNewMessenger is Base {
+contract L1OpUSDCBridgeAdapter_Unit_InitializeNewMessenger is Base {
   /**
    * @notice Check that only the owner can initalize a new messenger
    */
@@ -298,7 +299,7 @@ contract L1OpUSDCBridgeAdapter_Unit_InitalizeNewMessenger is Base {
     // Execute
     vm.prank(_user);
     vm.expectRevert(abi.encodeWithSelector(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector));
-    adapter.initalizeNewMessenger(_newMessenger);
+    adapter.initializeNewMessenger(_newMessenger);
   }
 
   /**
@@ -310,7 +311,7 @@ contract L1OpUSDCBridgeAdapter_Unit_InitalizeNewMessenger is Base {
     // Execute
     vm.prank(_factory);
     vm.expectRevert(IL1OpUSDCBridgeAdapter.IL1OpUSDCBridgeAdapter_MessengerAlreadyInitialized.selector);
-    adapter.initalizeNewMessenger(_newMessenger);
+    adapter.initializeNewMessenger(_newMessenger);
   }
 
   /**
@@ -319,7 +320,7 @@ contract L1OpUSDCBridgeAdapter_Unit_InitalizeNewMessenger is Base {
   function test_setMessengerStatus(address _newMessenger) external {
     // Execute
     vm.prank(_factory);
-    adapter.initalizeNewMessenger(_newMessenger);
+    adapter.initializeNewMessenger(_newMessenger);
 
     // Assert
     assertEq(
@@ -337,7 +338,7 @@ contract L1OpUSDCBridgeAdapter_Unit_InitalizeNewMessenger is Base {
     vm.prank(_factory);
     vm.expectEmit(true, true, true, true);
     emit MessengerInitialized(_newMessenger);
-    adapter.initalizeNewMessenger(_newMessenger);
+    adapter.initializeNewMessenger(_newMessenger);
   }
 }
 

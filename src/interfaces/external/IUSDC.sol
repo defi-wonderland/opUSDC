@@ -25,8 +25,15 @@ interface IUSDC is IERC20 {
   function transferOwnership(address _newOwner) external;
 
   /**
-   * @notice Upgrades the USDC implementation
-   * @param _newImplementation Address of the new implementation
+   * @notice Upgrades the USDC contract to a new implementation
+   * @param _implementation Address of the new implementation
    */
-  function upgradeTo(address _newImplementation) external;
+  function upgradeTo(address _implementation) external;
+
+  /**
+   * @dev Changes the admin of the proxy.
+   * Only the current admin can call this function.
+   * @param newAdmin Address to transfer proxy administration to.
+   */
+  function changeAdmin(address newAdmin) external;
 }
