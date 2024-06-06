@@ -52,14 +52,14 @@ contract FactoryDeployAndSetup {
 
     uint256 _messengersLength = _messengersExecutors.length;
     if (_messengersLength > 0) {
-      for (uint256 i = 0; i < _messengersLength; i++) {
+      for (uint256 _i; _i < _messengersLength; _i++) {
         console.log(
-          'Setting executor:', _messengersExecutors[i].executor, 'for messenger:', _messengersExecutors[i].l1Messenger
+          'Setting executor:', _messengersExecutors[_i].executor, 'for messenger:', _messengersExecutors[_i].l1Messenger
         );
         _upgradeManager.prepareDeploymentForMessenger(
-          _messengersExecutors[i].l1Messenger, _messengersExecutors[i].executor
+          _messengersExecutors[_i].l1Messenger, _messengersExecutors[_i].executor
         );
-        console.log('Executor set for messenger:', _messengersExecutors[i].l1Messenger);
+        console.log('Executor set for messenger!');
       }
     }
   }
