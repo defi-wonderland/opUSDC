@@ -42,11 +42,6 @@ interface IL1OpUSDCBridgeAdapter {
   ///////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Error when the the messenger is already initialized
-   */
-  error IL1OpUSDCBridgeAdapter_MessengerAlreadyInitialized();
-
-  /**
    * @notice Error when the messenger is not paused
    */
   error IL1OpUSDCBridgeAdapter_MessengerNotPaused();
