@@ -605,10 +605,14 @@ contract L2OpUSDCBridgeAdapter_setProxyExecutedInitTxs is Base {
   /**
    * @notice Check that _proxyExecutedInitTxsLength  can not be set if is not 0
    */
-  function test_revertIfLengthIsNotZero() external {
-    adapter.forTest_setProxyExecutedInitTxs(4);
-    vm.expectRevert(IL2OpUSDCBridgeAdapter.L2OpUSDCBridgeAdapter_InitializationAlreadyExecuted.selector);
-    adapter.setProxyExecutedInitTxs(1);
+  function test_omitIfLengthIsNotZero(uint256 _initialValue, uint256 _newValue) external {
+    vm.assume(_initialValue != 0);
+    vm.assume(_newValue != _initialValue);
+    adapter.forTest_setProxyExecutedInitTxs(_initialValue);
+    adapter.setProxyExecutedInitTxs(_newValue);
+    assertEq(
+      adapter.forTest_proxyExecutedInitTxsLength(), _initialValue, 'Last L2 Usdc Init Txs Length should not be set'
+    );
   }
 
   /**

@@ -4,7 +4,7 @@ pragma solidity 0.8.25;
 interface IL1OpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
                             ENUMS
-  //////////////////////////////////////////////////////////////*/
+  ///////////////////////////////////////////////////////////////*/
 
   /**
    * @notice The status of an L1 Messenger
@@ -22,7 +22,7 @@ interface IL1OpUSDCBridgeAdapter {
 
   /*///////////////////////////////////////////////////////////////
                             EVENTS
-  //////////////////////////////////////////////////////////////*/
+  ///////////////////////////////////////////////////////////////*/
 
   /**
    * @notice Emitted when the burn amount is set
@@ -39,7 +39,7 @@ interface IL1OpUSDCBridgeAdapter {
 
   /*///////////////////////////////////////////////////////////////
                             ERRORS
-  //////////////////////////////////////////////////////////////*/
+  ///////////////////////////////////////////////////////////////*/
 
   /**
    * @notice Error when the the messenger is already initialized
@@ -58,13 +58,15 @@ interface IL1OpUSDCBridgeAdapter {
 
   /*///////////////////////////////////////////////////////////////
                             LOGIC
-  //////////////////////////////////////////////////////////////*/
+  ///////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Burns the USDC tokens locked in the contract
-   * @dev The amount is determined by the burnAmount variable, which is set in the setBurnAmount function
+   * @notice Initiates the process to migrate the bridged USDC to native USDC
+   * @param _circle The address to transfer ownerships to
+   * @param _minGasLimitReceiveOnL2 Minimum gas limit that the message can be executed with on L2
+   * @param _minGasLimitSetBurnAmount Minimum gas limit that the message can be executed with to set the burn amount
    */
-  function burnLockedUSDC() external;
+  function migrateToNative(address _circle, uint32 _minGasLimitReceiveOnL2, uint32 _minGasLimitSetBurnAmount) external;
 
   /**
    * @notice Sets the amount of USDC tokens that will be burned when the burnLockedUSDC function is called
@@ -72,6 +74,12 @@ interface IL1OpUSDCBridgeAdapter {
    * @dev Only callable by a whitelisted messenger during its migration process
    */
   function setBurnAmount(uint256 _amount) external;
+
+  /**
+   * @notice Burns the USDC tokens locked in the contract
+   * @dev The amount is determined by the burnAmount variable, which is set in the setBurnAmount function
+   */
+  function burnLockedUSDC() external;
 
   /**
    * @notice Send a message to the linked adapter to call receiveStopMessaging() and stop outgoing messages.
@@ -83,45 +91,11 @@ interface IL1OpUSDCBridgeAdapter {
 
   /**
    * @notice Resume messaging on the messenger
-   * @dev Only callable by the UpgradeManager
+   * @dev Only callable by the owner
    * @dev Cant resume deprecated messengers
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function resumeMessaging(uint32 _minGasLimit) external;
-
-  /**
-   * @notice Initiates the process to migrate the bridged USDC to native USDC
-   * @param _circle The address to transfer ownerships to
-   * @param _minGasLimitReceiveOnL2 Minimum gas limit that the message can be executed with on L2
-   * @param _minGasLimitSetBurnAmount Minimum gas limit that the message can be executed with to set the burn amount
-   */
-  function migrateToNative(address _circle, uint32 _minGasLimitReceiveOnL2, uint32 _minGasLimitSetBurnAmount) external;
-
-  /**
-   * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
-   * @param _to The target address on the destination chain
-   * @param _amount The amount of tokens to send
-   * @param _minGasLimit Minimum gas limit that the message can be executed with
-   */
-  function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external;
-
-  /**
-   * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
-   * @param _signer The address of the user sending the message
-   * @param _to The target address on the destination chain
-   * @param _amount The amount of tokens to send
-   * @param _signature The signature of the user
-   * @param _deadline The deadline for the message to be executed
-   * @param _minGasLimit Minimum gas limit that the message can be executed with
-   */
-  function sendMessage(
-    address _signer,
-    address _to,
-    uint256 _amount,
-    bytes calldata _signature,
-    uint256 _deadline,
-    uint32 _minGasLimit
-  ) external;
 
   /**
    * @notice Send a message to the linked adapter to upgrade the implementation of the USDC contract
@@ -131,7 +105,7 @@ interface IL1OpUSDCBridgeAdapter {
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
-  //////////////////////////////////////////////////////////////*/
+  ///////////////////////////////////////////////////////////////*/
 
   /**
    * @notice Fetches the amount of USDC tokens that will be burned when the burnLockedUSDC function is called

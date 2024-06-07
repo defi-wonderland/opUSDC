@@ -141,7 +141,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
 
   /**
    * @notice Resume messaging on the messenger
-   * @dev Only callable by the UpgradeManager
+   * @dev Only callable by the owner
    * @dev Cant resume deprecated messengers
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
@@ -163,12 +163,12 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
   ///////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
+   * @notice Send tokens to other chain through the linked adapter
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external {
+  function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external override {
     // Ensure messaging is enabled
     if (messengerStatus != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
@@ -184,7 +184,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
   }
 
   /**
-   * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
+   * @notice Send tokens to other chain through the linked adapter
    * @param _signer The address of the user sending the message
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send

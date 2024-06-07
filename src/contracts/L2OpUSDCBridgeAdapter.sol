@@ -42,6 +42,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
                               MIGRATION
   ///////////////////////////////////////////////////////////////*/
+
   /**
    * @notice Initiates the process to migrate the bridged USDC to native USDC
    * @dev Full migration cant finish until L1 receives the message for setting the burn amount
@@ -89,9 +90,9 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
                              MESSAGING
   ///////////////////////////////////////////////////////////////*/
+
   /**
-   * @notice Send a message to the linked adapter to transfer the tokens to the user
-   * @dev Burn the bridged representation acording to the amount sent on the message
+   * @notice Send tokens to other chain through the linked adapter
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
    * @param _minGasLimit Minimum gas limit that the message can be executed with
@@ -112,7 +113,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   }
 
   /**
-   * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
+   * @notice Send tokens to other chain through the linked adapter
    * @param _signer The address of the user sending the message
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
@@ -199,7 +200,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _newLength The new value for _proxyExecutedInitTxsLength
    */
   function setProxyExecutedInitTxs(uint256 _newLength) external {
-    if (_proxyExecutedInitTxsLength != 0) revert L2OpUSDCBridgeAdapter_InitializationAlreadyExecuted();
+    if (_proxyExecutedInitTxsLength != 0) return;
     _proxyExecutedInitTxsLength = _newLength;
   }
 }

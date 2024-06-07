@@ -4,7 +4,7 @@ pragma solidity 0.8.25;
 interface IL2OpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
                             EVENTS
-  //////////////////////////////////////////////////////////////*/
+  ///////////////////////////////////////////////////////////////*/
 
   /**
    * @notice Emitted when the new USDC implementation is deployed
@@ -14,38 +14,28 @@ interface IL2OpUSDCBridgeAdapter {
 
   /*///////////////////////////////////////////////////////////////
                             ERRORS
-  //////////////////////////////////////////////////////////////*/
-
-  /**
-   * @notice Error when the adapter initialization fails
-   */
-  error L2OpUSDCBridgeAdapter_AdapterInitializationFailed();
+  ///////////////////////////////////////////////////////////////*/
 
   /**
    * @notice Error when the USDC initialization fails
    */
   error L2OpUSDCBridgeAdapter_UsdcInitializationFailed();
 
-  /**
-   * @notice Error when the initialization has already been executed
-   */
-  error L2OpUSDCBridgeAdapter_InitializationAlreadyExecuted();
-
   /*///////////////////////////////////////////////////////////////
                             LOGIC
-  //////////////////////////////////////////////////////////////*/
+  ///////////////////////////////////////////////////////////////*/
+  /**
+   * @notice Initiates the process to migrate the bridged USDC to native USDC
+   * @dev Full migration cant finish until L1 receives the message for setting the burn amount
+   * @param _newOwner The address to transfer ownerships to
+   * @param _setBurnAmountMinGasLimit Minimum gas limit that the setBurnAmount message can be executed on L1
+   */
+  function receiveMigrateToNative(address _newOwner, uint32 _setBurnAmountMinGasLimit) external;
+
   /**
    * @notice Receive the stop messaging message from the linked adapter and stop outgoing messages
    */
   function receiveStopMessaging() external;
-
-  /**
-   * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
-   * @param _to The target address on the destination chain
-   * @param _amount The amount of tokens to send
-   * @param _minGasLimit Minimum gas limit that the message can be executed with
-   */
-  function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external;
 
   /**
    * @notice Resume messaging after it was stopped
@@ -60,24 +50,6 @@ interface IL2OpUSDCBridgeAdapter {
   function receiveUsdcUpgrade(bytes calldata _l2UsdcBytecode, bytes[] memory _l2UsdcInitTxs) external;
 
   /**
-   * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
-   * @param _signer The address of the user sending the message
-   * @param _to The target address on the destination chain
-   * @param _amount The amount of tokens to send
-   * @param _signature The signature of the user
-   * @param _deadline The deadline for the message to be executed
-   * @param _minGasLimit Minimum gas limit that the message can be executed with
-   */
-  function sendMessage(
-    address _signer,
-    address _to,
-    uint256 _amount,
-    bytes calldata _signature,
-    uint256 _deadline,
-    uint32 _minGasLimit
-  ) external;
-
-  /**
    * @notice Set _proxyExecutedInitTxsLength  to the new value
    * @param _newLength The new value for _proxyExecutedInitTxsLength
    */
@@ -85,7 +57,7 @@ interface IL2OpUSDCBridgeAdapter {
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
-  //////////////////////////////////////////////////////////////*/
+  ///////////////////////////////////////////////////////////////*/
   /**
    * @notice Fetches whether messaging is disabled
    * @return _isMessagingDisabled Whether messaging is disabled

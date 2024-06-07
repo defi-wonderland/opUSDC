@@ -15,6 +15,17 @@ contract ForTestOpUSDCBridgeAdapter is OpUSDCBridgeAdapter {
 
   function receiveMessage(address _user, uint256 _amount) external override {}
 
+  function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external override {}
+
+  function sendMessage(
+    address _signer,
+    address _to,
+    uint256 _amount,
+    bytes calldata _signature,
+    uint256 _deadline,
+    uint32 _minGasLimit
+  ) external override {}
+
   function forTest_checkSignature(address _signer, bytes32 _messageHash, bytes memory _signature) public view {
     _checkSignature(_signer, _messageHash, _signature);
   }
@@ -44,6 +55,26 @@ contract OpUSDCBridgeAdapter_Unit_Constructor is Base {
   function test_constructorParams() public {
     assertEq(adapter.USDC(), _usdc, 'USDC should be set to the provided address');
     assertEq(adapter.LINKED_ADAPTER(), _linkedAdapter, 'Linked adapter should be set to the provided address');
+  }
+}
+
+contract OpUSDCBridgeAdapter_Unit_SendMessage is Base {
+  /**
+   * @notice Execute vitual function to get 100% coverage
+   */
+  function test_doNothing() public {
+    // Execute
+    adapter.sendMessage(address(0), 0, 0);
+  }
+}
+
+contract OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
+  /**
+   * @notice Execute vitual function to get 100% coverage
+   */
+  function test_doNothing() public {
+    // Execute
+    adapter.sendMessage(address(0), address(0), 0, '', 0, 0);
   }
 }
 

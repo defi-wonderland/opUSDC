@@ -32,6 +32,36 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
     LINKED_ADAPTER = _linkedAdapter;
   }
 
+  /*///////////////////////////////////////////////////////////////
+                             MESSAGING
+  ///////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice Send tokens to other chain through the linked adapter
+   * @param _to The target address on the destination chain
+   * @param _amount The amount of tokens to send
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external virtual;
+
+  /**
+   * @notice Send tokens to other chain through the linked adapter
+   * @param _signer The address of the user sending the message
+   * @param _to The target address on the destination chain
+   * @param _amount The amount of tokens to send
+   * @param _signature The signature of the user
+   * @param _deadline The deadline for the message to be executed
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  function sendMessage(
+    address _signer,
+    address _to,
+    uint256 _amount,
+    bytes calldata _signature,
+    uint256 _deadline,
+    uint32 _minGasLimit
+  ) external virtual;
+
   /**
    * @notice Receive the message from the other chain and mint the bridged representation for the user
    * @dev This function should only be called when receiving a message to mint the bridged representation
