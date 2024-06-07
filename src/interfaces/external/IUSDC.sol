@@ -36,4 +36,10 @@ interface IUSDC is IERC20 {
    * @param newAdmin Address to transfer proxy administration to.
    */
   function changeAdmin(address newAdmin) external;
+
+  /**
+   * @notice Returns the current implementation address
+   * @return _implementation Address of the current implementation
+   */
+  function implementation() external view returns (address _implementation);
 }

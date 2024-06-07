@@ -3,6 +3,7 @@ pragma solidity 0.8.25;
 
 import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
+import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
 import {UpgradeManager} from 'contracts/UpgradeManager.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
@@ -10,6 +11,7 @@ import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
 import {ICreate2Deployer} from 'interfaces/external/ICreate2Deployer.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
+import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 /**
  * @title L1OpUSDCFactory
@@ -27,71 +29,34 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   address public constant L2_CREATE2_DEPLOYER = 0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2;
 
   /// @inheritdoc IL1OpUSDCFactory
+  address public immutable USDC;
+
+  /// @inheritdoc IL1OpUSDCFactory
   address public immutable L2_FACTORY;
-
-  /// @inheritdoc IL1OpUSDCFactory
-  L1OpUSDCBridgeAdapter public immutable L1_ADAPTER_PROXY;
-
-  /// @inheritdoc IL1OpUSDCFactory
-  IUpgradeManager public immutable UPGRADE_MANAGER;
-
-  /// @inheritdoc IL1OpUSDCFactory
-  address public immutable L2_ADAPTER_PROXY;
-
-  /// @inheritdoc IL1OpUSDCFactory
-  address public immutable L2_USDC_PROXY;
 
   /// @notice Salt value to be used to deploy the L2 contracts on the L2 factory
   bytes32 internal immutable _SALT;
 
   /// @inheritdoc IL1OpUSDCFactory
-  mapping(address _l1Messenger => bool _deployed) public isFactoryDeployed;
+  mapping(address _l1Messenger => bool _isDeployed) public isFactoryDeployed;
+
+  /// @inheritdoc IL1OpUSDCFactory
+  uint256 public nonce;
 
   /**
    * @notice Constructs the L1 factory contract, deploys the L1 adapter and the upgrade manager and precalculates the
    * addresses of the L2 deployments
    * @param _usdc The address of the USDC contract
-   * @param _owner The owner of the upgrade manager
    */
-  constructor(address _usdc, bytes32 _salt, address _owner) {
+  constructor(address _usdc, bytes32 _salt) {
     // The WETH predeploy address on the OP Chains
-    address _wethL2 = 0x4200000000000000000000000000000000000006;
     _SALT = _salt;
-    bytes memory _emptyInitTx = '';
+    USDC = _usdc;
 
     // Calculate L2 factory address
     bytes memory _l2FactoryCArgs = abi.encode(_SALT, address(this));
     bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
     L2_FACTORY = _precalculateCreate2Address(_SALT, keccak256(_l2FactoryInitCode), L2_CREATE2_DEPLOYER);
-
-    // Calculate the L2 USDC proxy address
-    bytes32 _l2UsdcProxyInitCodeHash = keccak256(bytes.concat(USDC_PROXY_CREATION_CODE, abi.encode(_wethL2)));
-    L2_USDC_PROXY = _precalculateCreate2Address(_SALT, _l2UsdcProxyInitCodeHash, L2_FACTORY);
-
-    // Calculate the L2 adapter proxy address
-    bytes memory _l2AdapterProxyCArgs = abi.encode(_wethL2, _emptyInitTx);
-    bytes memory _l2AdapterProxyInitCode = bytes.concat(type(ERC1967Proxy).creationCode, _l2AdapterProxyCArgs);
-    L2_ADAPTER_PROXY = _precalculateCreate2Address(_SALT, keccak256(_l2AdapterProxyInitCode), L2_FACTORY);
-
-    // Calculate the upgrade manager using 4 as nonce since there are 3 deployments first
-    uint256 _thisNonceFourthTx = 4;
-    UPGRADE_MANAGER = IUpgradeManager(_precalculateCreateAddress(address(this), _thisNonceFourthTx));
-
-    // Deploy the L1 adapter implementation
-    address _l1AdapterImplementation =
-      address(new L1OpUSDCBridgeAdapter(_usdc, L2_ADAPTER_PROXY, address(UPGRADE_MANAGER), address(this)));
-
-    // Deploy the L1 adapter proxy
-    L1_ADAPTER_PROXY = L1OpUSDCBridgeAdapter(address(new ERC1967Proxy(_l1AdapterImplementation, _emptyInitTx)));
-    emit L1AdapterDeployed(address(L1_ADAPTER_PROXY), _l1AdapterImplementation);
-
-    // Deploy the upgrade manager implementation
-    address _upgradeManagerImplementation = address(new UpgradeManager(address(L1_ADAPTER_PROXY)));
-
-    // Deploy and initialize the upgrade manager proxy
-    bytes memory _initializeTx = abi.encodeWithSelector(IUpgradeManager.initialize.selector, _owner);
-    UpgradeManager(address(new ERC1967Proxy(address(_upgradeManagerImplementation), _initializeTx)));
-    emit UpgradeManagerDeployed(address(UPGRADE_MANAGER), _upgradeManagerImplementation);
   }
 
   /**
@@ -102,15 +67,13 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    */
   function deployL2FactoryAndContracts(
     address _l1Messenger,
+    address _l1AdapterOwner,
     uint32 _minGasLimitCreate2Factory,
-    uint32 _minGasLimitDeploy
+    uint32 _minGasLimitDeploy,
+    bytes[] memory _usdcInitTxs
   ) external {
-    if (IUpgradeManager(UPGRADE_MANAGER).messengerDeploymentExecutor(_l1Messenger) != msg.sender) {
-      revert IL1OpUSDCFactory_NotExecutor();
-    }
     // Set the messenger as deployed and initialize it on the adapter
     isFactoryDeployed[_l1Messenger] = true;
-    L1_ADAPTER_PROXY.initializeNewMessenger(_l1Messenger);
 
     // Get the L2 factory init code
     bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
@@ -124,41 +87,52 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
       L2_CREATE2_DEPLOYER, _l2FactoryCreate2Tx, _minGasLimitCreate2Factory
     );
 
-    _deployL2USDCAndAdapter(_l1Messenger, _minGasLimitDeploy);
+    deployAdapters(_l1Messenger, _l1AdapterOwner, _usdcInitTxs, _minGasLimitDeploy);
   }
 
-  /**
-   * @notice Sends the L2 USDC and adapter deployments tx through the messenger to be executed on the l2 factory
-   * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
-   * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
-   */
-  function deployL2USDCAndAdapter(address _l1Messenger, uint32 _minGasLimitDeploy) external {
+  function deployAdapters(
+    address _l1Messenger,
+    address _l1AdapterOwner,
+    bytes[] memory _usdcInitTxs,
+    uint32 _minGasLimitDeploy
+  ) public {
     if (!isFactoryDeployed[_l1Messenger]) revert IL1OpUSDCFactory_FactoryNotDeployed();
-    if (IUpgradeManager(UPGRADE_MANAGER).messengerDeploymentExecutor(_l1Messenger) != msg.sender) {
-      revert IL1OpUSDCFactory_NotExecutor();
-    }
-    _deployL2USDCAndAdapter(_l1Messenger, _minGasLimitDeploy);
+    _deployAdapters(_l1Messenger, _l1AdapterOwner, _usdcInitTxs, _minGasLimitDeploy);
   }
 
-  /**
-   * @notice Deploys the L2 USDC implementation and adapter contracts
-   * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
-   * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
-   */
-  function _deployL2USDCAndAdapter(address _l1Messenger, uint32 _minGasLimitDeploy) internal {
-    // Get the l2 usdc and adapter implementations
-    IUpgradeManager.Implementation memory _l2Usdc = UPGRADE_MANAGER.bridgedUSDCImplementation();
-    IUpgradeManager.Implementation memory _l2Adapter = UPGRADE_MANAGER.l2AdapterImplementation();
+  function _deployAdapters(
+    address _l1Messenger,
+    address _l1AdapterOwner,
+    bytes[] memory _usdcInitTxs,
+    uint32 _minGasLimitDeploy
+  ) internal {
+    // Precalculate l1 adapter address
+    uint256 _l1AdapterDeploymentNonce = nonce + 1;
+    address _l1Adapter = _precalculateCreateAddress(address(this), _l1AdapterDeploymentNonce);
 
+    // Precalculate l2 USDC proxy address
+    bytes memory _l2UsdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, abi.encode(_l1Adapter));
+    address _l2UsdcProxy = _precalculateCreate2Address(_SALT, keccak256(_l2UsdcProxyInitCode), L2_CREATE2_DEPLOYER);
+
+    // Precalculate l2 adapter address
+    bytes memory _l2AdapterInitCode =
+      bytes.concat(type(L2OpUSDCBridgeAdapter).creationCode, abi.encode(_l2UsdcProxy, L2_MESSENGER, _l1Adapter));
+    address _l2Adapter = _precalculateCreate2Address(_SALT, keccak256(_l2AdapterInitCode), L2_FACTORY);
+
+    // Deploy the L1 adapter implementation
+    new L1OpUSDCBridgeAdapter(USDC, _l1Messenger, _l2Adapter, _l1AdapterOwner);
+
+    // Update the nonce with the following 2 txs
+    nonce += 2;
+
+    // Get the l2 USDC implementation
+    bytes memory _usdcImplementationCode = IUSDC(USDC).implementation().code;
     // Send the call over the L2 factory `deploy` function message
-    bytes memory _l2DeploymentsTx = abi.encodeWithSelector(
-      L2OpUSDCFactory.deploy.selector,
-      _l2Usdc.implementation.code,
-      _l2Usdc.initTxs,
-      _l2Adapter.implementation.code,
-      _l2Adapter.initTxs
-    );
+    bytes memory _l2DeploymentsTx =
+      abi.encodeWithSelector(L2OpUSDCFactory.deploy.selector, _l1Adapter, _usdcImplementationCode, _usdcInitTxs);
     ICrossDomainMessenger(_l1Messenger).sendMessage(L2_FACTORY, _l2DeploymentsTx, _minGasLimitDeploy);
+
+    emit L1AdapterDeployed(_l1Adapter);
   }
 
   /**

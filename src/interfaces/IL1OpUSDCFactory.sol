@@ -13,10 +13,9 @@ interface IL1OpUSDCFactory {
 
   /**
    * @notice Emitted when the `L1OpUSDCBridgeAdapter` is deployed
-   * @param _l1AdapterProxy The address of the L1 adapter proxy
-   * @param _l1AdapterImplementation The address of the L1 adapter implementation
+   * @param _l1Adapter The address of the L1 adapter
    */
-  event L1AdapterDeployed(address _l1AdapterProxy, address _l1AdapterImplementation);
+  event L1AdapterDeployed(address _l1Adapter);
 
   /**
    * @notice Emitted when the `UpgradeManager` is deployed

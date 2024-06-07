@@ -3,6 +3,7 @@ pragma solidity 0.8.25;
 
 import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
+import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {BytecodeDeployer} from 'contracts/utils/BytecodeDeployer.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
@@ -40,56 +41,30 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     L1_FACTORY = _l1Factory;
   }
 
-  /**
-   * @notice Deploys the USDC implementation, proxy, and L2 adapter implementation and proxy contracts
-   * @param _usdcImplBytecode The bytecode for the USDC implementation contract
-   * @param _usdcImplInitTxs The initialization transactions for the USDC implementation contract
-   * @param _l2AdapterBytecode The bytecode for the L2 adapter contract
-   * @param _l2AdapterInitTxs The initialization transactions for the L2 adapter contract
-   * @dev It always deploys the proxies with WETH as the implementation, and then upgrades them so their address
-   * is always the same in all the chains, regardless of the implementation code.
-   */
-  function deploy(
-    bytes memory _usdcImplBytecode,
-    bytes[] memory _usdcImplInitTxs,
-    bytes memory _l2AdapterBytecode,
-    bytes[] memory _l2AdapterInitTxs
-  ) external {
+  function deploy(address _l1Adapter, bytes memory _usdcImplementationCode, bytes[] memory _usdcInitTxs) external {
     if (msg.sender != L2_MESSENGER || ICrossDomainMessenger(L2_MESSENGER).xDomainMessageSender() != L1_FACTORY) {
       revert IL2OpUSDCFactory_InvalidSender();
     }
 
-    bytes memory _bytecodeDeployerCreationCode = type(BytecodeDeployer).creationCode;
-    address _usdcImplementation;
-    address _usdcProxy;
-    {
-      // Deploy usdc implementation
-      bytes memory _usdcImplInitCode = bytes.concat(_bytecodeDeployerCreationCode, abi.encode(_usdcImplBytecode));
-      _usdcImplementation = _deployCreate2(_SALT, _usdcImplInitCode);
-      // Deploy usdc proxy
-      bytes memory _usdcProxyCArgs = abi.encode(_WETH);
-      bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);
-      _usdcProxy = _deployCreate2(_SALT, _usdcProxyInitCode);
-      // Upgrade the proxy to the implementation
-      IUSDC(_usdcProxy).upgradeTo(_usdcImplementation);
-      emit USDCDeployed(_usdcProxy, _usdcImplementation);
-    }
+    // Deploy USDC proxy
+    bytes memory _usdcProxyCArgs = abi.encode(_l1Adapter, _EMPTY_BYTES);
+    bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);
+    address _usdcProxy = _deployCreate2(_SALT, _usdcProxyInitCode);
 
-    address _adapterProxy;
-    uint256 _length = _usdcImplInitTxs.length;
-    {
-      // Deploy L2 adapter implementation
-      bytes memory _l2AdapterImplInitCode = bytes.concat(_bytecodeDeployerCreationCode, abi.encode(_l2AdapterBytecode));
-      address _adapterImplementation = _deployCreate2(_SALT, _l2AdapterImplInitCode);
-      // Deploy L2 adapter proxy
-      bytes memory _proxyCArgs = abi.encode(_WETH, _EMPTY_BYTES);
-      bytes memory _adapterProxyInitCode = bytes.concat(type(ERC1967Proxy).creationCode, _proxyCArgs);
-      _adapterProxy = _deployCreate2(_SALT, _adapterProxyInitCode);
-      // Upgrade the proxy and set the number of initialization transactions that will be executed by the USDC proxy
-      bytes memory _adapterInitTx = abi.encodeWithSignature('setProxyExecutedInitTxs(uint256)', _length);
-      UUPSUpgradeable(_adapterProxy).upgradeToAndCall(_adapterImplementation, _adapterInitTx);
-      emit AdapterDeployed(_adapterProxy, _adapterImplementation);
-    }
+    // Deploy L2 Adapter
+    bytes memory _l2AdapterCArgs = abi.encode(_usdcProxy, msg.sender, _l1Adapter);
+    bytes memory _l2AdapterInitCode = bytes.concat(type(ERC1967Proxy).creationCode, _l2AdapterCArgs);
+    address _l2Adapter = _deployCreate2(_SALT, _l2AdapterInitCode);
+
+    // Deploy USDC implementation
+    bytes memory _usdcImplInitCode = bytes.concat(type(BytecodeDeployer).creationCode, _usdcImplementationCode);
+    address _usdcImplementation = _deployCreate2(_SALT, _usdcImplInitCode);
+
+    // Upgrade the USDC proxy to the implementation
+    IUSDC(_usdcProxy).upgradeTo(_usdcImplementation);
+
+    // Change admin
+    IUSDC(_usdcProxy).changeAdmin(_l2Adapter);
 
     // Change the USDC admin so the init txs can be executed over the proxy from this contract
     IUSDC(_usdcProxy).changeAdmin(_adapterProxy);
@@ -99,11 +74,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
       _executeInitTxs(_usdcImplementation, _usdcImplInitTxs, _length);
     }
 
-    // Execute the L2 adapter initialization transactions, if any
-    _length = _l2AdapterInitTxs.length;
-    if (_length > 0) {
-      _executeInitTxs(_adapterProxy, _l2AdapterInitTxs, _length);
-    }
+    // TODO: Transfer ownership? To be defined
   }
 
   /**
