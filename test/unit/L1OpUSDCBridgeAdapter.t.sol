@@ -250,6 +250,15 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
     adapter.burnLockedUSDC();
   }
 
+  function test_burnAmountNotSet(address _circle) external {
+    adapter.forTest_setCircle(_circle);
+
+    // Execute
+    vm.prank(_circle);
+    vm.expectRevert(IL1OpUSDCBridgeAdapter.IL1OpUSDCBridgeAdapter_BurnAmountNotSet.selector);
+    adapter.burnLockedUSDC();
+  }
+
   /**
    * @notice Check that the burn function is called as expected
    */

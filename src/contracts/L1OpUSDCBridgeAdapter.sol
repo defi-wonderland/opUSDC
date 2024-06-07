@@ -112,6 +112,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    */
   function burnLockedUSDC() external {
     if (msg.sender != circle) revert IOpUSDCBridgeAdapter_InvalidSender();
+    if (burnAmount == 0) revert IL1OpUSDCBridgeAdapter_BurnAmountNotSet();
 
     // Burn the USDC tokens
     IUSDC(USDC).burn(address(this), burnAmount);
