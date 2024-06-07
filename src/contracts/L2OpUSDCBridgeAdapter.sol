@@ -166,6 +166,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
                              USDC UPGRADE
   ///////////////////////////////////////////////////////////////*/
+
   /**
    * @notice Receive the creation code from the linked adapter, deploy the new implementation and upgrade
    * @param _l2UsdcBytecode The bytecode for the new L2 USDC implementation

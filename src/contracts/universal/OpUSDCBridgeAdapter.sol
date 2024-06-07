@@ -24,6 +24,7 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
   /**
    * @notice Construct the OpUSDCBridgeAdapter contract
    * @param _usdc The address of the USDC Contract to be used by the adapter
+   * @param _messenger The address of the messenger contract
    * @param _linkedAdapter The address of the linked adapter
    */
   constructor(address _usdc, address _messenger, address _linkedAdapter) {
