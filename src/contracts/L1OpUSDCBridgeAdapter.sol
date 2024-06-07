@@ -124,40 +124,38 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
    * @notice Send a message to the linked adapter to call receiveStopMessaging() and stop outgoing messages.
    * @dev Only callable by the owner of the adapter
    * @dev Setting isMessagingDisabled to true is an irreversible operation
-   *  @param _messenger The address of the L2 messenger to stop messaging with
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  function stopMessaging(address _messenger, uint32 _minGasLimit) external onlyOwner {
+  function stopMessaging(uint32 _minGasLimit) external onlyOwner {
     // Ensure messaging is enabled
     if (messengerStatus != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
-    ICrossDomainMessenger(_messenger).sendMessage(
+    ICrossDomainMessenger(MESSENGER).sendMessage(
       LINKED_ADAPTER, abi.encodeWithSignature('receiveStopMessaging()'), _minGasLimit
     );
 
     messengerStatus = Status.Paused;
 
-    emit MessagingStopped(_messenger);
+    emit MessagingStopped(MESSENGER);
   }
 
   /**
    * @notice Resume messaging on the messenger
    * @dev Only callable by the UpgradeManager
    * @dev Cant resume deprecated messengers
-   * @param _messenger The address of the messenger to resume
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  function resumeMessaging(address _messenger, uint32 _minGasLimit) external onlyOwner {
+  function resumeMessaging(uint32 _minGasLimit) external onlyOwner {
     // Ensure messaging is disabled
     if (messengerStatus != Status.Paused) revert IOpUSDCBridgeAdapter_MessagingEnabled();
 
     messengerStatus = Status.Active;
 
-    ICrossDomainMessenger(_messenger).sendMessage(
+    ICrossDomainMessenger(MESSENGER).sendMessage(
       LINKED_ADAPTER, abi.encodeWithSignature('receiveResumeMessaging()'), _minGasLimit
     );
 
-    emit MessagingResumed(_messenger);
+    emit MessagingResumed(MESSENGER);
   }
 
   /*///////////////////////////////////////////////////////////////
@@ -168,10 +166,9 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
    * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
-   * @param _messenger The address of the messenger contract to send through
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  function sendMessage(address _to, uint256 _amount, address _messenger, uint32 _minGasLimit) external {
+  function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external {
     // Ensure messaging is enabled
     if (messengerStatus != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
@@ -179,11 +176,11 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
     IUSDC(USDC).safeTransferFrom(msg.sender, address(this), _amount);
 
     // Send the message to the linked adapter
-    ICrossDomainMessenger(_messenger).sendMessage(
+    ICrossDomainMessenger(MESSENGER).sendMessage(
       LINKED_ADAPTER, abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount), _minGasLimit
     );
 
-    emit MessageSent(msg.sender, _to, _amount, _messenger, _minGasLimit);
+    emit MessageSent(msg.sender, _to, _amount, MESSENGER, _minGasLimit);
   }
 
   /**
@@ -191,7 +188,6 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
    * @param _signer The address of the user sending the message
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
-   * @param _messenger The address of the messenger contract to send through
    * @param _signature The signature of the user
    * @param _deadline The deadline for the message to be executed
    * @param _minGasLimit Minimum gas limit that the message can be executed with
@@ -200,7 +196,6 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
     address _signer,
     address _to,
     uint256 _amount,
-    address _messenger,
     bytes calldata _signature,
     uint256 _deadline,
     uint32 _minGasLimit
@@ -220,11 +215,11 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
     IUSDC(USDC).safeTransferFrom(_signer, address(this), _amount);
 
     // Send the message to the linked adapter
-    ICrossDomainMessenger(_messenger).sendMessage(
+    ICrossDomainMessenger(MESSENGER).sendMessage(
       LINKED_ADAPTER, abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount), _minGasLimit
     );
 
-    emit MessageSent(_signer, _to, _amount, _messenger, _minGasLimit);
+    emit MessageSent(_signer, _to, _amount, MESSENGER, _minGasLimit);
   }
 
   /**
@@ -246,22 +241,21 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
 
   /**
    * @notice Send a message to the linked adapter to upgrade the implementation of the USDC contract
-   * @param _messenger The address of the messenger contract to send through
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  function sendL2UsdcUpgrade(address _messenger, bytes[] memory _initTxs, uint32 _minGasLimit) external onlyOwner {
+  function sendL2UsdcUpgrade(bytes[] memory _initTxs, uint32 _minGasLimit) external onlyOwner {
     // Ensure messaging is enabled
     if (messengerStatus != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
     // Get the bytecode of the USDC current implementation
     address _usdcImplementation = IUSDC(USDC).implementation();
 
-    ICrossDomainMessenger(_messenger).sendMessage(
+    ICrossDomainMessenger(MESSENGER).sendMessage(
       LINKED_ADAPTER,
       abi.encodeWithSignature('receiveUsdcUpgrade(bytes,bytes[])', _usdcImplementation.code, _initTxs),
       _minGasLimit
     );
 
-    emit L2UsdcUpgradeSent(_usdcImplementation, _messenger, _minGasLimit);
+    emit L2UsdcUpgradeSent(_usdcImplementation, MESSENGER, _minGasLimit);
   }
 }

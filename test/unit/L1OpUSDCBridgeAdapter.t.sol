@@ -378,7 +378,7 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
     // Execute
     vm.prank(_user);
     vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _user));
-    adapter.stopMessaging(_messenger, 0);
+    adapter.stopMessaging(0);
   }
 
   /**
@@ -389,7 +389,7 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
     // Execute
     vm.prank(_owner);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
-    adapter.stopMessaging(_messenger, _minGasLimit);
+    adapter.stopMessaging(_minGasLimit);
   }
 
   /**
@@ -406,7 +406,7 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
 
     // Execute
     vm.prank(_owner);
-    adapter.stopMessaging(_messenger, _minGasLimit);
+    adapter.stopMessaging(_minGasLimit);
   }
 
   /**
@@ -428,7 +428,7 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
 
     // Execute
     vm.prank(_owner);
-    adapter.stopMessaging(_messenger, _minGasLimit);
+    adapter.stopMessaging(_minGasLimit);
   }
 }
 
@@ -442,7 +442,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ResumeMessaging is Base {
     // Execute
     vm.prank(_user);
     vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _user));
-    adapter.resumeMessaging(_messenger, _minGasLimit);
+    adapter.resumeMessaging(_minGasLimit);
   }
 
   /**
@@ -452,7 +452,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ResumeMessaging is Base {
     // Execute
     vm.prank(_owner);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingEnabled.selector);
-    adapter.resumeMessaging(_messenger, _minGasLimit);
+    adapter.resumeMessaging(_minGasLimit);
   }
 
   /**
@@ -473,7 +473,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ResumeMessaging is Base {
 
     // Execute
     vm.prank(_owner);
-    adapter.resumeMessaging(_messenger, _minGasLimit);
+    adapter.resumeMessaging(_minGasLimit);
   }
 
   /**
@@ -499,7 +499,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ResumeMessaging is Base {
 
     // Execute
     vm.prank(_owner);
-    adapter.resumeMessaging(_messenger, _minGasLimit);
+    adapter.resumeMessaging(_minGasLimit);
   }
 }
 
@@ -515,7 +515,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessage is Base {
     // Execute
     vm.prank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
-    adapter.sendMessage(_to, _amount, _messenger, _minGasLimit);
+    adapter.sendMessage(_to, _amount, _minGasLimit);
   }
 
   /**
@@ -540,7 +540,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessage is Base {
 
     // Execute
     vm.prank(_user);
-    adapter.sendMessage(_to, _amount, _messenger, _minGasLimit);
+    adapter.sendMessage(_to, _amount, _minGasLimit);
   }
 
   /**
@@ -571,7 +571,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessage is Base {
 
     // Execute
     vm.prank(_user);
-    adapter.sendMessage(_to, _amount, _messenger, _minGasLimit);
+    adapter.sendMessage(_to, _amount, _minGasLimit);
   }
 }
 
@@ -590,7 +590,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     // Execute
     vm.prank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
-    adapter.sendMessage(_signerAd, _to, _amount, _messenger, _signature, _deadline, _minGasLimit);
+    adapter.sendMessage(_signerAd, _to, _amount, _signature, _deadline, _minGasLimit);
   }
 
   /**
@@ -610,7 +610,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     // Execute
     vm.prank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessageExpired.selector);
-    adapter.sendMessage(_signerAd, _to, _amount, _messenger, _signature, _deadline, _minGasLimit);
+    adapter.sendMessage(_signerAd, _to, _amount, _signature, _deadline, _minGasLimit);
   }
 
   /**
@@ -625,7 +625,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     // Execute
     vm.prank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSignature.selector);
-    adapter.sendMessage(_signerAd, _to, _amount, _messenger, _signature, _deadline, _minGasLimit);
+    adapter.sendMessage(_signerAd, _to, _amount, _signature, _deadline, _minGasLimit);
   }
 
   /**
@@ -654,7 +654,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
 
     // Execute
     vm.prank(_user);
-    adapter.sendMessage(_signerAd, _to, _amount, _messenger, _signature, _deadline, _minGasLimit);
+    adapter.sendMessage(_signerAd, _to, _amount, _signature, _deadline, _minGasLimit);
     assertEq(adapter.userNonce(_signerAd), _nonce + 1, 'Nonce should be incremented');
   }
 
@@ -684,7 +684,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
 
     // Execute
     vm.prank(_user);
-    adapter.sendMessage(_signerAd, _to, _amount, _messenger, _signature, _deadline, _minGasLimit);
+    adapter.sendMessage(_signerAd, _to, _amount, _signature, _deadline, _minGasLimit);
   }
 
   /**
@@ -716,7 +716,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     emit MessageSent(_signerAd, _to, _amount, _messenger, _minGasLimit);
     // Execute
     vm.prank(_user);
-    adapter.sendMessage(_signerAd, _to, _amount, _messenger, _signature, _deadline, _minGasLimit);
+    adapter.sendMessage(_signerAd, _to, _amount, _signature, _deadline, _minGasLimit);
   }
 }
 
@@ -792,7 +792,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendL2UsdcUpgrade is Base {
     // Execute
     vm.prank(_owner);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
-    adapter.sendL2UsdcUpgrade(_messenger, _l2UsdcInitTxs, _minGasLimit);
+    adapter.sendL2UsdcUpgrade(_l2UsdcInitTxs, _minGasLimit);
   }
 
   /**
@@ -814,7 +814,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendL2UsdcUpgrade is Base {
 
     // Execute
     vm.prank(_owner);
-    adapter.sendL2UsdcUpgrade(_messenger, _l2UsdcInitTxs, _minGasLimit);
+    adapter.sendL2UsdcUpgrade(_l2UsdcInitTxs, _minGasLimit);
   }
 
   /**
@@ -840,6 +840,6 @@ contract L1OpUSDCBridgeAdapter_Unit_SendL2UsdcUpgrade is Base {
 
     // Execute
     vm.prank(_owner);
-    adapter.sendL2UsdcUpgrade(_messenger, _l2UsdcInitTxs, _minGasLimit);
+    adapter.sendL2UsdcUpgrade(_l2UsdcInitTxs, _minGasLimit);
   }
 }
