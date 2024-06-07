@@ -231,8 +231,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
   function receiveMessage(address _user, uint256 _amount) external override checkSender {
     // Transfer the tokens to the user
     IUSDC(USDC).safeTransfer(_user, _amount);
-
-    emit MessageReceived(_user, _amount, msg.sender);
+    emit MessageReceived(_user, _amount, MESSENGER);
   }
 
   /*///////////////////////////////////////////////////////////////
