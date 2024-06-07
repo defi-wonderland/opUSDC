@@ -150,7 +150,6 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
   function resumeMessaging(address _messenger, uint32 _minGasLimit) external onlyOwner {
     // Ensure messaging is disabled
     if (messengerStatus != Status.Paused) revert IOpUSDCBridgeAdapter_MessagingEnabled();
-    if (messengerStatus == Status.Deprecated) revert IOpUSDCBridgeAdapter_Deprecated();
 
     messengerStatus = Status.Active;
 

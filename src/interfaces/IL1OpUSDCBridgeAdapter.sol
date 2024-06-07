@@ -59,11 +59,6 @@ interface IL1OpUSDCBridgeAdapter {
   error IL1OpUSDCBridgeAdapter_MessengerNotPaused();
 
   /**
-   * @notice Error when the messenger is deprecated
-   */
-  error IOpUSDCBridgeAdapter_Deprecated();
-
-  /**
    * @notice Error when address is not valid
    */
   error IOpUSDCBridgeAdapter_InvalidAddress();

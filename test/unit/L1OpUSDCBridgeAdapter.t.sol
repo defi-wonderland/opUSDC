@@ -270,6 +270,18 @@ contract L1OpUSDCBridgeAdapter_Unit_SetBurnAmount is Base {
   }
 
   /**
+   * @notice Check the functions reverts when messenger status is not upgrading
+   */
+  function test_revertIfMessengerStatusIsNotUpgrading(uint256 _amount) external {
+    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+
+    // Execute
+    vm.prank(_messenger);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_NotUpgrading.selector);
+    adapter.setBurnAmount(_amount);
+  }
+
+  /**
    * @notice Check that the burn amount is set as expected
    */
   function test_setAmount(uint256 _burnAmount) external {
