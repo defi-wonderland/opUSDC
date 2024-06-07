@@ -63,6 +63,11 @@ interface IL1OpUSDCBridgeAdapter {
    */
   error IOpUSDCBridgeAdapter_Deprecated();
 
+  /**
+   * @notice Error when address is not valid
+   */
+  error IOpUSDCBridgeAdapter_InvalidAddress();
+
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   //////////////////////////////////////////////////////////////*/

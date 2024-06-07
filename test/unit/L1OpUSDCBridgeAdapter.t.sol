@@ -94,6 +94,16 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
   }
 
   /**
+   * @notice Check that the function reverts if `_circle` is the zero address
+   */
+  function test_addressZero(uint32 _minGasLimitReceiveOnL2, uint32 _minGasLimitSetBurnAmount) external {
+    // Execute
+    vm.prank(_owner);
+    vm.expectRevert(abi.encodeWithSelector(IL1OpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidAddress.selector));
+    adapter.migrateToNative(address(0), _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
+  }
+
+  /**
    * @notice Check that the function reverts if a messenger is not active or upgrading
    */
   function test_revertIfMessengerDisabled(
@@ -101,7 +111,9 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
     uint32 _minGasLimitReceiveOnL2,
     uint32 _minGasLimitSetBurnAmount
   ) external {
+    vm.assume(_newOwner != address(0));
     adapter.forTest_setMessengerStatusToPaused();
+
     // Execute
     vm.prank(_owner);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
@@ -117,6 +129,7 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
     uint32 _minGasLimitSetBurnAmount,
     address _circle
   ) external {
+    vm.assume(_newOwner != address(0));
     // Sets the circle address
     vm.assume(_circle != address(0));
     adapter.forTest_setCircle(_circle);
@@ -134,6 +147,7 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
     uint32 _minGasLimitReceiveOnL2,
     uint32 _minGasLimitSetBurnAmount
   ) external {
+    vm.assume(_newOwner != address(0));
     vm.mockCall(
       address(_messenger),
       abi.encodeWithSignature(
@@ -164,6 +178,7 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
     uint32 _minGasLimitReceiveOnL2,
     uint32 _minGasLimitSetBurnAmount
   ) external {
+    vm.assume(_newOwner != address(0));
     _mockAndExpect(
       address(_messenger),
       abi.encodeWithSignature(
@@ -188,6 +203,7 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
     uint32 _minGasLimitReceiveOnL2,
     uint32 _minGasLimitSetBurnAmount
   ) external {
+    vm.assume(_newOwner != address(0));
     adapter.forTest_setCircle(_newOwner);
     adapter.forTest_setMessengerStatusToUpgrading();
 
@@ -215,6 +231,7 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
     uint32 _minGasLimitReceiveOnL2,
     uint32 _minGasLimitSetBurnAmount
   ) external {
+    vm.assume(_newOwner != address(0));
     // Mock calls
     vm.mockCall(
       address(_messenger),

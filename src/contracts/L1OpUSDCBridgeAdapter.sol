@@ -64,6 +64,9 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
   ) external onlyOwner {
     // Leave this flow open to resend upgrading flow incase message fails on L2
 
+    // Circle implementation of `transferOwnership` reverts on address(0)
+    if (_circle == address(0)) revert IOpUSDCBridgeAdapter_InvalidAddress();
+
     // Ensure messaging is enabled
     if (messengerStatus != Status.Active && messengerStatus != Status.Upgrading) {
       revert IOpUSDCBridgeAdapter_MessagingDisabled();
