@@ -8,6 +8,9 @@ import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.s
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
+  /// @inheritdoc IL2OpUSDCBridgeAdapter
+  bool public isMessagingDisabled;
+
   /// @notice amount of initialization transactions executed on the USDC contract
   uint256 internal _proxyExecutedInitTxsLength;
 

@@ -82,4 +82,13 @@ interface IL2OpUSDCBridgeAdapter {
    * @param _newLength The new value for _proxyExecutedInitTxsLength
    */
   function setProxyExecutedInitTxs(uint256 _newLength) external;
+
+  /*///////////////////////////////////////////////////////////////
+                            VARIABLES
+  //////////////////////////////////////////////////////////////*/
+  /**
+   * @notice Fetches whether messaging is disabled
+   * @return _isMessagingDisabled Whether messaging is disabled
+   */
+  function isMessagingDisabled() external view returns (bool _isMessagingDisabled);
 }

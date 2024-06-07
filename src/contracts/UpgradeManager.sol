@@ -139,7 +139,7 @@ contract UpgradeManager is Initializable, OwnableUpgradeable, UUPSUpgradeable, I
 
     // Migrate
     IL1OpUSDCBridgeAdapter(L1_ADAPTER).migrateToNative(
-      _l1Messenger, _migration.circle, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount
+      _migration.circle, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount
     );
 
     migrations[_l1Messenger].executed = true;

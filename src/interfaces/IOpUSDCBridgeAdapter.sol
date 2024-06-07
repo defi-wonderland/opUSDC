@@ -120,12 +120,6 @@ interface IOpUSDCBridgeAdapter {
   function MESSENGER() external view returns (address _messenger);
 
   /**
-   * @notice Fetches whether messaging is disabled
-   * @return _isMessagingDisabled Whether messaging is disabled
-   */
-  function isMessagingDisabled() external view returns (bool _isMessagingDisabled);
-
-  /**
    * @notice Returns the nonce of a given user to avoid replay attacks
    * @param _user The user to fetch the nonce for
    * @return _nonce The nonce of the user

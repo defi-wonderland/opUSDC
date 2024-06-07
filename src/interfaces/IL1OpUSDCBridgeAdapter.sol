@@ -8,14 +8,12 @@ interface IL1OpUSDCBridgeAdapter {
 
   /**
    * @notice The status of an L1 Messenger
-   * @param Uninitialized  The messenger is Uninitialized
    * @param Active The messenger is active
    * @param Paused The messenger is paused
    * @param Upgrading The messenger is upgrading
    * @param Deprecated The messenger is deprecated
    */
   enum Status {
-    Uninitialized,
     Active,
     Paused,
     Upgrading,
@@ -60,6 +58,11 @@ interface IL1OpUSDCBridgeAdapter {
    */
   error IL1OpUSDCBridgeAdapter_MessengerNotPaused();
 
+  /**
+   * @notice Error when the messenger is deprecated
+   */
+  error IOpUSDCBridgeAdapter_Deprecated();
+
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   //////////////////////////////////////////////////////////////*/
@@ -97,17 +100,11 @@ interface IL1OpUSDCBridgeAdapter {
 
   /**
    * @notice Initiates the process to migrate the bridged USDC to native USDC
-   * @param _messenger The address of the L1 messenger
    * @param _circle The address to transfer ownerships to
    * @param _minGasLimitReceiveOnL2 Minimum gas limit that the message can be executed with on L2
    * @param _minGasLimitSetBurnAmount Minimum gas limit that the message can be executed with to set the burn amount
    */
-  function migrateToNative(
-    address _messenger,
-    address _circle,
-    uint32 _minGasLimitReceiveOnL2,
-    uint32 _minGasLimitSetBurnAmount
-  ) external;
+  function migrateToNative(address _circle, uint32 _minGasLimitReceiveOnL2, uint32 _minGasLimitSetBurnAmount) external;
 
   /**
    * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
@@ -156,14 +153,14 @@ interface IL1OpUSDCBridgeAdapter {
   function burnAmount() external view returns (uint256 _burnAmount);
 
   /**
-   * @notice Fetches the status of the L2 USDC upgrade
-   * @return _isUpgrading The status of the L2 USDC upgrade
-   */
-  function isUpgrading() external view returns (bool _isUpgrading);
-
-  /**
    * @notice Fetches the address of the Circle contract
    * @return _circle The address of the Circle contract
    */
   function circle() external view returns (address _circle);
+
+  /**
+   * @notice Fetches the status of the messenger
+   * @return _status The status of the messenger
+   */
+  function messengerStatus() external view returns (Status _status);
 }

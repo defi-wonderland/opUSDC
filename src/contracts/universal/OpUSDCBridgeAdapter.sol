@@ -19,9 +19,6 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
   address public immutable MESSENGER;
 
   /// @inheritdoc IOpUSDCBridgeAdapter
-  bool public isMessagingDisabled;
-
-  /// @inheritdoc IOpUSDCBridgeAdapter
   mapping(address _user => uint256 _nonce) public userNonce;
 
   /**

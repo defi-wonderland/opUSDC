@@ -15,10 +15,10 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
   uint256 public burnAmount;
 
   /// @inheritdoc IL1OpUSDCBridgeAdapter
-  bool public isUpgrading;
+  address public circle;
 
   /// @inheritdoc IL1OpUSDCBridgeAdapter
-  address public circle;
+  Status public messengerStatus;
 
   /**
    * @notice Modifier to check if the sender is the linked adapter through the messenger
@@ -53,34 +53,35 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
 
   /**
    * @notice Initiates the process to migrate the bridged USDC to native USDC
-   * @param _messenger The address of the L1 messenger
    * @param _circle The address to transfer ownerships to
    * @param _minGasLimitReceiveOnL2 Minimum gas limit that the message can be executed with on L2
    * @param _minGasLimitSetBurnAmount Minimum gas limit that the message can be executed with to set the burn amount
    */
   function migrateToNative(
-    address _messenger,
     address _circle,
     uint32 _minGasLimitReceiveOnL2,
     uint32 _minGasLimitSetBurnAmount
   ) external onlyOwner {
-    // Ensure messaging is enabled
     // Leave this flow open to resend upgrading flow incase message fails on L2
-    if (isMessagingDisabled) revert IOpUSDCBridgeAdapter_MessagingDisabled();
-    if (circle != address(0) && isUpgrading) {
+
+    // Ensure messaging is enabled
+    if (messengerStatus != Status.Active && messengerStatus != Status.Upgrading) {
+      revert IOpUSDCBridgeAdapter_MessagingDisabled();
+    }
+    if (circle != address(0) && messengerStatus != Status.Upgrading) {
       revert IOpUSDCBridgeAdapter_MigrationInProgress();
     }
 
     circle = _circle;
-    isUpgrading = true;
+    messengerStatus = Status.Upgrading;
 
-    ICrossDomainMessenger(_messenger).sendMessage(
+    ICrossDomainMessenger(MESSENGER).sendMessage(
       LINKED_ADAPTER,
       abi.encodeWithSignature('receiveMigrateToNative(address,uint32)', _circle, _minGasLimitSetBurnAmount),
       _minGasLimitReceiveOnL2
     );
 
-    emit MigratingToNative(_messenger, _circle);
+    emit MigratingToNative(MESSENGER, _circle);
   }
 
   /**
@@ -89,9 +90,10 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
    * @dev Only callable by a whitelisted messenger during its migration process
    */
   function setBurnAmount(uint256 _amount) external checkSender {
-    if (!isUpgrading) revert IOpUSDCBridgeAdapter_NotUpgrading();
+    if (messengerStatus != Status.Upgrading) revert IOpUSDCBridgeAdapter_NotUpgrading();
 
     burnAmount = _amount;
+    messengerStatus = Status.Deprecated;
 
     emit BurnAmountSet(_amount);
   }
@@ -124,13 +126,13 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
    */
   function stopMessaging(address _messenger, uint32 _minGasLimit) external onlyOwner {
     // Ensure messaging is enabled
-    if (isMessagingDisabled) revert IOpUSDCBridgeAdapter_MessagingDisabled();
+    if (messengerStatus != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
     ICrossDomainMessenger(_messenger).sendMessage(
       LINKED_ADAPTER, abi.encodeWithSignature('receiveStopMessaging()'), _minGasLimit
     );
 
-    isMessagingDisabled = true;
+    messengerStatus = Status.Paused;
 
     emit MessagingStopped(_messenger);
   }
@@ -144,10 +146,10 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
    */
   function resumeMessaging(address _messenger, uint32 _minGasLimit) external onlyOwner {
     // Ensure messaging is disabled
-    if (!isMessagingDisabled) revert IOpUSDCBridgeAdapter_MessagingEnabled();
+    if (messengerStatus != Status.Paused) revert IOpUSDCBridgeAdapter_MessagingEnabled();
+    if (messengerStatus == Status.Deprecated) revert IOpUSDCBridgeAdapter_Deprecated();
 
-    // TODO: block this function after burnLockedUSDC is called
-    isMessagingDisabled = false;
+    messengerStatus = Status.Active;
 
     ICrossDomainMessenger(_messenger).sendMessage(
       LINKED_ADAPTER, abi.encodeWithSignature('receiveResumeMessaging()'), _minGasLimit
@@ -169,7 +171,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
    */
   function sendMessage(address _to, uint256 _amount, address _messenger, uint32 _minGasLimit) external {
     // Ensure messaging is enabled
-    if (isMessagingDisabled) revert IOpUSDCBridgeAdapter_MessagingDisabled();
+    if (messengerStatus != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
     // Transfer the tokens to the contract
     IUSDC(USDC).safeTransferFrom(msg.sender, address(this), _amount);
@@ -202,7 +204,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
     uint32 _minGasLimit
   ) external override {
     // Ensure messaging is enabled
-    if (isMessagingDisabled) revert IOpUSDCBridgeAdapter_MessagingDisabled();
+    if (messengerStatus != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
     // Ensure the deadline has not passed
     if (block.timestamp > _deadline) revert IOpUSDCBridgeAdapter_MessageExpired();
@@ -247,7 +249,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
    */
   function sendL2UsdcUpgrade(address _messenger, bytes[] memory _initTxs, uint32 _minGasLimit) external onlyOwner {
     // Ensure messaging is enabled
-    if (isMessagingDisabled) revert IOpUSDCBridgeAdapter_MessagingDisabled();
+    if (messengerStatus != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
     // Get the bytecode of the USDC current implementation
     address _usdcImplementation = IUSDC(USDC).implementation();
