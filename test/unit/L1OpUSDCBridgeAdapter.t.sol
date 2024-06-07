@@ -33,6 +33,7 @@ contract ForTestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
 abstract contract Base is Helpers {
   ForTestL1OpUSDCBridgeAdapter public adapter;
 
+  bytes32 internal _salt = bytes32('1');
   address internal _user = makeAddr('user');
   address internal _owner = makeAddr('owner');
   address internal _signerAd;
@@ -331,6 +332,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
     assertEq(adapter.circle(), address(0), 'Circle should be set to 0');
   }
 }
+
 
 /*///////////////////////////////////////////////////////////////
                       MESSAGING CONTROL
