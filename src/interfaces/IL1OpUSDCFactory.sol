@@ -2,7 +2,6 @@
 pragma solidity 0.8.25;
 
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
-import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
 
 // solhint-disable func-name-mixedcase
 
@@ -80,11 +79,6 @@ interface IL1OpUSDCFactory {
    * @return _l2Factory The address of the L1 factory
    */
   function L2_FACTORY() external view returns (address _l2Factory);
-
-  /**
-   * @return _upgradeManager The address of the UpgradeManager contract
-   */
-  function UPGRADE_MANAGER() external view returns (IUpgradeManager _upgradeManager);
 
   /**
    * @return _l1AdapterProxy The address of the L1OpUSDCBridgeAdapter contract

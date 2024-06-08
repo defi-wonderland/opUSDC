@@ -5,12 +5,11 @@ import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCFactory, L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
-import {UpgradeManager} from 'contracts/UpgradeManager.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {Test} from 'forge-std/Test.sol';
-import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
 import {ICreate2Deployer} from 'interfaces/external/ICreate2Deployer.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
+import {IUSDC} from 'interfaces/external/IUSDC.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
 contract ForTestL1OpUSDCFactory is L1OpUSDCFactory {
@@ -52,14 +51,10 @@ abstract contract Base is Test, Helpers {
 
   bytes[] internal _usdcImplInitTxs;
   bytes[] internal _l2AdapterInitTxs;
-  IUpgradeManager.Implementation internal _bridgedUsdcImplementation;
-  IUpgradeManager.Implementation internal _l2AdapterImplementation;
-  address internal _upgradeManager;
 
   function setUp() public virtual {
     // Deploy factory
     factory = new ForTestL1OpUSDCFactory(_usdc, _salt, _owner);
-    _upgradeManager = address(factory.UPGRADE_MANAGER());
 
     vm.etch(_l2AdapterImplAddress, _l2AdapterBytecode);
     vm.etch(_l2UsdcImplAddress, _l2UsdcImplementationBytecode);
@@ -69,8 +64,6 @@ abstract contract Base is Test, Helpers {
     _usdcImplInitTxs.push(_usdcInitTx);
     bytes memory _l2AdapterInitTx = 'tx2';
     _l2AdapterInitTxs.push(_l2AdapterInitTx);
-    _bridgedUsdcImplementation = IUpgradeManager.Implementation(_l2UsdcImplAddress, _usdcImplInitTxs);
-    _l2AdapterImplementation = IUpgradeManager.Implementation(_l2AdapterImplAddress, _l2AdapterInitTxs);
   }
 
   /**
@@ -78,25 +71,6 @@ abstract contract Base is Test, Helpers {
    * and some that will be made in the `deployL2FactoryAndContracts` function
    */
   function _mockDeployFunctionCalls() internal {
-    // Mock the user to be the executor
-    vm.mockCall(
-      _upgradeManager, abi.encodeWithSignature('messengerDeploymentExecutor(address)', _l1Messenger), abi.encode(_user)
-    );
-
-    // Mock the call over the `bridgedUSDCImplementation` function
-    vm.mockCall(
-      _upgradeManager,
-      abi.encodeWithSelector(IUpgradeManager.bridgedUSDCImplementation.selector),
-      abi.encode(_bridgedUsdcImplementation)
-    );
-
-    // Mock the call over the `l2AdapterImplementation` function
-    vm.mockCall(
-      _upgradeManager,
-      abi.encodeWithSelector(IUpgradeManager.l2AdapterImplementation.selector),
-      abi.encode(_l2AdapterImplementation)
-    );
-
     // Mock the call over the `portal` function on the L1 messenger
     vm.mockCall(_l1Messenger, abi.encodeWithSelector(ICrossDomainMessenger.sendMessage.selector), abi.encode(''));
   }
@@ -135,7 +109,6 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
     assertEq(factory.L2_FACTORY(), _l2Factory, 'Invalid l2Factory address');
     assertEq(factory.L2_USDC_PROXY(), _l2UsdcProxyAddress, 'Invalid l2UsdcProxy address');
     assertEq(factory.L2_ADAPTER_PROXY(), _l2AdapterProxy, 'Invalid l2Adapter proxy address');
-    assertEq(address(factory.UPGRADE_MANAGER()), _upgradeManager, 'Invalid upgradeManager address');
     assertEq(address(factory.L1_ADAPTER_PROXY()), _l1Adapter, 'Invalid l1Adapter address');
   }
 
@@ -167,44 +140,6 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
     // Execute
     new ForTestL1OpUSDCFactory(_usdc, _salt, _owner);
   }
-
-  /**
-   * @notice Check the constructor correctly deploys the upgrade manager implementation
-   * @dev We are assuming the upgrade manager correctly sets the immutable vars to compare. Need to do this to check the
-   * contract constructor values were properly set.
-   */
-  function test_deployUpgradeManagerImplementation() public {
-    IUpgradeManager _upgradeManager = IUpgradeManager(address(factory.UPGRADE_MANAGER()));
-    assertEq(_upgradeManager.L1_ADAPTER(), address(factory.L1_ADAPTER_PROXY()), 'Invalid l1Adapter');
-  }
-
-  /**
-   * @notice Check the constructor correctly deploys the upgrade manager proxy
-   * @dev We are assuming the upgrade manager correctly sets the immutable vars to compare. Need to do this to check the
-   * contract constructor values were properly set.
-   */
-  function test_deployUpgradeManagerProxy() public {
-    UpgradeManager _upgradeManager = UpgradeManager(address(factory.UPGRADE_MANAGER()));
-    assertEq(_upgradeManager.owner(), _owner, 'Invalid owner');
-  }
-
-  /**
-   * @notice Check the `UpgradeManagerDeployed` event is properly emitted
-   */
-  function test_emitUpgradeManagerDeployedEvent() public {
-    // Precalculate the upgrade manager address to be emitted
-    uint256 _nonce = vm.getNonce(address(this));
-    address _newFactory = factory.forTest_precalculateCreateAddress(address(this), _nonce);
-    address _upgradeManagerImpl = factory.forTest_precalculateCreateAddress(_newFactory, 3);
-    address _upgradeManagerProxy = factory.forTest_precalculateCreateAddress(_newFactory, 4);
-
-    // Expect
-    vm.expectEmit(true, true, true, true);
-    emit UpgradeManagerDeployed(_upgradeManagerProxy, _upgradeManagerImpl);
-
-    // Execute
-    new ForTestL1OpUSDCFactory(_usdc, _salt, _owner);
-  }
 }
 
 contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
@@ -218,29 +153,8 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
   ) public {
     vm.assume(_executor != _user);
 
-    vm.mockCall(
-      _upgradeManager,
-      abi.encodeWithSignature('messengerDeploymentExecutor(address)', _l1Messenger),
-      abi.encode(_executor)
-    );
-
     // Execute
     vm.expectRevert(IL1OpUSDCFactory.IL1OpUSDCFactory_NotExecutor.selector);
-    vm.prank(_user);
-    factory.deployL2FactoryAndContracts(_l1Messenger, _minGasLimitCreate2Factory, _minGasLimitDeploy);
-  }
-
-  /**
-   * @notice Check the `deployL2FactoryAndContracts` function calls the `messengerDeploymentExecutor` correctly
-   */
-  function test_callMessengerDeploymentExecutor(uint32 _minGasLimitCreate2Factory, uint32 _minGasLimitDeploy) public {
-    // Mock all the `deployL2FactoryAndContracts` function calls
-    _mockDeployFunctionCalls();
-
-    // Expect the `bridgedUSDCImplementation` to be properly called
-    vm.expectCall(_upgradeManager, abi.encodeWithSelector(IUpgradeManager.messengerDeploymentExecutor.selector));
-
-    // Execute
     vm.prank(_user);
     factory.deployL2FactoryAndContracts(_l1Messenger, _minGasLimitCreate2Factory, _minGasLimitDeploy);
   }
@@ -365,54 +279,18 @@ contract L1OpUSDCFactory_Unit_DeployL2USDCAndAdapter is Base {
     // Mock the `isMessengerDeployed` to return true
     factory.forTest_setIsFactoryDeployed(_l1Messenger, true);
 
-    vm.mockCall(
-      _upgradeManager,
-      abi.encodeWithSignature('messengerDeploymentExecutor(address)', _l1Messenger),
-      abi.encode(_executor)
-    );
-
     // Execute
     vm.expectRevert(IL1OpUSDCFactory.IL1OpUSDCFactory_NotExecutor.selector);
     vm.prank(_user);
     factory.deployL2USDCAndAdapter(_l1Messenger, _minGasLimitDeploy);
   }
 
-  /**
-   * @notice Check the `deployL2USDCAndAdapter` function calls the `messengerDeploymentExecutor` correctly
-   */
-  function test_callMessengerDeploymentExecutor(uint32 _minGasLimitDeploy) public {
+  function test_callUSDCImplementation(uint32 _minGasLimitDeploy) public {
     // Mock all the `deployL2USDCAndAdapter` function calls
     _mockDeployFunctionCalls();
 
     // Expect the `bridgedUSDCImplementation` to be properly called
-    vm.expectCall(_upgradeManager, abi.encodeWithSelector(IUpgradeManager.messengerDeploymentExecutor.selector));
-
-    // Execute
-    vm.prank(_user);
-    factory.deployL2USDCAndAdapter(_l1Messenger, _minGasLimitDeploy);
-  }
-
-  function test_callBridgedUSDCImplementation(uint32 _minGasLimitDeploy) public {
-    // Mock all the `deployL2USDCAndAdapter` function calls
-    _mockDeployFunctionCalls();
-
-    // Expect the `bridgedUSDCImplementation` to be properly called
-    vm.expectCall(_upgradeManager, abi.encodeWithSelector(IUpgradeManager.bridgedUSDCImplementation.selector));
-
-    // Execute
-    vm.prank(_user);
-    factory.deployL2USDCAndAdapter(_l1Messenger, _minGasLimitDeploy);
-  }
-
-  /**
-   * @notice Check the `deployL2USDCAndAdapter` function calls the `l2AdapterImplementation` correctly
-   */
-  function test_callL2AdapterImplementation(uint32 _minGasLimitDeploy) public {
-    // Mock all the `deployL2USDCAndAdapter` function calls
-    _mockDeployFunctionCalls();
-
-    // Expect the `l2AdapterImplementation` to be properly called
-    vm.expectCall(_upgradeManager, abi.encodeWithSelector(IUpgradeManager.l2AdapterImplementation.selector));
+    vm.expectCall(_usdc, abi.encodeWithSelector(IUSDC.implementation.selector));
 
     // Execute
     vm.prank(_user);

@@ -67,11 +67,12 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     IUSDC(_usdcProxy).changeAdmin(_l2Adapter);
 
     // Change the USDC admin so the init txs can be executed over the proxy from this contract
-    IUSDC(_usdcProxy).changeAdmin(_adapterProxy);
+    IUSDC(_usdcProxy).changeAdmin(_l2Adapter);
     // Execute the USDC initialization transactions, if any
+    uint256 _length = _usdcInitTxs.length;
     if (_length > 0) {
-      _executeInitTxs(_usdcProxy, _usdcImplInitTxs, _length);
-      _executeInitTxs(_usdcImplementation, _usdcImplInitTxs, _length);
+      _executeInitTxs(_usdcProxy, _usdcInitTxs, _length);
+      _executeInitTxs(_usdcImplementation, _usdcInitTxs, _length);
     }
 
     // TODO: Transfer ownership? To be defined
