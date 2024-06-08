@@ -32,10 +32,6 @@ contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
     return _proxyExecutedInitTxsLength;
   }
 
-  function forTest_authorizeUpgrade(address _newImplementation) external pure {
-    _authorizeUpgrade(_newImplementation);
-  }
-
   function forTest_dummyRevert() external pure {
     assembly {
       revert(0, 0)
@@ -82,16 +78,6 @@ contract L2OpUSDCBridgeAdapter_Unit_Constructor is Base {
     assertEq(adapter.USDC(), _usdc, 'USDC should be set to the provided address');
     assertEq(adapter.MESSENGER(), _messenger, 'Messenger should be set to the provided address');
     assertEq(adapter.LINKED_ADAPTER(), _linkedAdapter, 'Linked adapter should be set to the provided address');
-  }
-}
-
-contract L2OpUSDCBridgeAdapter_Unit_UpgradeToAndCall is Base {
-  /**
-   * @notice Check that the upgrade is called as expected
-   */
-  function test_callUpgradeToAndCall(address _newImplementation) external {
-    vm.expectRevert(IL2OpUSDCBridgeAdapter.L2OpUSDCBridgeAdapter_DisabledFlow.selector);
-    adapter.forTest_authorizeUpgrade(_newImplementation);
   }
 }
 
@@ -466,119 +452,6 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveResumeMessaging is Base {
   }
 }
 
-contract L2OpUSDCBridgeAdapter_ReceiveAdapterUpgrade is Base {
-  /**
-   * @notice Check that the receiveAdapterUpgrade function reverts if the sender is not MESSENGER
-   */
-  function test_wrongMessenger(address _notMessenger) external {
-    vm.assume(_notMessenger != _messenger);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
-    adapter.receiveAdapterUpgrade(_l2AdapterBytecode, _l2AdapterInitTxs);
-  }
-
-  /**
-   * @notice Check that the receiveAdapterUpgrade function reverts if the sender is not Linked Adapter
-   */
-  function test_wrongLinkedAdapter(address _notLinkedAdapter) external {
-    vm.assume(_notLinkedAdapter != _linkedAdapter);
-    // Mock calls
-    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_notLinkedAdapter));
-
-    // Execute
-    vm.prank(_messenger);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
-    adapter.receiveAdapterUpgrade(_l2AdapterBytecode, _l2AdapterInitTxs);
-  }
-
-  /**
-   * @notice Check the expected calls
-   */
-  function test_receiveAdapterUpgrade(address _newUsdc, address _newMessenger, address _newLinkedAdapter) external {
-    vm.assume(_newUsdc != _usdc);
-    vm.assume(_newMessenger != _messenger);
-    vm.assume(_newLinkedAdapter != _linkedAdapter);
-
-    address _realImplementation = address(new ForTestL2OpUSDCBridgeAdapter(_newUsdc, _newMessenger, _newLinkedAdapter));
-    _l2AdapterBytecode = _realImplementation.code;
-    _l2AdapterInitTxs.push(_l2AdapterInitTx);
-
-    // Mock calls
-    _mockAndExpect(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
-    // Execute
-    vm.prank(_messenger);
-    adapter.receiveAdapterUpgrade(_l2AdapterBytecode, _l2AdapterInitTxs);
-  }
-
-  /**
-   * @notice Check that the immutable variables are set as expected
-   */
-  function test_setVariables(address _newUsdc, address _newMessenger, address _newLinkedAdapter) external {
-    vm.assume(_newUsdc != _usdc);
-    vm.assume(_newMessenger != _messenger);
-    vm.assume(_newLinkedAdapter != _linkedAdapter);
-
-    address _realImplementation = address(new ForTestL2OpUSDCBridgeAdapter(_newUsdc, _newMessenger, _newLinkedAdapter));
-    _l2AdapterBytecode = _realImplementation.code;
-    for (uint256 i; i < 5; i++) {
-      _l2AdapterInitTxs.push(_l2AdapterInitTx);
-    }
-
-    // Mock calls
-    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
-    // Execute
-    vm.prank(_messenger);
-    adapter.receiveAdapterUpgrade(_l2AdapterBytecode, _l2AdapterInitTxs);
-    assertEq(adapter.USDC(), _newUsdc, 'USDC should be set to the provided address');
-    assertEq(adapter.MESSENGER(), _newMessenger, 'Messenger should be set to the provided address');
-    assertEq(adapter.LINKED_ADAPTER(), _newLinkedAdapter, 'Linked adapter should be set to the provided address');
-    assertEq(adapter.calls(), 5, 'Calls should be incremented');
-  }
-
-  /**
-   * @notice Check revert on invalid transaction
-   */
-  function test_revertOnInitTx(address _newUsdc, address _newMessenger, address _newLinkedAdapter) external {
-    vm.assume(_newUsdc != _usdc);
-    vm.assume(_newMessenger != _messenger);
-    vm.assume(_newLinkedAdapter != _linkedAdapter);
-
-    address _realImplementation = address(new ForTestL2OpUSDCBridgeAdapter(_newUsdc, _newMessenger, _newLinkedAdapter));
-    _l2AdapterBytecode = _realImplementation.code;
-    _l2AdapterInitTxs.push(abi.encodeWithSignature('forTest_dummyRevert()'));
-
-    // Mock calls
-    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
-    // Execute
-    vm.prank(_messenger);
-    vm.expectRevert(IL2OpUSDCBridgeAdapter.L2OpUSDCBridgeAdapter_AdapterInitializationFailed.selector);
-    adapter.receiveAdapterUpgrade(_l2AdapterBytecode, _l2AdapterInitTxs);
-  }
-
-  /**
-   * @notice Check that the event is emitted as expected
-   */
-  function test_emitEvent(address _newUsdc, address _newMessenger, address _newLinkedAdapter) external {
-    vm.assume(_newUsdc != _usdc);
-    vm.assume(_newMessenger != _messenger);
-    vm.assume(_newLinkedAdapter != _linkedAdapter);
-    uint64 _nonce = vm.getNonce(address(adapter));
-
-    address _realImplementation = address(new ForTestL2OpUSDCBridgeAdapter(_newUsdc, _newMessenger, _newLinkedAdapter));
-    _l2AdapterBytecode = _realImplementation.code;
-    _l2AdapterInitTxs.push(_l2AdapterInitTx);
-
-    // Mock calls
-    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
-    // Expect events
-    vm.expectEmit(true, true, true, true);
-    emit DeployedL2AdapterImplementation(_computeCreateAddress(address(adapter), _nonce));
-
-    // Execute
-    vm.prank(_messenger);
-    adapter.receiveAdapterUpgrade(_l2AdapterBytecode, _l2AdapterInitTxs);
-  }
-}
-
 contract L2OpUSDCBridgeAdapter_ReceiveUsdcUpgrade is Base {
   /**
    * @notice Check that the receiveUsdcUpgrade function reverts if the sender is not MESSENGER
@@ -732,10 +605,14 @@ contract L2OpUSDCBridgeAdapter_setProxyExecutedInitTxs is Base {
   /**
    * @notice Check that _proxyExecutedInitTxsLength  can not be set if is not 0
    */
-  function test_revertIfLengthIsNotZero() external {
-    adapter.forTest_setProxyExecutedInitTxs(4);
-    vm.expectRevert(IL2OpUSDCBridgeAdapter.L2OpUSDCBridgeAdapter_InitializationAlreadyExecuted.selector);
-    adapter.setProxyExecutedInitTxs(1);
+  function test_omitIfLengthIsNotZero(uint256 _initialValue, uint256 _newValue) external {
+    vm.assume(_initialValue != 0);
+    vm.assume(_newValue != _initialValue);
+    adapter.forTest_setProxyExecutedInitTxs(_initialValue);
+    adapter.setProxyExecutedInitTxs(_newValue);
+    assertEq(
+      adapter.forTest_proxyExecutedInitTxsLength(), _initialValue, 'Last L2 Usdc Init Txs Length should not be set'
+    );
   }
 
   /**
@@ -744,16 +621,6 @@ contract L2OpUSDCBridgeAdapter_setProxyExecutedInitTxs is Base {
   function test_setProxyExecutedInitTxs() external {
     adapter.setProxyExecutedInitTxs(1);
     assertEq(adapter.forTest_proxyExecutedInitTxsLength(), 1, 'Last L2 Usdc Init Txs Length should be set to 1');
-  }
-}
-
-contract L2OpUSDCBridgeAdapter_AuthorizeUpgrade is Base {
-  /**
-   * @notice Check that the upgrade is authorized as expected
-   */
-  function test_authorizeUpgrade(address _newImplementation) external {
-    vm.expectRevert(IL2OpUSDCBridgeAdapter.L2OpUSDCBridgeAdapter_DisabledFlow.selector);
-    adapter.forTest_authorizeUpgrade(_newImplementation);
   }
 }
 

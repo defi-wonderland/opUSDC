@@ -26,9 +26,9 @@ interface IUSDC is IERC20 {
 
   /**
    * @notice Upgrades the USDC contract to a new implementation
-   * @param _implementation Address of the new implementation
+   * @param _newImplementation Address of the new implementation
    */
-  function upgradeTo(address _implementation) external;
+  function upgradeTo(address _newImplementation) external;
 
   /**
    * @dev Changes the admin of the proxy.

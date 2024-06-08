@@ -4,7 +4,7 @@ pragma solidity 0.8.25;
 interface IOpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
                             EVENTS
-  //////////////////////////////////////////////////////////////*/
+  ///////////////////////////////////////////////////////////////*/
 
   /**
    * @notice Emitted when messaging is stopped
@@ -45,12 +45,17 @@ interface IOpUSDCBridgeAdapter {
 
   /*///////////////////////////////////////////////////////////////
                             ERRORS
-  //////////////////////////////////////////////////////////////*/
+  ///////////////////////////////////////////////////////////////*/
 
   /**
    * @notice Error when messaging is disabled
    */
   error IOpUSDCBridgeAdapter_MessagingDisabled();
+
+  /**
+   * @notice Error when messaging is enabled
+   */
+  error IOpUSDCBridgeAdapter_MessagingEnabled();
 
   /**
    * @notice Error when the caller is not the linked adapter
@@ -72,9 +77,39 @@ interface IOpUSDCBridgeAdapter {
    */
   error IOpUSDCBridgeAdapter_MigrationInProgress();
 
+  /**
+   * @notice Error when the contract is not in the upgrading state
+   */
+  error IOpUSDCBridgeAdapter_NotUpgrading();
+
   /*///////////////////////////////////////////////////////////////
                             LOGIC
-  //////////////////////////////////////////////////////////////*/
+  ///////////////////////////////////////////////////////////////*/
+  /**
+   * @notice Send tokens to other chain through the linked adapter
+   * @param _to The target address on the destination chain
+   * @param _amount The amount of tokens to send
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external;
+
+  /**
+   * @notice Send tokens to other chain through the linked adapter
+   * @param _signer The address of the user sending the message
+   * @param _to The target address on the destination chain
+   * @param _amount The amount of tokens to send
+   * @param _signature The signature of the user
+   * @param _deadline The deadline for the message to be executed
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  function sendMessage(
+    address _signer,
+    address _to,
+    uint256 _amount,
+    bytes calldata _signature,
+    uint256 _deadline,
+    uint32 _minGasLimit
+  ) external;
 
   /**
    * @notice Receive the message from the other chain and mint the bridged representation for the user
@@ -86,7 +121,7 @@ interface IOpUSDCBridgeAdapter {
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
-  //////////////////////////////////////////////////////////////*/
+  ///////////////////////////////////////////////////////////////*/
 
   /**
    * @notice Fetches address of the USDC token
@@ -101,6 +136,13 @@ interface IOpUSDCBridgeAdapter {
    */
   // solhint-disable-next-line func-name-mixedcase
   function LINKED_ADAPTER() external view returns (address _linkedAdapter);
+
+  /**
+   * @notice Fetches address of the CrossDomainMessenger to send messages to L1 <-> L2
+   * @return _messenger Address of the messenger
+   */
+  // solhint-disable-next-line func-name-mixedcase
+  function MESSENGER() external view returns (address _messenger);
 
   /**
    * @notice Returns the nonce of a given user to avoid replay attacks

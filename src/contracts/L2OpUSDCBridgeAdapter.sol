@@ -1,18 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
-import {ERC1967Utils} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol';
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
 import {BytecodeDeployer} from 'contracts/utils/BytecodeDeployer.sol';
 import {IL2OpUSDCBridgeAdapter} from 'interfaces/IL2OpUSDCBridgeAdapter.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
-contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCBridgeAdapter {
-  /// @inheritdoc IL2OpUSDCBridgeAdapter
-  address public immutable MESSENGER;
-
+contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /// @inheritdoc IL2OpUSDCBridgeAdapter
   bool public isMessagingDisabled;
 
@@ -37,15 +32,67 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
    * @dev The constructor is only used to initialize the OpUSDCBridgeAdapter immutable variables
    */
   /* solhint-disable no-unused-vars */
-  constructor(address _usdc, address _messenger, address _linkedAdapter) OpUSDCBridgeAdapter(_usdc, _linkedAdapter) {
-    MESSENGER = _messenger;
-    _disableInitializers();
-  }
+  constructor(
+    address _usdc,
+    address _messenger,
+    address _linkedAdapter
+  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
   /* solhint-enable no-unused-vars */
 
+  /*///////////////////////////////////////////////////////////////
+                              MIGRATION
+  ///////////////////////////////////////////////////////////////*/
+
   /**
-   * @notice Send a message to the linked adapter to transfer the tokens to the user
-   * @dev Burn the bridged representation acording to the amount sent on the message
+   * @notice Initiates the process to migrate the bridged USDC to native USDC
+   * @dev Full migration cant finish until L1 receives the message for setting the burn amount
+   * @param _newOwner The address to transfer ownerships to
+   * @param _setBurnAmountMinGasLimit Minimum gas limit that the setBurnAmount message can be executed on L1
+   */
+  function receiveMigrateToNative(address _newOwner, uint32 _setBurnAmountMinGasLimit) external checkSender {
+    // Transfer ownership of the USDC contract to the circle
+    IUSDC(USDC).transferOwnership(_newOwner);
+
+    uint256 _burnAmount = IUSDC(USDC).totalSupply();
+
+    ICrossDomainMessenger(MESSENGER).sendMessage(
+      LINKED_ADAPTER, abi.encodeWithSignature('setBurnAmount(uint256)', _burnAmount), _setBurnAmountMinGasLimit
+    );
+
+    isMessagingDisabled = true;
+
+    emit MigratingToNative(MESSENGER, _newOwner);
+  }
+
+  /*///////////////////////////////////////////////////////////////
+                          MESSAGING CONTROL
+  ///////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice Receive the stop messaging message from the linked adapter and stop outgoing messages
+   */
+  function receiveStopMessaging() external checkSender {
+    isMessagingDisabled = true;
+
+    emit MessagingStopped(MESSENGER);
+  }
+
+  /**
+   * @notice Resume messaging after it was stopped
+   */
+  function receiveResumeMessaging() external checkSender {
+    // NOTE: This is safe because this message can only be received when messaging is not deprecated on the L1 messenger
+    isMessagingDisabled = false;
+
+    emit MessagingResumed(MESSENGER);
+  }
+
+  /*///////////////////////////////////////////////////////////////
+                             MESSAGING
+  ///////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice Send tokens to other chain through the linked adapter
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
    * @param _minGasLimit Minimum gas limit that the message can be executed with
@@ -66,7 +113,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
   }
 
   /**
-   * @notice Send the message to the linked adapter to mint the bridged representation on the linked chain
+   * @notice Send tokens to other chain through the linked adapter
    * @param _signer The address of the user sending the message
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
@@ -116,58 +163,9 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
     emit MessageReceived(_user, _amount, MESSENGER);
   }
 
-  /**
-   * @notice Receive the stop messaging message from the linked adapter and stop outgoing messages
-   */
-  function receiveStopMessaging() external checkSender {
-    isMessagingDisabled = true;
-
-    emit MessagingStopped(MESSENGER);
-  }
-
-  /**
-   * @notice Resume messaging after it was stopped
-   */
-  function receiveResumeMessaging() external checkSender {
-    // NOTE: This is safe because this message can only be received when messaging is not deprecated on the L1 messenger
-    isMessagingDisabled = false;
-
-    emit MessagingResumed(MESSENGER);
-  }
-
-  /**
-   * @notice Receive the creation code from the linked adapter, deploy the new implementation and upgrade
-   * @param _l2AdapterBytecode The bytecode for the new L2 adapter implementation
-   * @param _l2AdapterInitTxs The initialization transactions for the new L2 adapter implementation
-   */
-  function receiveAdapterUpgrade(
-    bytes calldata _l2AdapterBytecode,
-    bytes[] calldata _l2AdapterInitTxs
-  ) external checkSender {
-    // Deploy L2 adapter implementation
-    address _adapterImplementation = address(new BytecodeDeployer(_l2AdapterBytecode));
-
-    // Store the implementation in the contract
-    bytes32 _implementationSlot = ERC1967Utils.IMPLEMENTATION_SLOT;
-    assembly {
-      sstore(_implementationSlot, _adapterImplementation)
-    }
-
-    //Execute the initialization transactions
-    if (_l2AdapterInitTxs.length != 0) {
-      // Cache the length of the initialization transactions
-      uint256 _l2AdapterInitTxsLength = _l2AdapterInitTxs.length;
-      // Initialize L2 adapter
-      for (uint256 i; i < _l2AdapterInitTxsLength; i++) {
-        (bool _success,) = address(this).call(_l2AdapterInitTxs[i]);
-        if (!_success) {
-          revert L2OpUSDCBridgeAdapter_AdapterInitializationFailed();
-        }
-      }
-    }
-
-    emit DeployedL2AdapterImplementation(_adapterImplementation);
-  }
+  /*///////////////////////////////////////////////////////////////
+                             USDC UPGRADE
+  ///////////////////////////////////////////////////////////////*/
 
   /**
    * @notice Receive the creation code from the linked adapter, deploy the new implementation and upgrade
@@ -199,39 +197,11 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, Initializable, OpUSDCB
   }
 
   /**
-   * @notice Initiates the process to migrate the bridged USDC to native USDC
-   * @dev Full migration cant finish until L1 receives the message for setting the burn amount
-   * @param _newOwner The address to transfer ownerships to
-   * @param _setBurnAmountMinGasLimit Minimum gas limit that the setBurnAmount message can be executed on L1
-   */
-  function receiveMigrateToNative(address _newOwner, uint32 _setBurnAmountMinGasLimit) external checkSender {
-    // Transfer ownership of the USDC contract to the circle
-    IUSDC(USDC).transferOwnership(_newOwner);
-
-    uint256 _burnAmount = IUSDC(USDC).totalSupply();
-
-    ICrossDomainMessenger(MESSENGER).sendMessage(
-      LINKED_ADAPTER, abi.encodeWithSignature('setBurnAmount(uint256)', _burnAmount), _setBurnAmountMinGasLimit
-    );
-
-    isMessagingDisabled = true;
-
-    emit MigratingToNative(MESSENGER, _newOwner);
-  }
-
-  /**
-   * @notice Set _proxyExecutedInitTxsLength  to the new value
+   * @notice Set _proxyExecutedInitTxsLength to the new value
    * @param _newLength The new value for _proxyExecutedInitTxsLength
    */
   function setProxyExecutedInitTxs(uint256 _newLength) external {
-    if (_proxyExecutedInitTxsLength != 0) revert L2OpUSDCBridgeAdapter_InitializationAlreadyExecuted();
+    if (_proxyExecutedInitTxsLength != 0) return;
     _proxyExecutedInitTxsLength = _newLength;
-  }
-
-  /**
-   * @notice Authorize the upgrade of the implementation of the contract
-   */
-  function _authorizeUpgrade(address) internal pure override {
-    revert L2OpUSDCBridgeAdapter_DisabledFlow();
   }
 }
