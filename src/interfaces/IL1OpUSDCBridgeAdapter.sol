@@ -35,7 +35,14 @@ interface IL1OpUSDCBridgeAdapter {
    * @param _newImplementation The address of the new implementation
    * @param _minGasLimit The minimum gas limit for the message
    */
-  event L2UsdcUpgradeSent(address _newImplementation, address _messenger, uint32 _minGasLimit);
+  event UsdcUpgradeSent(address _newImplementation, address _messenger, uint32 _minGasLimit);
+
+  /**
+   * @notice Emitted when the migration process is complete
+   * @param _burnAmount The amount of USDC tokens that were burned
+   * @param _circle The address of the Circle contract
+   */
+  event MigrationComplete(uint256 _burnAmount, address _circle);
 
   /*///////////////////////////////////////////////////////////////
                             ERRORS

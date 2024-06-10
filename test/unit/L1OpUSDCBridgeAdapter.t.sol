@@ -56,8 +56,9 @@ abstract contract Base is Helpers {
   event MessageSent(address _user, address _to, uint256 _amount, address _messenger, uint32 _minGasLimit);
   event MessageReceived(address _user, uint256 _amount, address _messenger);
   event BurnAmountSet(uint256 _burnAmount);
-  event L2UsdcUpgradeSent(address _newImplementation, address _messenger, uint32 _minGasLimit);
+  event UsdcUpgradeSent(address _newImplementation, address _messenger, uint32 _minGasLimit);
   event MigratingToNative(address _messenger, address _newOwner);
+  event MigrationComplete(uint256 _burnAmount, address _circle);
 
   function setUp() public virtual {
     // Set the bytecode to the implementation addresses
@@ -389,6 +390,28 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
 
     assertEq(adapter.burnAmount(), 0, 'Burn amount should be set to 0');
     assertEq(adapter.circle(), address(0), 'Circle should be set to 0');
+  }
+
+  /**
+   * @notice Check that the event is emitted as expected
+   */
+  function test_emitEvent(uint256 _burnAmount, address _circle) external {
+    vm.assume(_burnAmount > 0);
+    adapter.forTest_setCircle(_circle);
+
+    vm.mockCall(
+      address(_usdc), abi.encodeWithSignature('burn(address,uint256)', address(adapter), _burnAmount), abi.encode(true)
+    );
+
+    adapter.forTest_setBurnAmount(_burnAmount);
+
+    // Expect events
+    vm.expectEmit(true, true, true, true);
+    emit MigrationComplete(0, address(0));
+
+    // Execute
+    vm.prank(_circle);
+    adapter.burnLockedUSDC();
   }
 }
 
@@ -876,7 +899,7 @@ contract L1OpUSDCBridgeAdapter_Unit_sendUsdcUpgrade is Base {
 
     // Expect events
     vm.expectEmit(true, true, true, true);
-    emit L2UsdcUpgradeSent(_l2UsdcImplAddress, _messenger, _minGasLimit);
+    emit UsdcUpgradeSent(_l2UsdcImplAddress, _messenger, _minGasLimit);
 
     // Execute
     vm.prank(_owner);
