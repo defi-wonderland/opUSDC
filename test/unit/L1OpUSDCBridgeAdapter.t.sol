@@ -828,7 +828,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendL2UsdcUpgrade is Base {
     // Execute
     vm.prank(_owner);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
-    adapter.sendL2UsdcUpgrade(_l2UsdcInitTxs, _minGasLimit);
+    adapter.sendL2UsdcUpgrade(_l2UsdcInitTxs, _l2UsdcInitTxs, _minGasLimit);
   }
 
   /**
@@ -842,7 +842,9 @@ contract L1OpUSDCBridgeAdapter_Unit_SendL2UsdcUpgrade is Base {
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
-        abi.encodeWithSignature('receiveUsdcUpgrade(bytes,bytes[])', _l2UsdcBytecode, _l2UsdcInitTxs),
+        abi.encodeWithSignature(
+          'receiveUsdcUpgrade(bytes,bytes[],bytes[])', _l2UsdcBytecode, _l2UsdcInitTxs, _l2UsdcInitTxs
+        ),
         _minGasLimit
       ),
       abi.encode()
@@ -850,7 +852,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendL2UsdcUpgrade is Base {
 
     // Execute
     vm.prank(_owner);
-    adapter.sendL2UsdcUpgrade(_l2UsdcInitTxs, _minGasLimit);
+    adapter.sendL2UsdcUpgrade(_l2UsdcInitTxs, _l2UsdcInitTxs, _minGasLimit);
   }
 
   /**
@@ -864,7 +866,9 @@ contract L1OpUSDCBridgeAdapter_Unit_SendL2UsdcUpgrade is Base {
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
-        abi.encodeWithSignature('receiveUsdcUpgrade(bytes,bytes[])', _l2UsdcBytecode, _l2UsdcInitTxs),
+        abi.encodeWithSignature(
+          'receiveUsdcUpgrade(bytes,bytes[],bytes[])', _l2UsdcBytecode, _l2UsdcInitTxs, _l2UsdcInitTxs
+        ),
         _minGasLimit
       ),
       abi.encode()
@@ -876,6 +880,6 @@ contract L1OpUSDCBridgeAdapter_Unit_SendL2UsdcUpgrade is Base {
 
     // Execute
     vm.prank(_owner);
-    adapter.sendL2UsdcUpgrade(_l2UsdcInitTxs, _minGasLimit);
+    adapter.sendL2UsdcUpgrade(_l2UsdcInitTxs, _l2UsdcInitTxs, _minGasLimit);
   }
 }

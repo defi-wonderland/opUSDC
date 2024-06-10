@@ -20,6 +20,10 @@ contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
     isMessagingDisabled = true;
   }
 
+  function forTest_executeInitTxs(address _target, bytes[] memory _initTxs, uint256 _length) external {
+    _executeInitTxs(_target, _initTxs, _length);
+  }
+
   function forTest_dummy() external {
     calls++;
   }
@@ -668,5 +672,29 @@ contract L2OpUSDCBridgeAdapter_ReceiveUsdcUpgrade is Base {
     // Execute
     vm.prank(_messenger);
     adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs, _l2UsdcInitTxs);
+  }
+}
+
+contract L2OpUSDCBridgeAdapter_Unit_ExecuteInitTxs is Base {
+  /**
+   * @notice Check that the function reverts if a transaction reverts
+   */
+  function test_revert() external {
+    bytes[] memory _revertTx = new bytes[](1);
+    _revertTx[0] = abi.encodeWithSignature('dummyRevert()');
+
+    vm.mockCallRevert(_usdc, abi.encodeWithSignature('dummyRevert()'), abi.encode(''));
+
+    // Execute
+    vm.expectRevert(IL2OpUSDCBridgeAdapter.L2OpUSDCBridgeAdapter_UsdcInitializationFailed.selector);
+    adapter.forTest_executeInitTxs(_usdc, _revertTx, _revertTx.length);
+  }
+
+  /**
+   * @notice Check that the function works as expected
+   */
+  function test_executeInitTxs() external {
+    // Execute
+    adapter.forTest_executeInitTxs(_usdc, _l2UsdcInitTxs, _l2UsdcInitTxs.length);
   }
 }

@@ -237,7 +237,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
    * @notice Send a message to the linked adapter to upgrade the implementation of the USDC contract
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  function sendL2UsdcUpgrade(bytes[] memory _initTxs, uint32 _minGasLimit) external onlyOwner {
+  function sendL2UsdcUpgrade(bytes[] memory _implTxs, bytes[] memory _proxyTxs, uint32 _minGasLimit) external onlyOwner {
     // Ensure messaging is enabled
     if (messengerStatus != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
@@ -246,7 +246,9 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
 
     ICrossDomainMessenger(MESSENGER).sendMessage(
       LINKED_ADAPTER,
-      abi.encodeWithSignature('receiveUsdcUpgrade(bytes,bytes[])', _usdcImplementation.code, _initTxs),
+      abi.encodeWithSignature(
+        'receiveUsdcUpgrade(bytes,bytes[],bytes[])', _usdcImplementation.code, _implTxs, _proxyTxs
+      ),
       _minGasLimit
     );
 
