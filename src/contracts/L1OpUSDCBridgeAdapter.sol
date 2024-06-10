@@ -38,14 +38,12 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
    * @param _owner The address of the owner of the contract
    * @dev The constructor is only used to initialize the OpUSDCBridgeAdapter immutable variables
    */
-  /* solhint-disable no-unused-vars */
   constructor(
     address _usdc,
     address _messenger,
     address _linkedAdapter,
     address _owner
   ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) Ownable(_owner) {}
-  /* solhint-enable no-unused-vars */
 
   /*///////////////////////////////////////////////////////////////
                               MIGRATION
@@ -127,14 +125,14 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function stopMessaging(uint32 _minGasLimit) external onlyOwner {
+    messengerStatus = Status.Paused;
+
     // Ensure messaging is enabled
     if (messengerStatus != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
     ICrossDomainMessenger(MESSENGER).sendMessage(
       LINKED_ADAPTER, abi.encodeWithSignature('receiveStopMessaging()'), _minGasLimit
     );
-
-    messengerStatus = Status.Paused;
 
     emit MessagingStopped(MESSENGER);
   }

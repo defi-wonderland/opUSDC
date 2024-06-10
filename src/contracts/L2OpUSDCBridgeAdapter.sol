@@ -50,6 +50,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _setBurnAmountMinGasLimit Minimum gas limit that the setBurnAmount message can be executed on L1
    */
   function receiveMigrateToNative(address _newOwner, uint32 _setBurnAmountMinGasLimit) external checkSender {
+    isMessagingDisabled = true;
     // Transfer ownership of the USDC contract to the circle
     IUSDC(USDC).transferOwnership(_newOwner);
 
@@ -58,8 +59,6 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     ICrossDomainMessenger(MESSENGER).sendMessage(
       LINKED_ADAPTER, abi.encodeWithSignature('setBurnAmount(uint256)', _burnAmount), _setBurnAmountMinGasLimit
     );
-
-    isMessagingDisabled = true;
 
     emit MigratingToNative(MESSENGER, _newOwner);
   }
