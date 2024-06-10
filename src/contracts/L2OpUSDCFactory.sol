@@ -12,15 +12,12 @@ import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 /**
  * @title L2OpUSDCFactory
- * @notice Factory contract for deploying the L2 USDC implementation, proxy, and `L2OpUSDCBridgeAdapter` implementation
- * and proxy as well, all at once on the `deploy` function.
+ * @notice Factory contract for deploying the L2 USDC implementation, proxy, and `L2OpUSDCBridgeAdapter` contract,
+ * all at once on the `deploy` function.
  */
 contract L2OpUSDCFactory is IL2OpUSDCFactory {
   /// @inheritdoc IL2OpUSDCFactory
   address public constant L2_MESSENGER = 0x4200000000000000000000000000000000000007;
-
-  /// @notice The address of the WETH9 predeploy contract that exists on the OP Chains
-  address internal constant _WETH = 0x4200000000000000000000000000000000000006;
 
   /// @notice The empty bytes constant
   bytes internal constant _EMPTY_BYTES = '';
@@ -32,13 +29,13 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
   bytes32 internal immutable _SALT;
 
   /**
-   * @notice Deploys the USDC implementation, proxy, and L2 adapter contracts
+   * @notice Constructs the L2 factory contract
    * @param _salt The salt value used to deploy the contracts
    * @param _l1Factory The address of the L1 factory contract
    */
   constructor(bytes32 _salt, address _l1Factory) {
-    _SALT = _salt;
     L1_FACTORY = _l1Factory;
+    _SALT = _salt;
   }
 
   function deploy(address _l1Adapter, bytes memory _usdcImplementationCode, bytes[] memory _usdcInitTxs) external {
@@ -51,31 +48,25 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);
     address _usdcProxy = _deployCreate2(_SALT, _usdcProxyInitCode);
 
+    // Deploy USDC implementation
+    bytes memory _usdcImplInitCode = bytes.concat(type(BytecodeDeployer).creationCode, _usdcImplementationCode);
+    address _usdcImplementation = _deployCreate2(_SALT, _usdcImplInitCode);
+
     // Deploy L2 Adapter
     bytes memory _l2AdapterCArgs = abi.encode(_usdcProxy, msg.sender, _l1Adapter);
     bytes memory _l2AdapterInitCode = bytes.concat(type(ERC1967Proxy).creationCode, _l2AdapterCArgs);
     address _l2Adapter = _deployCreate2(_SALT, _l2AdapterInitCode);
 
-    // Deploy USDC implementation
-    bytes memory _usdcImplInitCode = bytes.concat(type(BytecodeDeployer).creationCode, _usdcImplementationCode);
-    address _usdcImplementation = _deployCreate2(_SALT, _usdcImplInitCode);
-
     // Upgrade the USDC proxy to the implementation
     IUSDC(_usdcProxy).upgradeTo(_usdcImplementation);
 
-    // Change admin
-    IUSDC(_usdcProxy).changeAdmin(_l2Adapter);
-
     // Change the USDC admin so the init txs can be executed over the proxy from this contract
     IUSDC(_usdcProxy).changeAdmin(_l2Adapter);
-    // Execute the USDC initialization transactions, if any
-    uint256 _length = _usdcInitTxs.length;
-    if (_length > 0) {
-      _executeInitTxs(_usdcProxy, _usdcInitTxs, _length);
-      _executeInitTxs(_usdcImplementation, _usdcInitTxs, _length);
-    }
+    // Execute the USDC initialization transactions
+    _executeInitTxs(_usdcProxy, _usdcInitTxs, _usdcInitTxs.length);
+    _executeInitTxs(_usdcImplementation, _usdcInitTxs, _usdcInitTxs.length);
 
-    // TODO: Transfer ownership? To be defined
+    // TODO: Transfer ownership TBD
   }
 
   /**
@@ -85,8 +76,8 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
    * @param _length The number of transactions to execute
    */
   function _executeInitTxs(address _target, bytes[] memory _initTxs, uint256 _length) internal {
-    for (uint256 i; i < _length; i++) {
-      (bool _success,) = _target.call(_initTxs[i]);
+    for (uint256 _i; _i < _length; _i++) {
+      (bool _success,) = _target.call(_initTxs[_i]);
       if (!_success) {
         revert IL2OpUSDCFactory_InitializationFailed();
       }

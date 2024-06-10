@@ -36,22 +36,20 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   bytes32 internal immutable _SALT;
 
   /// @inheritdoc IL1OpUSDCFactory
-  uint256 public nonce;
+  uint256 public nonce = 1;
 
   /// @inheritdoc IL1OpUSDCFactory
   mapping(address _l1Messenger => bool _isDeployed) public isFactoryDeployed;
 
   /**
-   * @notice Constructs the L1 factory contract, deploys the L1 adapter and the upgrade manager and precalculates the
-   * addresses of the L2 deployments
+   * @notice Constructs the L1 factory contract
    * @param _usdc The address of the USDC contract
+   * @param _salt The salt value to be used to deploy the L2 contracts with `CREATE2` on the L2 factory
    */
   constructor(address _usdc, bytes32 _salt) {
-    // The WETH predeploy address on the OP Chains
-    _SALT = _salt;
     USDC = _usdc;
+    _SALT = _salt;
 
-    // Calculate L2 factory address
     bytes memory _l2FactoryCArgs = abi.encode(_SALT, address(this));
     bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
     L2_FACTORY = _precalculateCreate2Address(_SALT, keccak256(_l2FactoryInitCode), L2_CREATE2_DEPLOYER);
@@ -75,6 +73,9 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     // Set the messenger as deployed and initialize it on the adapter
     isFactoryDeployed[_l1Messenger] = true;
 
+    // Update the nonce with the next txs
+    uint256 _nonce = nonce += 3;
+
     // Get the L2 factory init code
     bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
     bytes memory _l2FactoryCArgs = abi.encode(_SALT, address(this));
@@ -87,7 +88,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
       L2_CREATE2_DEPLOYER, _l2FactoryCreate2Tx, _minGasLimitCreate2Factory
     );
 
-    deployAdapters(_l1Messenger, _l1AdapterOwner, _usdcInitTxs, _minGasLimitDeploy);
+    _deployAdapters(_l1Messenger, _nonce, _l1AdapterOwner, _usdcInitTxs, _minGasLimitDeploy);
   }
 
   function deployAdapters(
@@ -97,47 +98,42 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     uint32 _minGasLimitDeploy
   ) public {
     if (!isFactoryDeployed[_l1Messenger]) revert IL1OpUSDCFactory_FactoryNotDeployed();
-    _deployAdapters(_l1Messenger, _l1AdapterOwner, _usdcInitTxs, _minGasLimitDeploy);
+    uint256 _nonce = nonce += 2;
+    _deployAdapters(_l1Messenger, _nonce, _l1AdapterOwner, _usdcInitTxs, _minGasLimitDeploy);
   }
 
   function _deployAdapters(
     address _l1Messenger,
+    uint256 _l1AdapterDeploymentNonce,
     address _l1AdapterOwner,
     bytes[] memory _usdcInitTxs,
     uint32 _minGasLimitDeploy
   ) internal {
-    // Precalculate l1 adapter address
-    uint256 _l1AdapterDeploymentNonce = nonce + 1;
     address _l1Adapter = _precalculateCreateAddress(address(this), _l1AdapterDeploymentNonce);
 
-    // Precalculate l2 USDC proxy address
     bytes memory _l2UsdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, abi.encode(_l1Adapter));
     address _l2UsdcProxy = _precalculateCreate2Address(_SALT, keccak256(_l2UsdcProxyInitCode), L2_CREATE2_DEPLOYER);
 
-    // Precalculate l2 adapter address
     bytes memory _l2AdapterInitCode =
       bytes.concat(type(L2OpUSDCBridgeAdapter).creationCode, abi.encode(_l2UsdcProxy, L2_MESSENGER, _l1Adapter));
     address _l2Adapter = _precalculateCreate2Address(_SALT, keccak256(_l2AdapterInitCode), L2_FACTORY);
 
-    // Deploy the L1 adapter implementation
-    new L1OpUSDCBridgeAdapter(USDC, _l1Messenger, _l2Adapter, _l1AdapterOwner);
-
-    // Update the nonce with the following 2 txs
-    nonce += 2;
-
-    // Get the l2 USDC implementation
+    // Get the L2 USDC implementation
     bytes memory _usdcImplementationCode = IUSDC(USDC).implementation().code;
     // Send the call over the L2 factory `deploy` function message
     bytes memory _l2DeploymentsTx =
       abi.encodeWithSelector(L2OpUSDCFactory.deploy.selector, _l1Adapter, _usdcImplementationCode, _usdcInitTxs);
     ICrossDomainMessenger(_l1Messenger).sendMessage(L2_FACTORY, _l2DeploymentsTx, _minGasLimitDeploy);
 
+    // Deploy the L1 adapter implementation
+    // NOTE: Done after external calls to update and retrieve nonce only once before invoking this function
+    new L1OpUSDCBridgeAdapter(USDC, _l1Messenger, _l2Adapter, _l1AdapterOwner);
+
     emit L1AdapterDeployed(_l1Adapter);
   }
 
   /**
    * @notice Precalculates the address of a contract that will be deployed thorugh `CREATE` opcode
-   * @dev It only works if the for nonces between 0 and 127, which is enough for this use case
    * @param _deployer The deployer address
    * @param _nonce The next nonce of the deployer address
    * @return _precalculatedAddress The address where the contract will be stored
@@ -149,9 +145,46 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   ) internal pure returns (address _precalculatedAddress) {
     bytes memory _data;
     bytes1 _len = bytes1(0x94);
+
+    // The theoretical allowed limit, based on EIP-2681, for an account nonce is 2**64-2:
+    // https://web.archive.org/web/20230921113252/https://eips.ethereum.org/EIPS/eip-2681.
+    if (_nonce > type(uint64).max - 1) {
+      revert IL1OpUSDCFactory_InvalidNonce();
+    }
+
+    // The integer zero is treated as an empty byte string and therefore has only one length prefix,
+    // 0x80, which is calculated via 0x80 + 0.
+    if (_nonce == 0x00) {
+      _data = abi.encodePacked(bytes1(0xd6), _len, _deployer, bytes1(0x80));
+    }
     // A one-byte integer in the [0x00, 0x7f] range uses its own value as a length prefix, there is no
     // additional "0x80 + length" prefix that precedes it.
-    _data = abi.encodePacked(bytes1(0xd6), _len, _deployer, uint8(_nonce));
+    else if (_nonce <= 0x7f) {
+      _data = abi.encodePacked(bytes1(0xd6), _len, _deployer, uint8(_nonce));
+    }
+    // In the case of `_nonce > 0x7f` and `_nonce <= type(uint8).max`, we have the following encoding scheme
+    // (the same calculation can be carried over for higher _nonce bytes):
+    // 0xda = 0xc0 (short RLP prefix) + 0x1a (= the bytes length of: 0x94 + address + 0x84 + _nonce, in hex),
+    // 0x94 = 0x80 + 0x14 (= the bytes length of an address, 20 bytes, in hex),
+    // 0x84 = 0x80 + 0x04 (= the bytes length of the _nonce, 4 bytes, in hex).
+    else if (_nonce <= type(uint8).max) {
+      _data = abi.encodePacked(bytes1(0xd7), _len, _deployer, bytes1(0x81), uint8(_nonce));
+    } else if (_nonce <= type(uint16).max) {
+      _data = abi.encodePacked(bytes1(0xd8), _len, _deployer, bytes1(0x82), uint16(_nonce));
+    } else if (_nonce <= type(uint24).max) {
+      _data = abi.encodePacked(bytes1(0xd9), _len, _deployer, bytes1(0x83), uint24(_nonce));
+    } else if (_nonce <= type(uint32).max) {
+      _data = abi.encodePacked(bytes1(0xda), _len, _deployer, bytes1(0x84), uint32(_nonce));
+    } else if (_nonce <= type(uint40).max) {
+      _data = abi.encodePacked(bytes1(0xdb), _len, _deployer, bytes1(0x85), uint40(_nonce));
+    } else if (_nonce <= type(uint48).max) {
+      _data = abi.encodePacked(bytes1(0xdc), _len, _deployer, bytes1(0x86), uint48(_nonce));
+    } else if (_nonce <= type(uint56).max) {
+      _data = abi.encodePacked(bytes1(0xdd), _len, _deployer, bytes1(0x87), uint56(_nonce));
+    } else {
+      _data = abi.encodePacked(bytes1(0xde), _len, _deployer, bytes1(0x88), uint64(_nonce));
+    }
+
     _precalculatedAddress = address(uint160(uint256(keccak256(_data))));
   }
 
@@ -160,13 +193,13 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * @param _salt The 32-byte random value used to create the contract address.
    * @param _initCodeHash The 32-byte bytecode digest of the contract creation bytecode.
    * @param _deployer The 20-byte _deployer address.
-   * @return _computedAddress The 20-byte address where a contract will be stored.
+   * @return _precalculatedAddress The 20-byte address where a contract will be stored.
    */
   function _precalculateCreate2Address(
     bytes32 _salt,
     bytes32 _initCodeHash,
     address _deployer
-  ) internal pure returns (address _computedAddress) {
+  ) internal pure returns (address _precalculatedAddress) {
     assembly ("memory-safe") {
       let _ptr := mload(0x40)
       mstore(add(_ptr, 0x40), _initCodeHash)
@@ -174,7 +207,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
       mstore(_ptr, _deployer)
       let _start := add(_ptr, 0x0b)
       mstore8(_start, 0xff)
-      _computedAddress := keccak256(_start, 85)
+      _precalculatedAddress := keccak256(_start, 85)
     }
   }
 }

@@ -38,6 +38,11 @@ interface IL1OpUSDCFactory {
    */
   error IL1OpUSDCFactory_FactoryNotDeployed();
 
+  /**
+   * @notice Thrown if the nonce is greater than 2**64-2 while precalculating the L1 Adapter using `CREATE`
+   */
+  error IL1OpUSDCFactory_InvalidNonce();
+
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   ///////////////////////////////////////////////////////////////*/
@@ -106,6 +111,7 @@ interface IL1OpUSDCFactory {
    * @notice Checks if the `L2OpUSDCFactory` has been deployed on L2 by the given messenger
    * @param _l1Messenger The address of the L1 messenger
    * @return _deployed Whether the messenger has a factory deployed for it on L2
+   * @dev It is initialized to `1` to avoid updating from zero to a non-zero value which is more expensive
    */
   function isFactoryDeployed(address _l1Messenger) external view returns (bool _deployed);
 }
