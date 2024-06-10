@@ -110,7 +110,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
     burnAmount = 0;
     circle = address(0);
 
-    emit MigrationComplete(burnAmount, circle);
+    emit MigrationComplete();
   }
 
   /*///////////////////////////////////////////////////////////////

@@ -39,10 +39,8 @@ interface IL1OpUSDCBridgeAdapter {
 
   /**
    * @notice Emitted when the migration process is complete
-   * @param _burnAmount The amount of USDC tokens that were burned
-   * @param _circle The address of the Circle contract
    */
-  event MigrationComplete(uint256 _burnAmount, address _circle);
+  event MigrationComplete();
 
   /*///////////////////////////////////////////////////////////////
                             ERRORS

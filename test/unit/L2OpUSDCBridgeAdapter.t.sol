@@ -564,7 +564,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
                              USDC UPGRADE
   ///////////////////////////////////////////////////////////////*/
 
-contract L2OpUSDCBridgeAdapter_ReceiveUsdcUpgrade is Base {
+contract L2OpUSDCBridgeAdapter_Unit_ReceiveUsdcUpgrade is Base {
   /**
    * @notice Check that the receiveUsdcUpgrade function reverts if the sender is not MESSENGER
    */
@@ -614,13 +614,15 @@ contract L2OpUSDCBridgeAdapter_ReceiveUsdcUpgrade is Base {
     bytes[] memory _revertTx = new bytes[](1);
     _revertTx[0] = abi.encodeWithSignature('dummyRevert()');
 
+    address _implementation = _computeCreateAddress(address(adapter), _nonce);
+
     // Mock calls
     _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
-    _mockAndExpect(
-      _usdc,
-      abi.encodeWithSignature('upgradeTo(address)', _computeCreateAddress(address(adapter), _nonce)),
-      abi.encode(true)
-    );
+    _mockAndExpect(_usdc, abi.encodeWithSignature('upgradeTo(address)', _implementation), abi.encode(true));
+
+    // Mock Revert
+    vm.mockCallRevert(_implementation, abi.encodeWithSignature('dummyRevert()'), abi.encode(''));
+
     // Execute
     vm.prank(_messenger);
     vm.expectRevert(IL2OpUSDCBridgeAdapter.L2OpUSDCBridgeAdapter_UsdcInitializationFailed.selector);

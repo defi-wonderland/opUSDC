@@ -58,7 +58,7 @@ abstract contract Base is Helpers {
   event BurnAmountSet(uint256 _burnAmount);
   event UsdcUpgradeSent(address _newImplementation, address _messenger, uint32 _minGasLimit);
   event MigratingToNative(address _messenger, address _newOwner);
-  event MigrationComplete(uint256 _burnAmount, address _circle);
+  event MigrationComplete();
 
   function setUp() public virtual {
     // Set the bytecode to the implementation addresses
@@ -407,7 +407,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
 
     // Expect events
     vm.expectEmit(true, true, true, true);
-    emit MigrationComplete(0, address(0));
+    emit MigrationComplete();
 
     // Execute
     vm.prank(_circle);
