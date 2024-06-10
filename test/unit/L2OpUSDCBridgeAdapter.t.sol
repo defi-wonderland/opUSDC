@@ -693,7 +693,11 @@ contract L2OpUSDCBridgeAdapter_Unit_ExecuteInitTxs is Base {
   /**
    * @notice Check that the function works as expected
    */
-  function test_executeInitTxs() external {
+  function test_executeInitTxs(string memory _function, bytes memory _params) external {
+    _l2UsdcInitTxs.push(abi.encodeWithSignature(_function, _params));
+
+    _mockAndExpect(_usdc, abi.encodeWithSignature(_function, _params), abi.encode(true));
+
     // Execute
     adapter.forTest_executeInitTxs(_usdc, _l2UsdcInitTxs, _l2UsdcInitTxs.length);
   }

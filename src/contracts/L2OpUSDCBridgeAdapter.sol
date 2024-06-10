@@ -194,8 +194,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _length The number of transactions to execute
    */
   function _executeInitTxs(address _target, bytes[] memory _initTxs, uint256 _length) internal {
-    for (uint256 i; i < _length; i++) {
-      (bool _success,) = _target.call(_initTxs[i]);
+    for (uint256 _i; _i < _length; _i++) {
+      (bool _success,) = _target.call(_initTxs[_i]);
       if (!_success) {
         revert L2OpUSDCBridgeAdapter_UsdcInitializationFailed();
       }
