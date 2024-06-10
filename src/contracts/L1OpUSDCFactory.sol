@@ -17,14 +17,14 @@ import {IUSDC} from 'interfaces/external/IUSDC.sol';
  * precalculates the addresses of the L2 deployments to be done on the L2 factory.
  */
 contract L1OpUSDCFactory is IL1OpUSDCFactory {
-  /// @notice Zero value constant to be used on portal interaction
-  uint256 internal constant _ZERO_VALUE = 0;
-
   /// @inheritdoc IL1OpUSDCFactory
   address public constant L2_MESSENGER = 0x4200000000000000000000000000000000000007;
 
   /// @inheritdoc IL1OpUSDCFactory
   address public constant L2_CREATE2_DEPLOYER = 0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2;
+
+  /// @notice Zero value constant to be used on portal interaction
+  uint256 internal constant _ZERO_VALUE = 0;
 
   /// @inheritdoc IL1OpUSDCFactory
   address public immutable USDC;
@@ -36,10 +36,10 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   bytes32 internal immutable _SALT;
 
   /// @inheritdoc IL1OpUSDCFactory
-  mapping(address _l1Messenger => bool _isDeployed) public isFactoryDeployed;
+  uint256 public nonce;
 
   /// @inheritdoc IL1OpUSDCFactory
-  uint256 public nonce;
+  mapping(address _l1Messenger => bool _isDeployed) public isFactoryDeployed;
 
   /**
    * @notice Constructs the L1 factory contract, deploys the L1 adapter and the upgrade manager and precalculates the
@@ -60,8 +60,10 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   /**
    * @notice Sends the L2 factory creation tx along with the L2 deployments to be done on it through the messenger
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
+   * @param _l1AdapterOwner The address of the owner of the L1 adapter
    * @param _minGasLimitCreate2Factory The minimum gas limit for the L2 factory deployment
    * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
+   * @param _usdcInitTxs The initialization transactions to be executed on the USDC contract
    */
   function deployL2FactoryAndContracts(
     address _l1Messenger,

@@ -45,25 +45,42 @@ interface IL1OpUSDCFactory {
   /**
    * @notice Sends the L2 factory creation tx along with the L2 deployments to be done on it through the messenger
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
+   * @param _l1AdapterOwner The address of the owner of the L1 adapter
    * @param _minGasLimitCreate2Factory The minimum gas limit for the L2 factory deployment
    * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
+   * @param _usdcInitTxs The initialization transactions to be executed on the USDC contract
    */
   function deployL2FactoryAndContracts(
     address _l1Messenger,
+    address _l1AdapterOwner,
     uint32 _minGasLimitCreate2Factory,
-    uint32 _minGasLimitDeploy
+    uint32 _minGasLimitDeploy,
+    bytes[] memory _usdcInitTxs
   ) external;
 
   /**
-   * @notice Sends the L2 USDC and adapter deployments tx through the messenger to be executed on the l2 factory
+   * @notice Sends the L2 adapter and USDC proxy and implementation deployments tx through the messenger
+   * to be executed on the l2 factory
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
+   * @param _l1AdapterOwner The address of the owner of the L1 adapter
+   * @param _usdcInitTxs The initialization transactions to be executed on the USDC contract
    * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
    */
-  function deployL2USDCAndAdapter(address _l1Messenger, uint32 _minGasLimitDeploy) external;
+  function deployAdapters(
+    address _l1Messenger,
+    address _l1AdapterOwner,
+    bytes[] memory _usdcInitTxs,
+    uint32 _minGasLimitDeploy
+  ) external;
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
   ///////////////////////////////////////////////////////////////*/
+
+  /**
+   * @return _usdc The address of USDC on L1
+   */
+  function USDC() external view returns (address _usdc);
 
   /**
    * @return _l2Messenger The address of the L2 messenger
@@ -81,19 +98,9 @@ interface IL1OpUSDCFactory {
   function L2_FACTORY() external view returns (address _l2Factory);
 
   /**
-   * @return _l1AdapterProxy The address of the L1OpUSDCBridgeAdapter contract
+   * @return _nonce The nonce counter of the factory contract
    */
-  function L1_ADAPTER_PROXY() external view returns (L1OpUSDCBridgeAdapter _l1AdapterProxy);
-
-  /**
-   * @return _l2AdapterProxy The address of the L2OpUSDCBridgeAdapter proxy contract
-   */
-  function L2_ADAPTER_PROXY() external view returns (address _l2AdapterProxy);
-
-  /**
-   * @return _l2UsdcProxy The address of the USDC proxy contract on L2
-   */
-  function L2_USDC_PROXY() external view returns (address _l2UsdcProxy);
+  function nonce() external view returns (uint256 _nonce);
 
   /**
    * @notice Checks if the `L2OpUSDCFactory` has been deployed on L2 by the given messenger
