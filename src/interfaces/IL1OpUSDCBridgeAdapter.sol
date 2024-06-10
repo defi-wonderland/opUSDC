@@ -98,7 +98,7 @@ interface IL1OpUSDCBridgeAdapter {
    * @param _proxyTxs The transactions to initialize the proxy contract
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  function sendL2UsdcUpgrade(bytes[] memory _implTxs, bytes[] memory _proxyTxs, uint32 _minGasLimit) external;
+  function sendUsdcUpgrade(bytes[] memory _implTxs, bytes[] memory _proxyTxs, uint32 _minGasLimit) external;
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES

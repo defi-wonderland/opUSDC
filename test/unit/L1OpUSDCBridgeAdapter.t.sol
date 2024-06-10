@@ -819,7 +819,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
                           USDC UPGRADE
 ///////////////////////////////////////////////////////////////*/
 
-contract L1OpUSDCBridgeAdapter_Unit_SendL2UsdcUpgrade is Base {
+contract L1OpUSDCBridgeAdapter_Unit_sendUsdcUpgrade is Base {
   /**
    * @notice Check that the function reverts if a messenger is unitialized
    */
@@ -828,7 +828,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendL2UsdcUpgrade is Base {
     // Execute
     vm.prank(_owner);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
-    adapter.sendL2UsdcUpgrade(_l2UsdcInitTxs, _l2UsdcInitTxs, _minGasLimit);
+    adapter.sendUsdcUpgrade(_l2UsdcInitTxs, _l2UsdcInitTxs, _minGasLimit);
   }
 
   /**
@@ -852,7 +852,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendL2UsdcUpgrade is Base {
 
     // Execute
     vm.prank(_owner);
-    adapter.sendL2UsdcUpgrade(_l2UsdcInitTxs, _l2UsdcInitTxs, _minGasLimit);
+    adapter.sendUsdcUpgrade(_l2UsdcInitTxs, _l2UsdcInitTxs, _minGasLimit);
   }
 
   /**
@@ -880,6 +880,6 @@ contract L1OpUSDCBridgeAdapter_Unit_SendL2UsdcUpgrade is Base {
 
     // Execute
     vm.prank(_owner);
-    adapter.sendL2UsdcUpgrade(_l2UsdcInitTxs, _l2UsdcInitTxs, _minGasLimit);
+    adapter.sendUsdcUpgrade(_l2UsdcInitTxs, _l2UsdcInitTxs, _minGasLimit);
   }
 }

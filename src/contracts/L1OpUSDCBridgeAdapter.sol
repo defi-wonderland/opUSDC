@@ -235,9 +235,11 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
 
   /**
    * @notice Send a message to the linked adapter to upgrade the implementation of the USDC contract
+   * @param _implTxs The transactions to initialize the new implementation
+   * @param _proxyTxs The transactions to initialize the proxy contract
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  function sendL2UsdcUpgrade(bytes[] memory _implTxs, bytes[] memory _proxyTxs, uint32 _minGasLimit) external onlyOwner {
+  function sendUsdcUpgrade(bytes[] memory _implTxs, bytes[] memory _proxyTxs, uint32 _minGasLimit) external onlyOwner {
     // Ensure messaging is enabled
     if (messengerStatus != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
