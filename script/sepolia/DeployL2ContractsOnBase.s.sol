@@ -15,7 +15,10 @@ contract DeployL2ContractsOnBase is Script {
   function run() public {
     vm.startBroadcast(deployer);
     // Deploy the L2 contracts
-    L1_FACTORY.deployL2FactoryAndContracts(L1_MESSENGER, MIN_GAS_LIMIT_FACTORY, MIN_GAS_LIMIT_DEPLOY);
+    bytes[] memory _usdcInitTxs = new bytes[](0);
+    L1_FACTORY.deployL2FactoryAndContracts(
+      L1_MESSENGER, deployer, MIN_GAS_LIMIT_FACTORY, MIN_GAS_LIMIT_DEPLOY, _usdcInitTxs
+    );
     vm.stopBroadcast();
   }
 }
