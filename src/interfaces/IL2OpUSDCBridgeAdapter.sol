@@ -49,12 +49,6 @@ interface IL2OpUSDCBridgeAdapter {
    */
   function receiveUsdcUpgrade(bytes calldata _l2UsdcBytecode, bytes[] memory _l2UsdcInitTxs) external;
 
-  /**
-   * @notice Set _proxyExecutedInitTxsLength  to the new value
-   * @param _newLength The new value for _proxyExecutedInitTxsLength
-   */
-  function setProxyExecutedInitTxs(uint256 _newLength) external;
-
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
   ///////////////////////////////////////////////////////////////*/

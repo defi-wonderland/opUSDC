@@ -131,25 +131,6 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
   }
 
   /**
-   * @notice Check that the function reverts if a migration is in progress
-   */
-  function test_revertIfMigrationInProgress(
-    address _newOwner,
-    uint32 _minGasLimitReceiveOnL2,
-    uint32 _minGasLimitSetBurnAmount,
-    address _circle
-  ) external {
-    vm.assume(_newOwner != address(0));
-    // Sets the circle address
-    vm.assume(_circle != address(0));
-    adapter.forTest_setCircle(_circle);
-    // Execute
-    vm.prank(_owner);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MigrationInProgress.selector);
-    adapter.migrateToNative(_newOwner, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
-  }
-
-  /**
    * @notice Check that the function updates the state as expected
    */
   function test_StateOfMigration(

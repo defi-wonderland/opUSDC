@@ -73,11 +73,6 @@ interface IOpUSDCBridgeAdapter {
   error IOpUSDCBridgeAdapter_MessageExpired();
 
   /**
-   * @notice Error when a migration is in progress
-   */
-  error IOpUSDCBridgeAdapter_MigrationInProgress();
-
-  /**
    * @notice Error when the contract is not in the upgrading state
    */
   error IOpUSDCBridgeAdapter_NotUpgrading();

@@ -69,9 +69,6 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
     if (messengerStatus != Status.Active && messengerStatus != Status.Upgrading) {
       revert IOpUSDCBridgeAdapter_MessagingDisabled();
     }
-    if (circle != address(0) && messengerStatus != Status.Upgrading) {
-      revert IOpUSDCBridgeAdapter_MigrationInProgress();
-    }
 
     circle = _circle;
     messengerStatus = Status.Upgrading;
@@ -125,10 +122,10 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function stopMessaging(uint32 _minGasLimit) external onlyOwner {
-    messengerStatus = Status.Paused;
-
     // Ensure messaging is enabled
     if (messengerStatus != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
+
+    messengerStatus = Status.Paused;
 
     ICrossDomainMessenger(MESSENGER).sendMessage(
       LINKED_ADAPTER, abi.encodeWithSignature('receiveStopMessaging()'), _minGasLimit

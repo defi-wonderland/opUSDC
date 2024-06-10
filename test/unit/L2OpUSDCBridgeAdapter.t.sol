@@ -721,26 +721,3 @@ contract L2OpUSDCBridgeAdapter_ReceiveUsdcUpgrade is Base {
     adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs);
   }
 }
-
-contract L2OpUSDCBridgeAdapter_setProxyExecutedInitTxs is Base {
-  /**
-   * @notice Check that _proxyExecutedInitTxsLength  can not be set if is not 0
-   */
-  function test_omitIfLengthIsNotZero(uint256 _initialValue, uint256 _newValue) external {
-    vm.assume(_initialValue != 0);
-    vm.assume(_newValue != _initialValue);
-    adapter.forTest_setProxyExecutedInitTxs(_initialValue);
-    adapter.setProxyExecutedInitTxs(_newValue);
-    assertEq(
-      adapter.forTest_proxyExecutedInitTxsLength(), _initialValue, 'Last L2 Usdc Init Txs Length should not be set'
-    );
-  }
-
-  /**
-   * @notice Check that _proxyExecutedInitTxsLength  can be set if is 0
-   */
-  function test_setProxyExecutedInitTxs() external {
-    adapter.setProxyExecutedInitTxs(1);
-    assertEq(adapter.forTest_proxyExecutedInitTxsLength(), 1, 'Last L2 Usdc Init Txs Length should be set to 1');
-  }
-}

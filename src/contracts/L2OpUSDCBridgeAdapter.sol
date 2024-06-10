@@ -194,13 +194,4 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
 
     emit DeployedL2UsdcImplementation(_usdcImplementation);
   }
-
-  /**
-   * @notice Set _proxyExecutedInitTxsLength to the new value
-   * @param _newLength The new value for _proxyExecutedInitTxsLength
-   */
-  function setProxyExecutedInitTxs(uint256 _newLength) external {
-    if (_proxyExecutedInitTxsLength != 0) return;
-    _proxyExecutedInitTxsLength = _newLength;
-  }
 }
