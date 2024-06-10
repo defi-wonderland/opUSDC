@@ -11,9 +11,6 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /// @inheritdoc IL2OpUSDCBridgeAdapter
   bool public isMessagingDisabled;
 
-  /// @notice amount of initialization transactions executed on the USDC contract
-  uint256 internal _proxyExecutedInitTxsLength;
-
   /**
    * @notice Modifier to check if the sender is the linked adapter through the messenger
    */
@@ -169,29 +166,39 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /**
    * @notice Receive the creation code from the linked adapter, deploy the new implementation and upgrade
    * @param _l2UsdcBytecode The bytecode for the new L2 USDC implementation
-   * @param _l2UsdcInitTxs The initialization transactions for the new L2 USDC implementation
+   * @param _l2UsdcImplTxs The initialization transactions for the new L2 USDC implementation
+   * @param _l2UsdcProxyTxs The initialization transactions for the proxy contract
    */
-  function receiveUsdcUpgrade(bytes calldata _l2UsdcBytecode, bytes[] memory _l2UsdcInitTxs) external checkSender {
+  function receiveUsdcUpgrade(
+    bytes calldata _l2UsdcBytecode,
+    bytes[] memory _l2UsdcImplTxs,
+    bytes[] memory _l2UsdcProxyTxs
+  ) external checkSender {
     // Deploy L2 USDC implementation
     address _usdcImplementation = address(new BytecodeDeployer(_l2UsdcBytecode));
 
     // Call upgradeToAndCall on the USDC contract
     IUSDC(USDC).upgradeTo(_usdcImplementation);
 
-    // Cache the length of the initialization transactions
-    uint256 _l2UsdcImpTxsLength = _l2UsdcInitTxs.length;
-    uint256 _proxyExecutedInitTxs = _proxyExecutedInitTxsLength;
-    // Initialize L2 Usdc
-    bool _success;
-    for (uint256 i; i < _l2UsdcImpTxsLength; i++) {
-      (_success,) = _usdcImplementation.call(_l2UsdcInitTxs[i]);
-      if (i >= _proxyExecutedInitTxs && _success) {
-        (_success,) = USDC.call(_l2UsdcInitTxs[i]);
-      }
-      if (!_success) revert L2OpUSDCBridgeAdapter_UsdcInitializationFailed();
-    }
-    _proxyExecutedInitTxsLength = _l2UsdcImpTxsLength;
+    // Execute the initialization transactions
+    _executeInitTxs(_usdcImplementation, _l2UsdcImplTxs, _l2UsdcImplTxs.length);
+    _executeInitTxs(USDC, _l2UsdcProxyTxs, _l2UsdcProxyTxs.length);
 
     emit DeployedL2UsdcImplementation(_usdcImplementation);
+  }
+
+  /**
+   * @notice Executes the initialization transactions for a target contract
+   * @param _target The address of the contract to execute the transactions on
+   * @param _initTxs The initialization transactions to execute
+   * @param _length The number of transactions to execute
+   */
+  function _executeInitTxs(address _target, bytes[] memory _initTxs, uint256 _length) internal {
+    for (uint256 i; i < _length; i++) {
+      (bool _success,) = _target.call(_initTxs[i]);
+      if (!_success) {
+        revert L2OpUSDCBridgeAdapter_UsdcInitializationFailed();
+      }
+    }
   }
 }

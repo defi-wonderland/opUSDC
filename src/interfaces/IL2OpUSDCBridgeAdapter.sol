@@ -45,9 +45,14 @@ interface IL2OpUSDCBridgeAdapter {
   /**
    * @notice Receive the creation code from the linked adapter, deploy the new implementation and upgrade
    * @param _l2UsdcBytecode The bytecode for the new L2 USDC implementation
-   * @param _l2UsdcInitTxs The initialization transactions for the new L2 USDC implementation
+   * @param _l2UsdcImplTxs The initialization transactions for the new L2 USDC implementation
+   * @param _l2UsdcProxyTxs The initialization transactions for the proxy contract
    */
-  function receiveUsdcUpgrade(bytes calldata _l2UsdcBytecode, bytes[] memory _l2UsdcInitTxs) external;
+  function receiveUsdcUpgrade(
+    bytes calldata _l2UsdcBytecode,
+    bytes[] memory _l2UsdcImplTxs,
+    bytes[] memory _l2UsdcProxyTxs
+  ) external;
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES

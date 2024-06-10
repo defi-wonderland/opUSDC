@@ -20,16 +20,8 @@ contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
     isMessagingDisabled = true;
   }
 
-  function forTest_setProxyExecutedInitTxs(uint256 _newLength) external {
-    _proxyExecutedInitTxsLength = _newLength;
-  }
-
   function forTest_dummy() external {
     calls++;
-  }
-
-  function forTest_proxyExecutedInitTxsLength() external view returns (uint256) {
-    return _proxyExecutedInitTxsLength;
   }
 
   function forTest_dummyRevert() external pure {
@@ -48,10 +40,6 @@ abstract contract Base is Helpers {
   address internal _usdc = makeAddr('opUSDC');
   address internal _messenger = makeAddr('messenger');
   address internal _linkedAdapter = makeAddr('linkedAdapter');
-
-  bytes internal _l2AdapterBytecode;
-  bytes internal _l2AdapterInitTx = abi.encodeWithSignature('forTest_dummy()');
-  bytes[] internal _l2AdapterInitTxs;
 
   bytes internal _l2UsdcBytecode;
   bytes internal _l2UsdcInitTx = abi.encodeWithSignature('forTest_dummy()');
@@ -579,7 +567,7 @@ contract L2OpUSDCBridgeAdapter_ReceiveUsdcUpgrade is Base {
   function test_wrongMessenger(address _notMessenger) external {
     vm.assume(_notMessenger != _messenger);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
-    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs);
+    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs, _l2UsdcInitTxs);
   }
 
   /**
@@ -593,7 +581,7 @@ contract L2OpUSDCBridgeAdapter_ReceiveUsdcUpgrade is Base {
     // Execute
     vm.prank(_messenger);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
-    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs);
+    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs, _l2UsdcInitTxs);
   }
 
   /**
@@ -611,57 +599,17 @@ contract L2OpUSDCBridgeAdapter_ReceiveUsdcUpgrade is Base {
     _mockAndExpect(_usdc, abi.encodeWithSignature('dummy()'), abi.encode(true));
     // Execute
     vm.prank(_messenger);
-    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs);
-  }
-
-  /**
-   * @notice Check the expected calls
-   */
-  function test_receiveUsdcUpgradeMultipleInitTxs() external {
-    adapter.forTest_setProxyExecutedInitTxs(2);
-    uint64 _nonce = vm.getNonce(address(adapter));
-    address _implementation = _computeCreateAddress(address(adapter), _nonce);
-    _l2UsdcInitTxs.push(abi.encodeWithSignature('dummy()'));
-    _l2UsdcInitTxs.push(abi.encodeWithSignature('dummyTwo()'));
-    _l2UsdcInitTxs.push(abi.encodeWithSignature('dummyThree()'));
-    _l2UsdcInitTxs.push(abi.encodeWithSignature('dummyFour()'));
-
-    // Mock calls
-    _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
-    _mockAndExpect(_usdc, abi.encodeWithSignature('upgradeTo(address)', _implementation), abi.encode(true));
-
-    _mockAndExpect(_usdc, abi.encodeWithSignature('dummyThree()'), abi.encode(true));
-    // Execute
-    vm.prank(_messenger);
-    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs);
-  }
-
-  /**
-   * @notice Check the expected calls on a second upgrade
-   */
-  function test_receive2ndUsdcUpgrade() external {
-    adapter.forTest_setProxyExecutedInitTxs(1);
-    uint64 _nonce = vm.getNonce(address(adapter));
-    _l2UsdcInitTxs.push(abi.encodeWithSignature('dummy()'));
-    // Mock calls
-    _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
-    _mockAndExpect(
-      _usdc,
-      abi.encodeWithSignature('upgradeTo(address)', _computeCreateAddress(address(adapter), _nonce)),
-      abi.encode(true)
-    );
-    // Execute
-    vm.prank(_messenger);
-    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs);
+    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs, _l2UsdcInitTxs);
   }
 
   /**
    * @notice Check that reverts if a call to implementation reverts
    */
   function test_revertOnImplementation() external {
-    adapter.forTest_setProxyExecutedInitTxs(1);
     uint64 _nonce = vm.getNonce(address(adapter));
-    _l2UsdcInitTxs.push(abi.encodeWithSignature('dummyRevert()'));
+    bytes[] memory _revertTx = new bytes[](1);
+    _revertTx[0] = abi.encodeWithSignature('dummyRevert()');
+
     // Mock calls
     _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
     _mockAndExpect(
@@ -672,15 +620,16 @@ contract L2OpUSDCBridgeAdapter_ReceiveUsdcUpgrade is Base {
     // Execute
     vm.prank(_messenger);
     vm.expectRevert(IL2OpUSDCBridgeAdapter.L2OpUSDCBridgeAdapter_UsdcInitializationFailed.selector);
-    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs);
+    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _revertTx, _l2UsdcInitTxs);
   }
 
   /**
    * @notice Revert on invalid transaction
    */
-  function test_revertOnInitTx() external {
+  function test_revertOnProxy() external {
     uint64 _nonce = vm.getNonce(address(adapter));
-    _l2UsdcInitTxs.push(abi.encodeWithSignature('dummyRevert()'));
+    bytes[] memory _revertTx = new bytes[](1);
+    _revertTx[0] = abi.encodeWithSignature('dummyRevert()');
 
     // Mock calls
     _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
@@ -696,7 +645,7 @@ contract L2OpUSDCBridgeAdapter_ReceiveUsdcUpgrade is Base {
     // Execute
     vm.prank(_messenger);
     vm.expectRevert(IL2OpUSDCBridgeAdapter.L2OpUSDCBridgeAdapter_UsdcInitializationFailed.selector);
-    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs);
+    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs, _revertTx);
   }
 
   /**
@@ -718,6 +667,6 @@ contract L2OpUSDCBridgeAdapter_ReceiveUsdcUpgrade is Base {
 
     // Execute
     vm.prank(_messenger);
-    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs);
+    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs, _l2UsdcInitTxs);
   }
 }
