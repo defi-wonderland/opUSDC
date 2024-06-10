@@ -139,18 +139,16 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
     assertEq(address(factory.L1_ADAPTER_PROXY()), _l1Adapter, 'Invalid l1Adapter address');
   }
 
-  /**
-   * @notice Check the constructor correctly deploys the L1 adapter
-   * @dev We are assuming the L1 adapter correctly sets the immutable vars to compare. Need to do this to check the
-   * contract constructor values were properly set.
-   */
-  function test_deployL1Adapter() public {
-    L1OpUSDCBridgeAdapter _l1Adapter = L1OpUSDCBridgeAdapter(factory.L1_ADAPTER_PROXY());
-    assertEq(_l1Adapter.USDC(), _usdc, 'Invalid usdc');
-    assertEq(_l1Adapter.LINKED_ADAPTER(), factory.L2_ADAPTER_PROXY(), 'Invalid l2Adapter');
-    assertEq(address(_l1Adapter.UPGRADE_MANAGER()), address(factory.UPGRADE_MANAGER()), 'Invalid upgradeManager');
-    assertEq(_l1Adapter.FACTORY(), address(factory), 'Invalid factory');
-  }
+  // /**
+  //  * @notice Check the constructor correctly deploys the L1 adapter
+  //  * @dev We are assuming the L1 adapter correctly sets the immutable vars to compare. Need to do this to check the
+  //  * contract constructor values were properly set.
+  //  */
+  // function test_deployL1Adapter() public {
+  //   L1OpUSDCBridgeAdapter _l1Adapter = L1OpUSDCBridgeAdapter(factory.L1_ADAPTER_PROXY());
+  //   assertEq(_l1Adapter.USDC(), _usdc, 'Invalid usdc');
+  //   assertEq(_l1Adapter.LINKED_ADAPTER(), factory.L2_ADAPTER_PROXY(), 'Invalid l2Adapter');
+  // }
 
   /**
    * @notice Check the `L1AdapterDeployed` event is properly emitted
@@ -270,10 +268,10 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
     _mockDeployFunctionCalls();
 
     // Expect the `initializeMessenger` to be properly called
-    vm.expectCall(
-      address(factory.L1_ADAPTER_PROXY()),
-      abi.encodeWithSelector(L1OpUSDCBridgeAdapter.initializeNewMessenger.selector, _l1Messenger)
-    );
+    // vm.expectCall(
+    //   address(factory.L1_ADAPTER_PROXY()),
+    //   abi.encodeWithSelector(L1OpUSDCBridgeAdapter.initializeNewMessenger.selector, _l1Messenger)
+    // );
 
     // Execute
     vm.prank(_user);

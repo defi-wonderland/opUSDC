@@ -110,7 +110,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     }
     // Set the messenger as deployed and initialize it on the adapter
     isFactoryDeployed[_l1Messenger] = true;
-    L1_ADAPTER_PROXY.initializeNewMessenger(_l1Messenger);
+    //L1_ADAPTER_PROXY.initializeNewMessenger(_l1Messenger);
 
     // Get the L2 factory init code
     bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
