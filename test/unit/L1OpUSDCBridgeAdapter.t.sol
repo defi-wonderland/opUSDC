@@ -28,6 +28,10 @@ contract ForTestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
   function forTest_setMessengerStatusToUpgrading() external {
     messengerStatus = Status.Upgrading;
   }
+
+  function forTest_setMessengerStatusByValue(uint256 _status) external {
+    messengerStatus = Status(_status);
+  }
 }
 
 abstract contract Base is Helpers {
@@ -52,8 +56,9 @@ abstract contract Base is Helpers {
   event MessageSent(address _user, address _to, uint256 _amount, address _messenger, uint32 _minGasLimit);
   event MessageReceived(address _user, uint256 _amount, address _messenger);
   event BurnAmountSet(uint256 _burnAmount);
-  event L2UsdcUpgradeSent(address _newImplementation, address _messenger, uint32 _minGasLimit);
+  event UsdcUpgradeSent(address _newImplementation, address _messenger, uint32 _minGasLimit);
   event MigratingToNative(address _messenger, address _newOwner);
+  event MigrationComplete();
 
   function setUp() public virtual {
     // Set the bytecode to the implementation addresses
@@ -86,17 +91,23 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
   /**
    * @notice Check that the function reverts if the sender is not the upgrade manager
    */
-  function test_onlyOwner(address _newOwner, uint32 _minGasLimitReceiveOnL2, uint32 _minGasLimitSetBurnAmount) external {
+  function test_onlyOwner(
+    address _executor,
+    address _newOwner,
+    uint32 _minGasLimitReceiveOnL2,
+    uint32 _minGasLimitSetBurnAmount
+  ) external {
+    vm.assume(_executor != _owner);
     // Execute
-    vm.prank(_user);
-    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _user));
+    vm.prank(_executor);
+    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _executor));
     adapter.migrateToNative(_newOwner, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
   }
 
   /**
    * @notice Check that the function reverts if `_circle` is the zero address
    */
-  function test_addressZero(uint32 _minGasLimitReceiveOnL2, uint32 _minGasLimitSetBurnAmount) external {
+  function test_revertOnAddressZero(uint32 _minGasLimitReceiveOnL2, uint32 _minGasLimitSetBurnAmount) external {
     // Execute
     vm.prank(_owner);
     vm.expectRevert(abi.encodeWithSelector(IL1OpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidAddress.selector));
@@ -106,7 +117,7 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
   /**
    * @notice Check that the function reverts if a messenger is not active or upgrading
    */
-  function test_revertIfMessengerDisabled(
+  function test_revertIfMessengerNotActive(
     address _newOwner,
     uint32 _minGasLimitReceiveOnL2,
     uint32 _minGasLimitSetBurnAmount
@@ -117,25 +128,6 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
     // Execute
     vm.prank(_owner);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
-    adapter.migrateToNative(_newOwner, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
-  }
-
-  /**
-   * @notice Check that the function reverts if a migration is in progress
-   */
-  function test_revertIfMigrationInProgress(
-    address _newOwner,
-    uint32 _minGasLimitReceiveOnL2,
-    uint32 _minGasLimitSetBurnAmount,
-    address _circle
-  ) external {
-    vm.assume(_newOwner != address(0));
-    // Sets the circle address
-    vm.assume(_circle != address(0));
-    adapter.forTest_setCircle(_circle);
-    // Execute
-    vm.prank(_owner);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MigrationInProgress.selector);
     adapter.migrateToNative(_newOwner, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
   }
 
@@ -256,6 +248,17 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
 
 contract L1OpUSDCBridgeAdapter_Unit_SetBurnAmount is Base {
   /**
+   * @notice Check that the function reverts if the sender is not the messenger
+   */
+  function test_revertIfMessengerDidntSendTheMessage(uint256 _amount, address _notMessager) external {
+    vm.assume(_notMessager != _messenger);
+    // Execute
+    vm.prank(_notMessager);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
+    adapter.setBurnAmount(_amount);
+  }
+
+  /**
    * @notice Check that the function reverts if the linked adapter didn't send the message
    */
   function test_revertIfLinkedAdapterDidntSendTheMessage(uint256 _amount, address _messageSender) external {
@@ -272,7 +275,12 @@ contract L1OpUSDCBridgeAdapter_Unit_SetBurnAmount is Base {
   /**
    * @notice Check the functions reverts when messenger status is not upgrading
    */
-  function test_revertIfMessengerStatusIsNotUpgrading(uint256 _amount) external {
+  function test_revertIfMessengerStatusIsNotUpgrading(uint256 _amount, uint256 _status) external {
+    _status = bound(_status, 0, uint256(type(IL1OpUSDCBridgeAdapter.Status).max) - 1);
+    vm.assume(_status != uint256(IL1OpUSDCBridgeAdapter.Status.Upgrading));
+
+    adapter.forTest_setMessengerStatusByValue(_status);
+
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
     // Execute
@@ -298,8 +306,28 @@ contract L1OpUSDCBridgeAdapter_Unit_SetBurnAmount is Base {
   }
 
   /**
+   * @notice Check that the status is set as expected
+   */
+  function test_setStatus(uint256 _burnAmount) external {
+    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+
+    adapter.forTest_setMessengerStatusToUpgrading();
+
+    // Execute
+    vm.prank(_messenger);
+    adapter.setBurnAmount(_burnAmount);
+
+    // Assert
+    assertEq(
+      uint256(adapter.messengerStatus()),
+      uint256(IL1OpUSDCBridgeAdapter.Status.Deprecated),
+      'Messenger status should be set to Deprecated'
+    );
+  }
+  /**
    * @notice Check that the event is emitted as expected
    */
+
   function test_emitEvent(uint256 _burnAmount) external {
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
@@ -363,6 +391,28 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
     assertEq(adapter.burnAmount(), 0, 'Burn amount should be set to 0');
     assertEq(adapter.circle(), address(0), 'Circle should be set to 0');
   }
+
+  /**
+   * @notice Check that the event is emitted as expected
+   */
+  function test_emitEvent(uint256 _burnAmount, address _circle) external {
+    vm.assume(_burnAmount > 0);
+    adapter.forTest_setCircle(_circle);
+
+    vm.mockCall(
+      address(_usdc), abi.encodeWithSignature('burn(address,uint256)', address(adapter), _burnAmount), abi.encode(true)
+    );
+
+    adapter.forTest_setBurnAmount(_burnAmount);
+
+    // Expect events
+    vm.expectEmit(true, true, true, true);
+    emit MigrationComplete();
+
+    // Execute
+    vm.prank(_circle);
+    adapter.burnLockedUSDC();
+  }
 }
 
 /*///////////////////////////////////////////////////////////////
@@ -374,17 +424,18 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
   /**
    * @notice Check that only the owner can stop messaging
    */
-  function test_onlyOwner() public {
+  function test_onlyOwner(address _executor) public {
+    vm.assume(_executor != _owner);
     // Execute
-    vm.prank(_user);
-    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _user));
+    vm.prank(_executor);
+    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _executor));
     adapter.stopMessaging(0);
   }
 
   /**
    * @notice Check that the function reverts if messaging is already disabled
    */
-  function test_revertIfMessagingIsAlreadyDisabled(uint32 _minGasLimit) public {
+  function test_revertIfMessagingIsAlreadyPaused(uint32 _minGasLimit) public {
     adapter.forTest_setMessengerStatusToPaused();
     // Execute
     vm.prank(_owner);
@@ -402,6 +453,13 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
       _messenger,
       abi.encodeWithSignature('sendMessage(address,bytes,uint32)', _linkedAdapter, _messageData, _minGasLimit),
       abi.encode('')
+    );
+
+    // Execute
+    vm.prank(_owner);
+    adapter.stopMessaging(_minGasLimit);
+    assertEq(
+      uint256(adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Paused), 'Messenger should be paused'
     );
 
     // Execute
@@ -438,10 +496,11 @@ contract L1OpUSDCBridgeAdapter_Unit_ResumeMessaging is Base {
   /**
    * @notice Check that only the owner can resume messaging
    */
-  function test_onlyOwner(uint32 _minGasLimit) external {
+  function test_onlyOwner(address _executor, uint32 _minGasLimit) external {
+    vm.assume(_executor != _owner);
     // Execute
-    vm.prank(_user);
-    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _user));
+    vm.prank(_executor);
+    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _executor));
     adapter.resumeMessaging(_minGasLimit);
   }
 
@@ -596,7 +655,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
   /**
    * @notice Check that the function reverts if the deadline is in the past
    */
-  function test_revertOnMessengerExpired(
+  function test_revertOnExpiredMessage(
     address _to,
     uint256 _amount,
     bytes memory _signature,
@@ -617,7 +676,8 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
    * @notice Check that the function reverts on invalid signature
    */
   function test_invalidSignature(address _to, uint256 _amount, uint256 _deadline, uint32 _minGasLimit) external {
-    vm.assume(_deadline >= block.timestamp);
+    vm.assume(_deadline > 0);
+    vm.warp(_deadline - 1);
     uint256 _nonce = adapter.userNonce(_signerAd);
     (address _notSignerAd, uint256 _notSignerPk) = makeAddrAndKey('notSigner');
     bytes memory _signature = _generateSignature(_to, _amount, _nonce, _notSignerAd, _notSignerPk, address(adapter));
@@ -632,7 +692,8 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
    * @notice Check nonce increment
    */
   function test_nonceIncrement(address _to, uint256 _amount, uint256 _deadline, uint32 _minGasLimit) external {
-    vm.assume(_deadline >= block.timestamp);
+    vm.assume(_deadline > 0);
+    vm.warp(_deadline - 1);
     uint256 _nonce = adapter.userNonce(_signerAd);
     bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
 
@@ -662,7 +723,8 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
    * @notice Check that transferFrom and sendMessage are called as expected
    */
   function test_expectedCall(address _to, uint256 _amount, uint256 _deadline, uint32 _minGasLimit) external {
-    vm.assume(_deadline >= block.timestamp);
+    vm.assume(_deadline > 0);
+    vm.warp(_deadline - 1);
     uint256 _nonce = adapter.userNonce(_signerAd);
     bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
 
@@ -691,7 +753,8 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
    * @notice Check that the event is emitted as expected
    */
   function test_emitEvent(address _to, uint256 _amount, uint256 _deadline, uint32 _minGasLimit) external {
-    vm.assume(_deadline >= block.timestamp);
+    vm.assume(_deadline > 0);
+    vm.warp(_deadline - 1);
     uint256 _nonce = adapter.userNonce(_signerAd);
     bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
 
@@ -783,7 +846,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
                           USDC UPGRADE
 ///////////////////////////////////////////////////////////////*/
 
-contract L1OpUSDCBridgeAdapter_Unit_SendL2UsdcUpgrade is Base {
+contract L1OpUSDCBridgeAdapter_Unit_SendUsdcUpgrade is Base {
   /**
    * @notice Check that the function reverts if a messenger is unitialized
    */
@@ -792,7 +855,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendL2UsdcUpgrade is Base {
     // Execute
     vm.prank(_owner);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
-    adapter.sendL2UsdcUpgrade(_l2UsdcInitTxs, _minGasLimit);
+    adapter.sendUsdcUpgrade(_l2UsdcInitTxs, _l2UsdcInitTxs, _minGasLimit);
   }
 
   /**
@@ -806,7 +869,9 @@ contract L1OpUSDCBridgeAdapter_Unit_SendL2UsdcUpgrade is Base {
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
-        abi.encodeWithSignature('receiveUsdcUpgrade(bytes,bytes[])', _l2UsdcBytecode, _l2UsdcInitTxs),
+        abi.encodeWithSignature(
+          'receiveUsdcUpgrade(bytes,bytes[],bytes[])', _l2UsdcBytecode, _l2UsdcInitTxs, _l2UsdcInitTxs
+        ),
         _minGasLimit
       ),
       abi.encode()
@@ -814,7 +879,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendL2UsdcUpgrade is Base {
 
     // Execute
     vm.prank(_owner);
-    adapter.sendL2UsdcUpgrade(_l2UsdcInitTxs, _minGasLimit);
+    adapter.sendUsdcUpgrade(_l2UsdcInitTxs, _l2UsdcInitTxs, _minGasLimit);
   }
 
   /**
@@ -828,7 +893,9 @@ contract L1OpUSDCBridgeAdapter_Unit_SendL2UsdcUpgrade is Base {
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
-        abi.encodeWithSignature('receiveUsdcUpgrade(bytes,bytes[])', _l2UsdcBytecode, _l2UsdcInitTxs),
+        abi.encodeWithSignature(
+          'receiveUsdcUpgrade(bytes,bytes[],bytes[])', _l2UsdcBytecode, _l2UsdcInitTxs, _l2UsdcInitTxs
+        ),
         _minGasLimit
       ),
       abi.encode()
@@ -836,10 +903,10 @@ contract L1OpUSDCBridgeAdapter_Unit_SendL2UsdcUpgrade is Base {
 
     // Expect events
     vm.expectEmit(true, true, true, true);
-    emit L2UsdcUpgradeSent(_l2UsdcImplAddress, _messenger, _minGasLimit);
+    emit UsdcUpgradeSent(_l2UsdcImplAddress, _messenger, _minGasLimit);
 
     // Execute
     vm.prank(_owner);
-    adapter.sendL2UsdcUpgrade(_l2UsdcInitTxs, _minGasLimit);
+    adapter.sendUsdcUpgrade(_l2UsdcInitTxs, _l2UsdcInitTxs, _minGasLimit);
   }
 }

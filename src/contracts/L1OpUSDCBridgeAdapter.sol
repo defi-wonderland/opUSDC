@@ -38,14 +38,12 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
    * @param _owner The address of the owner of the contract
    * @dev The constructor is only used to initialize the OpUSDCBridgeAdapter immutable variables
    */
-  /* solhint-disable no-unused-vars */
   constructor(
     address _usdc,
     address _messenger,
     address _linkedAdapter,
     address _owner
   ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) Ownable(_owner) {}
-  /* solhint-enable no-unused-vars */
 
   /*///////////////////////////////////////////////////////////////
                               MIGRATION
@@ -70,9 +68,6 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
     // Ensure messaging is enabled
     if (messengerStatus != Status.Active && messengerStatus != Status.Upgrading) {
       revert IOpUSDCBridgeAdapter_MessagingDisabled();
-    }
-    if (circle != address(0) && messengerStatus != Status.Upgrading) {
-      revert IOpUSDCBridgeAdapter_MigrationInProgress();
     }
 
     circle = _circle;
@@ -114,6 +109,8 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
     // Set the burn amount to 0
     burnAmount = 0;
     circle = address(0);
+
+    emit MigrationComplete();
   }
 
   /*///////////////////////////////////////////////////////////////
@@ -130,11 +127,11 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
     // Ensure messaging is enabled
     if (messengerStatus != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
+    messengerStatus = Status.Paused;
+
     ICrossDomainMessenger(MESSENGER).sendMessage(
       LINKED_ADAPTER, abi.encodeWithSignature('receiveStopMessaging()'), _minGasLimit
     );
-
-    messengerStatus = Status.Paused;
 
     emit MessagingStopped(MESSENGER);
   }
@@ -240,9 +237,11 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
 
   /**
    * @notice Send a message to the linked adapter to upgrade the implementation of the USDC contract
+   * @param _implTxs The transactions to initialize the new implementation
+   * @param _proxyTxs The transactions to initialize the proxy contract
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  function sendL2UsdcUpgrade(bytes[] memory _initTxs, uint32 _minGasLimit) external onlyOwner {
+  function sendUsdcUpgrade(bytes[] memory _implTxs, bytes[] memory _proxyTxs, uint32 _minGasLimit) external onlyOwner {
     // Ensure messaging is enabled
     if (messengerStatus != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
@@ -251,10 +250,12 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
 
     ICrossDomainMessenger(MESSENGER).sendMessage(
       LINKED_ADAPTER,
-      abi.encodeWithSignature('receiveUsdcUpgrade(bytes,bytes[])', _usdcImplementation.code, _initTxs),
+      abi.encodeWithSignature(
+        'receiveUsdcUpgrade(bytes,bytes[],bytes[])', _usdcImplementation.code, _implTxs, _proxyTxs
+      ),
       _minGasLimit
     );
 
-    emit L2UsdcUpgradeSent(_usdcImplementation, MESSENGER, _minGasLimit);
+    emit UsdcUpgradeSent(_usdcImplementation, MESSENGER, _minGasLimit);
   }
 }
