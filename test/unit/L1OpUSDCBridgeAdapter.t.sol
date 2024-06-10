@@ -461,10 +461,6 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
     assertEq(
       uint256(adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Paused), 'Messenger should be paused'
     );
-
-    // Execute
-    vm.prank(_owner);
-    adapter.stopMessaging(_minGasLimit);
   }
 
   /**
