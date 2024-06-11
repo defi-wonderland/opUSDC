@@ -115,18 +115,13 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     bytes[] memory _usdcInitTxs
   ) internal {
     // Get the current nonce and then increment 1 on it to match the final state after the L1 adapter deployment
-    uint256 _l1AdapterDeploymentNonce = nonce++;
+    uint256 _currentNonce = nonce++;
     // Calculate the L1 adapter address
-    address _l1Adapter = _precalculateCreateAddress(address(this), _l1AdapterDeploymentNonce);
-
-    // Calculate the L2 USDC proxy address
-    bytes memory _l2UsdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, abi.encode(_l1Adapter));
-    address _l2UsdcProxy = _precalculateCreate2Address(_SALT, keccak256(_l2UsdcProxyInitCode), L2_CREATE2_DEPLOYER);
+    address _l1Adapter = _precalculateCreateAddress(address(this), _currentNonce);
 
     // Calculate the L2 adapter address
-    bytes memory _l2AdapterInitCode =
-      bytes.concat(type(L2OpUSDCBridgeAdapter).creationCode, abi.encode(_l2UsdcProxy, L2_MESSENGER, _l1Adapter));
-    address _l2Adapter = _precalculateCreate2Address(_SALT, keccak256(_l2AdapterInitCode), L2_FACTORY);
+    uint256 _l2UsdcDeploymentNonce = _currentNonce + 1;
+    address _l2Adapter = _precalculateCreateAddress(L2_FACTORY, _l2UsdcDeploymentNonce);
 
     new L1OpUSDCBridgeAdapter(USDC, _l1Messenger, _l2Adapter, _l1AdapterOwner);
 

@@ -10,8 +10,6 @@ import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
-import 'forge-std/Test.sol';
-
 /**
  * @title L2OpUSDCFactory
  * @notice Factory contract for deploying the L2 USDC implementation, proxy, and `L2OpUSDCBridgeAdapter` contract,
@@ -45,42 +43,38 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
       revert IL2OpUSDCFactory_InvalidSender();
     }
 
-    console.log(1);
-
     // Deploy USDC implementation
-    bytes memory _usdcImplInitCode = bytes.concat(type(BytecodeDeployer).creationCode, _usdcImplementationCode);
-    address _usdcImplementation = _deployCreate2(_SALT, _usdcImplInitCode);
+    bytes memory _usdcImplInitCode =
+      bytes.concat(type(BytecodeDeployer).creationCode, abi.encode(_usdcImplementationCode));
+    (address _usdcImplementation, bool _usdcImplSuccess) = _deployCreate2(_SALT, _usdcImplInitCode);
+    if (_usdcImplSuccess) emit USDCImplementationDeployed();
 
-    console.log(2);
     // Deploy USDC proxy
     /// NOTE: Using `CREATE` to guarantee that this address is unique among all the L2s
     bytes memory _usdcProxyCArgs = abi.encode(_usdcImplementation, _EMPTY_BYTES);
     bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);
-    address _usdcProxy = _deployCreate(_usdcProxyInitCode);
+    (address _usdcProxy, bool _usdcProxySuccess) = _deployCreate(_usdcProxyInitCode);
+    if (_usdcProxySuccess) emit USDCProxyDeployed();
 
-    console.log(3);
     // Deploy L2 Adapter
     bytes memory _l2AdapterCArgs = abi.encode(_usdcProxy, msg.sender, _l1Adapter);
-    bytes memory _l2AdapterInitCode = bytes.concat(type(ERC1967Proxy).creationCode, _l2AdapterCArgs);
-    address _l2Adapter = _deployCreate2(_SALT, _l2AdapterInitCode);
+    bytes memory _l2AdapterInitCode = bytes.concat(type(L2OpUSDCBridgeAdapter).creationCode, _l2AdapterCArgs);
+    (address _l2Adapter, bool _l2AdapterSuccess) = _deployCreate2(_SALT, _l2AdapterInitCode);
+    if (_l2AdapterSuccess) emit L2AdapterDeployed();
 
-    console.log(4);
-    // Upgrade the USDC proxy to the implementation
-    IUSDC(_usdcProxy).upgradeTo(_usdcImplementation);
+    if (!_usdcImplSuccess || !_usdcProxySuccess || !_l2AdapterSuccess) {
+      revert IL2OpUSDCFactory_DeploymentsFailed();
+    }
 
-    console.log(5);
     // Change the USDC admin so the init txs can be executed over the proxy from this contract
     IUSDC(_usdcProxy).changeAdmin(_l2Adapter);
+
     // Execute the USDC initialization transactions
-    console.log(6);
     _executeInitTxs(_usdcImplementation, _usdcInitTxs, _usdcInitTxs.length);
-    console.log(7);
     _executeInitTxs(_usdcProxy, _usdcInitTxs, _usdcInitTxs.length);
-    console.log(8);
 
-    // TODO: Transfer ownership TBD
-
-    emit L2ContractsDeployed(_l1Adapter, _usdcProxy, _usdcImplementation);
+    // Transfer USDC ownership to adapter
+    IUSDC(_usdcProxy).transferOwnership(_l2Adapter);
   }
 
   /**
@@ -104,12 +98,14 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
    * @param _initCode The creation bytecode
    * @return _newContract The address where the contract was deployed
    */
-  function _deployCreate2(bytes32 _salt, bytes memory _initCode) internal returns (address _newContract) {
+  function _deployCreate2(bytes32 _salt, bytes memory _initCode) internal returns (address _newContract, bool _success) {
+    _success = true;
     assembly ("memory-safe") {
       _newContract := create2(0x0, add(_initCode, 0x20), mload(_initCode), _salt)
     }
     if (_newContract == address(0) || _newContract.code.length == 0) {
-      revert IL2OpUSDCFactory_Create2DeploymentFailed();
+      _success = false;
+      emit Create2DeploymentFailed();
     }
   }
 
@@ -121,13 +117,14 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
    * @param _initCode The creation bytecode.
    * @return _newContract The 20-byte address where the contract was deployed.
    */
-  function _deployCreate(bytes memory _initCode) internal returns (address _newContract) {
+  function _deployCreate(bytes memory _initCode) internal returns (address _newContract, bool _success) {
+    _success = true;
     assembly ("memory-safe") {
       _newContract := create(0x0, add(_initCode, 0x20), mload(_initCode))
     }
-    // TODO:
     if (_newContract == address(0) || _newContract.code.length == 0) {
-      revert IL2OpUSDCFactory_CreateDeploymentFailed();
+      _success = false;
+      emit CreateDeploymentFailed();
     }
   }
 }

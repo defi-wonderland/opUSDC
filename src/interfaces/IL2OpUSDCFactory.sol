@@ -8,13 +8,13 @@ interface IL2OpUSDCFactory {
                             EVENTS
   ///////////////////////////////////////////////////////////////*/
 
-  /**
-   * @notice Emitted when the contracts are deployed
-   * @param _l1Adapter The address of the L1 adapter
-   * @param _usdcProxy The address of the USDC proxy
-   * @param _usdcImplementation The address of the USDC implementation
-   */
-  event L2ContractsDeployed(address _l1Adapter, address _usdcProxy, address _usdcImplementation);
+  event Create2DeploymentFailed();
+
+  event CreateDeploymentFailed();
+
+  event USDCImplementationDeployed();
+  event USDCProxyDeployed();
+  event L2AdapterDeployed();
 
   /*///////////////////////////////////////////////////////////////
                             ERRORS
@@ -30,15 +30,7 @@ interface IL2OpUSDCFactory {
    */
   error IL2OpUSDCFactory_InvalidSender();
 
-  /**
-   * @notice Thrown when the `CREATE2` deployment failed
-   */
-  error IL2OpUSDCFactory_Create2DeploymentFailed();
-
-  /**
-   * @notice Thrown when the `CREATE` deployment failed
-   */
-  error IL2OpUSDCFactory_CreateDeploymentFailed();
+  error IL2OpUSDCFactory_DeploymentsFailed();
 
   /**
    * @notice Thrown when an USDC initialization tx failed

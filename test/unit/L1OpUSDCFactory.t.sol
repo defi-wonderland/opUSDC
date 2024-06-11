@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCFactory, L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
-import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {Test} from 'forge-std/Test.sol';
 import {ICreate2Deployer} from 'interfaces/external/ICreate2Deployer.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
@@ -46,9 +44,7 @@ abstract contract Base is Test, Helpers {
   address internal _owner = makeAddr('owner');
   address internal _user = makeAddr('user');
   address internal _usdc = makeAddr('USDC');
-  bytes internal _l2AdapterBytecode = '0x608061111111';
-  bytes internal _l2UsdcImplementationBytecode = '0x6080333333';
-  address internal _l2AdapterImplAddress = makeAddr('l2AdapterImpl');
+  bytes internal _usdcImplementationBytecode = '0x6080333333';
   address internal _usdcImplAddress = makeAddr('bridgedUsdcImpl');
   // cant fuzz this because of foundry's VM
   address internal _l1Messenger = makeAddr('messenger');
@@ -60,7 +56,7 @@ abstract contract Base is Test, Helpers {
     factory = new ForTestL1OpUSDCFactory(_usdc, _salt);
 
     // Etch code for the usdc implementation so its retrieved when checking the bytecode
-    vm.etch(_usdcImplAddress, _l2UsdcImplementationBytecode);
+    vm.etch(_usdcImplAddress, _usdcImplementationBytecode);
 
     // Define the implementation structs info
     bytes memory _usdcInitTx = 'tx1';
@@ -166,7 +162,7 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
 
     // Expect the `sendMessage` to be properly called
     bytes memory _l2DeploymentsTx =
-      abi.encodeWithSelector(L2OpUSDCFactory.deploy.selector, _l1Adapter, _l2UsdcImplementationBytecode, _usdcInitTxs);
+      abi.encodeWithSelector(L2OpUSDCFactory.deploy.selector, _l1Adapter, _usdcImplementationBytecode, _usdcInitTxs);
     vm.expectCall(
       _l1Messenger,
       abi.encodeWithSelector(
@@ -216,9 +212,16 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
     assertEq(factory.nonce(), _nonceBefore + _numberOfDeployments, 'Invalid nonce');
   }
 
+  /**
+   * @notice Check the function deploys the L1 adapter correctly and sends the message to the L2 factory to execute the
+   * L2 deployments
+   * @dev Assuming the `L1OpUSDCBridgeAdapter` sets the immutables correctly to check we are passing the right values
+   */
   function test_deployL1Adapter(uint32 _minGasLimitDeploy) public {
     uint256 _factoryNonce = vm.getNonce(address(factory));
     address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce);
+
+    address _l2Adapter = factory.forTest_precalculateCreateAddress(factory.L2_FACTORY(), _factoryNonce + 1);
 
     // Mock all the `deployAdapters` function calls
     _mockDeployFunctionCalls();
@@ -229,6 +232,11 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
 
     // Assert the contract was deployed by checking its bytecode length is greater than 0
     assertGt(_l1Adapter.code.length, 0, 'L1 adapter not deployed');
+    // Check the constructor values were properly passed
+    assertEq(L1OpUSDCBridgeAdapter(_l1Adapter).USDC(), _usdc, 'Invalid USDC address');
+    assertEq(L1OpUSDCBridgeAdapter(_l1Adapter).MESSENGER(), _l1Messenger, 'Invalid messenger address');
+    assertEq(L1OpUSDCBridgeAdapter(_l1Adapter).LINKED_ADAPTER(), _l2Adapter, 'Invalid linked adapter address');
+    assertEq(L1OpUSDCBridgeAdapter(_l1Adapter).owner(), _owner, 'Invalid owner address');
   }
 
   function test_callUSDCImplementation(uint32 _minGasLimitDeploy) public {
@@ -257,7 +265,7 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
 
     // Expect the `sendMessage` to be properly called
     bytes memory _l2DeploymentsTx =
-      abi.encodeWithSelector(L2OpUSDCFactory.deploy.selector, _l1Adapter, _l2UsdcImplementationBytecode, _usdcInitTxs);
+      abi.encodeWithSelector(L2OpUSDCFactory.deploy.selector, _l1Adapter, _usdcImplementationBytecode, _usdcInitTxs);
     vm.expectCall(
       _l1Messenger,
       abi.encodeWithSelector(
