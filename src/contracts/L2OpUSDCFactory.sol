@@ -22,7 +22,6 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
   address public constant L2_MESSENGER = 0x4200000000000000000000000000000000000007;
 
   /// @notice The empty bytes constant
-  bytes internal constant _EMPTY_BYTES = '';
 
   /// @inheritdoc IL2OpUSDCFactory
   address public immutable L1_FACTORY;
@@ -53,7 +52,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
 
     // Deploy USDC proxy
     /// NOTE: Using `CREATE` to guarantee that this address is unique among all the L2s
-    bytes memory _usdcProxyCArgs = abi.encode(_usdcImplementation, _EMPTY_BYTES);
+    bytes memory _usdcProxyCArgs = abi.encode(_usdcImplementation);
     bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);
     (address _usdcProxy, bool _usdcProxySuccess) = _deployCreate(_usdcProxyInitCode);
     if (_usdcProxySuccess) emit USDCProxyDeployed(_usdcProxy);
