@@ -19,6 +19,10 @@ contract ForTestL1OpUSDCFactory is L1OpUSDCFactory {
     isFactoryDeployed[_l1Messenger] = _deployed;
   }
 
+  function forTest_getSalt() public view returns (bytes32 _salt) {
+    _salt = _SALT;
+  }
+
   function forTest_precalculateCreateAddress(
     address _deployer,
     uint256 _nonce
@@ -92,6 +96,7 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
 
     // Assert
     assertEq(factory.USDC(), _usdc, 'Invalid usdc address');
+    assertEq(factory.forTest_getSalt(), _salt, 'Invalid salt value');
     assertEq(factory.L2_FACTORY(), _l2Factory, 'Invalid l2Factory address');
   }
 }
