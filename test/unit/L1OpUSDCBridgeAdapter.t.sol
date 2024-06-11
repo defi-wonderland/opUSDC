@@ -843,7 +843,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 }
 
 /*///////////////////////////////////////////////////////////////
-                          USDC UPGRADE
+                      BRIDGED USDC FUNCTIONS
 ///////////////////////////////////////////////////////////////*/
 contract L1OpUSDCBridgeAdapter_Unit_SendUsdcOwnableFunction is Base {
   /**

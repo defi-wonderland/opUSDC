@@ -163,7 +163,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   }
 
   /*///////////////////////////////////////////////////////////////
-                             USDC UPGRADE
+                        BRIDGED USDC FUNCTIONS
   ///////////////////////////////////////////////////////////////*/
 
   /**
