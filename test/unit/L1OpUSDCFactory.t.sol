@@ -197,21 +197,6 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
     factory.deployAdapters(_l1Messenger, _owner, _minGasLimitDeploy, _usdcInitTxs);
   }
 
-  function test_updateNonce(uint32 _minGasLimitDeploy) public {
-    uint256 _nonceBefore = factory.nonce();
-
-    // Mock all the `deployAdapters` function calls
-    _mockDeployFunctionCalls();
-
-    // Execute
-    vm.prank(_user);
-    factory.deployAdapters(_l1Messenger, _owner, _minGasLimitDeploy, _usdcInitTxs);
-
-    // Assert
-    uint256 _numberOfDeployments = 1;
-    assertEq(factory.nonce(), _nonceBefore + _numberOfDeployments, 'Invalid nonce');
-  }
-
   /**
    * @notice Check the function deploys the L1 adapter correctly and sends the message to the L2 factory to execute the
    * L2 deployments
@@ -221,7 +206,8 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
     uint256 _factoryNonce = vm.getNonce(address(factory));
     address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce);
 
-    address _l2Adapter = factory.forTest_precalculateCreateAddress(factory.L2_FACTORY(), _factoryNonce + 1);
+    uint256 _l2FactoryNonce = factory.l2FactoryNonce();
+    address _l2Adapter = factory.forTest_precalculateCreateAddress(factory.L2_FACTORY(), _l2FactoryNonce + 1);
 
     // Mock all the `deployAdapters` function calls
     _mockDeployFunctionCalls();
@@ -237,6 +223,21 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
     assertEq(L1OpUSDCBridgeAdapter(_l1Adapter).MESSENGER(), _l1Messenger, 'Invalid messenger address');
     assertEq(L1OpUSDCBridgeAdapter(_l1Adapter).LINKED_ADAPTER(), _l2Adapter, 'Invalid linked adapter address');
     assertEq(L1OpUSDCBridgeAdapter(_l1Adapter).owner(), _owner, 'Invalid owner address');
+  }
+
+  function test_updateL2FactoryNonce(uint32 _minGasLimitDeploy) public {
+    uint256 _l2FactoryNonceBefore = factory.l2FactoryNonce();
+
+    // Mock all the `deployAdapters` function calls
+    _mockDeployFunctionCalls();
+
+    // Execute
+    vm.prank(_user);
+    factory.deployAdapters(_l1Messenger, _owner, _minGasLimitDeploy, _usdcInitTxs);
+
+    // Assert
+    uint256 _numberOfDeployments = 3;
+    assertEq(factory.l2FactoryNonce(), _l2FactoryNonceBefore + _numberOfDeployments, 'Invalid l2 factory nonce');
   }
 
   function test_callUSDCImplementation(uint32 _minGasLimitDeploy) public {

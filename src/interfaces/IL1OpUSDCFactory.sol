@@ -103,10 +103,10 @@ interface IL1OpUSDCFactory {
   function L2_FACTORY() external view returns (address _l2Factory);
 
   /**
-   * @return _nonce The nonce counter of the factory contract
-   * @dev Initialized to 1 since after the factory is deployed, its nonce is 1
+   * @return _l2FactoryNonce The nonce of the L2 factory
+   * @dev It is initialized to `1` since when the factory is deployed, the nonce is `1`
    */
-  function nonce() external view returns (uint256 _nonce);
+  function l2FactoryNonce() external view returns (uint256 _l2FactoryNonce);
 
   /**
    * @notice Checks if the `L2OpUSDCFactory` has been deployed on L2 by the given messenger

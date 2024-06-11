@@ -38,7 +38,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   bytes32 internal immutable _SALT;
 
   /// @inheritdoc IL1OpUSDCFactory
-  uint256 public nonce = 1;
+  uint256 public l2FactoryNonce = 1;
 
   /// @inheritdoc IL1OpUSDCFactory
   mapping(address _l1Messenger => bool _isDeployed) public isFactoryDeployed;
@@ -87,6 +87,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
       L2_CREATE2_DEPLOYER, _l2FactoryCreate2Tx, _minGasLimitCreate2Factory
     );
 
+    /// NOTE: Breaking CEI while invoking this call, but it's safe to trust in the Messenger
     _deployAdapters(_l1Messenger, _l1AdapterOwner, _minGasLimitDeploy, _usdcInitTxs);
   }
 
@@ -114,16 +115,15 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     uint32 _minGasLimitDeploy,
     bytes[] memory _usdcInitTxs
   ) internal {
-    // Get the current nonce and then increment 1 on it to match the final state after the L1 adapter deployment
-    uint256 _currentNonce = nonce++;
-    // Calculate the L1 adapter address
-    address _l1Adapter = _precalculateCreateAddress(address(this), _currentNonce);
-
-    // Calculate the L2 adapter address
-    uint256 _l2UsdcDeploymentNonce = _currentNonce + 1;
+    // Calculate the L2 adapter address. Substracting 2 from the nonce since is the 2nd deployment from the 3 to be done
+    uint256 _l2UsdcDeploymentNonce = l2FactoryNonce + 1;
     address _l2Adapter = _precalculateCreateAddress(L2_FACTORY, _l2UsdcDeploymentNonce);
 
-    new L1OpUSDCBridgeAdapter(USDC, _l1Messenger, _l2Adapter, _l1AdapterOwner);
+    // Deploy the L1 adapter
+    address _l1Adapter = address(new L1OpUSDCBridgeAdapter(USDC, _l1Messenger, _l2Adapter, _l1AdapterOwner));
+
+    // Increment the L2 Factory nonce for the next L2 deployments
+    l2FactoryNonce += 3;
 
     // Send the call over the L2 factory `deploy` function message
     bytes memory _usdcImplementationCode = IUSDC(USDC).implementation().code;

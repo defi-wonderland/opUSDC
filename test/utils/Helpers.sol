@@ -36,7 +36,23 @@ contract Helpers is Test {
     vm.stopPrank();
   }
 
-  function _computeCreateAddress(address _origin, uint256 _nonce) internal pure returns (address _address) {
+  function _precalculateCreate2Address(
+    bytes32 salt,
+    bytes32 initCodeHash,
+    address deployer
+  ) internal pure returns (address computedAddress) {
+    assembly ("memory-safe") {
+      let ptr := mload(0x40)
+      mstore(add(ptr, 0x40), initCodeHash)
+      mstore(add(ptr, 0x20), salt)
+      mstore(ptr, deployer)
+      let start := add(ptr, 0x0b)
+      mstore8(start, 0xff)
+      computedAddress := keccak256(start, 85)
+    }
+  }
+
+  function _precalculateCreateAddress(address _origin, uint256 _nonce) internal pure returns (address _address) {
     bytes memory _data;
     if (_nonce == 0x00) {
       _data = abi.encodePacked(bytes1(0xd6), bytes1(0x94), _origin, bytes1(0x80));

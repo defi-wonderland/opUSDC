@@ -593,7 +593,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveUsdcUpgrade is Base {
    */
   function test_receiveUsdcUpgrade() external {
     uint64 _nonce = vm.getNonce(address(adapter));
-    address _implementation = _computeCreateAddress(address(adapter), _nonce);
+    address _implementation = _precalculateCreateAddress(address(adapter), _nonce);
     _l2UsdcInitTxs.push(abi.encodeWithSignature('dummy()'));
 
     // Mock calls
@@ -614,7 +614,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveUsdcUpgrade is Base {
     bytes[] memory _revertTx = new bytes[](1);
     _revertTx[0] = abi.encodeWithSignature('dummyRevert()');
 
-    address _implementation = _computeCreateAddress(address(adapter), _nonce);
+    address _implementation = _precalculateCreateAddress(address(adapter), _nonce);
 
     // Mock calls
     _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
@@ -641,7 +641,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveUsdcUpgrade is Base {
     _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
     _mockAndExpect(
       _usdc,
-      abi.encodeWithSignature('upgradeTo(address)', _computeCreateAddress(address(adapter), _nonce)),
+      abi.encodeWithSignature('upgradeTo(address)', _precalculateCreateAddress(address(adapter), _nonce)),
       abi.encode(true)
     );
 
@@ -663,13 +663,13 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveUsdcUpgrade is Base {
     vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
     vm.mockCall(
       _usdc,
-      abi.encodeWithSignature('upgradeTo(address)', _computeCreateAddress(address(adapter), _nonce)),
+      abi.encodeWithSignature('upgradeTo(address)', _precalculateCreateAddress(address(adapter), _nonce)),
       abi.encode(true)
     );
 
     // Expect events
     vm.expectEmit(true, true, true, true);
-    emit DeployedL2UsdcImplementation(_computeCreateAddress(address(adapter), _nonce));
+    emit DeployedL2UsdcImplementation(_precalculateCreateAddress(address(adapter), _nonce));
 
     // Execute
     vm.prank(_messenger);
