@@ -23,6 +23,8 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   /// @inheritdoc IL1OpUSDCFactory
   address public constant L2_CREATE2_DEPLOYER = 0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2;
 
+  uint256 internal constant _ONE_DEPLOYMENT = 1;
+
   /// @notice Zero value constant to be used on portal interaction
   uint256 internal constant _ZERO_VALUE = 0;
 
@@ -56,7 +58,8 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   }
 
   /**
-   * @notice Sends the L2 factory creation tx along with the L2 deployments to be done on it through the messenger
+   * @notice Sends the L2 factory creation tx along with the L2 deployments to be done on it through the messenger in
+   * addition to the L1 adapter deployment
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
    * @param _l1AdapterOwner The address of the owner of the L1 adapter
    * @param _minGasLimitCreate2Factory The minimum gas limit for the L2 factory deployment
@@ -70,11 +73,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     uint32 _minGasLimitDeploy,
     bytes[] memory _usdcInitTxs
   ) external {
-    // Set the messenger as deployed and initialize it on the adapter
     isFactoryDeployed[_l1Messenger] = true;
-
-    // Update the nonce with the next txs
-    uint256 _nonce = nonce += 3;
 
     // Get the L2 factory init code
     bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
@@ -88,46 +87,54 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
       L2_CREATE2_DEPLOYER, _l2FactoryCreate2Tx, _minGasLimitCreate2Factory
     );
 
-    _deployAdapters(_l1Messenger, _nonce, _l1AdapterOwner, _usdcInitTxs, _minGasLimitDeploy);
+    _deployAdapters(_l1Messenger, _l1AdapterOwner, _minGasLimitDeploy, _usdcInitTxs);
   }
 
+  /**
+   * @notice Sends the L2 adapter and USDC proxy and implementation deployments tx through the messenger
+   * to be executed on the l2 factory
+   * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
+   * @param _l1AdapterOwner The address of the owner of the L1 adapter
+   * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
+   * @param _usdcInitTxs The initialization transactions to be executed on the USDC contract
+   */
   function deployAdapters(
     address _l1Messenger,
     address _l1AdapterOwner,
-    bytes[] memory _usdcInitTxs,
-    uint32 _minGasLimitDeploy
+    uint32 _minGasLimitDeploy,
+    bytes[] memory _usdcInitTxs
   ) public {
     if (!isFactoryDeployed[_l1Messenger]) revert IL1OpUSDCFactory_FactoryNotDeployed();
-    uint256 _nonce = nonce += 2;
-    _deployAdapters(_l1Messenger, _nonce, _l1AdapterOwner, _usdcInitTxs, _minGasLimitDeploy);
+    _deployAdapters(_l1Messenger, _l1AdapterOwner, _minGasLimitDeploy, _usdcInitTxs);
   }
 
   function _deployAdapters(
     address _l1Messenger,
-    uint256 _l1AdapterDeploymentNonce,
     address _l1AdapterOwner,
-    bytes[] memory _usdcInitTxs,
-    uint32 _minGasLimitDeploy
+    uint32 _minGasLimitDeploy,
+    bytes[] memory _usdcInitTxs
   ) internal {
+    // Get the current nonce and then increment 1 on it to match the final state after the L1 adapter deployment
+    uint256 _l1AdapterDeploymentNonce = nonce++;
+    // Calculate the L1 adapter address
     address _l1Adapter = _precalculateCreateAddress(address(this), _l1AdapterDeploymentNonce);
 
+    // Calculate the L2 USDC proxy address
     bytes memory _l2UsdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, abi.encode(_l1Adapter));
     address _l2UsdcProxy = _precalculateCreate2Address(_SALT, keccak256(_l2UsdcProxyInitCode), L2_CREATE2_DEPLOYER);
 
+    // Calculate the L2 adapter address
     bytes memory _l2AdapterInitCode =
       bytes.concat(type(L2OpUSDCBridgeAdapter).creationCode, abi.encode(_l2UsdcProxy, L2_MESSENGER, _l1Adapter));
     address _l2Adapter = _precalculateCreate2Address(_SALT, keccak256(_l2AdapterInitCode), L2_FACTORY);
 
-    // Get the L2 USDC implementation
-    bytes memory _usdcImplementationCode = IUSDC(USDC).implementation().code;
+    new L1OpUSDCBridgeAdapter(USDC, _l1Messenger, _l2Adapter, _l1AdapterOwner);
+
     // Send the call over the L2 factory `deploy` function message
+    bytes memory _usdcImplementationCode = IUSDC(USDC).implementation().code;
     bytes memory _l2DeploymentsTx =
       abi.encodeWithSelector(L2OpUSDCFactory.deploy.selector, _l1Adapter, _usdcImplementationCode, _usdcInitTxs);
     ICrossDomainMessenger(_l1Messenger).sendMessage(L2_FACTORY, _l2DeploymentsTx, _minGasLimitDeploy);
-
-    // Deploy the L1 adapter implementation
-    // NOTE: Done after external calls to update and retrieve nonce only once before invoking this function
-    new L1OpUSDCBridgeAdapter(USDC, _l1Messenger, _l2Adapter, _l1AdapterOwner);
 
     emit L1AdapterDeployed(_l1Adapter);
   }
@@ -137,7 +144,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * @param _deployer The deployer address
    * @param _nonce The next nonce of the deployer address
    * @return _precalculatedAddress The address where the contract will be stored
-   * @dev Only works for nonces between 1 and 127, which is enough for this use case
+   * @dev Only works for nonces between 1 and 2**64-2, which is enough for this use case
    */
   function _precalculateCreateAddress(
     address _deployer,
@@ -150,12 +157,6 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     // https://web.archive.org/web/20230921113252/https://eips.ethereum.org/EIPS/eip-2681.
     if (_nonce > type(uint64).max - 1) {
       revert IL1OpUSDCFactory_InvalidNonce();
-    }
-
-    // The integer zero is treated as an empty byte string and therefore has only one length prefix,
-    // 0x80, which is calculated via 0x80 + 0.
-    if (_nonce == 0x00) {
-      _data = abi.encodePacked(bytes1(0xd6), _len, _deployer, bytes1(0x80));
     }
     // A one-byte integer in the [0x00, 0x7f] range uses its own value as a length prefix, there is no
     // additional "0x80 + length" prefix that precedes it.

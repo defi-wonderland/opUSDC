@@ -68,14 +68,14 @@ interface IL1OpUSDCFactory {
    * to be executed on the l2 factory
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
    * @param _l1AdapterOwner The address of the owner of the L1 adapter
-   * @param _usdcInitTxs The initialization transactions to be executed on the USDC contract
    * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
+   * @param _usdcInitTxs The initialization transactions to be executed on the USDC contract
    */
   function deployAdapters(
     address _l1Messenger,
     address _l1AdapterOwner,
-    bytes[] memory _usdcInitTxs,
-    uint32 _minGasLimitDeploy
+    uint32 _minGasLimitDeploy,
+    bytes[] memory _usdcInitTxs
   ) external;
 
   /*///////////////////////////////////////////////////////////////
@@ -104,6 +104,7 @@ interface IL1OpUSDCFactory {
 
   /**
    * @return _nonce The nonce counter of the factory contract
+   * @dev Initialized to 1 since after the factory is deployed, its nonce is 1
    */
   function nonce() external view returns (uint256 _nonce);
 
