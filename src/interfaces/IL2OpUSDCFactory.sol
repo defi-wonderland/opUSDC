@@ -12,9 +12,9 @@ interface IL2OpUSDCFactory {
 
   event CreateDeploymentFailed();
 
-  event USDCImplementationDeployed();
-  event USDCProxyDeployed();
-  event L2AdapterDeployed();
+  event USDCImplementationDeployed(address _l2UsdcImplementation);
+  event USDCProxyDeployed(address _l2UsdcProxy);
+  event L2AdapterDeployed(address _l2Adapter);
 
   /*///////////////////////////////////////////////////////////////
                             ERRORS

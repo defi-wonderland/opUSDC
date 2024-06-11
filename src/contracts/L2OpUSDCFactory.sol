@@ -10,6 +10,8 @@ import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
+import 'forge-std/Test.sol';
+
 /**
  * @title L2OpUSDCFactory
  * @notice Factory contract for deploying the L2 USDC implementation, proxy, and `L2OpUSDCBridgeAdapter` contract,
@@ -30,10 +32,10 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
 
   /**
    * @notice Constructs the L2 factory contract
-   * @param _salt The salt value used to deploy the contracts
    * @param _l1Factory The address of the L1 factory contract
+   * @param _salt The salt value used to deploy the contracts
    */
-  constructor(bytes32 _salt, address _l1Factory) {
+  constructor(address _l1Factory, bytes32 _salt) {
     L1_FACTORY = _l1Factory;
     _SALT = _salt;
   }
@@ -47,20 +49,20 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     bytes memory _usdcImplInitCode =
       bytes.concat(type(BytecodeDeployer).creationCode, abi.encode(_usdcImplementationCode));
     (address _usdcImplementation, bool _usdcImplSuccess) = _deployCreate2(_SALT, _usdcImplInitCode);
-    if (_usdcImplSuccess) emit USDCImplementationDeployed();
+    if (_usdcImplSuccess) emit USDCImplementationDeployed(_usdcImplementation);
 
     // Deploy USDC proxy
     /// NOTE: Using `CREATE` to guarantee that this address is unique among all the L2s
     bytes memory _usdcProxyCArgs = abi.encode(_usdcImplementation, _EMPTY_BYTES);
     bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);
     (address _usdcProxy, bool _usdcProxySuccess) = _deployCreate(_usdcProxyInitCode);
-    if (_usdcProxySuccess) emit USDCProxyDeployed();
+    if (_usdcProxySuccess) emit USDCProxyDeployed(_usdcProxy);
 
     // Deploy L2 Adapter
     bytes memory _l2AdapterCArgs = abi.encode(_usdcProxy, msg.sender, _l1Adapter);
     bytes memory _l2AdapterInitCode = bytes.concat(type(L2OpUSDCBridgeAdapter).creationCode, _l2AdapterCArgs);
     (address _l2Adapter, bool _l2AdapterSuccess) = _deployCreate2(_SALT, _l2AdapterInitCode);
-    if (_l2AdapterSuccess) emit L2AdapterDeployed();
+    if (_l2AdapterSuccess) emit L2AdapterDeployed(_l2Adapter);
 
     if (!_usdcImplSuccess || !_usdcProxySuccess || !_l2AdapterSuccess) {
       revert IL2OpUSDCFactory_DeploymentsFailed();
@@ -74,6 +76,8 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     _executeInitTxs(_usdcProxy, _usdcInitTxs, _usdcInitTxs.length);
 
     // Transfer USDC ownership to adapter
+    console.log('address(this)', address(this));
+    console.log('USDC OWNER', IUSDC(_usdcProxy).owner());
     IUSDC(_usdcProxy).transferOwnership(_l2Adapter);
   }
 

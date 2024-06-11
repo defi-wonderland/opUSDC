@@ -42,4 +42,7 @@ interface IUSDC is IERC20 {
    * @return _implementation Address of the current implementation
    */
   function implementation() external view returns (address _implementation);
+
+  // TODO: remove
+  function owner() external view returns (address);
 }

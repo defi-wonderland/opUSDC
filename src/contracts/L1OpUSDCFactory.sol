@@ -78,7 +78,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
 
     // Get the L2 factory init code
     bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
-    bytes memory _l2FactoryCArgs = abi.encode(_SALT, address(this));
+    bytes memory _l2FactoryCArgs = abi.encode(address(this), _SALT);
     bytes memory _l2FactoryInitCode = bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs);
 
     // Send the L2 factory deployment tx
