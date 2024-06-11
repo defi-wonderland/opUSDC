@@ -65,6 +65,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * @param _minGasLimitCreate2Factory The minimum gas limit for the L2 factory deployment
    * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
    * @param _usdcInitTxs The initialization transactions to be executed on the USDC contract
+   * @dev Breaking CEI when invoking this `_deployAdapters`, but it's safe to trust in the Messenger
    */
   function deployL2FactoryAndContracts(
     address _l1Messenger,
@@ -87,7 +88,6 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
       L2_CREATE2_DEPLOYER, _l2FactoryCreate2Tx, _minGasLimitCreate2Factory
     );
 
-    /// NOTE: Breaking CEI while invoking this call, but it's safe to trust in the Messenger
     _deployAdapters(_l1Messenger, _l1AdapterOwner, _minGasLimitDeploy, _usdcInitTxs);
   }
 
