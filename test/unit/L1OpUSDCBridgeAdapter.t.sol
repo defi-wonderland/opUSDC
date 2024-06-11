@@ -29,6 +29,10 @@ contract ForTestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
     messengerStatus = Status.Upgrading;
   }
 
+  function forTest_setMessengerStatusToDeprecated() external {
+    messengerStatus = Status.Deprecated;
+  }
+
   function forTest_setMessengerStatusByValue(uint256 _status) external {
     messengerStatus = Status(_status);
   }
@@ -59,6 +63,7 @@ abstract contract Base is Helpers {
   event UsdcUpgradeSent(address _newImplementation, address _messenger, uint32 _minGasLimit);
   event MigratingToNative(address _messenger, address _newOwner);
   event MigrationComplete();
+  event UsdcOwnableFunctionSent(bytes4 _functionSignature, uint32 _minGasLimit);
 
   function setUp() public virtual {
     // Set the bytecode to the implementation addresses
@@ -86,7 +91,6 @@ contract L1OpUSDCBridgeAdapter_Unit_Constructor is Base {
 /*///////////////////////////////////////////////////////////////
                           MIGRATION
 ///////////////////////////////////////////////////////////////*/
-
 contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
   /**
    * @notice Check that the function reverts if the sender is not the upgrade manager
@@ -110,7 +114,7 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
   function test_revertOnAddressZero(uint32 _minGasLimitReceiveOnL2, uint32 _minGasLimitSetBurnAmount) external {
     // Execute
     vm.prank(_owner);
-    vm.expectRevert(abi.encodeWithSelector(IL1OpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidAddress.selector));
+    vm.expectRevert(abi.encodeWithSelector(IL1OpUSDCBridgeAdapter.IL1OpUSDCBridgeAdapter_InvalidAddress.selector));
     adapter.migrateToNative(address(0), _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
   }
 
@@ -841,8 +845,133 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 /*///////////////////////////////////////////////////////////////
                           USDC UPGRADE
 ///////////////////////////////////////////////////////////////*/
+contract L1OpUSDCBridgeAdapter_Unit_SendUsdcOwnableFunction is Base {
+  /**
+   * @notice Check that the function reverts if the sender is not the owner
+   */
+  function test_onlyOwner(address _notOwner, bytes calldata _data, uint32 _minGasLimit) external {
+    vm.assume(_notOwner != _owner);
+    // Execute
+    vm.prank(_notOwner);
+    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _notOwner));
+    adapter.sendUsdcOwnableFunction(_data, _minGasLimit);
+  }
 
-contract L1OpUSDCBridgeAdapter_Unit_sendUsdcUpgrade is Base {
+  /**
+   * @notice Check that the function reverts if adapter state is deprecated
+   */
+  function test_revertIfMessengerIsDeprecated(bytes calldata _data, uint32 _minGasLimit) external {
+    adapter.forTest_setMessengerStatusToDeprecated();
+    // Execute
+    vm.prank(_owner);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
+    adapter.sendUsdcOwnableFunction(_data, _minGasLimit);
+  }
+
+  /**
+   * @notice Check that the function reverts if _date length is less than four
+   */
+  function test_revertIfDataLengthIsLessThanFour(bytes calldata _data, uint32 _minGasLimit) external {
+    vm.assume(_data.length < 4);
+    // Execute
+    vm.prank(_owner);
+    vm.expectRevert(IL1OpUSDCBridgeAdapter.IL1OpUSDCBridgeAdapter_InvalidCalldata.selector);
+    adapter.sendUsdcOwnableFunction(_data, _minGasLimit);
+  }
+
+  /**
+   * @notice Check that the function reverts function selector is transferOwnership (0xf2fde38b)
+   */
+  function test_refevertoIfTxIsTransferOwnership(bytes memory _data, uint32 _minGasLimit) external {
+    _data = bytes.concat(bytes4(0xf2fde38b), _data);
+    // Execute
+    vm.prank(_owner);
+    vm.expectRevert(IL1OpUSDCBridgeAdapter.IL1OpUSDCBridgeAdapter_ForbiddenTransaction.selector);
+    adapter.sendUsdcOwnableFunction(_data, _minGasLimit);
+  }
+
+  /**
+   * @notice Check that the function reverts function selector is upgradeTo (0x3659cfe6)
+   */
+  function test_revertIfTxIsUpgradeTo(bytes memory _data, uint32 _minGasLimit) external {
+    _data = bytes.concat(bytes4(0x3659cfe6), _data);
+    // Execute
+    vm.prank(_owner);
+    vm.expectRevert(IL1OpUSDCBridgeAdapter.IL1OpUSDCBridgeAdapter_ForbiddenTransaction.selector);
+    adapter.sendUsdcOwnableFunction(_data, _minGasLimit);
+  }
+
+  /**
+   * @notice Check that the function reverts function selector is upgradeToAndCall (0x4f1ef286)
+   */
+  function test_revertIfTxIsUpgradeToAndCall(bytes memory _data, uint32 _minGasLimit) external {
+    _data = bytes.concat(bytes4(0x4f1ef286), _data);
+    // Execute
+    vm.prank(_owner);
+    vm.expectRevert(IL1OpUSDCBridgeAdapter.IL1OpUSDCBridgeAdapter_ForbiddenTransaction.selector);
+    adapter.sendUsdcOwnableFunction(_data, _minGasLimit);
+  }
+
+  /**
+   * @notice Check that the function reverts function selector is changeAdmin (0x8f283970)
+   */
+  function test_revertIfTxIsChangeAdmin(bytes memory _data, uint32 _minGasLimit) external {
+    _data = bytes.concat(bytes4(0x8f283970), _data);
+    // Execute
+    vm.prank(_owner);
+    vm.expectRevert(IL1OpUSDCBridgeAdapter.IL1OpUSDCBridgeAdapter_ForbiddenTransaction.selector);
+    adapter.sendUsdcOwnableFunction(_data, _minGasLimit);
+  }
+
+  /**
+   * @notice Check that the message is sent as expected
+   */
+  function test_expectedCall(bytes calldata _data, uint32 _minGasLimit) external {
+    vm.assume(_data.length >= 4);
+    _mockAndExpect(
+      address(_messenger),
+      abi.encodeWithSignature(
+        'sendMessage(address,bytes,uint32)',
+        _linkedAdapter,
+        abi.encodeWithSignature('receiveUsdcOwnableFunction(bytes)', _data),
+        _minGasLimit
+      ),
+      abi.encode()
+    );
+
+    // Execute
+    vm.prank(_owner);
+    adapter.sendUsdcOwnableFunction(_data, _minGasLimit);
+  }
+
+  /**
+   * @notice Check that the event is emitted as expected
+   */
+  function test_emitEvent(bytes calldata _data, uint32 _minGasLimit) external {
+    vm.assume(_data.length >= 4);
+    // Mock calls
+    vm.mockCall(
+      address(_messenger),
+      abi.encodeWithSignature(
+        'sendMessage(address,bytes,uint32)',
+        _linkedAdapter,
+        abi.encodeWithSignature('receiveUsdcOwnableFunction(bytes)', _data),
+        _minGasLimit
+      ),
+      abi.encode()
+    );
+
+    // Expect events
+    vm.expectEmit(true, true, true, true);
+    emit UsdcOwnableFunctionSent(bytes4(_data[:4]), _minGasLimit);
+
+    // Execute
+    vm.prank(_owner);
+    adapter.sendUsdcOwnableFunction(_data, _minGasLimit);
+  }
+}
+
+contract L1OpUSDCBridgeAdapter_Unit_SendUsdcUpgrade is Base {
   /**
    * @notice Check that the function reverts if a messenger is unitialized
    */

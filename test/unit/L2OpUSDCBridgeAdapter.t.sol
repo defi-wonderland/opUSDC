@@ -76,7 +76,6 @@ contract L2OpUSDCBridgeAdapter_Unit_Constructor is Base {
 /*///////////////////////////////////////////////////////////////
                               MIGRATION
   ///////////////////////////////////////////////////////////////*/
-
 contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
   /**
    * @notice Check that the upgradeToAndCall function reverts if the sender is not MESSENGER
@@ -109,6 +108,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
     _mockAndExpect(address(_usdc), abi.encodeWithSignature('transferOwnership(address)', _newOwner), abi.encode());
+    _mockAndExpect(address(_usdc), abi.encodeWithSignature('changeAdmin(address)', _newOwner), abi.encode());
     _mockAndExpect(address(_usdc), abi.encodeWithSignature('totalSupply()'), abi.encode(_burnAmount));
     _mockAndExpect(
       address(_messenger),
@@ -131,6 +131,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
     _mockAndExpect(address(_usdc), abi.encodeWithSignature('transferOwnership(address)', _newOwner), abi.encode());
+    _mockAndExpect(address(_usdc), abi.encodeWithSignature('changeAdmin(address)', _newOwner), abi.encode());
     _mockAndExpect(address(_usdc), abi.encodeWithSignature('totalSupply()'), abi.encode(100));
     _mockAndExpect(
       address(_messenger),
@@ -156,6 +157,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
     // Mock calls
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
     vm.mockCall(address(_usdc), abi.encodeWithSignature('transferOwnership(address)', _newOwner), abi.encode());
+    vm.mockCall(address(_usdc), abi.encodeWithSignature('changeAdmin(address)', _newOwner), abi.encode());
     vm.mockCall(address(_usdc), abi.encodeWithSignature('totalSupply()'), abi.encode(_burnAmount));
     vm.mockCall(
       address(_messenger),
@@ -181,7 +183,6 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
 /*///////////////////////////////////////////////////////////////
                           MESSAGING CONTROL
   ///////////////////////////////////////////////////////////////*/
-
 contract L2OpUSDCBridgeAdapter_Unit_ReceiveStopMessaging is Base {
   event MessagingStopped(address _messenger);
 
@@ -299,6 +300,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveResumeMessaging is Base {
     adapter.receiveResumeMessaging();
   }
 }
+
 /*///////////////////////////////////////////////////////////////
                              MESSAGING
   ///////////////////////////////////////////////////////////////*/
@@ -564,6 +566,58 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
                              USDC UPGRADE
   ///////////////////////////////////////////////////////////////*/
 
+contract L2OpUSDCBridgeAdapter_Unit_ReceiveUsdcOwnableFunction is Base {
+  /**
+   * @notice Check that the receiveUsdcUpgrade function reverts if the sender is not MESSENGER
+   */
+  function test_wrongMessenger(address _notMessenger, bytes memory _data) external {
+    vm.assume(_notMessenger != _messenger);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
+    adapter.receiveUsdcOwnableFunction(_data);
+  }
+
+  /**
+   * @notice Check that the receiveUsdcUpgrade function reverts if the sender is not Linked Adapter
+   */
+  function test_wrongLinkedAdapter(address _notLinkedAdapter, bytes memory _data) external {
+    vm.assume(_notLinkedAdapter != _linkedAdapter);
+    // Mock calls
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_notLinkedAdapter));
+
+    // Execute
+    vm.prank(_messenger);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
+    adapter.receiveUsdcOwnableFunction(_data);
+  }
+
+  /**
+   * @notice Check the expected calls
+   */
+  function test_receiveUsdcOwnableFunction(bytes memory _data) external {
+    // Mock calls
+    _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    _mockAndExpect(_usdc, _data, abi.encode(true, ''));
+
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveUsdcOwnableFunction(_data);
+  }
+
+  /**
+   * @notice Check that reverts if a call reverts
+   */
+  function test_revertOnCallRevert(bytes memory _data) external {
+    // Mock calls
+    _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    vm.mockCallRevert(_usdc, _data, abi.encode(false, ''));
+
+    // Execute
+    vm.prank(_messenger);
+    vm.expectRevert(IL2OpUSDCBridgeAdapter.IL2OpUSDCBridgeAdapter_InvalidOwnerTransaction.selector);
+    adapter.receiveUsdcOwnableFunction(_data);
+  }
+}
+
 contract L2OpUSDCBridgeAdapter_Unit_ReceiveUsdcUpgrade is Base {
   /**
    * @notice Check that the receiveUsdcUpgrade function reverts if the sender is not MESSENGER
@@ -625,7 +679,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveUsdcUpgrade is Base {
 
     // Execute
     vm.prank(_messenger);
-    vm.expectRevert(IL2OpUSDCBridgeAdapter.L2OpUSDCBridgeAdapter_UsdcInitializationFailed.selector);
+    vm.expectRevert(IL2OpUSDCBridgeAdapter.IL2OpUSDCBridgeAdapter_UsdcInitializationFailed.selector);
     adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _revertTx, _l2UsdcInitTxs);
   }
 
@@ -650,7 +704,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveUsdcUpgrade is Base {
 
     // Execute
     vm.prank(_messenger);
-    vm.expectRevert(IL2OpUSDCBridgeAdapter.L2OpUSDCBridgeAdapter_UsdcInitializationFailed.selector);
+    vm.expectRevert(IL2OpUSDCBridgeAdapter.IL2OpUSDCBridgeAdapter_UsdcInitializationFailed.selector);
     adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs, _revertTx);
   }
 
@@ -688,7 +742,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ExecuteInitTxs is Base {
     vm.mockCallRevert(_usdc, abi.encodeWithSignature('dummyRevert()'), abi.encode(''));
 
     // Execute
-    vm.expectRevert(IL2OpUSDCBridgeAdapter.L2OpUSDCBridgeAdapter_UsdcInitializationFailed.selector);
+    vm.expectRevert(IL2OpUSDCBridgeAdapter.IL2OpUSDCBridgeAdapter_UsdcInitializationFailed.selector);
     adapter.forTest_executeInitTxs(_usdc, _revertTx, _revertTx.length);
   }
 

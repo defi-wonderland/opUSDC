@@ -48,8 +48,11 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    */
   function receiveMigrateToNative(address _newOwner, uint32 _setBurnAmountMinGasLimit) external checkSender {
     isMessagingDisabled = true;
-    // Transfer ownership of the USDC contract to the circle
+    // Transfer ownership of the USDC contract to circle
     IUSDC(USDC).transferOwnership(_newOwner);
+
+    //Transfer proxy admin ownership to circle
+    IUSDC(USDC).changeAdmin(_newOwner);
 
     uint256 _burnAmount = IUSDC(USDC).totalSupply();
 
@@ -164,6 +167,21 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   ///////////////////////////////////////////////////////////////*/
 
   /**
+   * @notice Receive the message from the owner to execute a call with abitrary calldata on USDC contract.
+   * @dev can't execute the following list of transactions:
+   *  • transferOwnership (0xf2fde38b)
+   *  • upgradeTo (0x3659cfe6)
+   *  • upgradeToAndCall (0x4f1ef286)
+   *  • changeAdmin (0x8f283970)
+   */
+  function receiveUsdcOwnableFunction(bytes calldata _data) external checkSender {
+    (bool _success,) = USDC.call(_data);
+    if (!_success) {
+      revert IL2OpUSDCBridgeAdapter_InvalidOwnerTransaction();
+    }
+  }
+
+  /**
    * @notice Receive the creation code from the linked adapter, deploy the new implementation and upgrade
    * @param _l2UsdcBytecode The bytecode for the new L2 USDC implementation
    * @param _l2UsdcImplTxs The initialization transactions for the new L2 USDC implementation
@@ -197,7 +215,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     for (uint256 _i; _i < _length; _i++) {
       (bool _success,) = _target.call(_initTxs[_i]);
       if (!_success) {
-        revert L2OpUSDCBridgeAdapter_UsdcInitializationFailed();
+        revert IL2OpUSDCBridgeAdapter_UsdcInitializationFailed();
       }
     }
   }

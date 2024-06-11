@@ -42,6 +42,11 @@ interface IL1OpUSDCBridgeAdapter {
    */
   event MigrationComplete();
 
+  /**
+   * @notice Emitted when the owner message is sent
+   */
+  event UsdcOwnableFunctionSent(bytes4 _functionSignature, uint32 _minGasLimit);
+
   /*///////////////////////////////////////////////////////////////
                             ERRORS
   ///////////////////////////////////////////////////////////////*/
@@ -54,7 +59,17 @@ interface IL1OpUSDCBridgeAdapter {
   /**
    * @notice Error when address is not valid
    */
-  error IOpUSDCBridgeAdapter_InvalidAddress();
+  error IL1OpUSDCBridgeAdapter_InvalidAddress();
+
+  /**
+   * @notice Error when signature is not valid
+   */
+  error IL1OpUSDCBridgeAdapter_ForbiddenTransaction();
+
+  /**
+   * @notice Error when calldata is not valid
+   */
+  error IL1OpUSDCBridgeAdapter_InvalidCalldata();
 
   /*///////////////////////////////////////////////////////////////
                             LOGIC
@@ -96,6 +111,16 @@ interface IL1OpUSDCBridgeAdapter {
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function resumeMessaging(uint32 _minGasLimit) external;
+
+  /**
+   * @notice Send a message from the owner to execute a call with abitrary calldata on USDC contract.
+   * @dev can't execute the following list of transactions:
+   *  • transferOwnership (0xf2fde38b)
+   *  • upgradeTo (0x3659cfe6)
+   *  • upgradeToAndCall (0x4f1ef286)
+   *  • changeAdmin (0x8f283970)
+   */
+  function sendUsdcOwnableFunction(bytes calldata _data, uint32 _minGasLimit) external;
 
   /**
    * @notice Send a message to the linked adapter to upgrade the implementation of the USDC contract

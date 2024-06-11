@@ -11,6 +11,14 @@ import {IUSDC} from 'interfaces/external/IUSDC.sol';
 contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, Ownable {
   using SafeERC20 for IUSDC;
 
+  /**
+   * @notice USDC function signatures
+   */
+  bytes4 internal constant _TRANSFER_OWNERSHIP = 0xf2fde38b;
+  bytes4 internal constant _UPGRADE_TO = 0x3659cfe6;
+  bytes4 internal constant _UPGRADE_TO_AND_CALL = 0x4f1ef286;
+  bytes4 internal constant _CHANGE_ADMIN = 0x8f283970;
+
   /// @inheritdoc IL1OpUSDCBridgeAdapter
   uint256 public burnAmount;
 
@@ -63,7 +71,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
     // Leave this flow open to resend upgrading flow incase message fails on L2
 
     // Circle implementation of `transferOwnership` reverts on address(0)
-    if (_circle == address(0)) revert IOpUSDCBridgeAdapter_InvalidAddress();
+    if (_circle == address(0)) revert IL1OpUSDCBridgeAdapter_InvalidAddress();
 
     // Ensure messaging is enabled
     if (messengerStatus != Status.Active && messengerStatus != Status.Upgrading) {
@@ -232,8 +240,37 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
   }
 
   /*///////////////////////////////////////////////////////////////
-                             USDC UPGRADE
+                        BRIDGED USDC FUNCTIONS
   ///////////////////////////////////////////////////////////////*/
+  /**
+   * @notice Send a message from the owner to execute a call with abitrary calldata on USDC contract.
+   * @dev can't execute the following list of transactions:
+   *  • transferOwnership (0xf2fde38b)
+   *  • upgradeTo (0x3659cfe6)
+   *  • upgradeToAndCall (0x4f1ef286)
+   *  • changeAdmin (0x8f283970)
+   */
+  function sendUsdcOwnableFunction(bytes calldata _data, uint32 _minGasLimit) external onlyOwner {
+    // Ensure adapter is not deprecated allowing owner messages even when messaging is disabled
+    // since owner messages are used to execute transactions on the USDC contract.
+    if (messengerStatus == Status.Deprecated) revert IOpUSDCBridgeAdapter_MessagingDisabled();
+
+    if (_data.length < 4) revert IL1OpUSDCBridgeAdapter_InvalidCalldata();
+
+    //Check forbidden transactions
+    bytes4 _signature = bytes4(_data[:4]);
+    if (
+      _signature == _TRANSFER_OWNERSHIP || _signature == _UPGRADE_TO || _signature == _UPGRADE_TO_AND_CALL
+        || _signature == _CHANGE_ADMIN
+    ) revert IL1OpUSDCBridgeAdapter_ForbiddenTransaction();
+
+    // Send the message to the linked adapter
+    ICrossDomainMessenger(MESSENGER).sendMessage(
+      LINKED_ADAPTER, abi.encodeWithSignature('receiveUsdcOwnableFunction(bytes)', _data), _minGasLimit
+    );
+
+    emit UsdcOwnableFunctionSent(_signature, _minGasLimit);
+  }
 
   /**
    * @notice Send a message to the linked adapter to upgrade the implementation of the USDC contract

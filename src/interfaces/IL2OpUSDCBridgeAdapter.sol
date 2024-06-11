@@ -19,7 +19,12 @@ interface IL2OpUSDCBridgeAdapter {
   /**
    * @notice Error when the USDC initialization fails
    */
-  error L2OpUSDCBridgeAdapter_UsdcInitializationFailed();
+  error IL2OpUSDCBridgeAdapter_UsdcInitializationFailed();
+
+  /**
+   * @notice Error when the owner transaction is invalid
+   */
+  error IL2OpUSDCBridgeAdapter_InvalidOwnerTransaction();
 
   /*///////////////////////////////////////////////////////////////
                             LOGIC
@@ -41,6 +46,16 @@ interface IL2OpUSDCBridgeAdapter {
    * @notice Resume messaging after it was stopped
    */
   function receiveResumeMessaging() external;
+
+  /**
+   * @notice Receive the message from the owner to execute a call with abitrary calldata on USDC contract.
+   * @dev can't execute the following list of transactions:
+   *  • transferOwnership (0xf2fde38b)
+   *  • upgradeTo (0x3659cfe6)
+   *  • upgradeToAndCall (0x4f1ef286)
+   *  • changeAdmin (0x8f283970)
+   */
+  function receiveUsdcOwnableFunction(bytes calldata _data) external;
 
   /**
    * @notice Receive the creation code from the linked adapter, deploy the new implementation and upgrade
