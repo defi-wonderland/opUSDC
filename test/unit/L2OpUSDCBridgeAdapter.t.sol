@@ -549,7 +549,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 /*///////////////////////////////////////////////////////////////
                       BRIDGED USDC FUNCTIONS
 ///////////////////////////////////////////////////////////////*/
-contract L2OpUSDCBridgeAdapter_Unit_SendUsdcOwnableFunction is Base {
+contract L2OpUSDCBridgeAdapter_Unit_CallUsdcTransaction is Base {
   /**
    * @notice Check that the function reverts if the sender is not the owner
    */
@@ -558,7 +558,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendUsdcOwnableFunction is Base {
     // Execute
     vm.prank(_notOwner);
     vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _notOwner));
-    adapter.sendUsdcOwnableFunction(_data);
+    adapter.callUsdcTransaction(_data);
   }
 
   /**
@@ -569,7 +569,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendUsdcOwnableFunction is Base {
     // Execute
     vm.prank(_owner);
     vm.expectRevert(IL2OpUSDCBridgeAdapter.IL2OpUSDCBridgeAdapter_InvalidCalldata.selector);
-    adapter.sendUsdcOwnableFunction(_data);
+    adapter.callUsdcTransaction(_data);
   }
 
   /**
@@ -580,7 +580,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendUsdcOwnableFunction is Base {
     // Execute
     vm.prank(_owner);
     vm.expectRevert(IL2OpUSDCBridgeAdapter.IL2OpUSDCBridgeAdapter_ForbiddenTransaction.selector);
-    adapter.sendUsdcOwnableFunction(_data);
+    adapter.callUsdcTransaction(_data);
   }
 
   /**
@@ -591,7 +591,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendUsdcOwnableFunction is Base {
     // Execute
     vm.prank(_owner);
     vm.expectRevert(IL2OpUSDCBridgeAdapter.IL2OpUSDCBridgeAdapter_ForbiddenTransaction.selector);
-    adapter.sendUsdcOwnableFunction(_data);
+    adapter.callUsdcTransaction(_data);
   }
 
   /**
@@ -605,7 +605,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendUsdcOwnableFunction is Base {
     // Execute
     vm.prank(_owner);
     vm.expectRevert(IL2OpUSDCBridgeAdapter.IL2OpUSDCBridgeAdapter_InvalidTransaction.selector);
-    adapter.sendUsdcOwnableFunction(_data);
+    adapter.callUsdcTransaction(_data);
   }
 
   /**
@@ -617,7 +617,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendUsdcOwnableFunction is Base {
 
     // Execute
     vm.prank(_owner);
-    adapter.sendUsdcOwnableFunction(_data);
+    adapter.callUsdcTransaction(_data);
   }
 
   /**
@@ -634,6 +634,6 @@ contract L2OpUSDCBridgeAdapter_Unit_SendUsdcOwnableFunction is Base {
 
     // Execute
     vm.prank(_owner);
-    adapter.sendUsdcOwnableFunction(_data);
+    adapter.callUsdcTransaction(_data);
   }
 }

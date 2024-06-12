@@ -174,12 +174,12 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   ///////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Send the message from the owner to execute a call with abitrary calldata on USDC contract.
+   * @notice Call with abitrary calldata on USDC contract.
    * @dev can't execute the following list of transactions:
    *  • transferOwnership (0xf2fde38b)
    *  • changeAdmin (0x8f283970)
    */
-  function sendUsdcOwnableFunction(bytes calldata _data) external onlyOwner {
+  function callUsdcTransaction(bytes calldata _data) external onlyOwner {
     if (_data.length < 4) revert IL2OpUSDCBridgeAdapter_InvalidCalldata();
 
     //Check forbidden transactions
