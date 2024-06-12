@@ -1,23 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
-contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, Ownable {
+contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   using SafeERC20 for IUSDC;
-
-  /**
-   * @notice USDC function signatures
-   */
-  bytes4 internal constant _TRANSFER_OWNERSHIP_SELECTOR = 0xf2fde38b;
-  bytes4 internal constant _UPGRADE_TO_SELECTOR = 0x3659cfe6;
-  bytes4 internal constant _UPGRADE_TO_AND_CALL_SELECTOR = 0x4f1ef286;
-  bytes4 internal constant _CHANGE_ADMIN_SELECTOR = 0x8f283970;
 
   /// @inheritdoc IL1OpUSDCBridgeAdapter
   uint256 public burnAmount;
@@ -51,7 +42,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
     address _messenger,
     address _linkedAdapter,
     address _owner
-  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) Ownable(_owner) {}
+  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _owner) {}
 
   /*///////////////////////////////////////////////////////////////
                               MIGRATION
@@ -237,62 +228,5 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
     // Transfer the tokens to the user
     IUSDC(USDC).safeTransfer(_user, _amount);
     emit MessageReceived(_user, _amount, MESSENGER);
-  }
-
-  /*///////////////////////////////////////////////////////////////
-                        BRIDGED USDC FUNCTIONS
-  ///////////////////////////////////////////////////////////////*/
-  /**
-   * @notice Send a message from the owner to execute a call with abitrary calldata on USDC contract.
-   * @dev can't execute the following list of transactions:
-   *  • transferOwnership (0xf2fde38b)
-   *  • upgradeTo (0x3659cfe6)
-   *  • upgradeToAndCall (0x4f1ef286)
-   *  • changeAdmin (0x8f283970)
-   */
-  function sendUsdcOwnableFunction(bytes calldata _data, uint32 _minGasLimit) external onlyOwner {
-    // Ensure adapter is not deprecated allowing owner messages even when messaging is disabled
-    // since owner messages are used to execute transactions on the USDC contract.
-    if (messengerStatus == Status.Deprecated) revert IOpUSDCBridgeAdapter_MessagingDisabled();
-
-    if (_data.length < 4) revert IL1OpUSDCBridgeAdapter_InvalidCalldata();
-
-    //Check forbidden transactions
-    bytes4 _signature = bytes4(_data);
-    if (
-      _signature == _TRANSFER_OWNERSHIP_SELECTOR || _signature == _UPGRADE_TO_SELECTOR
-        || _signature == _UPGRADE_TO_AND_CALL_SELECTOR || _signature == _CHANGE_ADMIN_SELECTOR
-    ) revert IL1OpUSDCBridgeAdapter_ForbiddenTransaction();
-
-    // Send the message to the linked adapter
-    ICrossDomainMessenger(MESSENGER).sendMessage(
-      LINKED_ADAPTER, abi.encodeWithSignature('receiveUsdcOwnableFunction(bytes)', _data), _minGasLimit
-    );
-
-    emit UsdcOwnableFunctionSent(_signature, _minGasLimit);
-  }
-
-  /**
-   * @notice Send a message to the linked adapter to upgrade the implementation of the USDC contract
-   * @param _implTxs The transactions to initialize the new implementation
-   * @param _proxyTxs The transactions to initialize the proxy contract
-   * @param _minGasLimit Minimum gas limit that the message can be executed with
-   */
-  function sendUsdcUpgrade(bytes[] memory _implTxs, bytes[] memory _proxyTxs, uint32 _minGasLimit) external onlyOwner {
-    // Ensure messaging is enabled
-    if (messengerStatus != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
-
-    // Get the bytecode of the USDC current implementation
-    address _usdcImplementation = IUSDC(USDC).implementation();
-
-    ICrossDomainMessenger(MESSENGER).sendMessage(
-      LINKED_ADAPTER,
-      abi.encodeWithSignature(
-        'receiveUsdcUpgrade(bytes,bytes[],bytes[])', _usdcImplementation.code, _implTxs, _proxyTxs
-      ),
-      _minGasLimit
-    );
-
-    emit UsdcUpgradeSent(_usdcImplementation, MESSENGER, _minGasLimit);
   }
 }
