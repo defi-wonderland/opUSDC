@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {Test} from 'forge-std/Test.sol';
 import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
+import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
@@ -29,7 +29,6 @@ contract Base is Test, Helpers {
 
   address internal _l2Messenger = 0x4200000000000000000000000000000000000007;
   address internal _l1Factory = makeAddr('l1Factory');
-  address internal _usdc = makeAddr('opUSDC');
 
   address internal _messenger = makeAddr('messenger');
   address internal _create2Deployer = makeAddr('create2Deployer');
@@ -37,7 +36,6 @@ contract Base is Test, Helpers {
   address internal _l2Adapter;
 
   address internal _dummyContract;
-  address internal _dummyContractTwo;
   bytes internal _usdcImplInitCode;
 
   bytes[] internal _emptyInitTxs;
@@ -137,13 +135,19 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Assert the USDC implementation was deployed
     assertGt(_usdcImplementation.code.length, 0, 'USDC implementation was not deployed');
+    assertTrue(ForTestDummyContract(_usdcImplementation).returnTrue(), 'USDC implementation was not properly deployed');
   }
 
   /**
    * @notice Check the deployment of the L2 adapter implementation and proxy is properly done by checking the emitted
    * event and the 'upgradeToAndCall' call to the proxy
+   * @dev Assuming the USDC proxy correctly sets the implementation address to check it was properly deployed
    */
   function test_deployUsdcProxy() public {
+    // Calculate the usdc implementation address
+    uint256 _usdcImplDeploymentNonce = vm.getNonce(address(factory));
+    address _usdcImpl = _precalculateCreateAddress(address(factory), _usdcImplDeploymentNonce);
+
     // Calculate the usdc proxy address
     uint256 _usdcProxyDeploymentNonce = vm.getNonce(address(factory)) + 1;
     address _usdcProxy = _precalculateCreateAddress(address(factory), _usdcProxyDeploymentNonce);
@@ -165,9 +169,19 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Assert the USDC proxy was deployed
     assertGt(_usdcProxy.code.length, 0, 'USDC proxy was not deployed');
+    assertEq(IUSDC(_usdcProxy).implementation(), _usdcImpl, 'USDC implementation was not set');
   }
 
+  /**
+   * @notice Check the deployment of the L2 adapter implementation and proxy is properly done by checking the address
+   * on the emitted, the code length of the contract and the constructor values were properly set
+   * @dev Assuming the adapter correctly sets the immutables to check the constructor values were properly set
+   */
   function test_deployAdapter() public {
+    // Get the USDC proxy address
+    uint256 _usdcProxyDeploymentNonce = vm.getNonce(address(factory)) + 1;
+    address _usdcProxy = _precalculateCreateAddress(address(factory), _usdcProxyDeploymentNonce);
+
     // Get the adapter address
     uint256 _adapterDeploymentNonce = vm.getNonce(address(factory)) + 2;
     _l2Adapter = _precalculateCreateAddress(address(factory), _adapterDeploymentNonce);
@@ -189,8 +203,15 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Assert the adapter was deployed
     assertGt(_l2Adapter.code.length, 0, 'Adapter was not deployed');
+    // Check the constructor values were properly set
+    assertEq(IOpUSDCBridgeAdapter(_l2Adapter).USDC(), _usdcProxy, 'USDC address was not set');
+    assertEq(IOpUSDCBridgeAdapter(_l2Adapter).MESSENGER(), _l2Messenger, 'Messenger address was not set');
+    assertEq(IOpUSDCBridgeAdapter(_l2Adapter).LINKED_ADAPTER(), _l1Adapter, 'Linked adapter address was not set');
   }
 
+  /**
+   * @notice Check it reverts if the USDC implementation deployment fail
+   */
   function test_revertOnFailedUsdcImplementationDeployment() public {
     // Deploy the USDC implementation to the same address as the factory to make it fail
     uint256 _usdcImplDeploymentNonce = vm.getNonce(address(factory));
@@ -214,6 +235,9 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     factory.deploy(_l1Adapter, _usdcImplInitCode, _emptyInitTxs);
   }
 
+  /**
+   * @notice Check it reverts if the USDC proxy deployment fail
+   */
   function test_revertOnFailedUsdcProxyDeployment() public {
     // Calculate the usdc proxy address
     uint256 _usdcProxyDeploymentNonce = vm.getNonce(address(factory)) + 1;
@@ -237,6 +261,9 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     factory.deploy(_l1Adapter, _usdcImplInitCode, _emptyInitTxs);
   }
 
+  /**
+   * @notice Check it reverts if the adapter deployment fail
+   */
   function test_revertOnFailedAdapterDeployment() public {
     // Get the adapter address
     uint256 _adapterDeploymentNonce = vm.getNonce(address(factory)) + 2;

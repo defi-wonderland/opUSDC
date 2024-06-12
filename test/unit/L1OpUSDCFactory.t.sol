@@ -10,8 +10,6 @@ import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.s
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
-import 'forge-std/Test.sol';
-
 contract ForTestL1OpUSDCFactory is L1OpUSDCFactory {
   constructor(address _usdc) L1OpUSDCFactory(_usdc) {}
 
@@ -83,6 +81,9 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
 }
 
 contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
+  /**
+   * @notice Check the function reverts if the salt was already used
+   */
   function test_revertOnReusedSalt(uint32 _minGasLimitCreate2Factory, uint32 _minGasLimitDeploy) public {
     // Set the salt as used
     factory.forTest_setIsSaltUsed(_salt, true);
@@ -104,6 +105,9 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
     );
   }
 
+  /**
+   * @notice Check it sets the salt as used after the deployment
+   */
   function test_setSaltAsUsed(uint32 _minGasLimitCreate2Factory, uint32 _minGasLimitDeploy) public {
     // Set the salt as not used yet
     factory.forTest_setIsSaltUsed(_salt, false);
@@ -127,6 +131,10 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
     assertTrue(factory.isSaltUsed(_salt), 'Salt not set as used');
   }
 
+  /**
+   * @notice Check it properly increments the l2 factory nonce.
+   * @dev We are assuming that the `_deployAdapters()` function properly updates it too to assert the output
+   */
   function test_incrementL2FactoryNonce(
     bytes32 _newSalt,
     uint32 _minGasLimitCreate2Factory,
@@ -139,8 +147,6 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
     bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
     address _l2Factory =
       _precalculateCreate2Address(_newSalt, keccak256(_l2FactoryInitCode), factory.L2_CREATE2_DEPLOYER());
-
-    console.log('teest factory:', _l2Factory);
 
     // Get the nonce before the deployment
     uint256 _nonceBefore = factory.l2FactoryNonce(_l2Factory);
@@ -251,6 +257,9 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
     );
   }
 
+  /**
+   * @notice Check the returned addresses are the expected ones
+   */
   function test_returnAdapters(bytes32 _newSalt, uint32 _minGasLimitCreate2Factory, uint32 _minGasLimitDeploy) public {
     vm.assume(_newSalt != _salt);
 
@@ -291,6 +300,9 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
 contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
   event L1AdapterDeployed(address _l1Adapter);
 
+  /**
+   * @notice Check the function reverts if the given L2 factory was not deployed
+   */
   function test_revertIfFactoryNotDeployed(address _l2Factory, uint32 _minGasLimitDeploy) public {
     // Set the l2 factory nonce to 0
     factory.forTest_setL2FactoryNonce(_l2Factory, 0);
@@ -336,7 +348,10 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
     assertEq(L1OpUSDCBridgeAdapter(_l1Adapter).owner(), _owner, 'Invalid owner address');
   }
 
-  function test_updateL2FactoryNonce(address _l2Factory, uint32 _minGasLimitDeploy) public {
+  /**
+   * @notice Check the nonce is incremented with the number of deployments to be done on the L2 Factory
+   */
+  function test_incrementL2FactoryNonce(address _l2Factory, uint32 _minGasLimitDeploy) public {
     // Set the l2 factory nonce to 1 as if it was already deployed
     factory.forTest_setL2FactoryNonce(_l2Factory, 1);
     uint256 _l2FactoryNonceBefore = factory.l2FactoryNonce(_l2Factory);
@@ -358,8 +373,7 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
   }
 
   /**
-   * @notice Check the `_deployAdapters` function calls the `sendMessage` correctly. We use a for test function
-   * to get the internal because the `sendMessage` function is not public
+   * @notice Check the `_deployAdapters` function calls the `sendMessage` correctly
    */
   function test_callSendMessage(address _l2Factory, uint32 _minGasLimitDeploy) public {
     // Set the l2 factory nonce to 1 as if it was already deployed
@@ -389,6 +403,9 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
     );
   }
 
+  /**
+   * @notice Check the `L1AdapterDeployed` event is properly emitted
+   */
   function test_emitEvent(address _l2Factory, uint32 _minGasLimitDeploy) public {
     // Set the l2 factory nonce to 1 as if it was already deployed
     factory.forTest_setL2FactoryNonce(_l2Factory, 1);
@@ -411,6 +428,9 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
     );
   }
 
+  /**
+   * @notice Check the returned addresses are the expected ones
+   */
   function test_returnAdapters(address _l2Factory, uint32 _minGasLimitDeploy) public {
     // Set the l2 factory nonce to 1 as if it was already deployed
     factory.forTest_setL2FactoryNonce(_l2Factory, 1);
@@ -436,7 +456,10 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
 }
 
 contract L1OpUSDCFactory_Unit_PrecalculateCreateAddress is Base {
-  function test_revertOnInvalidNonce(address _deployer) public {
+  /**
+   * @notice Check the function reverts if the nonce is higher than the max possible value (2^64 - 2)
+   */
+  function test_revertOnInvalidNonce() public {
     uint64 _maxNonce = 2 ** 64 - 2;
     uint64 _nonce = _maxNonce + 1;
     // Setting a higher nonce than the deployer's current one will revert
@@ -446,12 +469,12 @@ contract L1OpUSDCFactory_Unit_PrecalculateCreateAddress is Base {
     vm.expectRevert(IL1OpUSDCFactory.IL1OpUSDCFactory_InvalidNonce.selector);
 
     // Execute
-    factory.forTest_precalculateCreateAddress(_deployer, _nonce);
+    factory.forTest_precalculateCreateAddress(_user, _nonce);
   }
 
   /**
    * @notice Check the `precalculateCreateAddress` function returns the correct address for the given deployer and nonce
-   * We are testing the range from 1 to 127 since the function only covers that range which is enough for the factory
+   * We are testing the range from 1 to (2**64 -2)
    */
   function test_precalculateCreateAddress(address _deployer, uint256 _nonce) public {
     uint256 _maxNonce = 2 ** 64 - 2;
@@ -474,11 +497,10 @@ contract L1OpUSDCFactory_Unit_PrecalculateCreateAddress is Base {
 
 contract L1OpUSDCFactory_Unit_PrecalculateCreate2Address is Base {
   // Error to revert when the create2 fails while testing the precalculateCreate2Address function
-  error Create2Failed();
+  error ForTest_Create2Failed();
 
   /**
-   * @notice Check the `precalculateCreate2Address` function returns the correct address for the given salt, init code
-   *  hash, and deployer
+   * @notice Check the function returns the expected address
    */
   function test_precalculateCreate2Address(bytes32 _salt, address _deployer) public {
     // Get the dumy contract init code and its hash
@@ -489,16 +511,16 @@ contract L1OpUSDCFactory_Unit_PrecalculateCreate2Address is Base {
     address _precalculatedAddress = factory.forTest_precalculateCreate2Address(_salt, _initCodeHash, _deployer);
     address _newAddress;
 
-    // Execute
+    // Deploy the contract using the CREATE2 opcode
     vm.prank(_deployer);
     assembly ("memory-safe") {
       _newAddress := create2(callvalue(), add(_initCode, 0x20), mload(_initCode), _salt)
     }
     if (_newAddress == address(0) || _newAddress.code.length == 0) {
-      revert Create2Failed();
+      revert ForTest_Create2Failed();
     }
 
-    // Assert
+    // Assert the address is the expected one
     assertEq(_newAddress, _precalculatedAddress, 'Invalid create2 precalculated address');
   }
 }
