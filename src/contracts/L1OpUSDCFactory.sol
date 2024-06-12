@@ -147,9 +147,9 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     bytes[] memory _usdcInitTxs,
     uint32 _minGasLimitDeploy
   ) internal returns (address _l1Adapter, address _l2Adapter) {
-    // Calculate the L2 adapter address. Adding 1 since the USDC implementation is deployed first on the L2 factory
-    uint256 _l2UsdcDeploymentNonce = _l2FactoryNonce + 1;
-    _l2Adapter = _precalculateCreateAddress(_l2Factory, _l2UsdcDeploymentNonce);
+    // Calculate the L2 adapter address. Adding 2 since the USDC contracts are already deployed first on the L2 factory
+    uint256 _l2AdapterDeploymentNonce = _l2FactoryNonce + 2;
+    _l2Adapter = _precalculateCreateAddress(_l2Factory, _l2AdapterDeploymentNonce);
 
     // Deploy the L1 adapter
     _l1Adapter = address(new L1OpUSDCBridgeAdapter(USDC, _l1Messenger, _l2Adapter, _l1AdapterOwner));

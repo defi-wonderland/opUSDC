@@ -274,7 +274,7 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
 
     // Calculate the expected l2 adapter address
     address _expectedL2Adapter =
-      factory.forTest_precalculateCreateAddress(_expectedL2Factory, factory.l2FactoryNonce(_l1Messenger) + 2);
+      factory.forTest_precalculateCreateAddress(_expectedL2Factory, factory.l2FactoryNonce(_l1Messenger) + 3);
 
     // Mock all the `deployL2FactoryAndContracts` function calls
     _mockDeployFunctionCalls();
@@ -325,7 +325,7 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
     address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce);
 
     uint256 _l2FactoryNonce = factory.l2FactoryNonce(_l2Factory);
-    address _l2Adapter = factory.forTest_precalculateCreateAddress(_l2Factory, _l2FactoryNonce + 1);
+    address _l2Adapter = factory.forTest_precalculateCreateAddress(_l2Factory, _l2FactoryNonce + 2);
 
     // Mock all the `deployAdapters` function calls
     _mockDeployFunctionCalls();
@@ -427,7 +427,7 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
     uint256 _factoryNonce = vm.getNonce(address(factory));
     address _expectedL1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce);
 
-    uint256 _l2FactoryNonce = factory.l2FactoryNonce(_l2Factory) + 1;
+    uint256 _l2FactoryNonce = factory.l2FactoryNonce(_l2Factory) + 2;
     address _expectedL2Adapter = factory.forTest_precalculateCreateAddress(_l2Factory, _l2FactoryNonce);
 
     // Mock all the `deployAdapters` function calls
