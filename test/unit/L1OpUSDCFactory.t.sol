@@ -44,7 +44,7 @@ abstract contract Base is Test, Helpers {
   address internal _owner = makeAddr('owner');
   address internal _user = makeAddr('user');
   address internal _usdc = makeAddr('USDC');
-  bytes internal _usdcImplementationBytecode = '0x6080333333';
+  bytes internal _usdcImplementationInitCode = '0x6080333333';
   address internal _usdcImplAddress = makeAddr('bridgedUsdcImpl');
   // cant fuzz this because of foundry's VM
   address internal _l1Messenger = makeAddr('messenger');
@@ -54,9 +54,6 @@ abstract contract Base is Test, Helpers {
   function setUp() public virtual {
     // Deploy factory
     factory = new ForTestL1OpUSDCFactory(_usdc, _salt);
-
-    // Etch code for the usdc implementation so its retrieved when checking the bytecode
-    vm.etch(_usdcImplAddress, _usdcImplementationBytecode);
 
     // Define the implementation structs info
     bytes memory _usdcInitTx = 'tx1';
@@ -108,7 +105,7 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
     // Execute
     vm.prank(_user);
     factory.deployL2FactoryAndContracts(
-      _l1Messenger, _owner, _minGasLimitCreate2Factory, _minGasLimitDeploy, _usdcInitTxs
+      _l1Messenger, _owner, _minGasLimitCreate2Factory, _usdcImplementationInitCode, _usdcInitTxs, _minGasLimitDeploy
     );
 
     // Assert
@@ -144,7 +141,7 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
     // Execute
     vm.prank(_user);
     factory.deployL2FactoryAndContracts(
-      _l1Messenger, _owner, _minGasLimitCreate2Factory, _minGasLimitDeploy, _usdcInitTxs
+      _l1Messenger, _owner, _minGasLimitCreate2Factory, _usdcImplementationInitCode, _usdcInitTxs, _minGasLimitDeploy
     );
   }
 
@@ -162,7 +159,7 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
 
     // Expect the `sendMessage` to be properly called
     bytes memory _l2DeploymentsTx =
-      abi.encodeWithSelector(L2OpUSDCFactory.deploy.selector, _l1Adapter, _usdcImplementationBytecode, _usdcInitTxs);
+      abi.encodeWithSelector(L2OpUSDCFactory.deploy.selector, _l1Adapter, _usdcImplementationInitCode, _usdcInitTxs);
     vm.expectCall(
       _l1Messenger,
       abi.encodeWithSelector(
@@ -173,7 +170,7 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
     // Execute
     vm.prank(_user);
     factory.deployL2FactoryAndContracts(
-      _l1Messenger, _owner, _minGasLimitCreate2Factory, _minGasLimitDeploy, _usdcInitTxs
+      _l1Messenger, _owner, _minGasLimitCreate2Factory, _usdcImplementationInitCode, _usdcInitTxs, _minGasLimitDeploy
     );
   }
 }
@@ -194,7 +191,7 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
     // Execute
     vm.prank(_user);
     vm.expectRevert(IL1OpUSDCFactory.IL1OpUSDCFactory_FactoryNotDeployed.selector);
-    factory.deployAdapters(_l1Messenger, _owner, _minGasLimitDeploy, _usdcInitTxs);
+    factory.deployAdapters(_l1Messenger, _owner, _usdcImplementationInitCode, _usdcInitTxs, _minGasLimitDeploy);
   }
 
   /**
@@ -214,7 +211,7 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
 
     // Execute
     vm.prank(_user);
-    factory.deployAdapters(_l1Messenger, _owner, _minGasLimitDeploy, _usdcInitTxs);
+    factory.deployAdapters(_l1Messenger, _owner, _usdcImplementationInitCode, _usdcInitTxs, _minGasLimitDeploy);
 
     // Assert the contract was deployed by checking its bytecode length is greater than 0
     assertGt(_l1Adapter.code.length, 0, 'L1 adapter not deployed');
@@ -233,23 +230,11 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
 
     // Execute
     vm.prank(_user);
-    factory.deployAdapters(_l1Messenger, _owner, _minGasLimitDeploy, _usdcInitTxs);
+    factory.deployAdapters(_l1Messenger, _owner, _usdcImplementationInitCode, _usdcInitTxs, _minGasLimitDeploy);
 
     // Assert
     uint256 _numberOfDeployments = 3;
     assertEq(factory.l2FactoryNonce(), _l2FactoryNonceBefore + _numberOfDeployments, 'Invalid l2 factory nonce');
-  }
-
-  function test_callUSDCImplementation(uint32 _minGasLimitDeploy) public {
-    // Mock all the `deployAdapters` function calls
-    _mockDeployFunctionCalls();
-
-    // Expect the `bridgedUSDCImplementation` to be properly called
-    vm.expectCall(_usdc, abi.encodeWithSelector(IUSDC.implementation.selector));
-
-    // Execute
-    vm.prank(_user);
-    factory.deployAdapters(_l1Messenger, _owner, _minGasLimitDeploy, _usdcInitTxs);
   }
 
   /**
@@ -266,7 +251,7 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
 
     // Expect the `sendMessage` to be properly called
     bytes memory _l2DeploymentsTx =
-      abi.encodeWithSelector(L2OpUSDCFactory.deploy.selector, _l1Adapter, _usdcImplementationBytecode, _usdcInitTxs);
+      abi.encodeWithSelector(L2OpUSDCFactory.deploy.selector, _l1Adapter, _usdcImplementationInitCode, _usdcInitTxs);
     vm.expectCall(
       _l1Messenger,
       abi.encodeWithSelector(
@@ -276,7 +261,7 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
 
     // Execute
     vm.prank(_user);
-    factory.deployAdapters(_l1Messenger, _owner, _minGasLimitDeploy, _usdcInitTxs);
+    factory.deployAdapters(_l1Messenger, _owner, _usdcImplementationInitCode, _usdcInitTxs, _minGasLimitDeploy);
   }
 
   function test_emitEvent(uint32 _minGasLimitDeploy) public {
@@ -293,7 +278,7 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
 
     // Execute
     vm.prank(_user);
-    factory.deployAdapters(_l1Messenger, _owner, _minGasLimitDeploy, _usdcInitTxs);
+    factory.deployAdapters(_l1Messenger, _owner, _usdcImplementationInitCode, _usdcInitTxs, _minGasLimitDeploy);
   }
 }
 

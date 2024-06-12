@@ -13,8 +13,6 @@ import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.s
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
-import 'forge-std/Test.sol';
-
 contract L2OpUSDCFactoryTest is L2OpUSDCFactory {
   constructor(address _l1Factory, bytes32 _salt) L2OpUSDCFactory(_l1Factory, _salt) {}
 

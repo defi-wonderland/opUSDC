@@ -52,15 +52,17 @@ interface IL1OpUSDCFactory {
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
    * @param _l1AdapterOwner The address of the owner of the L1 adapter
    * @param _minGasLimitCreate2Factory The minimum gas limit for the L2 factory deployment
-   * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
+   * @param _usdcImplementationInitCode The creation code with the constructor arguments for the USDC implementation
    * @param _usdcInitTxs The initialization transactions to be executed on the USDC contract
+   * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
    */
   function deployL2FactoryAndContracts(
     address _l1Messenger,
     address _l1AdapterOwner,
     uint32 _minGasLimitCreate2Factory,
-    uint32 _minGasLimitDeploy,
-    bytes[] memory _usdcInitTxs
+    bytes memory _usdcImplementationInitCode,
+    bytes[] memory _usdcInitTxs,
+    uint32 _minGasLimitDeploy
   ) external;
 
   /**
@@ -68,14 +70,16 @@ interface IL1OpUSDCFactory {
    * to be executed on the l2 factory
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
    * @param _l1AdapterOwner The address of the owner of the L1 adapter
-   * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
+   * @param _usdcImplementationInitCode The creation code with the constructor arguments for the USDC implementation
    * @param _usdcInitTxs The initialization transactions to be executed on the USDC contract
+   * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
    */
   function deployAdapters(
     address _l1Messenger,
     address _l1AdapterOwner,
-    uint32 _minGasLimitDeploy,
-    bytes[] memory _usdcInitTxs
+    bytes memory _usdcImplementationInitCode,
+    bytes[] memory _usdcInitTxs,
+    uint32 _minGasLimitDeploy
   ) external;
 
   /*///////////////////////////////////////////////////////////////

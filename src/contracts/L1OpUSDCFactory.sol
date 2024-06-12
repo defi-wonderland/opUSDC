@@ -63,16 +63,18 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
    * @param _l1AdapterOwner The address of the owner of the L1 adapter
    * @param _minGasLimitCreate2Factory The minimum gas limit for the L2 factory deployment
-   * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
+   * @param _usdcImplementationInitCode The creation code with the constructor arguments for the USDC implementation
    * @param _usdcInitTxs The initialization transactions to be executed on the USDC contract
+   * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
    * @dev Breaking CEI when invoking this `_deployAdapters`, but it's safe to trust in the Messenger
    */
   function deployL2FactoryAndContracts(
     address _l1Messenger,
     address _l1AdapterOwner,
     uint32 _minGasLimitCreate2Factory,
-    uint32 _minGasLimitDeploy,
-    bytes[] memory _usdcInitTxs
+    bytes memory _usdcImplementationInitCode,
+    bytes[] memory _usdcInitTxs,
+    uint32 _minGasLimitDeploy
   ) external {
     isFactoryDeployed[_l1Messenger] = true;
 
@@ -88,7 +90,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
       L2_CREATE2_DEPLOYER, _l2FactoryCreate2Tx, _minGasLimitCreate2Factory
     );
 
-    _deployAdapters(_l1Messenger, _l1AdapterOwner, _minGasLimitDeploy, _usdcInitTxs);
+    _deployAdapters(_l1Messenger, _l1AdapterOwner, _usdcImplementationInitCode, _usdcInitTxs, _minGasLimitDeploy);
   }
 
   /**
@@ -96,24 +98,27 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * to be executed on the l2 factory
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
    * @param _l1AdapterOwner The address of the owner of the L1 adapter
-   * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
+   * @param _usdcImplementationInitCode The creation code with the constructor arguments for the USDC implementation
    * @param _usdcInitTxs The initialization transactions to be executed on the USDC contract
+   * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
    */
   function deployAdapters(
     address _l1Messenger,
     address _l1AdapterOwner,
-    uint32 _minGasLimitDeploy,
-    bytes[] memory _usdcInitTxs
+    bytes memory _usdcImplementationInitCode,
+    bytes[] memory _usdcInitTxs,
+    uint32 _minGasLimitDeploy
   ) public {
     if (!isFactoryDeployed[_l1Messenger]) revert IL1OpUSDCFactory_FactoryNotDeployed();
-    _deployAdapters(_l1Messenger, _l1AdapterOwner, _minGasLimitDeploy, _usdcInitTxs);
+    _deployAdapters(_l1Messenger, _l1AdapterOwner, _usdcImplementationInitCode, _usdcInitTxs, _minGasLimitDeploy);
   }
 
   function _deployAdapters(
     address _l1Messenger,
     address _l1AdapterOwner,
-    uint32 _minGasLimitDeploy,
-    bytes[] memory _usdcInitTxs
+    bytes memory _usdcImplementationInitCode,
+    bytes[] memory _usdcInitTxs,
+    uint32 _minGasLimitDeploy
   ) internal {
     // Calculate the L2 adapter address. Substracting 2 from the nonce since is the 2nd deployment from the 3 to be done
     uint256 _l2UsdcDeploymentNonce = l2FactoryNonce + 1;
@@ -122,13 +127,11 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     // Deploy the L1 adapter
     address _l1Adapter = address(new L1OpUSDCBridgeAdapter(USDC, _l1Messenger, _l2Adapter, _l1AdapterOwner));
 
-    // Increment the L2 Factory nonce for the next L2 deployments
     l2FactoryNonce += 3;
 
     // Send the call over the L2 factory `deploy` function message
-    bytes memory _usdcImplementationCode = IUSDC(USDC).implementation().code;
     bytes memory _l2DeploymentsTx =
-      abi.encodeWithSelector(L2OpUSDCFactory.deploy.selector, _l1Adapter, _usdcImplementationCode, _usdcInitTxs);
+      abi.encodeWithSelector(L2OpUSDCFactory.deploy.selector, _l1Adapter, _usdcImplementationInitCode, _usdcInitTxs);
     ICrossDomainMessenger(_l1Messenger).sendMessage(L2_FACTORY, _l2DeploymentsTx, _minGasLimitDeploy);
 
     emit L1AdapterDeployed(_l1Adapter);

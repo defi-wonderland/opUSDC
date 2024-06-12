@@ -39,19 +39,17 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     _SALT = _salt;
   }
 
-  function deploy(address _l1Adapter, bytes memory _usdcImplementationCode, bytes[] memory _usdcInitTxs) external {
+  /// NOTE: Using `CREATE` to guarantee that the addresses are unique among all the L2s
+  function deploy(address _l1Adapter, bytes memory _usdcImplementationInitCode, bytes[] memory _usdcInitTxs) external {
     if (msg.sender != L2_MESSENGER || ICrossDomainMessenger(L2_MESSENGER).xDomainMessageSender() != L1_FACTORY) {
       revert IL2OpUSDCFactory_InvalidSender();
     }
 
     // Deploy USDC implementation
-    bytes memory _usdcImplInitCode =
-      bytes.concat(type(BytecodeDeployer).creationCode, abi.encode(_usdcImplementationCode));
-    (address _usdcImplementation, bool _usdcImplSuccess) = _deployCreate2(_SALT, _usdcImplInitCode);
+    (address _usdcImplementation, bool _usdcImplSuccess) = _deployCreate2(_SALT, _usdcImplementationInitCode);
     if (_usdcImplSuccess) emit USDCImplementationDeployed(_usdcImplementation);
 
     // Deploy USDC proxy
-    /// NOTE: Using `CREATE` to guarantee that this address is unique among all the L2s
     bytes memory _usdcProxyCArgs = abi.encode(_usdcImplementation);
     bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);
     (address _usdcProxy, bool _usdcProxySuccess) = _deployCreate(_usdcProxyInitCode);
