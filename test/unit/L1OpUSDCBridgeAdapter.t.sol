@@ -21,20 +21,8 @@ contract ForTestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
     circle = _circle;
   }
 
-  function forTest_setMessengerStatusToPaused() external {
-    messengerStatus = Status.Paused;
-  }
-
-  function forTest_setMessengerStatusToUpgrading() external {
-    messengerStatus = Status.Upgrading;
-  }
-
-  function forTest_setMessengerStatusToDeprecated() external {
-    messengerStatus = Status.Deprecated;
-  }
-
-  function forTest_setMessengerStatusByValue(uint256 _status) external {
-    messengerStatus = Status(_status);
+  function forTest_setMessengerStatus(Status _status) external {
+    messengerStatus = _status;
   }
 }
 
@@ -127,7 +115,7 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
     uint32 _minGasLimitSetBurnAmount
   ) external {
     vm.assume(_newOwner != address(0));
-    adapter.forTest_setMessengerStatusToPaused();
+    adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Paused);
 
     // Execute
     vm.prank(_owner);
@@ -201,7 +189,7 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
   ) external {
     vm.assume(_newOwner != address(0));
     adapter.forTest_setCircle(_newOwner);
-    adapter.forTest_setMessengerStatusToUpgrading();
+    adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Upgrading);
 
     _mockAndExpect(
       address(_messenger),
@@ -283,7 +271,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SetBurnAmount is Base {
     _status = bound(_status, 0, uint256(type(IL1OpUSDCBridgeAdapter.Status).max) - 1);
     vm.assume(_status != uint256(IL1OpUSDCBridgeAdapter.Status.Upgrading));
 
-    adapter.forTest_setMessengerStatusByValue(_status);
+    adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status(_status));
 
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
@@ -299,7 +287,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SetBurnAmount is Base {
   function test_setAmount(uint256 _burnAmount) external {
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
-    adapter.forTest_setMessengerStatusToUpgrading();
+    adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Upgrading);
 
     // Execute
     vm.prank(_messenger);
@@ -315,7 +303,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SetBurnAmount is Base {
   function test_setStatus(uint256 _burnAmount) external {
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
-    adapter.forTest_setMessengerStatusToUpgrading();
+    adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Upgrading);
 
     // Execute
     vm.prank(_messenger);
@@ -335,7 +323,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SetBurnAmount is Base {
   function test_emitEvent(uint256 _burnAmount) external {
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
-    adapter.forTest_setMessengerStatusToUpgrading();
+    adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Upgrading);
 
     // Execute
     vm.prank(_messenger);
@@ -440,7 +428,7 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
    * @notice Check that the function reverts if messaging is already disabled
    */
   function test_revertIfMessagingIsAlreadyPaused(uint32 _minGasLimit) public {
-    adapter.forTest_setMessengerStatusToPaused();
+    adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Paused);
     // Execute
     vm.prank(_owner);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
@@ -518,7 +506,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ResumeMessaging is Base {
    * @notice Check that the messenger status is set to active
    */
   function test_setMessengerStatusToActive(uint32 _minGasLimit) external {
-    adapter.forTest_setMessengerStatusToPaused();
+    adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Paused);
     _mockAndExpect(
       address(_messenger),
       abi.encodeWithSignature(
@@ -539,7 +527,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ResumeMessaging is Base {
    * @notice Check that the event is emitted as expected
    */
   function test_emitEvent(uint32 _minGasLimit) external {
-    adapter.forTest_setMessengerStatusToPaused();
+    adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Paused);
     // Mock calls
     vm.mockCall(
       address(_messenger),
@@ -570,7 +558,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessage is Base {
    * @notice Check that the function reverts if messager is not active
    */
   function test_revertOnMessengerNotActive(address _to, uint256 _amount, uint32 _minGasLimit) external {
-    adapter.forTest_setMessengerStatusToPaused();
+    adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Paused);
     // Execute
     vm.prank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
@@ -645,7 +633,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     uint256 _deadline,
     uint32 _minGasLimit
   ) external {
-    adapter.forTest_setMessengerStatusToPaused();
+    adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Paused);
     // Execute
     vm.prank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
@@ -861,7 +849,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendUsdcOwnableFunction is Base {
    * @notice Check that the function reverts if adapter state is deprecated
    */
   function test_revertIfMessengerIsDeprecated(bytes calldata _data, uint32 _minGasLimit) external {
-    adapter.forTest_setMessengerStatusToDeprecated();
+    adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Deprecated);
     // Execute
     vm.prank(_owner);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
@@ -976,7 +964,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendUsdcUpgrade is Base {
    * @notice Check that the function reverts if a messenger is unitialized
    */
   function test_revertOnMessagingDisabled(uint32 _minGasLimit) external {
-    adapter.forTest_setMessengerStatusToPaused();
+    adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Paused);
     // Execute
     vm.prank(_owner);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);

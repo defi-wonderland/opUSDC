@@ -14,10 +14,10 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
   /**
    * @notice USDC function signatures
    */
-  bytes4 internal constant _TRANSFER_OWNERSHIP = 0xf2fde38b;
-  bytes4 internal constant _UPGRADE_TO = 0x3659cfe6;
-  bytes4 internal constant _UPGRADE_TO_AND_CALL = 0x4f1ef286;
-  bytes4 internal constant _CHANGE_ADMIN = 0x8f283970;
+  bytes4 internal constant _TRANSFER_OWNERSHIP_SELECTOR = 0xf2fde38b;
+  bytes4 internal constant _UPGRADE_TO_SELECTOR = 0x3659cfe6;
+  bytes4 internal constant _UPGRADE_TO_AND_CALL_SELECTOR = 0x4f1ef286;
+  bytes4 internal constant _CHANGE_ADMIN_SELECTOR = 0x8f283970;
 
   /// @inheritdoc IL1OpUSDCBridgeAdapter
   uint256 public burnAmount;
@@ -258,10 +258,10 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter, O
     if (_data.length < 4) revert IL1OpUSDCBridgeAdapter_InvalidCalldata();
 
     //Check forbidden transactions
-    bytes4 _signature = bytes4(_data[:4]);
+    bytes4 _signature = bytes4(_data);
     if (
-      _signature == _TRANSFER_OWNERSHIP || _signature == _UPGRADE_TO || _signature == _UPGRADE_TO_AND_CALL
-        || _signature == _CHANGE_ADMIN
+      _signature == _TRANSFER_OWNERSHIP_SELECTOR || _signature == _UPGRADE_TO_SELECTOR
+        || _signature == _UPGRADE_TO_AND_CALL_SELECTOR || _signature == _CHANGE_ADMIN_SELECTOR
     ) revert IL1OpUSDCBridgeAdapter_ForbiddenTransaction();
 
     // Send the message to the linked adapter
