@@ -4,7 +4,6 @@ pragma solidity 0.8.25;
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
-import {BytecodeDeployer} from 'contracts/utils/BytecodeDeployer.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {Test} from 'forge-std/Test.sol';
 import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';

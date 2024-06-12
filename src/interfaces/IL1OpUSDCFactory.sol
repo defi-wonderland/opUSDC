@@ -16,27 +16,20 @@ interface IL1OpUSDCFactory {
    */
   event L1AdapterDeployed(address _l1Adapter);
 
-  /**
-   * @notice Emitted when the `UpgradeManager` is deployed
-   * @param _upgradeManagerProxy The address of the upgrade manager proxy
-   * @param _upgradeManagerImplementation The address of the upgrade manager implementation
-   */
-  event UpgradeManagerDeployed(address _upgradeManagerProxy, address _upgradeManagerImplementation);
-
   /*///////////////////////////////////////////////////////////////
                             ERRORS
   ///////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Thrown when the caller is not the executor
+   * @notice Thrown when the salt for deploying the L2 factory is already used
    */
-  error IL1OpUSDCFactory_NotExecutor();
+  error IL1OpUSDCFactory_SaltAlreadyUsed();
 
   /**
    * @notice Thrown when the factory on L2 for the given messenger is not deployed and the `deployL2USDCAndAdapter` is
    * called
    */
-  error IL1OpUSDCFactory_FactoryNotDeployed();
+  error IL1OpUSDCFactory_L2FactoryNotDeployed();
 
   /**
    * @notice Thrown if the nonce is greater than 2**64-2 while precalculating the L1 Adapter using `CREATE`
@@ -49,28 +42,32 @@ interface IL1OpUSDCFactory {
 
   /**
    * @notice Sends the L2 factory creation tx along with the L2 deployments to be done on it through the messenger
+   * @param _l2FactorySalt The salt for the L2 factory deployment
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
    * @param _l1AdapterOwner The address of the owner of the L1 adapter
    * @param _minGasLimitCreate2Factory The minimum gas limit for the L2 factory deployment
    * @param _usdcImplementationInitCode The creation code with the constructor arguments for the USDC implementation
    * @param _usdcInitTxs The initialization transactions to be executed on the USDC contract
    * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
+   * @return _l2Factory The address of the L2 factory
    * @return _l1Adapter The address of the L1 adapter
    * @return _l2Adapter The address of the L2 adapter
    */
   function deployL2FactoryAndContracts(
+    bytes32 _l2FactorySalt,
     address _l1Messenger,
     address _l1AdapterOwner,
     uint32 _minGasLimitCreate2Factory,
     bytes memory _usdcImplementationInitCode,
     bytes[] memory _usdcInitTxs,
     uint32 _minGasLimitDeploy
-  ) external returns (address _l1Adapter, address _l2Adapter);
+  ) external returns (address _l2Factory, address _l1Adapter, address _l2Adapter);
 
   /**
    * @notice Sends the L2 adapter and USDC proxy and implementation deployments tx through the messenger
    * to be executed on the l2 factory
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
+   * @param _l2Factory The address of the L2 factory
    * @param _l1AdapterOwner The address of the owner of the L1 adapter
    * @param _usdcImplementationInitCode The creation code with the constructor arguments for the USDC implementation
    * @param _usdcInitTxs The initialization transactions to be executed on the USDC contract
@@ -80,6 +77,7 @@ interface IL1OpUSDCFactory {
    */
   function deployAdapters(
     address _l1Messenger,
+    address _l2Factory,
     address _l1AdapterOwner,
     bytes memory _usdcImplementationInitCode,
     bytes[] memory _usdcInitTxs,
@@ -89,11 +87,6 @@ interface IL1OpUSDCFactory {
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
   ///////////////////////////////////////////////////////////////*/
-
-  /**
-   * @return _usdc The address of USDC on L1
-   */
-  function USDC() external view returns (address _usdc);
 
   /**
    * @return _l2Messenger The address of the L2 messenger
@@ -106,22 +99,23 @@ interface IL1OpUSDCFactory {
   function L2_CREATE2_DEPLOYER() external view returns (address _l2Create2Deployer);
 
   /**
-   * @return _l2Factory The address of the L1 factory
+   * @return _usdc The address of USDC on L1
    */
-  function L2_FACTORY() external view returns (address _l2Factory);
+  function USDC() external view returns (address _usdc);
 
   /**
-   * @param _l1Messenger The address of the L1 messenger in charge of interacting with the L2 factory
+   * @notice Tracks the nonce for each L2 factory
+   * @param _l2Factory The address of the L2 factory
    * @return _l2FactoryNonce The nonce of the L2 factory
-   * @dev It is initialized to `1` since when the factory is deployed, the nonce is `1`
    */
-  function l2FactoryNonce(address _l1Messenger) external view returns (uint256 _l2FactoryNonce);
+  function l2FactoryNonce(address _l2Factory) external view returns (uint256 _l2FactoryNonce);
 
   /**
-   * @notice Checks if the `L2OpUSDCFactory` has been deployed on L2 by the given messenger
-   * @param _l1Messenger The address of the L1 messenger
-   * @return _deployed Whether the messenger has a factory deployed for it on L2
-   * @dev It is initialized to `1` to avoid updating from zero to a non-zero value which is more expensive
+   * @notice Checks if the salt has been used for deploying the L2 factory
+   * @param _salt The salt for the L2 factory deployment
+   * @return _isUsed Whether the salt has been used
+   * @dev Is important to track this to avoid having the L2 Factory deployed in the same address on different chains,
+   * which would lead to having the same addresses for L2 contracts owned by different owners
    */
-  function isFactoryDeployed(address _l1Messenger) external view returns (bool _deployed);
+  function isSaltUsed(bytes32 _salt) external view returns (bool _isUsed);
 }
