@@ -80,7 +80,7 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
   function test_setImmutables() public {
     // Get the init codes
     bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
-    bytes memory _l2FactoryCArgs = abi.encode(address(factory), _salt);
+    bytes memory _l2FactoryCArgs = abi.encode(address(factory));
     bytes32 _l2FactoryInitCodeHash = keccak256(bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs));
 
     // Precalculate the addresses to be deployed using CREATE2
@@ -89,7 +89,6 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
 
     // Assert
     assertEq(factory.USDC(), _usdc, 'Invalid usdc address');
-    assertEq(factory.forTest_getSalt(), _salt, 'Invalid salt value');
     assertEq(factory.L2_FACTORY(), _l2Factory, 'Invalid l2Factory address');
   }
 }
@@ -138,7 +137,7 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
 
     // Get the L2 factory deployment tx
     bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
-    bytes memory _l2FactoryCArgs = abi.encode(address(factory), _salt);
+    bytes memory _l2FactoryCArgs = abi.encode(address(factory));
     bytes memory _l2FactoryInitCode = bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs);
     bytes memory _l2FactoryCreate2Tx =
       abi.encodeWithSelector(ICreate2Deployer.deploy.selector, _zeroValue, _salt, _l2FactoryInitCode);

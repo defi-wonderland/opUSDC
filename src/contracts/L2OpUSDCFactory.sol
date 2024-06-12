@@ -19,22 +19,15 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
   /// @inheritdoc IL2OpUSDCFactory
   address public constant L2_MESSENGER = 0x4200000000000000000000000000000000000007;
 
-  /// @notice The empty bytes constant
-
   /// @inheritdoc IL2OpUSDCFactory
   address public immutable L1_FACTORY;
-
-  /// @notice The salt value used to deploy the contracts
-  bytes32 internal immutable _SALT;
 
   /**
    * @notice Constructs the L2 factory contract
    * @param _l1Factory The address of the L1 factory contract
-   * @param _salt The salt value used to deploy the contracts
    */
-  constructor(address _l1Factory, bytes32 _salt) {
+  constructor(address _l1Factory) {
     L1_FACTORY = _l1Factory;
-    _SALT = _salt;
   }
 
   /// NOTE: Using `CREATE` to guarantee that the addresses are unique among all the L2s
@@ -44,7 +37,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     }
 
     // Deploy USDC implementation
-    (address _usdcImplementation, bool _usdcImplSuccess) = _deployCreate2(_SALT, _usdcImplementationInitCode);
+    (address _usdcImplementation, bool _usdcImplSuccess) = _deployCreate(_usdcImplementationInitCode);
     if (_usdcImplSuccess) emit USDCImplementationDeployed(_usdcImplementation);
 
     // Deploy USDC proxy
@@ -56,7 +49,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     // Deploy L2 Adapter
     bytes memory _l2AdapterCArgs = abi.encode(_usdcProxy, msg.sender, _l1Adapter);
     bytes memory _l2AdapterInitCode = bytes.concat(type(L2OpUSDCBridgeAdapter).creationCode, _l2AdapterCArgs);
-    (address _l2Adapter, bool _l2AdapterSuccess) = _deployCreate2(_SALT, _l2AdapterInitCode);
+    (address _l2Adapter, bool _l2AdapterSuccess) = _deployCreate(_l2AdapterInitCode);
     if (_l2AdapterSuccess) emit L2AdapterDeployed(_l2Adapter);
 
     // We need to first deploy everything and then revert so we can always track the nonce on the L1 factory
@@ -69,6 +62,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
 
     // Execute the USDC initialization transactions
     _executeInitTxs(_usdcImplementation, _usdcInitTxs, _usdcInitTxs.length);
+    // NOTE: The USDC proxy owner needs to be set on the first init tx
     _executeInitTxs(_usdcProxy, _usdcInitTxs, _usdcInitTxs.length);
   }
 
@@ -84,23 +78,6 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
       if (!_success) {
         revert IL2OpUSDCFactory_InitializationFailed();
       }
-    }
-  }
-
-  /**
-   * @notice Deploys a contract using the `CREATE2` opcode
-   * @param _salt The random value to be used to create the contract address
-   * @param _initCode The creation bytecode
-   * @return _newContract The address where the contract was deployed
-   */
-  function _deployCreate2(bytes32 _salt, bytes memory _initCode) internal returns (address _newContract, bool _success) {
-    assembly ("memory-safe") {
-      _newContract := create2(0x0, add(_initCode, 0x20), mload(_initCode), _salt)
-    }
-    if (_newContract == address(0) || _newContract.code.length == 0) {
-      emit Create2DeploymentFailed();
-    } else {
-      _success = true;
     }
   }
 
