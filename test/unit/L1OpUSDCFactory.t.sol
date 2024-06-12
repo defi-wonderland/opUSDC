@@ -80,7 +80,7 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
   function test_setImmutables() public {
     // Get the init codes
     bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
-    bytes memory _l2FactoryCArgs = abi.encode(_salt, address(factory));
+    bytes memory _l2FactoryCArgs = abi.encode(address(factory), _salt);
     bytes32 _l2FactoryInitCodeHash = keccak256(bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs));
 
     // Precalculate the addresses to be deployed using CREATE2
@@ -110,6 +110,22 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
 
     // Assert
     assertTrue(factory.isFactoryDeployed(_l1Messenger), 'Messenger not deployed');
+  }
+
+  function test_updateNonce(uint32 _minGasLimitCreate2Factory, uint32 _minGasLimitDeploy) public {
+    uint256 _nonceBefore = factory.l2FactoryNonce(_l1Messenger);
+
+    // Mock all the `deployL2FactoryAndContracts` function calls
+    _mockDeployFunctionCalls();
+
+    // Execute
+    vm.prank(_user);
+    factory.deployL2FactoryAndContracts(
+      _l1Messenger, _owner, _minGasLimitCreate2Factory, _usdcImplementationInitCode, _usdcInitTxs, _minGasLimitDeploy
+    );
+
+    // Assert
+    assertEq(factory.l2FactoryNonce(_l1Messenger), _nonceBefore + 4, 'Invalid nonce');
   }
 
   /**
@@ -173,6 +189,26 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
       _l1Messenger, _owner, _minGasLimitCreate2Factory, _usdcImplementationInitCode, _usdcInitTxs, _minGasLimitDeploy
     );
   }
+
+  function test_returnAdapters(uint32 _minGasLimitCreate2Factory, uint32 _minGasLimitDeploy) public {
+    uint256 _factoryNonce = vm.getNonce(address(factory));
+    address _expectedL1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce);
+
+    uint256 _l2FactoryNonce = factory.l2FactoryNonce(_l1Messenger) + 2;
+    address _expectedL2Adapter = factory.forTest_precalculateCreateAddress(factory.L2_FACTORY(), _l2FactoryNonce);
+
+    // Mock all the `deployL2FactoryAndContracts` function calls
+    _mockDeployFunctionCalls();
+
+    // Execute
+    (address _l1Adapter, address _l2Adapter) = factory.deployL2FactoryAndContracts(
+      _l1Messenger, _owner, _minGasLimitCreate2Factory, _usdcImplementationInitCode, _usdcInitTxs, _minGasLimitDeploy
+    );
+
+    // Assert
+    assertEq(_l1Adapter, _expectedL1Adapter, 'Invalid l1 adapter address');
+    assertEq(_l2Adapter, _expectedL2Adapter, 'Invalid l2 adapter address');
+  }
 }
 
 contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
@@ -203,7 +239,7 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
     uint256 _factoryNonce = vm.getNonce(address(factory));
     address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce);
 
-    uint256 _l2FactoryNonce = factory.l2FactoryNonce();
+    uint256 _l2FactoryNonce = factory.l2FactoryNonce(_l1Messenger);
     address _l2Adapter = factory.forTest_precalculateCreateAddress(factory.L2_FACTORY(), _l2FactoryNonce + 1);
 
     // Mock all the `deployAdapters` function calls
@@ -223,7 +259,7 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
   }
 
   function test_updateL2FactoryNonce(uint32 _minGasLimitDeploy) public {
-    uint256 _l2FactoryNonceBefore = factory.l2FactoryNonce();
+    uint256 _l2FactoryNonceBefore = factory.l2FactoryNonce(_l1Messenger);
 
     // Mock all the `deployAdapters` function calls
     _mockDeployFunctionCalls();
@@ -234,7 +270,9 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
 
     // Assert
     uint256 _numberOfDeployments = 3;
-    assertEq(factory.l2FactoryNonce(), _l2FactoryNonceBefore + _numberOfDeployments, 'Invalid l2 factory nonce');
+    assertEq(
+      factory.l2FactoryNonce(_l1Messenger), _l2FactoryNonceBefore + _numberOfDeployments, 'Invalid l2 factory nonce'
+    );
   }
 
   /**
@@ -279,6 +317,25 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
     // Execute
     vm.prank(_user);
     factory.deployAdapters(_l1Messenger, _owner, _usdcImplementationInitCode, _usdcInitTxs, _minGasLimitDeploy);
+  }
+
+  function test_returnAdapters(uint32 _minGasLimitDeploy) public {
+    uint256 _factoryNonce = vm.getNonce(address(factory));
+    address _expectedL1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce);
+
+    uint256 _l2FactoryNonce = factory.l2FactoryNonce(_l1Messenger) + 1;
+    address _expectedL2Adapter = factory.forTest_precalculateCreateAddress(factory.L2_FACTORY(), _l2FactoryNonce);
+
+    // Mock all the `deployAdapters` function calls
+    _mockDeployFunctionCalls();
+
+    // Execute
+    (address _l1Adapter, address _l2Adapter) =
+      factory.deployAdapters(_l1Messenger, _owner, _usdcImplementationInitCode, _usdcInitTxs, _minGasLimitDeploy);
+
+    // Assert
+    assertEq(_l1Adapter, _expectedL1Adapter, 'Invalid l1 adapter address');
+    assertEq(_l2Adapter, _expectedL2Adapter, 'Invalid l2 adapter address');
   }
 }
 

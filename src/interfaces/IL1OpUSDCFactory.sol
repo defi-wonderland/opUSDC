@@ -55,6 +55,8 @@ interface IL1OpUSDCFactory {
    * @param _usdcImplementationInitCode The creation code with the constructor arguments for the USDC implementation
    * @param _usdcInitTxs The initialization transactions to be executed on the USDC contract
    * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
+   * @return _l1Adapter The address of the L1 adapter
+   * @return _l2Adapter The address of the L2 adapter
    */
   function deployL2FactoryAndContracts(
     address _l1Messenger,
@@ -63,7 +65,7 @@ interface IL1OpUSDCFactory {
     bytes memory _usdcImplementationInitCode,
     bytes[] memory _usdcInitTxs,
     uint32 _minGasLimitDeploy
-  ) external;
+  ) external returns (address _l1Adapter, address _l2Adapter);
 
   /**
    * @notice Sends the L2 adapter and USDC proxy and implementation deployments tx through the messenger
@@ -73,6 +75,8 @@ interface IL1OpUSDCFactory {
    * @param _usdcImplementationInitCode The creation code with the constructor arguments for the USDC implementation
    * @param _usdcInitTxs The initialization transactions to be executed on the USDC contract
    * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
+   * @return _l1Adapter The address of the L1 adapter
+   * @return _l2Adapter The address of the L2 adapter
    */
   function deployAdapters(
     address _l1Messenger,
@@ -80,7 +84,7 @@ interface IL1OpUSDCFactory {
     bytes memory _usdcImplementationInitCode,
     bytes[] memory _usdcInitTxs,
     uint32 _minGasLimitDeploy
-  ) external;
+  ) external returns (address _l1Adapter, address _l2Adapter);
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
@@ -107,10 +111,11 @@ interface IL1OpUSDCFactory {
   function L2_FACTORY() external view returns (address _l2Factory);
 
   /**
+   * @param _l1Messenger The address of the L1 messenger in charge of interacting with the L2 factory
    * @return _l2FactoryNonce The nonce of the L2 factory
    * @dev It is initialized to `1` since when the factory is deployed, the nonce is `1`
    */
-  function l2FactoryNonce() external view returns (uint256 _l2FactoryNonce);
+  function l2FactoryNonce(address _l1Messenger) external view returns (uint256 _l2FactoryNonce);
 
   /**
    * @notice Checks if the `L2OpUSDCFactory` has been deployed on L2 by the given messenger
