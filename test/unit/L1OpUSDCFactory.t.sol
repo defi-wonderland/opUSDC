@@ -77,15 +77,6 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
    * @notice Test the constructor params are correctly set
    */
   function test_setImmutables() public {
-    // Get the init codes
-    bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
-    bytes memory _l2FactoryCArgs = abi.encode(address(factory));
-    bytes32 _l2FactoryInitCodeHash = keccak256(bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs));
-
-    // Precalculate the addresses to be deployed using CREATE2
-    address _l2Factory =
-      factory.forTest_precalculateCreate2Address(_salt, _l2FactoryInitCodeHash, factory.L2_CREATE2_DEPLOYER());
-
     // Assert
     assertEq(factory.USDC(), _usdc, 'Invalid usdc address');
   }
