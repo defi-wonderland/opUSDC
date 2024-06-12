@@ -11,6 +11,9 @@ import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.s
  * @title L1OpUSDCFactory
  * @notice Factory contract to deploy and setup the `L1OpUSDCBridgeAdapter` and `UpgradeManager` contracts on L1, and
  * precalculates the addresses of the L2 deployments to be done on the L2 factory.
+ * @dev The salt is always different for each deployed instance of this contract on the L1 Factory, and the L2 contracts
+ * are deployed with `CREATE` to guarantee that the addresses are unique among all the L2s, so we avoid a scenario where
+ * L2 contracts have the same address on different L2s when triggered by different owners.
  */
 contract L1OpUSDCFactory is IL1OpUSDCFactory {
   /// @inheritdoc IL1OpUSDCFactory
@@ -52,7 +55,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * @return _l2Factory The address of the L2 factory
    * @return _l1Adapter The address of the L1 adapter
    * @return _l2Adapter The address of the L2 adapter
-   * @dev Breaking CEI when invoking this `_deployAdapters`, but it's safe to trust in the Messenger
+   * @dev Breaking CEI when invoking `_deployAdapters`, but it's safe to trust in the Messenger
    */
   function deployL2FactoryAndContracts(
     bytes32 _l2FactorySalt,

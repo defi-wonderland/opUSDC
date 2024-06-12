@@ -13,6 +13,9 @@ import {IUSDC} from 'interfaces/external/IUSDC.sol';
  * @title L2OpUSDCFactory
  * @notice Factory contract for deploying the L2 USDC implementation, proxy, and `L2OpUSDCBridgeAdapter` contract,
  * all at once on the `deploy` function.
+ * @dev The salt is always different for each deployed instance of this contract on the L1 Factory, and the L2 contracts
+ * are deployed with `CREATE` to guarantee that the addresses are unique among all the L2s, so we avoid a scenario where
+ * L2 contracts have the same address on different L2s when triggered by different owners.
  */
 contract L2OpUSDCFactory is IL2OpUSDCFactory {
   /// @inheritdoc IL2OpUSDCFactory
@@ -29,7 +32,14 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     L1_FACTORY = _l1Factory;
   }
 
-  /// NOTE: Using `CREATE` to guarantee that the addresses are unique among all the L2s
+  /**
+   * @notice Deploys the USDC implementation, proxy, and L2 adapter contracts all at once, and then initializes the USDC
+   * @param _l1Adapter The address of the L1 adapter contract
+   * @param _usdcImplementationInitCode The creation code with the constructor arguments for the USDC implementation
+   * @param _usdcInitTxs The initialization transactions for the USDC proxy and implementation contracts
+   * @dev The USDC proxy owner needs to be set on the first init tx
+   * @dev Using `CREATE` to guarantee that the addresses are unique among all the L2s
+   */
   function deploy(address _l1Adapter, bytes memory _usdcImplementationInitCode, bytes[] memory _usdcInitTxs) external {
     if (msg.sender != L2_MESSENGER || ICrossDomainMessenger(L2_MESSENGER).xDomainMessageSender() != L1_FACTORY) {
       revert IL2OpUSDCFactory_InvalidSender();
@@ -61,7 +71,6 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
 
     // Execute the USDC initialization transactions
     _executeInitTxs(_usdcImplementation, _usdcInitTxs, _usdcInitTxs.length);
-    // NOTE: The USDC proxy owner needs to be set on the first init tx
     _executeInitTxs(_usdcProxy, _usdcInitTxs, _usdcInitTxs.length);
   }
 
@@ -81,10 +90,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
   }
 
   /**
-   * @dev Deploys a new contract via calling the `CREATE` opcode and using the creation
-   * bytecode `initCode` and `msg.value` as inputs. In order to save deployment costs,
-   * we do not sanity check the `initCode` length. Note that if `msg.value` is non-zero,
-   * `initCode` must have a `payable` constructor.
+   * @notice Deploys a new contract via calling the `CREATE` opcode
    * @param _initCode The creation bytecode.
    * @return _newContract The 20-byte address where the contract was deployed.
    */
