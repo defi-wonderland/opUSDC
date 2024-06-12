@@ -1,5 +1,6 @@
 pragma solidity ^0.8.25;
 
+import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {IL2OpUSDCBridgeAdapter} from 'interfaces/IL2OpUSDCBridgeAdapter.sol';
@@ -13,25 +14,12 @@ contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
   constructor(
     address _usdc,
     address _messenger,
-    address _linkedAdapter
-  ) L2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
+    address _linkedAdapter,
+    address _owner
+  ) L2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _owner) {}
 
   function forTest_setIsMessagingDisabled() external {
     isMessagingDisabled = true;
-  }
-
-  function forTest_executeInitTxs(address _target, bytes[] memory _initTxs, uint256 _length) external {
-    _executeInitTxs(_target, _initTxs, _length);
-  }
-
-  function forTest_dummy() external {
-    calls++;
-  }
-
-  function forTest_dummyRevert() external pure {
-    assembly {
-      revert(0, 0)
-    }
   }
 }
 
@@ -39,26 +27,21 @@ abstract contract Base is Helpers {
   ForTestL2OpUSDCBridgeAdapter public adapter;
 
   address internal _user = makeAddr('user');
+  address internal _owner = makeAddr('owner');
   address internal _signerAd;
   uint256 internal _signerPk;
   address internal _usdc = makeAddr('opUSDC');
   address internal _messenger = makeAddr('messenger');
   address internal _linkedAdapter = makeAddr('linkedAdapter');
 
-  bytes internal _l2UsdcBytecode;
-  bytes internal _l2UsdcInitTx = abi.encodeWithSignature('forTest_dummy()');
-  bytes[] internal _l2UsdcInitTxs;
-
+  event MigratingToNative(address _messenger, address _newOwner);
   event MessageSent(address _user, address _to, uint256 _amount, address _messenger, uint32 _minGasLimit);
   event MessageReceived(address _user, uint256 _amount, address _messenger);
-  event MigratingToNative(address _messenger, address _newOwner);
-  event DeployedL2AdapterImplementation(address _adapterImplementation);
-  event DeployedL2UsdcImplementation(address _adapterImplementation);
+  event UsdcOwnableFunctionSent(bytes4 _functionSignature);
 
   function setUp() public virtual {
     (_signerAd, _signerPk) = makeAddrAndKey('signer');
-    address _implementation = address(new ForTestL2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter));
-    adapter = ForTestL2OpUSDCBridgeAdapter(address(new ERC1967Proxy(_implementation, '')));
+    adapter = new ForTestL2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _owner);
   }
 }
 
@@ -70,13 +53,13 @@ contract L2OpUSDCBridgeAdapter_Unit_Constructor is Base {
     assertEq(adapter.USDC(), _usdc, 'USDC should be set to the provided address');
     assertEq(adapter.MESSENGER(), _messenger, 'Messenger should be set to the provided address');
     assertEq(adapter.LINKED_ADAPTER(), _linkedAdapter, 'Linked adapter should be set to the provided address');
+    assertEq(adapter.owner(), _owner, 'Owner should be set to the provided address');
   }
 }
 
 /*///////////////////////////////////////////////////////////////
                               MIGRATION
   ///////////////////////////////////////////////////////////////*/
-
 contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
   /**
    * @notice Check that the upgradeToAndCall function reverts if the sender is not MESSENGER
@@ -109,6 +92,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
     _mockAndExpect(address(_usdc), abi.encodeWithSignature('transferOwnership(address)', _newOwner), abi.encode());
+    _mockAndExpect(address(_usdc), abi.encodeWithSignature('changeAdmin(address)', _newOwner), abi.encode());
     _mockAndExpect(address(_usdc), abi.encodeWithSignature('totalSupply()'), abi.encode(_burnAmount));
     _mockAndExpect(
       address(_messenger),
@@ -131,6 +115,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
     _mockAndExpect(address(_usdc), abi.encodeWithSignature('transferOwnership(address)', _newOwner), abi.encode());
+    _mockAndExpect(address(_usdc), abi.encodeWithSignature('changeAdmin(address)', _newOwner), abi.encode());
     _mockAndExpect(address(_usdc), abi.encodeWithSignature('totalSupply()'), abi.encode(100));
     _mockAndExpect(
       address(_messenger),
@@ -156,6 +141,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
     // Mock calls
     vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
     vm.mockCall(address(_usdc), abi.encodeWithSignature('transferOwnership(address)', _newOwner), abi.encode());
+    vm.mockCall(address(_usdc), abi.encodeWithSignature('changeAdmin(address)', _newOwner), abi.encode());
     vm.mockCall(address(_usdc), abi.encodeWithSignature('totalSupply()'), abi.encode(_burnAmount));
     vm.mockCall(
       address(_messenger),
@@ -181,7 +167,6 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
 /*///////////////////////////////////////////////////////////////
                           MESSAGING CONTROL
   ///////////////////////////////////////////////////////////////*/
-
 contract L2OpUSDCBridgeAdapter_Unit_ReceiveStopMessaging is Base {
   event MessagingStopped(address _messenger);
 
@@ -299,6 +284,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveResumeMessaging is Base {
     adapter.receiveResumeMessaging();
   }
 }
+
 /*///////////////////////////////////////////////////////////////
                              MESSAGING
   ///////////////////////////////////////////////////////////////*/
@@ -561,146 +547,93 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 }
 
 /*///////////////////////////////////////////////////////////////
-                             USDC UPGRADE
-  ///////////////////////////////////////////////////////////////*/
-
-contract L2OpUSDCBridgeAdapter_Unit_ReceiveUsdcUpgrade is Base {
+                      BRIDGED USDC FUNCTIONS
+///////////////////////////////////////////////////////////////*/
+contract L2OpUSDCBridgeAdapter_Unit_CallUsdcTransaction is Base {
   /**
-   * @notice Check that the receiveUsdcUpgrade function reverts if the sender is not MESSENGER
+   * @notice Check that the function reverts if the sender is not the owner
    */
-  function test_wrongMessenger(address _notMessenger) external {
-    vm.assume(_notMessenger != _messenger);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
-    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs, _l2UsdcInitTxs);
+  function test_onlyOwner(address _notOwner, bytes calldata _data) external {
+    vm.assume(_notOwner != _owner);
+    // Execute
+    vm.prank(_notOwner);
+    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _notOwner));
+    adapter.callUsdcTransaction(_data);
   }
 
   /**
-   * @notice Check that the receiveUsdcUpgrade function reverts if the sender is not Linked Adapter
+   * @notice Check that the function reverts if _date length is less than four
    */
-  function test_wrongLinkedAdapter(address _notLinkedAdapter) external {
-    vm.assume(_notLinkedAdapter != _linkedAdapter);
-    // Mock calls
-    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_notLinkedAdapter));
-
+  function test_revertIfDataLengthIsLessThanFour(bytes calldata _data) external {
+    vm.assume(_data.length < 4);
     // Execute
-    vm.prank(_messenger);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
-    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs, _l2UsdcInitTxs);
+    vm.prank(_owner);
+    vm.expectRevert(IL2OpUSDCBridgeAdapter.IL2OpUSDCBridgeAdapter_InvalidCalldata.selector);
+    adapter.callUsdcTransaction(_data);
   }
 
   /**
-   * @notice Check the expected calls
+   * @notice Check that the function reverts function selector is transferOwnership (0xf2fde38b)
    */
-  function test_receiveUsdcUpgrade() external {
-    uint64 _nonce = vm.getNonce(address(adapter));
-    address _implementation = _precalculateCreateAddress(address(adapter), _nonce);
-    _l2UsdcInitTxs.push(abi.encodeWithSignature('dummy()'));
-
-    // Mock calls
-    _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
-    _mockAndExpect(_usdc, abi.encodeWithSignature('upgradeTo(address)', _implementation), abi.encode(true));
-
-    _mockAndExpect(_usdc, abi.encodeWithSignature('dummy()'), abi.encode(true));
+  function test_refevertoIfTxIsTransferOwnership(bytes memory _data) external {
+    _data = bytes.concat(bytes4(0xf2fde38b), _data);
     // Execute
-    vm.prank(_messenger);
-    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs, _l2UsdcInitTxs);
+    vm.prank(_owner);
+    vm.expectRevert(IL2OpUSDCBridgeAdapter.IL2OpUSDCBridgeAdapter_ForbiddenTransaction.selector);
+    adapter.callUsdcTransaction(_data);
   }
 
   /**
-   * @notice Check that reverts if a call to implementation reverts
+   * @notice Check that the function reverts function selector is changeAdmin (0x8f283970)
    */
-  function test_revertOnImplementation() external {
-    uint64 _nonce = vm.getNonce(address(adapter));
-    bytes[] memory _revertTx = new bytes[](1);
-    _revertTx[0] = abi.encodeWithSignature('dummyRevert()');
-
-    address _implementation = _precalculateCreateAddress(address(adapter), _nonce);
-
-    // Mock calls
-    _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
-    _mockAndExpect(_usdc, abi.encodeWithSignature('upgradeTo(address)', _implementation), abi.encode(true));
-
-    // Mock Revert
-    vm.mockCallRevert(_implementation, abi.encodeWithSignature('dummyRevert()'), abi.encode(''));
-
+  function test_revertIfTxIsChangeAdmin(bytes memory _data) external {
+    _data = bytes.concat(bytes4(0x8f283970), _data);
     // Execute
-    vm.prank(_messenger);
-    vm.expectRevert(IL2OpUSDCBridgeAdapter.L2OpUSDCBridgeAdapter_UsdcInitializationFailed.selector);
-    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _revertTx, _l2UsdcInitTxs);
+    vm.prank(_owner);
+    vm.expectRevert(IL2OpUSDCBridgeAdapter.IL2OpUSDCBridgeAdapter_ForbiddenTransaction.selector);
+    adapter.callUsdcTransaction(_data);
   }
 
   /**
-   * @notice Revert on invalid transaction
+   * @notice Check that reverts if a call reverts
    */
-  function test_revertOnProxy() external {
-    uint64 _nonce = vm.getNonce(address(adapter));
-    bytes[] memory _revertTx = new bytes[](1);
-    _revertTx[0] = abi.encodeWithSignature('dummyRevert()');
-
+  function test_revertOnCallRevert(bytes memory _data) external {
+    vm.assume(_data.length >= 4);
     // Mock calls
-    _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
-    _mockAndExpect(
-      _usdc,
-      abi.encodeWithSignature('upgradeTo(address)', _precalculateCreateAddress(address(adapter), _nonce)),
-      abi.encode(true)
-    );
-
-    // Mock Revert
-    vm.mockCallRevert(_usdc, abi.encodeWithSignature('dummyRevert()'), abi.encode(''));
+    vm.mockCallRevert(_usdc, _data, abi.encode(false, ''));
 
     // Execute
-    vm.prank(_messenger);
-    vm.expectRevert(IL2OpUSDCBridgeAdapter.L2OpUSDCBridgeAdapter_UsdcInitializationFailed.selector);
-    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs, _revertTx);
+    vm.prank(_owner);
+    vm.expectRevert(IL2OpUSDCBridgeAdapter.IL2OpUSDCBridgeAdapter_InvalidTransaction.selector);
+    adapter.callUsdcTransaction(_data);
+  }
+
+  /**
+   * @notice Check that the message is sent as expected
+   */
+  function test_expectedCall(bytes calldata _data) external {
+    vm.assume(_data.length >= 4);
+    _mockAndExpect(_usdc, _data, abi.encode(true, ''));
+
+    // Execute
+    vm.prank(_owner);
+    adapter.callUsdcTransaction(_data);
   }
 
   /**
    * @notice Check that the event is emitted as expected
    */
-  function test_emitEvent() external {
-    uint64 _nonce = vm.getNonce(address(adapter));
+  function test_emitEvent(bytes calldata _data) external {
+    vm.assume(_data.length >= 4);
     // Mock calls
-    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
-    vm.mockCall(
-      _usdc,
-      abi.encodeWithSignature('upgradeTo(address)', _precalculateCreateAddress(address(adapter), _nonce)),
-      abi.encode(true)
-    );
+    vm.mockCall(_usdc, _data, abi.encode(true, ''));
 
     // Expect events
     vm.expectEmit(true, true, true, true);
-    emit DeployedL2UsdcImplementation(_precalculateCreateAddress(address(adapter), _nonce));
+    emit UsdcOwnableFunctionSent(bytes4(_data));
 
     // Execute
-    vm.prank(_messenger);
-    adapter.receiveUsdcUpgrade(_l2UsdcBytecode, _l2UsdcInitTxs, _l2UsdcInitTxs);
-  }
-}
-
-contract L2OpUSDCBridgeAdapter_Unit_ExecuteInitTxs is Base {
-  /**
-   * @notice Check that the function reverts if a transaction reverts
-   */
-  function test_revert() external {
-    bytes[] memory _revertTx = new bytes[](1);
-    _revertTx[0] = abi.encodeWithSignature('dummyRevert()');
-
-    vm.mockCallRevert(_usdc, abi.encodeWithSignature('dummyRevert()'), abi.encode(''));
-
-    // Execute
-    vm.expectRevert(IL2OpUSDCBridgeAdapter.L2OpUSDCBridgeAdapter_UsdcInitializationFailed.selector);
-    adapter.forTest_executeInitTxs(_usdc, _revertTx, _revertTx.length);
-  }
-
-  /**
-   * @notice Check that the function works as expected
-   */
-  function test_executeInitTxs(string memory _function, bytes memory _params) external {
-    _l2UsdcInitTxs.push(abi.encodeWithSignature(_function, _params));
-
-    _mockAndExpect(_usdc, abi.encodeWithSignature(_function, _params), abi.encode(true));
-
-    // Execute
-    adapter.forTest_executeInitTxs(_usdc, _l2UsdcInitTxs, _l2UsdcInitTxs.length);
+    vm.prank(_owner);
+    adapter.callUsdcTransaction(_data);
   }
 }
