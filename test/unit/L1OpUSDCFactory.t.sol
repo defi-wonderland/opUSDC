@@ -83,7 +83,7 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
   function test_setImmutables() public {
     // Get the init codes
     bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
-    bytes memory _l2FactoryCArgs = abi.encode(address(factory), _salt);
+    bytes memory _l2FactoryCArgs = abi.encode(_salt, address(factory));
     bytes32 _l2FactoryInitCodeHash = keccak256(bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs));
 
     // Precalculate the addresses to be deployed using CREATE2

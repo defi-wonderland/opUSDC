@@ -63,6 +63,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     (address _l2Adapter, bool _l2AdapterSuccess) = _deployCreate2(_SALT, _l2AdapterInitCode);
     if (_l2AdapterSuccess) emit L2AdapterDeployed(_l2Adapter);
 
+    // We need to first deploy everything and then revert so we can always track the nonce on the L1 factory
     if (!_usdcImplSuccess || !_usdcProxySuccess || !_l2AdapterSuccess) {
       revert IL2OpUSDCFactory_DeploymentsFailed();
     }
@@ -73,11 +74,6 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     // Execute the USDC initialization transactions
     _executeInitTxs(_usdcImplementation, _usdcInitTxs, _usdcInitTxs.length);
     _executeInitTxs(_usdcProxy, _usdcInitTxs, _usdcInitTxs.length);
-
-    // Transfer USDC ownership to adapter
-    console.log('address(this)', address(this));
-    console.log('USDC OWNER', IUSDC(_usdcProxy).owner());
-    IUSDC(_usdcProxy).transferOwnership(_l2Adapter);
   }
 
   /**
@@ -102,13 +98,13 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
    * @return _newContract The address where the contract was deployed
    */
   function _deployCreate2(bytes32 _salt, bytes memory _initCode) internal returns (address _newContract, bool _success) {
-    _success = true;
     assembly ("memory-safe") {
       _newContract := create2(0x0, add(_initCode, 0x20), mload(_initCode), _salt)
     }
     if (_newContract == address(0) || _newContract.code.length == 0) {
-      _success = false;
       emit Create2DeploymentFailed();
+    } else {
+      _success = true;
     }
   }
 
@@ -121,13 +117,13 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
    * @return _newContract The 20-byte address where the contract was deployed.
    */
   function _deployCreate(bytes memory _initCode) internal returns (address _newContract, bool _success) {
-    _success = true;
     assembly ("memory-safe") {
       _newContract := create(0x0, add(_initCode, 0x20), mload(_initCode))
     }
     if (_newContract == address(0) || _newContract.code.length == 0) {
-      _success = false;
       emit CreateDeploymentFailed();
+    } else {
+      _success = true;
     }
   }
 }
