@@ -7,19 +7,23 @@ interface IL2OpUSDCBridgeAdapter {
   ///////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Emitted when the new USDC implementation is deployed
-   * @param _l2UsdcImplementation The address of the L2 USDC implementation
+   * @notice Emitted when the owner message is sent
    */
-  event DeployedL2UsdcImplementation(address _l2UsdcImplementation);
+  event UsdcOwnableFunctionSent(bytes4 _functionSignature);
 
   /*///////////////////////////////////////////////////////////////
                             ERRORS
   ///////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Error when the USDC initialization fails
+   * @notice Error when the owner transaction is invalid
    */
-  error L2OpUSDCBridgeAdapter_UsdcInitializationFailed();
+  error IL2OpUSDCBridgeAdapter_InvalidTransaction();
+
+  /**
+   * @notice Error when signature is not valid
+   */
+  error IL2OpUSDCBridgeAdapter_ForbiddenTransaction();
 
   /*///////////////////////////////////////////////////////////////
                             LOGIC
@@ -43,16 +47,13 @@ interface IL2OpUSDCBridgeAdapter {
   function receiveResumeMessaging() external;
 
   /**
-   * @notice Receive the creation code from the linked adapter, deploy the new implementation and upgrade
-   * @param _l2UsdcBytecode The bytecode for the new L2 USDC implementation
-   * @param _l2UsdcImplTxs The initialization transactions for the new L2 USDC implementation
-   * @param _l2UsdcProxyTxs The initialization transactions for the proxy contract
+   * @notice Call with abitrary calldata on USDC contract.
+   * @dev can't execute the following list of transactions:
+   *  • transferOwnership (0xf2fde38b)
+   *  • changeAdmin (0x8f283970)
+   * @param _data The calldata to execute on the USDC contract
    */
-  function receiveUsdcUpgrade(
-    bytes calldata _l2UsdcBytecode,
-    bytes[] memory _l2UsdcImplTxs,
-    bytes[] memory _l2UsdcProxyTxs
-  ) external;
+  function callUsdcTransaction(bytes calldata _data) external;
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES

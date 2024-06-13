@@ -2,12 +2,17 @@
 pragma solidity 0.8.25;
 
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
-import {BytecodeDeployer} from 'contracts/utils/BytecodeDeployer.sol';
 import {IL2OpUSDCBridgeAdapter} from 'interfaces/IL2OpUSDCBridgeAdapter.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
+  /**
+   * @notice USDC function signatures
+   */
+  bytes4 internal constant _TRANSFER_OWNERSHIP_SELECTOR = 0xf2fde38b;
+  bytes4 internal constant _CHANGE_ADMIN_SELECTOR = 0x8f283970;
+
   /// @inheritdoc IL2OpUSDCBridgeAdapter
   bool public isMessagingDisabled;
 
@@ -32,8 +37,9 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   constructor(
     address _usdc,
     address _messenger,
-    address _linkedAdapter
-  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
+    address _linkedAdapter,
+    address _owner
+  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _owner) {}
   /* solhint-enable no-unused-vars */
 
   /*///////////////////////////////////////////////////////////////
@@ -48,8 +54,11 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    */
   function receiveMigrateToNative(address _newOwner, uint32 _setBurnAmountMinGasLimit) external checkSender {
     isMessagingDisabled = true;
-    // Transfer ownership of the USDC contract to the circle
+    // Transfer ownership of the USDC contract to circle
     IUSDC(USDC).transferOwnership(_newOwner);
+
+    //Transfer proxy admin ownership to circle
+    IUSDC(USDC).changeAdmin(_newOwner);
 
     uint256 _burnAmount = IUSDC(USDC).totalSupply();
 
@@ -160,45 +169,28 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   }
 
   /*///////////////////////////////////////////////////////////////
-                             USDC UPGRADE
+                        BRIDGED USDC FUNCTIONS
   ///////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Receive the creation code from the linked adapter, deploy the new implementation and upgrade
-   * @param _l2UsdcBytecode The bytecode for the new L2 USDC implementation
-   * @param _l2UsdcImplTxs The initialization transactions for the new L2 USDC implementation
-   * @param _l2UsdcProxyTxs The initialization transactions for the proxy contract
+   * @notice Call with abitrary calldata on USDC contract.
+   * @dev can't execute the following list of transactions:
+   *  • transferOwnership (0xf2fde38b)
+   *  • changeAdmin (0x8f283970)
+   * @param _data The calldata to execute on the USDC contract
    */
-  function receiveUsdcUpgrade(
-    bytes calldata _l2UsdcBytecode,
-    bytes[] memory _l2UsdcImplTxs,
-    bytes[] memory _l2UsdcProxyTxs
-  ) external checkSender {
-    // Deploy L2 USDC implementation
-    address _usdcImplementation = address(new BytecodeDeployer(_l2UsdcBytecode));
-
-    // Call upgradeToAndCall on the USDC contract
-    IUSDC(USDC).upgradeTo(_usdcImplementation);
-
-    // Execute the initialization transactions
-    _executeInitTxs(_usdcImplementation, _l2UsdcImplTxs, _l2UsdcImplTxs.length);
-    _executeInitTxs(USDC, _l2UsdcProxyTxs, _l2UsdcProxyTxs.length);
-
-    emit DeployedL2UsdcImplementation(_usdcImplementation);
-  }
-
-  /**
-   * @notice Executes the initialization transactions for a target contract
-   * @param _target The address of the contract to execute the transactions on
-   * @param _initTxs The initialization transactions to execute
-   * @param _length The number of transactions to execute
-   */
-  function _executeInitTxs(address _target, bytes[] memory _initTxs, uint256 _length) internal {
-    for (uint256 _i; _i < _length; _i++) {
-      (bool _success,) = _target.call(_initTxs[_i]);
-      if (!_success) {
-        revert L2OpUSDCBridgeAdapter_UsdcInitializationFailed();
-      }
+  function callUsdcTransaction(bytes calldata _data) external onlyOwner {
+    //Check forbidden transactions
+    bytes4 _signature = bytes4(_data);
+    if (_signature == _TRANSFER_OWNERSHIP_SELECTOR || _signature == _CHANGE_ADMIN_SELECTOR) {
+      revert IL2OpUSDCBridgeAdapter_ForbiddenTransaction();
     }
+
+    (bool _success,) = USDC.call(_data);
+    if (!_success) {
+      revert IL2OpUSDCBridgeAdapter_InvalidTransaction();
+    }
+
+    emit UsdcOwnableFunctionSent(_signature);
   }
 }

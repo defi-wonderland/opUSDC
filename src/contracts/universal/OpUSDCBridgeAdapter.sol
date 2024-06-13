@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
+import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
 import {SignatureChecker} from '@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 
-abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
+abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, Ownable {
   using MessageHashUtils for bytes32;
   using SignatureChecker for address;
 
@@ -26,8 +27,10 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter {
    * @param _usdc The address of the USDC Contract to be used by the adapter
    * @param _messenger The address of the messenger contract
    * @param _linkedAdapter The address of the linked adapter
+   * @param _owner The address of the owner of the contract
    */
-  constructor(address _usdc, address _messenger, address _linkedAdapter) {
+  // solhint-disable-next-line no-unused-vars
+  constructor(address _usdc, address _messenger, address _linkedAdapter, address _owner) Ownable(_owner) {
     USDC = _usdc;
     MESSENGER = _messenger;
     LINKED_ADAPTER = _linkedAdapter;
