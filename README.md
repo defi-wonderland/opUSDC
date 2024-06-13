@@ -1,20 +1,24 @@
-<br />
-<div align="center"><strong>This README is a WIP...</strong></div>
-<br />
-
 # opUSDC
-
 opUSDC allows for an efficient and modular solution for expanding USDC across the optimism super chain ecosystem. Utilizing the cross chain messaging of the canonical bridge the adapter allows for easy access to USDC liquidity across all op chains. 
 
 ## Contracts
 
-_L1OpUSDCBridgeAdapter_ - Contract that allows for the transfer of USDC from the L1 to the L2. Locks USDC on the L1 and sends a message to the L2 to mint the equivalent amount of USDC. Receives messages from the L2 and unlocks USDC on the L1. Controls the message flow between layers. Allows Circle to migrate from bridged USDC to native USDC on the L2.
+_L1OpUSDCFactory.sol_ - Factory contract to deploy and setup the `L1OpUSDCBridgeAdapter` contract on L1, and precalculates the addresses of the L2 deployments to be done on the L2 factory.
+
+_L2OpUSDCFactory.sol_ - Factory contract deployed from the l1 factory through a cross-chain deployment for deploying the L2 USDC implementation, proxy, and `L2OpUSDCBridgeAdapter` contract, all at once on the `deploy` function.
+
+_L1OpUSDCBridgeAdapter_ - Contract that allows for the transfer of USDC from the L1 to the L2. Locks USDC on the L1 and sends a message to the L2 to mint the equivalent amount of USDC. Receives messages from the L2 and unlocks USDC on the L1. Controls the message flow between layers. Supports the requirements for the Bridged USDC to be migrated to Native USDC, should the chain operator and Circle want to.
 
 _L2OpUSDCBridgeAdapter_ - Contract that allows for the transfer of USDC from the L2 to the L1. Burns USDC on the L2 and sends a message to the L1 to unlock the equivalent amount of USDC. Receives messages from the L1 and mints USDC on the L2. Allows contract owner to execute ownable functions on the L2 bridged USDC contract.
 
-_L1OpUSDCFactory.sol_ - Factory contract to deploy and setup the `L1OpUSDCBridgeAdapter` and `UpgradeManager` contracts on L1, and precalculates the addresses of the L2 deployments to be done on the L2 factory.
+## L1 → L2 Deployment
+![image](https://github.com/defi-wonderland/opUSDC/assets/165055168/ac9d0b57-03e7-40ae-b109-34d656d7539b)
 
-_L2OpUSDCFactory.sol_ - Factory contract for deploying the L2 USDC implementation, proxy, and `L2OpUSDCBridgeAdapter` contract, all at once on the `deploy` function.
+## L1 → L2 USDC Canonical Bridging
+![image](https://github.com/defi-wonderland/opUSDC/assets/165055168/eaf55522-e768-463f-830b-b9305cec1e79)
+
+## Migrating from Bridged USDC to Native USDC
+![image](https://github.com/defi-wonderland/opUSDC/assets/165055168/17aebc4a-709f-4084-ab83-000e299a70bd)
 
 ## Setup
 
@@ -93,40 +97,6 @@ yarn deploy:mainnet
 The deployments are stored in ./broadcast
 
 See the [Foundry Book for available options](https://book.getfoundry.sh/reference/forge/forge-create.html).
-
-## Export And Publish
-
-Export TypeScript interfaces from Solidity contracts and interfaces providing compatibility with TypeChain. Publish the exported packages to NPM.
-
-To enable this feature, make sure you've set the `NPM_TOKEN` on your org's secrets. Then set the job's conditional to `true`:
-
-```yaml
-jobs:
-  export:
-    name: Generate Interfaces And Contracts
-    # Remove the following line if you wish to export your Solidity contracts and interfaces and publish them to NPM
-    if: true
-    ...
-```
-
-Also, remember to update the `package_name` param to your package name:
-
-```yaml
-- name: Export Solidity - ${{ matrix.export_type }}
-  uses: defi-wonderland/solidity-exporter-action@1dbf5371c260add4a354e7a8d3467e5d3b9580b8
-  with:
-    # Update package_name with your package name
-    package_name: "my-cool-project"
-    ...
-
-
-- name: Publish to NPM - ${{ matrix.export_type }}
-  # Update `my-cool-project` with your package name
-  run: cd export/my-cool-project-${{ matrix.export_type }} && npm publish --access public
-  ...
-```
-
-You can take a look at our [solidity-exporter-action](https://github.com/defi-wonderland/solidity-exporter-action) repository for more information and usage examples.
 
 ## Licensing
 The primary license for the boilerplate is MIT, see [`LICENSE`](https://github.com/defi-wonderland/solidity-foundry-boilerplate/blob/main/LICENSE)
