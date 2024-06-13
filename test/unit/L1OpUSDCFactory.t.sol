@@ -69,6 +69,18 @@ abstract contract Base is Test, Helpers {
       usdcInitTxs: _usdcInitTxs,
       minGasLimitDeploy: _minGasLimitDeploy
     });
+
+    // Define the first init tx for USDC
+    string memory _tokenName = 'USDC';
+    string memory _tokenSymbol = 'USDC';
+    string memory _tokenCurrency = 'USD';
+    uint8 _tokenDecimals = 6;
+    address _newMasterMinter = makeAddr('newMasterMinter');
+    address _newPauser = makeAddr('newPauser');
+    address _newBlacklister = makeAddr('newBlacklister');
+    address _newOwner = address(0);
+    bytes memory _initializeTx =
+      abi.encodeWithSelector(IUSDC.initialize.selector, _usdcImplAddress, _usdc, 6, 'USDC', 'USDC', 18);
   }
 
   /**

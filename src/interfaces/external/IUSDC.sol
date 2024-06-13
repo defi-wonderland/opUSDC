@@ -36,4 +36,26 @@ interface IUSDC is IERC20 {
    * @return _implementation Address of the current implementation
    */
   function implementation() external view returns (address _implementation);
+
+  /**
+   * @notice Initializes the fiat token contract.
+   * @param _tokenName       The name of the fiat token.
+   * @param _tokenSymbol     The symbol of the fiat token.
+   * @param _tokenCurrency   The fiat currency that the token represents.
+   * @param _tokenDecimals   The number of decimals that the token uses.
+   * @param _newMasterMinter The masterMinter address for the fiat token.
+   * @param _newPauser       The pauser address for the fiat token.
+   * @param _newBlacklister  The blacklister address for the fiat token.
+   * @param _newOwner        The owner of the fiat token.
+   */
+  function initialize(
+    string memory _tokenName,
+    string memory _tokenSymbol,
+    string memory _tokenCurrency,
+    uint8 _tokenDecimals,
+    address _newMasterMinter,
+    address _newPauser,
+    address _newBlacklister,
+    address _newOwner
+  ) external;
 }

@@ -22,6 +22,8 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   /// @inheritdoc IL1OpUSDCFactory
   address public constant L2_CREATE2_DEPLOYER = 0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2;
 
+  bytes4 public constant INITIALIZE_SELECTOR = hex'3357162b';
+
   /// @notice Zero value constant to be used on the `CREATE2_DEPLOYER` interaction
   uint256 internal constant _ZERO_VALUE = 0;
 
@@ -132,6 +134,9 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     // Increment the nonce of the L2 factory with all the deployments to be done
     l2FactoryNonce[_l2Factory] = _l2FactoryNonce + 3;
 
+    // Set the L2 adapter as the owner of the USDC on the first init tx
+    _setAdaperAsOwner(_l2Deployments.usdcInitTxs, _l2Adapter);
+
     // Send the call over the L2 factory `deploy` function message
     bytes memory _l2DeploymentsTx = abi.encodeWithSelector(
       L2OpUSDCFactory.deploy.selector,
@@ -143,6 +148,46 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     ICrossDomainMessenger(_l1Messenger).sendMessage(_l2Factory, _l2DeploymentsTx, _l2Deployments.minGasLimitDeploy);
 
     emit L1AdapterDeployed(_l1Adapter);
+  }
+
+  /**
+   * @notice Sets the L2 adapter as the owner of the L2 USDC on the `initialize()` first init tx
+   * @param _usdcInitTxs The USDC initialization transactions
+   * @param _l2Adapter The address of the L2 adapter
+   */
+  function _setAdaperAsOwner(bytes[] memory _usdcInitTxs, address _l2Adapter) internal pure {
+    bytes memory _initializeTx = _usdcInitTxs[0];
+    if (bytes4(_initializeTx) != INITIALIZE_SELECTOR) {
+      revert IL1OpUSDCFactory_InvalidInitTx();
+    }
+
+    // TODO: Better to use assembly to slice the tx and get only the params?
+    (
+      ,
+      string memory _tokenName,
+      string memory _tokenSymbol,
+      string memory _tokenCurrency,
+      uint8 _tokenDecimals,
+      address _newMasterMinter,
+      address _newPauser,
+      address _newBlacklister,
+      address _newOwner
+    ) = abi.decode(_initializeTx, (bytes4, string, string, string, uint8, address, address, address, address));
+    _newOwner = _l2Adapter;
+
+    _initializeTx = abi.encodeWithSelector(
+      INITIALIZE_SELECTOR,
+      _tokenName,
+      _tokenSymbol,
+      _tokenCurrency,
+      _tokenDecimals,
+      _newMasterMinter,
+      _newPauser,
+      _newBlacklister,
+      _newOwner
+    );
+
+    _usdcInitTxs[0] = _initializeTx;
   }
 
   /**

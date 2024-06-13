@@ -46,6 +46,11 @@ interface IL1OpUSDCFactory {
   error IL1OpUSDCFactory_L2FactoryNotDeployed();
 
   /**
+   * @notice Thrown when the 1st provided init tx's selector is not the `initialize()` function one
+   */
+  error IL1OpUSDCFactory_InvalidInitTx();
+
+  /**
    * @notice Thrown if the nonce is greater than 2**64-2 while precalculating the L1 Adapter using `CREATE`
    */
   error IL1OpUSDCFactory_InvalidNonce();
