@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {AddressAliasHelper} from '../utils/AddressAliasHelper.sol';
-import {USDC_IMPLEMENTATION_CREATION_CODE} from '../utils/USDCImplementationCreationCode.sol';
-import {IMockCrossDomainMessenger} from '../utils/interfaces/IMockCrossDomainMessenger.sol';
+import {AddressAliasHelper} from 'test/utils/AddressAliasHelper.sol';
+import {USDC_IMPLEMENTATION_CREATION_CODE} from 'test/utils/USDCImplementationCreationCode.sol';
+import {IMockCrossDomainMessenger} from 'test/utils/interfaces/IMockCrossDomainMessenger.sol';
 
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 
