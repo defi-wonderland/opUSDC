@@ -7,9 +7,9 @@ _L1OpUSDCFactory.sol_ - Factory contract to deploy and setup the `L1OpUSDCBridge
 
 _L2OpUSDCFactory.sol_ - Factory contract deployed from the l1 factory through a cross-chain deployment for deploying the L2 USDC implementation, proxy, and `L2OpUSDCBridgeAdapter` contract, all at once on the `deploy` function.
 
-_L1OpUSDCBridgeAdapter_ - Contract that allows for the transfer of USDC from the L1 to the L2. Locks USDC on the L1 and sends a message to the L2 to mint the equivalent amount of USDC. Receives messages from the L2 and unlocks USDC on the L1. Controls the message flow between layers. Supports the requirements for the Bridged USDC to be migrated to Native USDC, should the chain operator and Circle want to.
+_L1OpUSDCBridgeAdapter_ - Contract that allows for the transfer of USDC from Ethereum Mainnet to an specific op-chain. Locks USDC on Ethereum Mainnet and sends a message to the other chain to mint the equivalent amount of USDC. Receives messages from the other chain and unlocks USDC on the Ethereum Mainnet. Controls the message flow between layers. Supports the requirements for the Bridged USDC to be migrated to Native USDC, should the chain operator and Circle want to.
 
-_L2OpUSDCBridgeAdapter_ - Contract that allows for the transfer of USDC from the L2 to the L1. Burns USDC on the L2 and sends a message to the L1 to unlock the equivalent amount of USDC. Receives messages from the L1 and mints USDC on the L2. Allows contract owner to execute ownable functions on the L2 bridged USDC contract.
+_L2OpUSDCBridgeAdapter_ - Contract that allows for the transfer of USDC from the an specific op-chain to the Ethereum Mainnet. Burns USDC on the other chain and sends a message to Ethereum Mainnet to unlock the equivalent amount of USDC. Receives messages from Ethereum Mainnet and mints USDC on the the other chain. Allows contract owner to execute ownable functions on the other chain bridged USDC contract.
 
 ## L1 → L2 Deployment
 ![image](https://github.com/defi-wonderland/opUSDC/assets/165055168/ac9d0b57-03e7-40ae-b109-34d656d7539b)
