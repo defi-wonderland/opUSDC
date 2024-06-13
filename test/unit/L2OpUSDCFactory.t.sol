@@ -142,7 +142,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
   /**
    * @notice Check the deployment of the L2 adapter implementation and proxy is properly done by checking the emitted
-   * event and the 'upgradeToAndCall' call to the proxy
+   * event and the implementation length
    * @dev Assuming the USDC proxy correctly sets the implementation address to check it was properly deployed
    */
   function test_deployUsdcProxy() public {

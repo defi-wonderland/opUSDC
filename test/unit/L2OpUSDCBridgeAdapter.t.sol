@@ -1,7 +1,6 @@
 pragma solidity ^0.8.25;
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
-import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {IL2OpUSDCBridgeAdapter} from 'interfaces/IL2OpUSDCBridgeAdapter.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
@@ -558,17 +557,6 @@ contract L2OpUSDCBridgeAdapter_Unit_CallUsdcTransaction is Base {
     // Execute
     vm.prank(_notOwner);
     vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _notOwner));
-    adapter.callUsdcTransaction(_data);
-  }
-
-  /**
-   * @notice Check that the function reverts if _date length is less than four
-   */
-  function test_revertIfDataLengthIsLessThanFour(bytes calldata _data) external {
-    vm.assume(_data.length < 4);
-    // Execute
-    vm.prank(_owner);
-    vm.expectRevert(IL2OpUSDCBridgeAdapter.IL2OpUSDCBridgeAdapter_InvalidCalldata.selector);
     adapter.callUsdcTransaction(_data);
   }
 
