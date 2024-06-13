@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
-import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
@@ -38,7 +36,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
    * @param _l2AdapterOwner The address of the L2 adapter owner
    * @param _usdcImplementationInitCode The creation code with the constructor arguments for the USDC implementation
    * @param _usdcInitTxs The initialization transactions for the USDC proxy and implementation contracts
-   * @dev The USDC proxy owner needs to be set on the first init tx
+   * @dev The USDC proxy owner needs to be set on the first init tx, and will be set to the L2 adapter address
    * @dev Using `CREATE` to guarantee that the addresses are unique among all the L2s
    */
   function deploy(
