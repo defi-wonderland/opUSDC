@@ -2,7 +2,6 @@
 pragma solidity 0.8.25;
 
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
-import {BytecodeDeployer} from 'contracts/utils/BytecodeDeployer.sol';
 import {IL2OpUSDCBridgeAdapter} from 'interfaces/IL2OpUSDCBridgeAdapter.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
@@ -178,10 +177,9 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @dev can't execute the following list of transactions:
    *  • transferOwnership (0xf2fde38b)
    *  • changeAdmin (0x8f283970)
+   * @param _data The calldata to execute on the USDC contract
    */
   function callUsdcTransaction(bytes calldata _data) external onlyOwner {
-    if (_data.length < 4) revert IL2OpUSDCBridgeAdapter_InvalidCalldata();
-
     //Check forbidden transactions
     bytes4 _signature = bytes4(_data);
     if (_signature == _TRANSFER_OWNERSHIP_SELECTOR || _signature == _CHANGE_ADMIN_SELECTOR) {

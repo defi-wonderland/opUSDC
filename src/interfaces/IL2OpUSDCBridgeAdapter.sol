@@ -25,11 +25,6 @@ interface IL2OpUSDCBridgeAdapter {
    */
   error IL2OpUSDCBridgeAdapter_ForbiddenTransaction();
 
-  /**
-   * @notice Error when calldata is not valid
-   */
-  error IL2OpUSDCBridgeAdapter_InvalidCalldata();
-
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   ///////////////////////////////////////////////////////////////*/
@@ -56,6 +51,7 @@ interface IL2OpUSDCBridgeAdapter {
    * @dev can't execute the following list of transactions:
    *  • transferOwnership (0xf2fde38b)
    *  • changeAdmin (0x8f283970)
+   * @param _data The calldata to execute on the USDC contract
    */
   function callUsdcTransaction(bytes calldata _data) external;
 

@@ -11,6 +11,3 @@
 | User who bridges tokens should receive them on the destination chain                                         | High level |
 | Protocols deployed on one L2 should never have a matching address with a protocol on a different L2          | High level |
 | Assuming the adapter is the only minter the amount locked in L1 should always equal the amount minted on L2  | High level |
-| On bridgedUSDC contract: ownership transfer can be achieved only within migration flow                       | High level |
-| On bridgedUSDC contract: admin change can be achieved only within migration flow                             | High level |
-| On bridgedUSDC contract: implementation upgrade can be achieved only within upgrade flor                     | High level |
