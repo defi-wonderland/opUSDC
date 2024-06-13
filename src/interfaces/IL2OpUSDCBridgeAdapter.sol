@@ -51,7 +51,10 @@ interface IL2OpUSDCBridgeAdapter {
    * @dev can't execute the following list of transactions:
    *  • transferOwnership (0xf2fde38b)
    *  • changeAdmin (0x8f283970)
+   * <<<<<<< HEAD
+   * =======
    * @param _data The calldata to execute on the USDC contract
+   * >>>>>>> dev
    */
   function callUsdcTransaction(bytes calldata _data) external;
 
