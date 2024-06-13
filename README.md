@@ -1,34 +1,20 @@
-<img src="https://raw.githubusercontent.com/defi-wonderland/brand/v1.0.0/external/solidity-foundry-boilerplate-banner.png" alt="wonderland banner" align="center" />
+<br />
+<div align="center"><strong>This README is a WIP...</strong></div>
 <br />
 
-<div align="center"><strong>Start your next Solidity project with Foundry in seconds</strong></div>
-<div align="center">A highly scalable foundation focused on DX and best practices</div>
+# opUSDC
 
-<br />
+opUSDC allows for an efficient and modular solution for expanding USDC across the optimism super chain ecosystem. Utilizing the cross chain messaging of the canonical bridge the adapter allows for easy access to USDC liquidity across all op chains. 
 
-## Features
+## Contracts
 
-<dl>
-  <dt>Sample contracts</dt>
-  <dd>Basic Greeter contract with an external interface.</dd>
+_L1OpUSDCBridgeAdapter_ - Contract that allows for the transfer of USDC from the L1 to the L2. Locks USDC on the L1 and sends a message to the L2 to mint the equivalent amount of USDC. Receives messages from the L2 and unlocks USDC on the L1. Controls the message flow between layers. Allows Circle to migrate from bridged USDC to native USDC on the L2.
 
-  <dt>Foundry setup</dt>
-  <dd>Foundry configuration with multiple custom profiles and remappings.</dd>
+_L2OpUSDCBridgeAdapter_ - Contract that allows for the transfer of USDC from the L2 to the L1. Burns USDC on the L2 and sends a message to the L1 to unlock the equivalent amount of USDC. Receives messages from the L1 and mints USDC on the L2. Allows contract owner to execute ownable functions on the L2 bridged USDC contract.
 
-  <dt>Deployment scripts</dt>
-  <dd>Sample scripts to deploy contracts on both mainnet and testnet.</dd>
+_L1OpUSDCFactory.sol_ - Factory contract to deploy and setup the `L1OpUSDCBridgeAdapter` and `UpgradeManager` contracts on L1, and precalculates the addresses of the L2 deployments to be done on the L2 factory.
 
-  <dt>Sample Integration & Unit tests</dt>
-  <dd>Example tests showcasing mocking, assertions and configuration for mainnet forking. As well it includes everything needed in order to check code coverage.</dd>
-
-  <dt>Linter</dt>
-  <dd>Simple and fast solidity linting thanks to forge fmt.</dd>
-  <dd>Find missing natspec automatically.</dd>
-
-  <dt>Github workflows CI</dt>
-  <dd>Run all tests and see the coverage as you push your changes.</dd>
-  <dd>Export your Solidity interfaces and contracts as packages, and publish them to NPM.</dd>
-</dl>
+_L2OpUSDCFactory.sol_ - Factory contract for deploying the L2 USDC implementation, proxy, and `L2OpUSDCBridgeAdapter` contract, all at once on the `deploy` function.
 
 ## Setup
 
