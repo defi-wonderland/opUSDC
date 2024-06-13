@@ -14,20 +14,11 @@ import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
 import {Test} from 'forge-std/Test.sol';
 
 import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
-import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 contract IntegrationBase is Test {
-  // Fork variables
+  // Constants
   uint256 internal constant _MAINNET_FORK_BLOCK = 20_076_176;
   uint256 internal constant _OPTIMISM_FORK_BLOCK = 121_300_856;
-  uint256 optimism;
-  uint256 mainnet;
-
-  // EOA addresses
-  address internal _owner = makeAddr('owner');
-  address internal _user = makeAddr('user');
-
-  // External contracts
   address public constant MAINNET_USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
   address public constant MAINNET_USDC_IMPLEMENTATION = 0xa2327a938Febf5FEC13baCFb16Ae10EcBc4cbDCF;
   address public constant L2_CREATE2_DEPLOYER = 0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2;
@@ -35,9 +26,17 @@ contract IntegrationBase is Test {
     IMockCrossDomainMessenger(0x4200000000000000000000000000000000000007);
   IMockCrossDomainMessenger public constant OPTIMISM_L1_MESSENGER =
     IMockCrossDomainMessenger(0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1);
+  bytes32 public constant SALT = keccak256(abi.encode('32'));
+
+  // Fork variables
+  uint256 public optimism;
+  uint256 public mainnet;
+
+  // EOA addresses
+  address internal _owner = makeAddr('owner');
+  address internal _user = makeAddr('user');
 
   // Helper variables
-  bytes32 public constant SALT = keccak256(abi.encode('32'));
   bytes[] public usdcInitTxns = new bytes[](3);
   bytes public initialize;
 
