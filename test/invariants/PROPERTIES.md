@@ -11,3 +11,4 @@
 | User who bridges tokens should receive them on the destination chain                                         | High level |
 | Protocols deployed on one L2 should never have a matching address with a protocol on a different L2          | High level |
 | Assuming the adapter is the only minter the amount locked in L1 should always equal the amount minted on L2  | High level |
+| USDC proxy admin rights can only be transferred during the migration to native flow                          | High level |
