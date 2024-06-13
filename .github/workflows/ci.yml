@@ -8,6 +8,7 @@ concurrency:
 
 env:
   MAINNET_RPC: ${{ secrets.MAINNET_RPC }}
+  OPTIMISM_RPC: ${{ secrets.OPTIMISM_RPC }}
   SEPOLIA_RPC: ${{ secrets.SEPOLIA_RPC }}
 
 jobs:
