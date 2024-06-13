@@ -6,6 +6,22 @@ import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 // solhint-disable func-name-mixedcase
 
 interface IL1OpUSDCFactory {
+  /**
+   * @notice The struct to hold the deployments data to deploy the L2 adapter, and the L2 USDC contracts
+   * @param l2AdapterOwner The address of the owner of the L2 adapter
+   * @param minGasLimitCreate2Factory The minimum gas limit for the L2 factory deployment
+   * @param usdcImplementationInitCode The creation code with the constructor arguments for the USDC implementation
+   * @param usdcInitTxs The initialization transactions to be executed on the USDC contract
+   * @param minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
+   * @dev Only the values needed in both `deployL2FactoryAndContracts()` and `deployAdapters()` params are included
+   */
+  struct L2Deployments {
+    address l2AdapterOwner;
+    bytes usdcImplementationInitCode;
+    bytes[] usdcInitTxs;
+    uint32 minGasLimitDeploy;
+  }
+
   /*///////////////////////////////////////////////////////////////
                             EVENTS
   ///////////////////////////////////////////////////////////////*/
@@ -44,11 +60,9 @@ interface IL1OpUSDCFactory {
    * @notice Sends the L2 factory creation tx along with the L2 deployments to be done on it through the messenger
    * @param _l2FactorySalt The salt for the L2 factory deployment
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
-   * @param _l1AdapterOwner The address of the owner of the L1 adapter
    * @param _minGasLimitCreate2Factory The minimum gas limit for the L2 factory deployment
-   * @param _usdcImplementationInitCode The creation code with the constructor arguments for the USDC implementation
-   * @param _usdcInitTxs The initialization transactions to be executed on the USDC contract
-   * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
+   * @param _l1AdapterOwner The address of the owner of the L1 adapter
+   * @param _l2Deployments The deployments data for the L2 adapter, and the L2 USDC contracts
    * @return _l2Factory The address of the L2 factory
    * @return _l1Adapter The address of the L1 adapter
    * @return _l2Adapter The address of the L2 adapter
@@ -56,32 +70,25 @@ interface IL1OpUSDCFactory {
   function deployL2FactoryAndContracts(
     bytes32 _l2FactorySalt,
     address _l1Messenger,
-    address _l1AdapterOwner,
     uint32 _minGasLimitCreate2Factory,
-    bytes memory _usdcImplementationInitCode,
-    bytes[] memory _usdcInitTxs,
-    uint32 _minGasLimitDeploy
+    address _l1AdapterOwner,
+    L2Deployments memory _l2Deployments
   ) external returns (address _l2Factory, address _l1Adapter, address _l2Adapter);
 
   /**
    * @notice Sends the L2 adapter and USDC proxy and implementation deployments tx through the messenger
    * to be executed on the l2 factory
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
-   * @param _l2Factory The address of the L2 factory
    * @param _l1AdapterOwner The address of the owner of the L1 adapter
-   * @param _usdcImplementationInitCode The creation code with the constructor arguments for the USDC implementation
-   * @param _usdcInitTxs The initialization transactions to be executed on the USDC contract
-   * @param _minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
+   * @param _l2Deployments The deployments data for the L2 adapter, and the L2 USDC contracts
    * @return _l1Adapter The address of the L1 adapter
    * @return _l2Adapter The address of the L2 adapter
    */
   function deployAdapters(
     address _l1Messenger,
-    address _l2Factory,
     address _l1AdapterOwner,
-    bytes memory _usdcImplementationInitCode,
-    bytes[] memory _usdcInitTxs,
-    uint32 _minGasLimitDeploy
+    address _l2Factory,
+    L2Deployments memory _l2Deployments
   ) external returns (address _l1Adapter, address _l2Adapter);
 
   /*///////////////////////////////////////////////////////////////

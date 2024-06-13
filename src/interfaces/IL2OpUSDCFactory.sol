@@ -57,12 +57,18 @@ interface IL2OpUSDCFactory {
   /**
    * @notice Deploys the USDC implementation, proxy, and L2 adapter contracts all at once, and then initializes the USDC
    * @param _l1Adapter The address of the L1 adapter contract
+   * @param _l2AdapterOwner The address of the L2 adapter owner
    * @param _usdcImplementationInitCode The creation code with the constructor arguments for the USDC implementation
    * @param _usdcInitTxs The initialization transactions for the USDC proxy and implementation contracts
    * @dev The USDC proxy owner needs to be set on the first init tx
    * @dev Using `CREATE` to guarantee that the addresses are unique among all the L2s
    */
-  function deploy(address _l1Adapter, bytes memory _usdcImplementationInitCode, bytes[] memory _usdcInitTxs) external;
+  function deploy(
+    address _l1Adapter,
+    address _l2AdapterOwner,
+    bytes memory _usdcImplementationInitCode,
+    bytes[] memory _usdcInitTxs
+  ) external;
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
+import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
@@ -32,7 +33,8 @@ contract Base is Test, Helpers {
 
   address internal _messenger = makeAddr('messenger');
   address internal _create2Deployer = makeAddr('create2Deployer');
-  address internal _l1Adapter = makeAddr('_l1Adapter');
+  address internal _l1Adapter = makeAddr('l1Adapter');
+  address internal _l2AdapterOwner = makeAddr('l2AdapterOwner');
   address internal _l2Adapter;
 
   address internal _dummyContract;
@@ -87,7 +89,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InvalidSender.selector);
     // Execute
     vm.prank(_sender);
-    factory.deploy(_l1Adapter, _usdcImplInitCode, _initTxsUsdc);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _initTxsUsdc);
   }
 
   /**
@@ -106,7 +108,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     // Execute
     vm.prank(factory.L2_MESSENGER());
     vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InvalidSender.selector);
-    factory.deploy(_l1Adapter, _usdcImplInitCode, _initTxsUsdc);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _initTxsUsdc);
   }
 
   /**
@@ -131,7 +133,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _usdcImplInitCode, _emptyInitTxs);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _emptyInitTxs);
 
     // Assert the USDC implementation was deployed
     assertGt(_usdcImplementation.code.length, 0, 'USDC implementation was not deployed');
@@ -165,7 +167,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _usdcImplInitCode, _emptyInitTxs);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _emptyInitTxs);
 
     // Assert the USDC proxy was deployed
     assertGt(_usdcProxy.code.length, 0, 'USDC proxy was not deployed');
@@ -199,7 +201,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _usdcImplInitCode, _emptyInitTxs);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _emptyInitTxs);
 
     // Assert the adapter was deployed
     assertGt(_l2Adapter.code.length, 0, 'Adapter was not deployed');
@@ -207,6 +209,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     assertEq(IOpUSDCBridgeAdapter(_l2Adapter).USDC(), _usdcProxy, 'USDC address was not set');
     assertEq(IOpUSDCBridgeAdapter(_l2Adapter).MESSENGER(), _l2Messenger, 'Messenger address was not set');
     assertEq(IOpUSDCBridgeAdapter(_l2Adapter).LINKED_ADAPTER(), _l1Adapter, 'Linked adapter address was not set');
+    assertEq(Ownable(_l2Adapter).owner(), _l2AdapterOwner, 'Owner address was not set');
   }
 
   /**
@@ -232,7 +235,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _usdcImplInitCode, _emptyInitTxs);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _emptyInitTxs);
   }
 
   /**
@@ -258,7 +261,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _usdcImplInitCode, _emptyInitTxs);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _emptyInitTxs);
   }
 
   /**
@@ -284,7 +287,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _usdcImplInitCode, _emptyInitTxs);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _emptyInitTxs);
   }
 
   /**
@@ -309,7 +312,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _usdcImplInitCode, _emptyInitTxs);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _emptyInitTxs);
   }
 
   /**
@@ -331,7 +334,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _usdcImplInitCode, _initTxsUsdc);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _initTxsUsdc);
   }
 
   /**
@@ -354,7 +357,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _usdcImplInitCode, _initTxsUsdc);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _initTxsUsdc);
   }
 }
 

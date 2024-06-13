@@ -35,12 +35,18 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
   /**
    * @notice Deploys the USDC implementation, proxy, and L2 adapter contracts all at once, and then initializes the USDC
    * @param _l1Adapter The address of the L1 adapter contract
+   * @param _l2AdapterOwner The address of the L2 adapter owner
    * @param _usdcImplementationInitCode The creation code with the constructor arguments for the USDC implementation
    * @param _usdcInitTxs The initialization transactions for the USDC proxy and implementation contracts
    * @dev The USDC proxy owner needs to be set on the first init tx
    * @dev Using `CREATE` to guarantee that the addresses are unique among all the L2s
    */
-  function deploy(address _l1Adapter, bytes memory _usdcImplementationInitCode, bytes[] memory _usdcInitTxs) external {
+  function deploy(
+    address _l1Adapter,
+    address _l2AdapterOwner,
+    bytes memory _usdcImplementationInitCode,
+    bytes[] memory _usdcInitTxs
+  ) external {
     if (msg.sender != L2_MESSENGER || ICrossDomainMessenger(L2_MESSENGER).xDomainMessageSender() != L1_FACTORY) {
       revert IL2OpUSDCFactory_InvalidSender();
     }
@@ -56,7 +62,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     if (_usdcProxySuccess) emit USDCProxyDeployed(_usdcProxy);
 
     // Deploy L2 Adapter
-    bytes memory _l2AdapterCArgs = abi.encode(_usdcProxy, msg.sender, _l1Adapter);
+    bytes memory _l2AdapterCArgs = abi.encode(_usdcProxy, msg.sender, _l1Adapter, _l2AdapterOwner);
     bytes memory _l2AdapterInitCode = bytes.concat(type(L2OpUSDCBridgeAdapter).creationCode, _l2AdapterCArgs);
     (address _l2Adapter, bool _l2AdapterSuccess) = _deployCreate(_l2AdapterInitCode);
     if (_l2AdapterSuccess) emit L2AdapterDeployed(_l2Adapter);
