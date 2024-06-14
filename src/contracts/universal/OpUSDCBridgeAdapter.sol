@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
+import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
 import {SignatureChecker} from '@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol';
+
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 
-abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, UUPSUpgradeable {
+abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, Ownable {
   using MessageHashUtils for bytes32;
   using SignatureChecker for address;
 
@@ -17,17 +18,54 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, UUPSUpgradeable {
   address public immutable LINKED_ADAPTER;
 
   /// @inheritdoc IOpUSDCBridgeAdapter
+  address public immutable MESSENGER;
+
+  /// @inheritdoc IOpUSDCBridgeAdapter
   mapping(address _user => uint256 _nonce) public userNonce;
 
   /**
    * @notice Construct the OpUSDCBridgeAdapter contract
    * @param _usdc The address of the USDC Contract to be used by the adapter
+   * @param _messenger The address of the messenger contract
    * @param _linkedAdapter The address of the linked adapter
+   * @param _owner The address of the owner of the contract
    */
-  constructor(address _usdc, address _linkedAdapter) {
+  // solhint-disable-next-line no-unused-vars
+  constructor(address _usdc, address _messenger, address _linkedAdapter, address _owner) Ownable(_owner) {
     USDC = _usdc;
+    MESSENGER = _messenger;
     LINKED_ADAPTER = _linkedAdapter;
   }
+
+  /*///////////////////////////////////////////////////////////////
+                             MESSAGING
+  ///////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice Send tokens to other chain through the linked adapter
+   * @param _to The target address on the destination chain
+   * @param _amount The amount of tokens to send
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external virtual;
+
+  /**
+   * @notice Send tokens to other chain through the linked adapter
+   * @param _signer The address of the user sending the message
+   * @param _to The target address on the destination chain
+   * @param _amount The amount of tokens to send
+   * @param _signature The signature of the user
+   * @param _deadline The deadline for the message to be executed
+   * @param _minGasLimit Minimum gas limit that the message can be executed with
+   */
+  function sendMessage(
+    address _signer,
+    address _to,
+    uint256 _amount,
+    bytes calldata _signature,
+    uint256 _deadline,
+    uint32 _minGasLimit
+  ) external virtual;
 
   /**
    * @notice Receive the message from the other chain and mint the bridged representation for the user

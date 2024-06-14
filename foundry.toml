@@ -12,8 +12,6 @@ sort_imports = true
 via_ir = true
 out = 'out-via-ir'
 
-[profile.default.optimizer_details]
-yul = false
 
 [profile.test]
 via_ir = true
@@ -27,6 +25,7 @@ runs = 1000
 
 [rpc_endpoints]
 mainnet = "${MAINNET_RPC}"
+optimism = "${OPTIMISM_RPC}"
 sepolia = "${SEPOLIA_RPC}"
 
 [etherscan]

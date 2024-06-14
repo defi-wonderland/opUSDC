@@ -7,30 +7,46 @@ import {Test} from 'forge-std/Test.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 
 contract ForTestOpUSDCBridgeAdapter is OpUSDCBridgeAdapter {
-  constructor(address _usdc, address _linkedAdapter) OpUSDCBridgeAdapter(_usdc, _linkedAdapter) {}
+  constructor(
+    address _usdc,
+    address _messenger,
+    address _linkedAdapter,
+    address _owner
+  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _owner) {}
 
   function receiveMessage(address _user, uint256 _amount) external override {}
+
+  function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external override {}
+
+  function sendMessage(
+    address _signer,
+    address _to,
+    uint256 _amount,
+    bytes calldata _signature,
+    uint256 _deadline,
+    uint32 _minGasLimit
+  ) external override {}
 
   function forTest_checkSignature(address _signer, bytes32 _messageHash, bytes memory _signature) public view {
     _checkSignature(_signer, _messageHash, _signature);
   }
-
-  function _authorizeUpgrade(address newImplementation) internal override {}
 }
 
 abstract contract Base is Test {
   ForTestOpUSDCBridgeAdapter public adapter;
 
   address internal _usdc = makeAddr('opUSDC');
+  address internal _owner = makeAddr('owner');
   address internal _linkedAdapter = makeAddr('linkedAdapter');
   address internal _signerAd;
   uint256 internal _signerPk;
   address internal _notSignerAd;
   uint256 internal _notSignerPk;
+  address internal _messenger = makeAddr('messenger');
 
   function setUp() public virtual {
     (_signerAd, _signerPk) = makeAddrAndKey('signer');
-    adapter = new ForTestOpUSDCBridgeAdapter(_usdc, _linkedAdapter);
+    adapter = new ForTestOpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _owner);
   }
 }
 
@@ -41,6 +57,27 @@ contract OpUSDCBridgeAdapter_Unit_Constructor is Base {
   function test_constructorParams() public {
     assertEq(adapter.USDC(), _usdc, 'USDC should be set to the provided address');
     assertEq(adapter.LINKED_ADAPTER(), _linkedAdapter, 'Linked adapter should be set to the provided address');
+    assertEq(adapter.owner(), _owner, 'Owner should be set to the provided address');
+  }
+}
+
+contract OpUSDCBridgeAdapter_Unit_SendMessage is Base {
+  /**
+   * @notice Execute vitual function to get 100% coverage
+   */
+  function test_doNothing() public {
+    // Execute
+    adapter.sendMessage(address(0), 0, 0);
+  }
+}
+
+contract OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
+  /**
+   * @notice Execute vitual function to get 100% coverage
+   */
+  function test_doNothing() public {
+    // Execute
+    adapter.sendMessage(address(0), address(0), 0, '', 0, 0);
   }
 }
 

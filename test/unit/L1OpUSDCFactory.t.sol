@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCFactory, L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
-import {UpgradeManager} from 'contracts/UpgradeManager.sol';
-import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {Test} from 'forge-std/Test.sol';
-import {IUpgradeManager} from 'interfaces/IUpgradeManager.sol';
 import {ICreate2Deployer} from 'interfaces/external/ICreate2Deployer.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
 contract ForTestL1OpUSDCFactory is L1OpUSDCFactory {
-  constructor(address _usdc, bytes32 _salt, address _owner) L1OpUSDCFactory(_usdc, _salt, _owner) {}
+  constructor(address _usdc) L1OpUSDCFactory(_usdc) {}
 
-  function forTest_setIsFactoryDeployed(address _l1Messenger, bool _deployed) public {
-    isFactoryDeployed[_l1Messenger] = _deployed;
+  function forTest_setL2FactoryNonce(address _factory, uint256 _nonce) public {
+    l2FactoryNonce[_factory] = _nonce;
+  }
+
+  function forTest_setIsSaltUsed(bytes32 _salt, bool _isUsed) public {
+    isSaltUsed[_salt] = _isUsed;
   }
 
   function forTest_precalculateCreateAddress(
@@ -39,261 +39,145 @@ contract ForTestL1OpUSDCFactory is L1OpUSDCFactory {
 abstract contract Base is Test, Helpers {
   ForTestL1OpUSDCFactory public factory;
 
-  bytes32 internal _salt = bytes32('1');
-  address internal _owner = makeAddr('owner');
+  bytes32 internal _salt = bytes32('32');
+  address internal _l1AdapterOwner = makeAddr('l1AdapterOwner');
   address internal _user = makeAddr('user');
   address internal _usdc = makeAddr('USDC');
-  bytes internal _l2AdapterBytecode = '0x608061111111';
-  bytes internal _l2UsdcImplementationBytecode = '0x6080333333';
-  address internal _l2AdapterImplAddress = makeAddr('l2AdapterImpl');
-  address internal _l2UsdcImplAddress = makeAddr('bridgedUsdcImpl');
+  address internal _usdcImplAddress = makeAddr('bridgedUsdcImpl');
   // cant fuzz this because of foundry's VM
   address internal _l1Messenger = makeAddr('messenger');
 
-  bytes[] internal _usdcImplInitTxs;
-  bytes[] internal _l2AdapterInitTxs;
-  IUpgradeManager.Implementation internal _bridgedUsdcImplementation;
-  IUpgradeManager.Implementation internal _l2AdapterImplementation;
-  address internal _upgradeManager;
+  IL1OpUSDCFactory.L2Deployments internal _l2Deployments;
+  bytes[] internal _usdcInitTxs;
 
   function setUp() public virtual {
     // Deploy factory
-    factory = new ForTestL1OpUSDCFactory(_usdc, _salt, _owner);
-    _upgradeManager = address(factory.UPGRADE_MANAGER());
+    factory = new ForTestL1OpUSDCFactory(_usdc);
 
-    vm.etch(_l2AdapterImplAddress, _l2AdapterBytecode);
-    vm.etch(_l2UsdcImplAddress, _l2UsdcImplementationBytecode);
-
-    // Define the implementation structs info
+    // Add the USDC init tx
     bytes memory _usdcInitTx = 'tx1';
-    _usdcImplInitTxs.push(_usdcInitTx);
-    bytes memory _l2AdapterInitTx = 'tx2';
-    _l2AdapterInitTxs.push(_l2AdapterInitTx);
-    _bridgedUsdcImplementation = IUpgradeManager.Implementation(_l2UsdcImplAddress, _usdcImplInitTxs);
-    _l2AdapterImplementation = IUpgradeManager.Implementation(_l2AdapterImplAddress, _l2AdapterInitTxs);
+    _usdcInitTxs.push(_usdcInitTx);
+
+    // Define the L2 deployments struct data
+    uint32 _minGasLimitDeploy = 100;
+    address _l2AdapterOwner = makeAddr('l2AdapterOwner');
+    bytes memory _usdcImplementationInitCode = '0x6080333333';
+    _l2Deployments = IL1OpUSDCFactory.L2Deployments({
+      l2AdapterOwner: _l2AdapterOwner,
+      usdcImplementationInitCode: _usdcImplementationInitCode,
+      usdcInitTxs: _usdcInitTxs,
+      minGasLimitDeploy: _minGasLimitDeploy
+    });
   }
 
   /**
-   * @notice Helper function to mock all the function calls that will be made in the `deployL2USDCAndAdapter` function,
+   * @notice Helper function to mock all the function calls that will be made in the `deployAdapters` function,
    * and some that will be made in the `deployL2FactoryAndContracts` function
    */
   function _mockDeployFunctionCalls() internal {
-    // Mock the user to be the executor
-    vm.mockCall(
-      _upgradeManager, abi.encodeWithSignature('messengerDeploymentExecutor(address)', _l1Messenger), abi.encode(_user)
-    );
-
-    // Mock the call over the `bridgedUSDCImplementation` function
-    vm.mockCall(
-      _upgradeManager,
-      abi.encodeWithSelector(IUpgradeManager.bridgedUSDCImplementation.selector),
-      abi.encode(_bridgedUsdcImplementation)
-    );
-
-    // Mock the call over the `l2AdapterImplementation` function
-    vm.mockCall(
-      _upgradeManager,
-      abi.encodeWithSelector(IUpgradeManager.l2AdapterImplementation.selector),
-      abi.encode(_l2AdapterImplementation)
-    );
-
     // Mock the call over the `portal` function on the L1 messenger
     vm.mockCall(_l1Messenger, abi.encodeWithSelector(ICrossDomainMessenger.sendMessage.selector), abi.encode(''));
   }
 }
 
 contract L1OpUSDCFactory_Unit_Constructor is Base {
-  event L1AdapterDeployed(address _l1AdapterProxy, address _l1AdapterImplementation);
-
-  event UpgradeManagerDeployed(address _upgradeManagerProxy, address _upgradeManagerImplementation);
-
   /**
    * @notice Test the constructor params are correctly set
    */
   function test_setImmutables() public {
-    address _wethL2 = 0x4200000000000000000000000000000000000006;
-    // Get the init codes
-    bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
-    bytes memory _l2FactoryCArgs = abi.encode(_salt, address(factory));
-    bytes32 _l2FactoryInitCodeHash = keccak256(bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs));
-    bytes32 _l2UsdcProxyInitCodeHash = keccak256(bytes.concat(USDC_PROXY_CREATION_CODE, abi.encode(_wethL2)));
-    bytes32 _l2AdapterProxyInitCodeHash =
-      keccak256(bytes.concat(type(ERC1967Proxy).creationCode, abi.encode(_wethL2, '')));
-
-    // Precalculate the addresses to be deployed using CREATE2
-    address _l2Factory =
-      factory.forTest_precalculateCreate2Address(_salt, _l2FactoryInitCodeHash, factory.L2_CREATE2_DEPLOYER());
-    address _l2UsdcProxyAddress =
-      factory.forTest_precalculateCreate2Address(_salt, _l2UsdcProxyInitCodeHash, address(_l2Factory));
-    address _l2AdapterProxy =
-      factory.forTest_precalculateCreate2Address(_salt, _l2AdapterProxyInitCodeHash, address(_l2Factory));
-    // Precalculate the addresses to be deployed using CREATE
-    address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), 2);
-    address _upgradeManager = factory.forTest_precalculateCreateAddress(address(factory), 4);
-
     // Assert
-    assertEq(factory.L2_FACTORY(), _l2Factory, 'Invalid l2Factory address');
-    assertEq(factory.L2_USDC_PROXY(), _l2UsdcProxyAddress, 'Invalid l2UsdcProxy address');
-    assertEq(factory.L2_ADAPTER_PROXY(), _l2AdapterProxy, 'Invalid l2Adapter proxy address');
-    assertEq(address(factory.UPGRADE_MANAGER()), _upgradeManager, 'Invalid upgradeManager address');
-    assertEq(address(factory.L1_ADAPTER_PROXY()), _l1Adapter, 'Invalid l1Adapter address');
-  }
-
-  /**
-   * @notice Check the constructor correctly deploys the L1 adapter
-   * @dev We are assuming the L1 adapter correctly sets the immutable vars to compare. Need to do this to check the
-   * contract constructor values were properly set.
-   */
-  function test_deployL1Adapter() public {
-    L1OpUSDCBridgeAdapter _l1Adapter = L1OpUSDCBridgeAdapter(factory.L1_ADAPTER_PROXY());
-    assertEq(_l1Adapter.USDC(), _usdc, 'Invalid usdc');
-    assertEq(_l1Adapter.LINKED_ADAPTER(), factory.L2_ADAPTER_PROXY(), 'Invalid l2Adapter');
-    assertEq(address(_l1Adapter.UPGRADE_MANAGER()), address(factory.UPGRADE_MANAGER()), 'Invalid upgradeManager');
-    assertEq(_l1Adapter.FACTORY(), address(factory), 'Invalid factory');
-  }
-
-  /**
-   * @notice Check the `L1AdapterDeployed` event is properly emitted
-   */
-  function test_emitL1AdapterDeployedEvent() public {
-    // Precalculate the L1 adapter address to be emitted
-    uint256 _nonce = vm.getNonce(address(this));
-    address _newFactory = factory.forTest_precalculateCreateAddress(address(this), _nonce);
-    address _l1AdapterImpl = factory.forTest_precalculateCreateAddress(_newFactory, 1);
-    address _l1AdapterProxy = factory.forTest_precalculateCreateAddress(_newFactory, 2);
-
-    // Expect
-    vm.expectEmit(true, true, true, true);
-    emit L1AdapterDeployed(_l1AdapterProxy, _l1AdapterImpl);
-
-    // Execute
-    new ForTestL1OpUSDCFactory(_usdc, _salt, _owner);
-  }
-
-  /**
-   * @notice Check the constructor correctly deploys the upgrade manager implementation
-   * @dev We are assuming the upgrade manager correctly sets the immutable vars to compare. Need to do this to check the
-   * contract constructor values were properly set.
-   */
-  function test_deployUpgradeManagerImplementation() public {
-    IUpgradeManager _upgradeManager = IUpgradeManager(address(factory.UPGRADE_MANAGER()));
-    assertEq(_upgradeManager.L1_ADAPTER(), address(factory.L1_ADAPTER_PROXY()), 'Invalid l1Adapter');
-  }
-
-  /**
-   * @notice Check the constructor correctly deploys the upgrade manager proxy
-   * @dev We are assuming the upgrade manager correctly sets the immutable vars to compare. Need to do this to check the
-   * contract constructor values were properly set.
-   */
-  function test_deployUpgradeManagerProxy() public {
-    UpgradeManager _upgradeManager = UpgradeManager(address(factory.UPGRADE_MANAGER()));
-    assertEq(_upgradeManager.owner(), _owner, 'Invalid owner');
-  }
-
-  /**
-   * @notice Check the `UpgradeManagerDeployed` event is properly emitted
-   */
-  function test_emitUpgradeManagerDeployedEvent() public {
-    // Precalculate the upgrade manager address to be emitted
-    uint256 _nonce = vm.getNonce(address(this));
-    address _newFactory = factory.forTest_precalculateCreateAddress(address(this), _nonce);
-    address _upgradeManagerImpl = factory.forTest_precalculateCreateAddress(_newFactory, 3);
-    address _upgradeManagerProxy = factory.forTest_precalculateCreateAddress(_newFactory, 4);
-
-    // Expect
-    vm.expectEmit(true, true, true, true);
-    emit UpgradeManagerDeployed(_upgradeManagerProxy, _upgradeManagerImpl);
-
-    // Execute
-    new ForTestL1OpUSDCFactory(_usdc, _salt, _owner);
+    assertEq(factory.USDC(), _usdc, 'Invalid usdc address');
   }
 }
 
 contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
   /**
-   * @notice Check the `deployL2FactoryAndContracts` function reverts if the caller is not the executor
+   * @notice Check the function reverts if the salt was already used
    */
-  function test_revertIfNotExecutor(
-    uint32 _minGasLimitDeploy,
-    uint32 _minGasLimitCreate2Factory,
-    address _executor
-  ) public {
-    vm.assume(_executor != _user);
+  function test_revertOnReusedSalt(uint32 _minGasLimitCreate2Factory) public {
+    // Set the salt as used
+    factory.forTest_setIsSaltUsed(_salt, true);
 
-    vm.mockCall(
-      _upgradeManager,
-      abi.encodeWithSignature('messengerDeploymentExecutor(address)', _l1Messenger),
-      abi.encode(_executor)
+    // Mock all the `deployL2FactoryAndContracts` function calls
+    _mockDeployFunctionCalls();
+
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(IL1OpUSDCFactory.IL1OpUSDCFactory_SaltAlreadyUsed.selector);
+    factory.deployL2FactoryAndContracts(
+      _salt, _l1Messenger, _minGasLimitCreate2Factory, _l1AdapterOwner, _l2Deployments
     );
-
-    // Execute
-    vm.expectRevert(IL1OpUSDCFactory.IL1OpUSDCFactory_NotExecutor.selector);
-    vm.prank(_user);
-    factory.deployL2FactoryAndContracts(_l1Messenger, _minGasLimitCreate2Factory, _minGasLimitDeploy);
   }
 
   /**
-   * @notice Check the `deployL2FactoryAndContracts` function calls the `messengerDeploymentExecutor` correctly
+   * @notice Check it sets the salt as used after the deployment
    */
-  function test_callMessengerDeploymentExecutor(uint32 _minGasLimitCreate2Factory, uint32 _minGasLimitDeploy) public {
-    // Mock all the `deployL2FactoryAndContracts` function calls
-    _mockDeployFunctionCalls();
+  function test_setSaltAsUsed(uint32 _minGasLimitCreate2Factory) public {
+    // Set the salt as not used yet
+    factory.forTest_setIsSaltUsed(_salt, false);
 
-    // Expect the `bridgedUSDCImplementation` to be properly called
-    vm.expectCall(_upgradeManager, abi.encodeWithSelector(IUpgradeManager.messengerDeploymentExecutor.selector));
-
-    // Execute
-    vm.prank(_user);
-    factory.deployL2FactoryAndContracts(_l1Messenger, _minGasLimitCreate2Factory, _minGasLimitDeploy);
-  }
-
-  /**
-   * @notice Check the messenger is set as deployed on the `isMessengerDeployed` mapping
-   */
-  function test_setMessengerDeployed(uint32 _minGasLimitCreate2Factory, uint32 _minGasLimitDeploy) public {
     // Mock all the `deployL2FactoryAndContracts` function calls
     _mockDeployFunctionCalls();
 
     // Execute
     vm.prank(_user);
-    factory.deployL2FactoryAndContracts(_l1Messenger, _minGasLimitCreate2Factory, _minGasLimitDeploy);
+    factory.deployL2FactoryAndContracts(
+      _salt, _l1Messenger, _minGasLimitCreate2Factory, _l1AdapterOwner, _l2Deployments
+    );
 
     // Assert
-    assertTrue(factory.isFactoryDeployed(_l1Messenger), 'Messenger not deployed');
+    assertTrue(factory.isSaltUsed(_salt), 'Salt not set as used');
   }
 
   /**
-   * @notice Check the `deployL2FactoryAndContracts` function calls the `initializeNewMessenger` correctly
+   * @notice Check it properly increments the l2 factory nonce.
+   * @dev We are assuming that the `_deployAdapters()` function properly updates it too to assert the output
    */
-  function test_callInitializeMessenger(uint32 _minGasLimitCreate2Factory, uint32 _minGasLimitDeploy) public {
+  function test_incrementL2FactoryNonce(bytes32 _newSalt, uint32 _minGasLimitCreate2Factory) public {
+    vm.assume(_newSalt != _salt);
+
+    // Precalculate L2 factory
+    bytes memory _l2FactoryCArgs = abi.encode(address(factory));
+    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
+    address _l2Factory =
+      _precalculateCreate2Address(_newSalt, keccak256(_l2FactoryInitCode), factory.L2_CREATE2_DEPLOYER());
+
+    // Set the L2 Factory as struct value
+    _l2Factory = _l2Factory;
+
+    // Get the nonce before the deployment
+    uint256 _nonceBefore = factory.l2FactoryNonce(_l2Factory);
+
     // Mock all the `deployL2FactoryAndContracts` function calls
     _mockDeployFunctionCalls();
 
-    // Expect the `initializeMessenger` to be properly called
-    vm.expectCall(
-      address(factory.L1_ADAPTER_PROXY()),
-      abi.encodeWithSelector(L1OpUSDCBridgeAdapter.initializeNewMessenger.selector, _l1Messenger)
-    );
-
     // Execute
     vm.prank(_user);
-    factory.deployL2FactoryAndContracts(_l1Messenger, _minGasLimitCreate2Factory, _minGasLimitDeploy);
+    factory.deployL2FactoryAndContracts(
+      _newSalt, _l1Messenger, _minGasLimitCreate2Factory, _l1AdapterOwner, _l2Deployments
+    );
+
+    // Assert
+    uint256 _nonceAfter = factory.l2FactoryNonce(_l2Factory);
+    assertEq(_nonceAfter, _nonceBefore + 4, 'Invalid l2 factory nonce');
   }
 
   /**
    * @notice Check the `deploy` call over the `create2Deployer` is correctly sent through the messenger
    */
-  function test_callSendMessage(uint32 _minGasLimitCreate2Factory, uint32 _minGasLimitDeploy) public {
+  function test_callSendMessage(bytes32 _newSalt, uint32 _minGasLimitCreate2Factory) public {
+    vm.assume(_newSalt != _salt);
     uint256 _zeroValue = 0;
+
     // Mock all the `deployL2FactoryAndContracts` function calls
     _mockDeployFunctionCalls();
 
     // Get the L2 factory deployment tx
     bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
-    bytes memory _l2FactoryCArgs = abi.encode(_salt, address(factory));
+    bytes memory _l2FactoryCArgs = abi.encode(address(factory));
     bytes memory _l2FactoryInitCode = bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs);
     bytes memory _l2FactoryCreate2Tx =
-      abi.encodeWithSelector(ICreate2Deployer.deploy.selector, _zeroValue, _salt, _l2FactoryInitCode);
+      abi.encodeWithSelector(ICreate2Deployer.deploy.selector, _zeroValue, _newSalt, _l2FactoryInitCode);
 
     // Expect the `sendMessage` to be properly called
     vm.expectCall(
@@ -308,178 +192,284 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
 
     // Execute
     vm.prank(_user);
-    factory.deployL2FactoryAndContracts(_l1Messenger, _minGasLimitCreate2Factory, _minGasLimitDeploy);
+    factory.deployL2FactoryAndContracts(
+      _newSalt, _l1Messenger, _minGasLimitCreate2Factory, _l1AdapterOwner, _l2Deployments
+    );
   }
 
   /**
-   * @notice Check the `deployL2USDCAndAdapter` function is called on the `deployL2USDCAndAdapter` function by checking
+   * @notice Check the `deployAdapters` function is called on the `deployAdapters` function by checking
    * that the message to deploy those L2 contracts is properly sent
    */
-  function test_callDeployL2USDCAndAdapter(uint32 _minGasLimitCreate2Factory, uint32 _minGasLimitDeploy) public {
+  function test_callDeployAdapters(bytes32 _newSalt, uint32 _minGasLimitCreate2Factory) public {
+    // Get the l1 adapter address
+    uint256 _factoryNonce = vm.getNonce(address(factory));
+    address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce);
+
+    // Precalculate L2 factory
+    bytes memory _l2FactoryCArgs = abi.encode(address(factory));
+    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
+    address _l2Factory =
+      _precalculateCreate2Address(_newSalt, keccak256(_l2FactoryInitCode), factory.L2_CREATE2_DEPLOYER());
+
     // Mock all the `deployL2FactoryAndContracts` function calls
     _mockDeployFunctionCalls();
 
     // Expect the `sendMessage` to be properly called
     bytes memory _l2DeploymentsTx = abi.encodeWithSelector(
       L2OpUSDCFactory.deploy.selector,
-      _l2UsdcImplementationBytecode,
-      _usdcImplInitTxs,
-      _l2AdapterBytecode,
-      _l2AdapterInitTxs
+      _l1Adapter,
+      _l2Deployments.l2AdapterOwner,
+      _l2Deployments.usdcImplementationInitCode,
+      _l2Deployments.usdcInitTxs
     );
     vm.expectCall(
       _l1Messenger,
       abi.encodeWithSelector(
-        ICrossDomainMessenger.sendMessage.selector, factory.L2_FACTORY(), _l2DeploymentsTx, _minGasLimitDeploy
+        ICrossDomainMessenger.sendMessage.selector, _l2Factory, _l2DeploymentsTx, _l2Deployments.minGasLimitDeploy
       )
     );
 
     // Execute
     vm.prank(_user);
-    factory.deployL2FactoryAndContracts(_l1Messenger, _minGasLimitCreate2Factory, _minGasLimitDeploy);
+    factory.deployL2FactoryAndContracts(
+      _newSalt, _l1Messenger, _minGasLimitCreate2Factory, _l1AdapterOwner, _l2Deployments
+    );
+  }
+
+  /**
+   * @notice Check the returned addresses are the expected ones
+   */
+  function test_returnAdapters(bytes32 _newSalt, uint32 _minGasLimitCreate2Factory) public {
+    vm.assume(_newSalt != _salt);
+
+    // Calculate the expected l2 factory address
+    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, abi.encode(address(factory)));
+    address _expectedL2Factory =
+      _precalculateCreate2Address(_newSalt, keccak256(_l2FactoryInitCode), factory.L2_CREATE2_DEPLOYER());
+
+    // Calculate the expected l1 adapter address
+    address _expectedL1Adapter =
+      factory.forTest_precalculateCreateAddress(address(factory), vm.getNonce(address(factory)));
+
+    // Calculate the expected l2 adapter address
+    address _expectedL2Adapter =
+      factory.forTest_precalculateCreateAddress(_expectedL2Factory, factory.l2FactoryNonce(_l1Messenger) + 3);
+
+    // Mock all the `deployL2FactoryAndContracts` function calls
+    _mockDeployFunctionCalls();
+
+    // Execute
+    (address _l2Factory, address _l1Adapter, address _l2Adapter) = factory.deployL2FactoryAndContracts(
+      _newSalt, _l1Messenger, _minGasLimitCreate2Factory, _l1AdapterOwner, _l2Deployments
+    );
+
+    // Assert
+    assertEq(_l2Factory, _expectedL2Factory, 'Invalid l2 factory address');
+    assertEq(_l1Adapter, _expectedL1Adapter, 'Invalid l1 adapter address');
+    assertEq(_l2Adapter, _expectedL2Adapter, 'Invalid l2 adapter address');
   }
 }
 
-contract L1OpUSDCFactory_Unit_DeployL2USDCAndAdapter is Base {
-  function setUp() public override {
-    super.setUp();
-    // Set the L2 factory as deployed for the L1 messenger
-    factory.forTest_setIsFactoryDeployed(_l1Messenger, true);
-  }
+contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
+  event L1AdapterDeployed(address _l1Adapter);
 
-  function test_revertIfFactoryAlreadyDeployed() public {
-    uint32 _minGasLimit = 0;
-    // Mock the `isMessengerDeployed` to return true
-    factory.forTest_setIsFactoryDeployed(_l1Messenger, false);
+  /**
+   * @notice Check the function reverts if the given L2 factory was not deployed
+   */
+  function test_revertIfFactoryNotDeployed(address _l2Factory) public {
+    // Set the l2 factory nonce to 0
+    uint256 _nonce = 0;
+    factory.forTest_setL2FactoryNonce(_l2Factory, _nonce);
 
     // Execute
     vm.prank(_user);
-    vm.expectRevert(IL1OpUSDCFactory.IL1OpUSDCFactory_FactoryNotDeployed.selector);
-    factory.deployL2USDCAndAdapter(_l1Messenger, _minGasLimit);
+    vm.expectRevert(IL1OpUSDCFactory.IL1OpUSDCFactory_L2FactoryNotDeployed.selector);
+    factory.deployAdapters(_l1Messenger, _l1AdapterOwner, _l2Factory, _l2Deployments);
   }
 
   /**
-   * @notice Check the `deployL2USDCAndAdapter` function reverts if the caller is not the executor
+   * @notice Check the function deploys the L1 adapter correctly and sends the message to the L2 factory to execute the
+   * L2 deployments
+   * @dev Assuming the `L1OpUSDCBridgeAdapter` sets the immutables correctly to check we are passing the right values
    */
-  function test_revertIfNotExecutor(uint32 _minGasLimitDeploy, address _executor) public {
-    vm.assume(_executor != _user);
+  function test_deployL1Adapter(address _l2Factory) public {
+    // Set the l2 factory nonce to 1 as if it was already deployed
+    factory.forTest_setL2FactoryNonce(_l2Factory, 1);
 
-    // Mock the `isMessengerDeployed` to return true
-    factory.forTest_setIsFactoryDeployed(_l1Messenger, true);
+    uint256 _factoryNonce = vm.getNonce(address(factory));
+    address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce);
 
-    vm.mockCall(
-      _upgradeManager,
-      abi.encodeWithSignature('messengerDeploymentExecutor(address)', _l1Messenger),
-      abi.encode(_executor)
+    uint256 _l2FactoryNonce = factory.l2FactoryNonce(_l2Factory);
+    address _l2Adapter = factory.forTest_precalculateCreateAddress(_l2Factory, _l2FactoryNonce + 2);
+
+    // Mock all the `deployAdapters` function calls
+    _mockDeployFunctionCalls();
+
+    // Execute
+    vm.prank(_user);
+    factory.deployAdapters(_l1Messenger, _l1AdapterOwner, _l2Factory, _l2Deployments);
+
+    // Assert the contract was deployed by checking its bytecode length is greater than 0
+    assertGt(_l1Adapter.code.length, 0, 'L1 adapter not deployed');
+    // Check the constructor values were properly passed
+    assertEq(L1OpUSDCBridgeAdapter(_l1Adapter).USDC(), _usdc, 'Invalid USDC address');
+    assertEq(L1OpUSDCBridgeAdapter(_l1Adapter).MESSENGER(), _l1Messenger, 'Invalid messenger address');
+    assertEq(L1OpUSDCBridgeAdapter(_l1Adapter).LINKED_ADAPTER(), _l2Adapter, 'Invalid linked adapter address');
+    assertEq(L1OpUSDCBridgeAdapter(_l1Adapter).owner(), _l1AdapterOwner, 'Invalid owner address');
+  }
+
+  /**
+   * @notice Check the nonce is incremented with the number of deployments to be done on the L2 Factory
+   */
+  function test_incrementL2FactoryNonce(address _l2Factory) public {
+    // Set the l2 factory nonce to 1 as if it was already deployed
+    factory.forTest_setL2FactoryNonce(_l2Factory, 1);
+    uint256 _l2FactoryNonceBefore = factory.l2FactoryNonce(_l2Factory);
+
+    // Mock all the `deployAdapters` function calls
+    _mockDeployFunctionCalls();
+
+    // Execute
+    vm.prank(_user);
+    factory.deployAdapters(_l1Messenger, _l1AdapterOwner, _l2Factory, _l2Deployments);
+
+    // Assert
+    uint256 _numberOfDeployments = 3;
+    assertEq(
+      factory.l2FactoryNonce(_l2Factory), _l2FactoryNonceBefore + _numberOfDeployments, 'Invalid l2 factory nonce'
     );
-
-    // Execute
-    vm.expectRevert(IL1OpUSDCFactory.IL1OpUSDCFactory_NotExecutor.selector);
-    vm.prank(_user);
-    factory.deployL2USDCAndAdapter(_l1Messenger, _minGasLimitDeploy);
   }
 
   /**
-   * @notice Check the `deployL2USDCAndAdapter` function calls the `messengerDeploymentExecutor` correctly
+   * @notice Check the `_deployAdapters` function calls the `sendMessage` correctly
    */
-  function test_callMessengerDeploymentExecutor(uint32 _minGasLimitDeploy) public {
-    // Mock all the `deployL2USDCAndAdapter` function calls
-    _mockDeployFunctionCalls();
+  function test_callSendMessage(address _l2Factory) public {
+    // Set the l2 factory nonce to 1 as if it was already deployed
+    factory.forTest_setL2FactoryNonce(_l2Factory, 1);
 
-    // Expect the `bridgedUSDCImplementation` to be properly called
-    vm.expectCall(_upgradeManager, abi.encodeWithSelector(IUpgradeManager.messengerDeploymentExecutor.selector));
+    // Calculate the l1 adapter address
+    uint256 _factoryNonce = vm.getNonce(address(factory));
+    address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce);
 
-    // Execute
-    vm.prank(_user);
-    factory.deployL2USDCAndAdapter(_l1Messenger, _minGasLimitDeploy);
-  }
-
-  function test_callBridgedUSDCImplementation(uint32 _minGasLimitDeploy) public {
-    // Mock all the `deployL2USDCAndAdapter` function calls
-    _mockDeployFunctionCalls();
-
-    // Expect the `bridgedUSDCImplementation` to be properly called
-    vm.expectCall(_upgradeManager, abi.encodeWithSelector(IUpgradeManager.bridgedUSDCImplementation.selector));
-
-    // Execute
-    vm.prank(_user);
-    factory.deployL2USDCAndAdapter(_l1Messenger, _minGasLimitDeploy);
-  }
-
-  /**
-   * @notice Check the `deployL2USDCAndAdapter` function calls the `l2AdapterImplementation` correctly
-   */
-  function test_callL2AdapterImplementation(uint32 _minGasLimitDeploy) public {
-    // Mock all the `deployL2USDCAndAdapter` function calls
-    _mockDeployFunctionCalls();
-
-    // Expect the `l2AdapterImplementation` to be properly called
-    vm.expectCall(_upgradeManager, abi.encodeWithSelector(IUpgradeManager.l2AdapterImplementation.selector));
-
-    // Execute
-    vm.prank(_user);
-    factory.deployL2USDCAndAdapter(_l1Messenger, _minGasLimitDeploy);
-  }
-
-  /**
-   * @notice Check the `_deployL2USDCAndAdapter` function calls the `sendMessage` correctly. We use a for test function
-   * to get the internal because the `sendMessage` function is not public
-   */
-  function test_callSendMessage(uint32 _minGasLimitDeploy) public {
-    // Mock all the `deployL2USDCAndAdapter` function calls
+    // Mock all the `deployL2FactoryAndContracts` function calls
     _mockDeployFunctionCalls();
 
     // Expect the `sendMessage` to be properly called
     bytes memory _l2DeploymentsTx = abi.encodeWithSelector(
       L2OpUSDCFactory.deploy.selector,
-      _l2UsdcImplementationBytecode,
-      _usdcImplInitTxs,
-      _l2AdapterBytecode,
-      _l2AdapterInitTxs
+      _l1Adapter,
+      _l2Deployments.l2AdapterOwner,
+      _l2Deployments.usdcImplementationInitCode,
+      _l2Deployments.usdcInitTxs
     );
     vm.expectCall(
       _l1Messenger,
       abi.encodeWithSelector(
-        ICrossDomainMessenger.sendMessage.selector, factory.L2_FACTORY(), _l2DeploymentsTx, _minGasLimitDeploy
+        ICrossDomainMessenger.sendMessage.selector, _l2Factory, _l2DeploymentsTx, _l2Deployments.minGasLimitDeploy
       )
     );
 
     // Execute
     vm.prank(_user);
-    factory.deployL2USDCAndAdapter(_l1Messenger, _minGasLimitDeploy);
+    factory.deployAdapters(_l1Messenger, _l1AdapterOwner, _l2Factory, _l2Deployments);
+  }
+
+  /**
+   * @notice Check the `L1AdapterDeployed` event is properly emitted
+   */
+  function test_emitEvent(address _l2Factory) public {
+    // Set the l2 factory nonce to 1 as if it was already deployed
+    factory.forTest_setL2FactoryNonce(_l2Factory, 1);
+
+    // Calculate the l1 adapter address
+    uint256 _factoryNonce = vm.getNonce(address(factory));
+    address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce);
+
+    // Mock all the `deployAdapters` function calls
+    _mockDeployFunctionCalls();
+
+    // Expect the `L1AdapterDeployed` event to be emitted
+    vm.expectEmit(true, true, true, true);
+    emit L1AdapterDeployed(_l1Adapter);
+
+    // Execute
+    vm.prank(_user);
+    factory.deployAdapters(_l1Messenger, _l1AdapterOwner, _l2Factory, _l2Deployments);
+  }
+
+  /**
+   * @notice Check the returned addresses are the expected ones
+   */
+  function test_returnAdapters(address _l2Factory) public {
+    // Set the l2 factory nonce to 1 as if it was already deployed
+    factory.forTest_setL2FactoryNonce(_l2Factory, 1);
+
+    uint256 _factoryNonce = vm.getNonce(address(factory));
+    address _expectedL1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce);
+
+    uint256 _l2FactoryNonce = factory.l2FactoryNonce(_l2Factory) + 2;
+    address _expectedL2Adapter = factory.forTest_precalculateCreateAddress(_l2Factory, _l2FactoryNonce);
+
+    // Mock all the `deployAdapters` function calls
+    _mockDeployFunctionCalls();
+
+    // Execute
+    (address _l1Adapter, address _l2Adapter) =
+      factory.deployAdapters(_l1Messenger, _l1AdapterOwner, _l2Factory, _l2Deployments);
+
+    // Assert
+    assertEq(_l1Adapter, _expectedL1Adapter, 'Invalid l1 adapter address');
+    assertEq(_l2Adapter, _expectedL2Adapter, 'Invalid l2 adapter address');
   }
 }
 
 contract L1OpUSDCFactory_Unit_PrecalculateCreateAddress is Base {
   /**
-   * @notice Check the `precalculateCreateAddress` function returns the correct address for the given deployer and nonce
-   * We are testing the range from 1 to 127 since the function only covers that range which is enough for the factory
+   * @notice Check the function reverts if the nonce is higher than the max possible value (2^64 - 2)
    */
-  function test_precalculateCreateAddress(address _deployer) public {
+  function test_revertOnInvalidNonce() public {
+    uint64 _maxNonce = 2 ** 64 - 2;
+    uint64 _nonce = _maxNonce + 1;
+    // Setting a higher nonce than the deployer's current one will revert
+    vm.setNonce(_user, _nonce);
+
+    // Expect the call to revert
+    vm.expectRevert(IL1OpUSDCFactory.IL1OpUSDCFactory_InvalidNonce.selector);
+
+    // Execute
+    factory.forTest_precalculateCreateAddress(_user, _nonce);
+  }
+
+  /**
+   * @notice Check the `precalculateCreateAddress` function returns the correct address for the given deployer and nonce
+   * We are testing the range from 1 to (2**64 -2)
+   */
+  function test_precalculateCreateAddress(address _deployer, uint256 _nonce) public {
+    uint256 _maxNonce = 2 ** 64 - 2;
+    _nonce = bound(_nonce, 1, _maxNonce);
     // Setting a lower nonce than the deployer's current one will revert
-    vm.assume(vm.getNonce(_deployer) <= 1);
-    vm.setNonce(_deployer, 1);
-    for (uint256 i = 1; i < 127; i++) {
-      // Precalculate the address
-      address _precalculatedAddress = factory.forTest_precalculateCreateAddress(_deployer, i);
+    vm.assume(vm.getNonce(_deployer) <= _nonce);
+    vm.setNonce(_deployer, uint64(_nonce));
 
-      // Execute
-      vm.prank(_deployer);
-      address _newAddress = address(new ForTest_DummyContract());
+    // Precalculate the address
+    address _precalculatedAddress = factory.forTest_precalculateCreateAddress(_deployer, _nonce);
 
-      // Assert
-      assertEq(_newAddress, _precalculatedAddress, 'Invalid create precalculated address');
-    }
+    // Execute
+    vm.prank(_deployer);
+    address _newAddress = address(new ForTest_DummyContract());
+
+    // Assert
+    assertEq(_newAddress, _precalculatedAddress, 'Invalid create precalculated address');
   }
 }
 
 contract L1OpUSDCFactory_Unit_PrecalculateCreate2Address is Base {
   // Error to revert when the create2 fails while testing the precalculateCreate2Address function
-  error Create2Failed();
+  error ForTest_Create2Failed();
 
   /**
-   * @notice Check the `precalculateCreate2Address` function returns the correct address for the given salt, init code
-   *  hash, and deployer
+   * @notice Check the function returns the expected address
    */
   function test_precalculateCreate2Address(bytes32 _salt, address _deployer) public {
     // Get the dumy contract init code and its hash
@@ -490,16 +480,16 @@ contract L1OpUSDCFactory_Unit_PrecalculateCreate2Address is Base {
     address _precalculatedAddress = factory.forTest_precalculateCreate2Address(_salt, _initCodeHash, _deployer);
     address _newAddress;
 
-    // Execute
+    // Deploy the contract using the CREATE2 opcode
     vm.prank(_deployer);
     assembly ("memory-safe") {
       _newAddress := create2(callvalue(), add(_initCode, 0x20), mload(_initCode), _salt)
     }
     if (_newAddress == address(0) || _newAddress.code.length == 0) {
-      revert Create2Failed();
+      revert ForTest_Create2Failed();
     }
 
-    // Assert
+    // Assert the address is the expected one
     assertEq(_newAddress, _precalculatedAddress, 'Invalid create2 precalculated address');
   }
 }
