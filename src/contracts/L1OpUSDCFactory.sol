@@ -7,6 +7,8 @@ import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 import {ICreate2Deployer} from 'interfaces/external/ICreate2Deployer.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 
+import 'forge-std/Test.sol';
+
 /**
  * @title L1OpUSDCFactory
  * @notice Factory contract to deploy and setup the `L1OpUSDCBridgeAdapter` and `UpgradeManager` contracts on L1, and
@@ -135,7 +137,8 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     l2FactoryNonce[_l2Factory] = _l2FactoryNonce + 3;
 
     // Set the L2 adapter as the owner of the USDC on the first init tx
-    _setAdaperAsOwner(_l2Deployments.usdcInitTxs, _l2Adapter);
+    bytes memory _initializeTx = _setAdapterAsOwner(_l2Deployments.usdcInitTxs, _l2Adapter);
+    _l2Deployments.usdcInitTxs[0] = _initializeTx;
 
     // Send the call over the L2 factory `deploy` function message
     bytes memory _l2DeploymentsTx = abi.encodeWithSelector(
@@ -145,6 +148,8 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
       _l2Deployments.usdcImplementationInitCode,
       _l2Deployments.usdcInitTxs
     );
+    // console.logBytes(_l2DeploymentsTx);
+
     ICrossDomainMessenger(_l1Messenger).sendMessage(_l2Factory, _l2DeploymentsTx, _l2Deployments.minGasLimitDeploy);
 
     emit L1AdapterDeployed(_l1Adapter);
@@ -155,22 +160,33 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * @param _usdcInitTxs The USDC initialization transactions
    * @param _l2Adapter The address of the L2 adapter
    */
-  function _setAdaperAsOwner(bytes[] memory _usdcInitTxs, address _l2Adapter) internal pure {
-    bytes memory _initializeTx = _usdcInitTxs[0];
+  function _setAdapterAsOwner(
+    bytes[] memory _usdcInitTxs,
+    address _l2Adapter
+  ) internal pure returns (bytes memory _initializeTx) {
+    if (_usdcInitTxs.length == 0) revert IL1OpUSDCFactory_NoInitTxs();
+    _initializeTx = _usdcInitTxs[0];
     if (bytes4(_initializeTx) != INITIALIZE_SELECTOR) {
       revert IL1OpUSDCFactory_InvalidInitTx();
     }
 
-    // Get the length of the init tx to calculate the position of the address, since it is the latest parameter
-    uint256 _addressPosition = _initializeTx.length;
+    // Get the position of the address argument in the `initialize()` function
+    uint256 _addressPosition = 4 // Function selector
+      + 32 // Offset of _tokenName string
+      + 32 // Offset of _tokenSymbol string
+      + 32 // Offset of _tokenSymbol string
+      + 32 // Offset of _decimalsu uint8
+      + 32 // Offset of _newMasterMinter address
+      + 32 // Offset of _newMasterMinter address
+      + 32; // Offset of _newBlacklister address
+
     // Use inline assembly to update the last 32 bytes with the new address
     assembly {
-      // Store the new address at the specified position
       mstore(add(_initializeTx, add(32, _addressPosition)), _l2Adapter)
     }
 
     // Update the 1st USDC init tx with the new owner
-    _usdcInitTxs[0] = _initializeTx;
+    // _usdcInitTxs[0] = _initializeTx;
   }
 
   /**

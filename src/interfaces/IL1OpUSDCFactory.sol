@@ -46,6 +46,11 @@ interface IL1OpUSDCFactory {
   error IL1OpUSDCFactory_L2FactoryNotDeployed();
 
   /**
+   * @notice Thrown when there are no init txs provided for the USDC contract
+   */
+  error IL1OpUSDCFactory_NoInitTxs();
+
+  /**
    * @notice Thrown when the 1st provided init tx's selector is not the `initialize()` function one
    */
   error IL1OpUSDCFactory_InvalidInitTx();

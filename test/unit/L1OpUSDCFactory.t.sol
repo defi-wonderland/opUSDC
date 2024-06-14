@@ -10,6 +10,8 @@ import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.s
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
+import 'forge-std/Test.sol';
+
 contract ForTestL1OpUSDCFactory is L1OpUSDCFactory {
   constructor(address _usdc) L1OpUSDCFactory(_usdc) {}
 
@@ -19,6 +21,13 @@ contract ForTestL1OpUSDCFactory is L1OpUSDCFactory {
 
   function forTest_setIsSaltUsed(bytes32 _salt, bool _isUsed) public {
     isSaltUsed[_salt] = _isUsed;
+  }
+
+  function forTest_setAdapterAsOwner(
+    bytes[] memory _usdcInitTxs,
+    address _l2Adapter
+  ) public pure returns (bytes memory _initializeTx) {
+    _initializeTx = _setAdapterAsOwner(_usdcInitTxs, _l2Adapter);
   }
 
   function forTest_precalculateCreateAddress(
@@ -47,38 +56,24 @@ abstract contract Base is Test, Helpers {
   address internal _usdcImplAddress = makeAddr('bridgedUsdcImpl');
   // cant fuzz this because of foundry's VM
   address internal _l1Messenger = makeAddr('messenger');
+  address _newMasterMinter = makeAddr('newMasterMinter');
+  address _newPauser = makeAddr('newPauser');
+  address _newBlacklister = makeAddr('newBlacklister');
+  string _tokenName = 'USDC';
+  string _tokenSymbol = 'USDC';
+  string _tokenCurrency = 'USD';
+  uint8 _tokenDecimals = 6;
 
   IL1OpUSDCFactory.L2Deployments internal _l2Deployments;
   bytes[] internal _usdcInitTxs;
-  bytes internal _initializeTx;
 
   function setUp() public virtual {
     // Deploy factory
     factory = new ForTestL1OpUSDCFactory(_usdc);
 
-    // TODO: Move to a helper function _setAdapter(_l2Adapter) returns (_usdcInitTxs)
-    // Define the first init tx for USDC
-    string memory _tokenName = 'USDC';
-    string memory _tokenSymbol = 'USDC';
-    string memory _tokenCurrency = 'USD';
-    uint8 _tokenDecimals = 6;
-    address _newMasterMinter = makeAddr('newMasterMinter');
-    address _newPauser = makeAddr('newPauser');
-    address _newBlacklister = makeAddr('newBlacklister');
+    // Set the init txs
     address _newOwner = address(0);
-    _initializeTx = abi.encodeWithSelector(
-      IUSDC.initialize.selector,
-      _tokenName,
-      _tokenSymbol,
-      _tokenCurrency,
-      _tokenDecimals,
-      _newMasterMinter,
-      _newPauser,
-      _newBlacklister,
-      _newOwner
-    );
-
-    // Add the USDC init tx
+    bytes memory _initializeTx = _getInitializeTx(_newOwner);
     _usdcInitTxs.push(_initializeTx);
 
     // Define the L2 deployments struct data
@@ -91,6 +86,21 @@ abstract contract Base is Test, Helpers {
       usdcInitTxs: _usdcInitTxs,
       minGasLimitDeploy: _minGasLimitDeploy
     });
+  }
+
+  function _getInitializeTx(address _newOwner) internal view returns (bytes memory _initializeTx) {
+    // Define the first init tx for USDC
+    _initializeTx = abi.encodeWithSelector(
+      IUSDC.initialize.selector,
+      _tokenName,
+      _tokenSymbol,
+      _tokenCurrency,
+      _tokenDecimals,
+      _newMasterMinter,
+      _newPauser,
+      _newBlacklister,
+      _newOwner
+    );
   }
 
   /**
@@ -243,18 +253,12 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
     _mockDeployFunctionCalls();
 
     // Expect the first USDC init tx to be called with the L2 adapter as owner
-    _initializeTx = abi.encodeWithSelector(
-      IUSDC.initialize.selector,
-      'USDC',
-      'USDC',
-      'USD',
-      6,
-      _l2Deployments.l2AdapterOwner,
-      _l2Deployments.l2AdapterOwner,
-      _l2Deployments.l2AdapterOwner,
-      _l2Adapter
-    );
-    _usdcInitTxs[0] = _initializeTx;
+    bytes memory _initTxWithAdapter = _getInitializeTx(_l2Adapter);
+    console.log('real expected intit tx');
+    console.logBytes(_initTxWithAdapter);
+
+    bytes[] memory _expectedUsdcInitTxs = new bytes[](1);
+    _expectedUsdcInitTxs[0] = _initTxWithAdapter;
 
     // Expect the `sendMessage` to be properly called
     bytes memory _l2DeploymentsTx = abi.encodeWithSelector(
@@ -262,14 +266,22 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
       _l1Adapter,
       _l2Deployments.l2AdapterOwner,
       _l2Deployments.usdcImplementationInitCode,
-      _l2Deployments.usdcInitTxs
+      _expectedUsdcInitTxs
     );
+    // console.log('test');
+    // console.logBytes(_l2DeploymentsTx);
+    // console.log('---');
     vm.expectCall(
       _l1Messenger,
       abi.encodeWithSelector(
         ICrossDomainMessenger.sendMessage.selector, _l2Factory, _l2DeploymentsTx, _l2Deployments.minGasLimitDeploy
       )
     );
+
+    // console.log('l2Factory', _l2Factory);
+    // console.log('l;2deploymentsx ');
+    // console.logBytes(_l2DeploymentsTx);
+    // console.log('_l2Deployments.minGasLimitDeploy ', _l2Deployments.minGasLimitDeploy);
 
     // Execute
     vm.prank(_user);
@@ -462,6 +474,23 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
     // Assert
     assertEq(_l1Adapter, _expectedL1Adapter, 'Invalid l1 adapter address');
     assertEq(_l2Adapter, _expectedL2Adapter, 'Invalid l2 adapter address');
+  }
+}
+
+contract L1OpUSDCFactory_Unit_SetAdapterAsOwner is Base {
+  /**
+   * @notice Check the function sets the L1 adapter as the owner of the L2 adapter
+   */
+  function test_setAdapterAsOwner(address _l2Adapter) public {
+    vm.assume(_l2Adapter != address(0));
+    // Get the expected USDC init txs array with the l2 adapter
+    bytes memory _expectedInitializeTx = _getInitializeTx(_l2Adapter);
+
+    // Execute
+    bytes memory _initializeTx = factory.forTest_setAdapterAsOwner(_usdcInitTxs, _l2Adapter);
+
+    // Assert
+    assertEq(_initializeTx, _expectedInitializeTx, 'Invalid USDC init txs');
   }
 }
 
