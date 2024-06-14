@@ -1,6 +1,6 @@
 # opUSDC
 
-> ⚠️ Theis code has not been audited yet and is not production ready at this time, tread with caution.
+> ⚠️ This code has not been audited yet and is not production ready at this time, tread with caution.
 
 
 opUSDC allows for an efficient and modular solution for expanding USDC across the optimism super chain ecosystem. Utilizing the cross chain messaging of the canonical bridge the adapter allows for easy access to USDC liquidity across all op chains. 
