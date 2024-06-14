@@ -9,7 +9,7 @@ _`L2OpUSDCFactory.sol`_ - Factory contract deployed from the L1 factory through 
 
 _`L1OpUSDCBridgeAdapter`_ - Contract that allows for the transfer of USDC from Ethereum Mainnet to a specific OP-chain. Locks USDC on Ethereum Mainnet and sends a message to the other chain to mint the equivalent amount of USDC. Receives messages from the other chain and unlocks USDC on the Ethereum Mainnet. Controls the message flow between layers. Supports the requirements for the Bridged USDC to be migrated to Native USDC, should the chain operator and Circle want to.
 
-_`L2OpUSDCBridgeAdapter`_ - Contract that allows for the transfer of USDC from the an specific OP-chain to the Ethereum Mainnet. Burns USDC on the other chain and sends a message to Ethereum Mainnet to unlock the equivalent amount of USDC. Receives messages from Ethereum Mainnet and mints USDC on the the other chain. Allows contract owner to execute _ownable_ functions on the other chain bridged USDC contract.
+_`L2OpUSDCBridgeAdapter`_ - Contract that allows for the transfer of USDC from the a specific OP-chain to Ethereum Mainnet. Burns USDC on the other chain and sends a message to Ethereum Mainnet to unlock the equivalent amount of USDC. Receives messages from Ethereum Mainnet and mints USDC on the the other chain. Allows contract owner to execute arbitrary functions on the Bridged USDC contract.
 
 ## L1 → L2 Deployment
 ![image](https://github.com/defi-wonderland/opUSDC/assets/165055168/ac9d0b57-03e7-40ae-b109-34d656d7539b)
