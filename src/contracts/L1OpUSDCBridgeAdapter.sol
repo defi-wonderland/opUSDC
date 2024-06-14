@@ -102,7 +102,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   function burnLockedUSDC() external {
     if (msg.sender != circle) revert IOpUSDCBridgeAdapter_InvalidSender();
 
-    // Status should be set to deprecated after the burn amount is set, if the adapter is not deprecated the burn amount has not been set
+    // If the adapter is not deprecated the burn amount has not been set
     if (messengerStatus != Status.Deprecated) revert IL1OpUSDCBridgeAdapter_BurnAmountNotSet();
 
     // Burn the USDC tokens
