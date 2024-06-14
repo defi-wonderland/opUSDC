@@ -7,7 +7,6 @@ import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
 import {Test} from 'forge-std/Test.sol';
 import {ICreate2Deployer} from 'interfaces/external/ICreate2Deployer.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
-import {IUSDC} from 'interfaces/external/IUSDC.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
 contract ForTestL1OpUSDCFactory is L1OpUSDCFactory {
