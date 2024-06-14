@@ -161,32 +161,15 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
       revert IL1OpUSDCFactory_InvalidInitTx();
     }
 
-    // TODO: Better to use assembly to slice the tx and get only the params?
-    (
-      ,
-      string memory _tokenName,
-      string memory _tokenSymbol,
-      string memory _tokenCurrency,
-      uint8 _tokenDecimals,
-      address _newMasterMinter,
-      address _newPauser,
-      address _newBlacklister,
-      address _newOwner
-    ) = abi.decode(_initializeTx, (bytes4, string, string, string, uint8, address, address, address, address));
-    _newOwner = _l2Adapter;
+    // Get the length of the init tx to calculate the position of the address, since it is the latest parameter
+    uint256 _addressPosition = _initializeTx.length;
+    // Use inline assembly to update the last 32 bytes with the new address
+    assembly {
+      // Store the new address at the specified position
+      mstore(add(_initializeTx, add(32, _addressPosition)), _l2Adapter)
+    }
 
-    _initializeTx = abi.encodeWithSelector(
-      INITIALIZE_SELECTOR,
-      _tokenName,
-      _tokenSymbol,
-      _tokenCurrency,
-      _tokenDecimals,
-      _newMasterMinter,
-      _newPauser,
-      _newBlacklister,
-      _newOwner
-    );
-
+    // Update the 1st USDC init tx with the new owner
     _usdcInitTxs[0] = _initializeTx;
   }
 

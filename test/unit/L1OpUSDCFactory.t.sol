@@ -50,14 +50,36 @@ abstract contract Base is Test, Helpers {
 
   IL1OpUSDCFactory.L2Deployments internal _l2Deployments;
   bytes[] internal _usdcInitTxs;
+  bytes internal _initializeTx;
 
   function setUp() public virtual {
     // Deploy factory
     factory = new ForTestL1OpUSDCFactory(_usdc);
 
+    // TODO: Move to a helper function _setAdapter(_l2Adapter) returns (_usdcInitTxs)
+    // Define the first init tx for USDC
+    string memory _tokenName = 'USDC';
+    string memory _tokenSymbol = 'USDC';
+    string memory _tokenCurrency = 'USD';
+    uint8 _tokenDecimals = 6;
+    address _newMasterMinter = makeAddr('newMasterMinter');
+    address _newPauser = makeAddr('newPauser');
+    address _newBlacklister = makeAddr('newBlacklister');
+    address _newOwner = address(0);
+    _initializeTx = abi.encodeWithSelector(
+      IUSDC.initialize.selector,
+      _tokenName,
+      _tokenSymbol,
+      _tokenCurrency,
+      _tokenDecimals,
+      _newMasterMinter,
+      _newPauser,
+      _newBlacklister,
+      _newOwner
+    );
+
     // Add the USDC init tx
-    bytes memory _usdcInitTx = 'tx1';
-    _usdcInitTxs.push(_usdcInitTx);
+    _usdcInitTxs.push(_initializeTx);
 
     // Define the L2 deployments struct data
     uint32 _minGasLimitDeploy = 100;
@@ -69,18 +91,6 @@ abstract contract Base is Test, Helpers {
       usdcInitTxs: _usdcInitTxs,
       minGasLimitDeploy: _minGasLimitDeploy
     });
-
-    // Define the first init tx for USDC
-    string memory _tokenName = 'USDC';
-    string memory _tokenSymbol = 'USDC';
-    string memory _tokenCurrency = 'USD';
-    uint8 _tokenDecimals = 6;
-    address _newMasterMinter = makeAddr('newMasterMinter');
-    address _newPauser = makeAddr('newPauser');
-    address _newBlacklister = makeAddr('newBlacklister');
-    address _newOwner = address(0);
-    bytes memory _initializeTx =
-      abi.encodeWithSelector(IUSDC.initialize.selector, _usdcImplAddress, _usdc, 6, 'USDC', 'USDC', 18);
   }
 
   /**
@@ -225,8 +235,26 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
     address _l2Factory =
       _precalculateCreate2Address(_newSalt, keccak256(_l2FactoryInitCode), factory.L2_CREATE2_DEPLOYER());
 
+    // Calculate the l2 adapter address
+    uint256 _l2FactoryNonce = factory.l2FactoryNonce(_l2Factory);
+    address _l2Adapter = factory.forTest_precalculateCreateAddress(_l2Factory, _l2FactoryNonce + 3);
+
     // Mock all the `deployL2FactoryAndContracts` function calls
     _mockDeployFunctionCalls();
+
+    // Expect the first USDC init tx to be called with the L2 adapter as owner
+    _initializeTx = abi.encodeWithSelector(
+      IUSDC.initialize.selector,
+      'USDC',
+      'USDC',
+      'USD',
+      6,
+      _l2Deployments.l2AdapterOwner,
+      _l2Deployments.l2AdapterOwner,
+      _l2Deployments.l2AdapterOwner,
+      _l2Adapter
+    );
+    _usdcInitTxs[0] = _initializeTx;
 
     // Expect the `sendMessage` to be properly called
     bytes memory _l2DeploymentsTx = abi.encodeWithSelector(
