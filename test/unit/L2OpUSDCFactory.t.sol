@@ -409,9 +409,8 @@ contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
     _mockExecuteTxsCalls();
 
     // Expect `configureMinter` to be properly called
-    vm.expectCall(
-      _dummyContract, abi.encodeWithSelector(IUSDC.configureMinter.selector, _l2Adapter, type(uint256).max - 1)
-    );
+    // solhint-disable-next-line max-line-length
+    vm.expectCall(_dummyContract, abi.encodeWithSelector(IUSDC.configureMinter.selector, _l2Adapter, type(uint256).max));
 
     // Execute
     factory.forTest_executeInitTxs(_dummyContract, _usdcInitializeData, _l2Adapter, _initTxsUsdc);

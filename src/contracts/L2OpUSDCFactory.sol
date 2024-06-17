@@ -76,6 +76,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     address _fallbackProxyAdmin = address(L2OpUSDCBridgeAdapter(_l2Adapter).FALLBACK_PROXY_ADMIN());
     // Change the USDC admin so the init txs can be executed over the proxy from this contract
 
+    // IUSDC(_usdcImplementation).changeAdmin(_fallbackProxyAdmin);
     IUSDC(_usdcProxy).changeAdmin(_fallbackProxyAdmin);
     // Execute the USDC initialization transactions over the USDC contracts
     _executeInitTxs(_usdcImplementation, _usdcInitializeData, _l2Adapter, _usdcInitTxs);
@@ -111,7 +112,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     );
 
     // Add l2 adapter as unlimited minter
-    IUSDC(_usdc).configureMinter(_l2Adapter, type(uint256).max - 1);
+    IUSDC(_usdc).configureMinter(_l2Adapter, type(uint256).max);
     // Set l2 adapter as new master minter
     IUSDC(_usdc).updateMasterMinter(_l2Adapter);
     // Transfer USDC ownership to the L2 adapter

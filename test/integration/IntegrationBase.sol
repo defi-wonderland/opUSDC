@@ -2,27 +2,23 @@
 pragma solidity 0.8.25;
 
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
+import {IL1OpUSDCFactory, L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
+import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
+import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
+import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
+import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 import {AddressAliasHelper} from 'test/utils/AddressAliasHelper.sol';
+import {Helpers} from 'test/utils/Helpers.sol';
 import {USDC_IMPLEMENTATION_CREATION_CODE} from 'test/utils/USDCImplementationCreationCode.sol';
 import {IMockCrossDomainMessenger} from 'test/utils/interfaces/IMockCrossDomainMessenger.sol';
-
-import {IL1OpUSDCFactory, L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
-
-import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
-
-import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
-import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
-import {Helpers} from 'test/utils/Helpers.sol';
-
-import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
 
 contract IntegrationBase is Helpers {
   // Constants
   uint256 internal constant _MAINNET_FORK_BLOCK = 20_076_176;
   uint256 internal constant _OPTIMISM_FORK_BLOCK = 121_300_856;
   IUSDC public constant MAINNET_USDC = IUSDC(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
-  address public constant MAINNET_USDC_IMPLEMENTATION = 0xa2327a938Febf5FEC13baCFb16Ae10EcBc4cbDCF;
+  address public constant MAINNET_USDC_IMPLEMENTATION = 0x43506849D7C04F9138D1A2050bbF3A0c054402dd;
   address public constant L2_CREATE2_DEPLOYER = 0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2;
   IMockCrossDomainMessenger public constant L2_MESSENGER =
     IMockCrossDomainMessenger(0x4200000000000000000000000000000000000007);
@@ -39,7 +35,7 @@ contract IntegrationBase is Helpers {
   address internal _user = makeAddr('user');
 
   // Helper variables
-  bytes[] public usdcInitTxns = new bytes[](2);
+  bytes[] public usdcInitTxns = new bytes[](3);
   bytes public initialize;
 
   // OpUSDC Protocol
@@ -55,11 +51,11 @@ contract IntegrationBase is Helpers {
 
     factory = new L1OpUSDCFactory(address(MAINNET_USDC));
 
+    // Define the initialization transactions
     usdcInitTxns[0] = USDCInitTxs.INITIALIZEV2;
     usdcInitTxns[1] = USDCInitTxs.INITIALIZEV2_1;
-    // TODO: see why it fails
-    // usdcInitTxns[2] = USDCInitTxs.INITIALIZEV2_2;
-
+    usdcInitTxns[2] = USDCInitTxs.INITIALIZEV2_2;
+    // Define the L2 deployments data
     IL1OpUSDCFactory.L2Deployments memory _l2Deployments =
       IL1OpUSDCFactory.L2Deployments(_owner, USDC_IMPLEMENTATION_CREATION_CODE, usdcInitTxns, 3_000_000);
 
