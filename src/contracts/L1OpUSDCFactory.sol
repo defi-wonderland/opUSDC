@@ -24,6 +24,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   /// @inheritdoc IL1OpUSDCFactory
   address public constant L2_CREATE2_DEPLOYER = 0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2;
 
+  /// @inheritdoc IL1OpUSDCFactory
   bytes4 public constant INITIALIZE_SELECTOR = hex'07fbc6b5';
 
   /// @notice Zero value constant to be used on the `CREATE2_DEPLOYER` interaction
