@@ -2,6 +2,7 @@
 pragma solidity 0.8.25;
 
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
+import {FallbackProxyAdmin} from 'contracts/utils/FallbackProxyAdmin.sol';
 import {IL2OpUSDCBridgeAdapter} from 'interfaces/IL2OpUSDCBridgeAdapter.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
@@ -12,6 +13,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    */
   bytes4 internal constant _TRANSFER_OWNERSHIP_SELECTOR = 0xf2fde38b;
   bytes4 internal constant _CHANGE_ADMIN_SELECTOR = 0x8f283970;
+
+  FallbackProxyAdmin public immutable FALLBACK_PROXY_ADMIN;
 
   /// @inheritdoc IL2OpUSDCBridgeAdapter
   bool public isMessagingDisabled;
@@ -39,7 +42,9 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     address _messenger,
     address _linkedAdapter,
     address _owner
-  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _owner) {}
+  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _owner) {
+    FALLBACK_PROXY_ADMIN = new FallbackProxyAdmin(_usdc);
+  }
   /* solhint-enable no-unused-vars */
 
   /*///////////////////////////////////////////////////////////////
@@ -58,7 +63,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     IUSDC(USDC).transferOwnership(_newOwner);
 
     //Transfer proxy admin ownership to circle
-    IUSDC(USDC).changeAdmin(_newOwner);
+    FALLBACK_PROXY_ADMIN.changeAdmin(_newOwner);
 
     uint256 _burnAmount = IUSDC(USDC).totalSupply();
 

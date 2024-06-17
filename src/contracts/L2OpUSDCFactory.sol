@@ -72,8 +72,10 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
       revert IL2OpUSDCFactory_DeploymentsFailed();
     }
 
+    // Deploy the FallbackProxyAdmin internally in the L2 Adapter to keep it unique
+    address _fallbackProxyAdmin = address(L2OpUSDCBridgeAdapter(_l2Adapter).FALLBACK_PROXY_ADMIN());
     // Change the USDC admin so the init txs can be executed over the proxy from this contract
-    IUSDC(_usdcProxy).changeAdmin(_l2Adapter);
+    IUSDC(_usdcProxy).changeAdmin(_fallbackProxyAdmin);
 
     // Execute the USDC initialization transactions over the USDC contracts
     _executeInitTxs(_usdcImplementation, _usdcInitializeData, _l2Adapter, _usdcInitTxs);

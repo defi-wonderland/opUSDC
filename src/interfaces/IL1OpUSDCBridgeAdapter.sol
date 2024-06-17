@@ -45,6 +45,11 @@ interface IL1OpUSDCBridgeAdapter {
   error IL1OpUSDCBridgeAdapter_MessengerNotPaused();
 
   /**
+   * @notice Error when burnLockedUSDC is called before a burn amount is set
+   */
+  error IL1OpUSDCBridgeAdapter_BurnAmountNotSet();
+
+  /**
    * @notice Error when address is not valid
    */
   error IL1OpUSDCBridgeAdapter_InvalidAddress();

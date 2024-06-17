@@ -1,34 +1,28 @@
-<img src="https://raw.githubusercontent.com/defi-wonderland/brand/v1.0.0/external/solidity-foundry-boilerplate-banner.png" alt="wonderland banner" align="center" />
-<br />
+# opUSDC
 
-<div align="center"><strong>Start your next Solidity project with Foundry in seconds</strong></div>
-<div align="center">A highly scalable foundation focused on DX and best practices</div>
+> ⚠️ This code has not been audited yet and is not production ready at this time, tread with caution.
 
-<br />
 
-## Features
+opUSDC allows for an efficient and modular solution for expanding USDC across the optimism super chain ecosystem. Utilizing the cross chain messaging of the canonical bridge the adapter allows for easy access to USDC liquidity across all op chains. 
 
-<dl>
-  <dt>Sample contracts</dt>
-  <dd>Basic Greeter contract with an external interface.</dd>
+## Contracts
 
-  <dt>Foundry setup</dt>
-  <dd>Foundry configuration with multiple custom profiles and remappings.</dd>
+_`L1OpUSDCFactory.sol`_ - Factory contract to deploy and setup the `L1OpUSDCBridgeAdapter` contract on L1. Precalculates the addresses of the L2 deployments and triggers their deployment. Setup the L1 adapter and the L2 adapter.
 
-  <dt>Deployment scripts</dt>
-  <dd>Sample scripts to deploy contracts on both mainnet and testnet.</dd>
+_`L2OpUSDCFactory.sol`_ - Factory contract deployed from the L1 factory through a cross-chain deployment for deploying the L2 USDC implementation, proxy, and `L2OpUSDCBridgeAdapter` contract, all at once on the `deploy()` function.
 
-  <dt>Sample Integration & Unit tests</dt>
-  <dd>Example tests showcasing mocking, assertions and configuration for mainnet forking. As well it includes everything needed in order to check code coverage.</dd>
+_`L1OpUSDCBridgeAdapter`_ - Contract that allows for the transfer of USDC from Ethereum Mainnet to a specific OP-chain. Locks USDC on Ethereum Mainnet and sends a message to the other chain to mint the equivalent amount of USDC. Receives messages from the other chain and unlocks USDC on the Ethereum Mainnet. Controls the message flow between layers. Supports the requirements for the Bridged USDC to be migrated to Native USDC, should the chain operator and Circle want to.
 
-  <dt>Linter</dt>
-  <dd>Simple and fast solidity linting thanks to forge fmt.</dd>
-  <dd>Find missing natspec automatically.</dd>
+_`L2OpUSDCBridgeAdapter`_ - Contract that allows for the transfer of USDC from the a specific OP-chain to Ethereum Mainnet. Burns USDC on the other chain and sends a message to Ethereum Mainnet to unlock the equivalent amount of USDC. Receives messages from Ethereum Mainnet and mints USDC on the the other chain. Allows contract owner to execute arbitrary functions on the Bridged USDC contract.
 
-  <dt>Github workflows CI</dt>
-  <dd>Run all tests and see the coverage as you push your changes.</dd>
-  <dd>Export your Solidity interfaces and contracts as packages, and publish them to NPM.</dd>
-</dl>
+## L1 → L2 Deployment
+![image](https://github.com/defi-wonderland/opUSDC/assets/165055168/ac9d0b57-03e7-40ae-b109-34d656d7539b)
+
+## L1 → L2 USDC Canonical Bridging
+![image](https://github.com/defi-wonderland/opUSDC/assets/165055168/eaf55522-e768-463f-830b-b9305cec1e79)
+
+## Migrating from Bridged USDC to Native USDC
+![image](https://github.com/defi-wonderland/opUSDC/assets/165055168/17aebc4a-709f-4084-ab83-000e299a70bd)
 
 ## Setup
 
@@ -84,63 +78,5 @@ In order to check your current code coverage, run:
 yarn coverage
 ```
 
-<br>
-
-## Deploy & verify
-
-### Setup
-
-Configure the `.env` variables.
-
-### Sepolia
-
-```bash
-yarn deploy:sepolia
-```
-
-### Mainnet
-
-```bash
-yarn deploy:mainnet
-```
-
-The deployments are stored in ./broadcast
-
-See the [Foundry Book for available options](https://book.getfoundry.sh/reference/forge/forge-create.html).
-
-## Export And Publish
-
-Export TypeScript interfaces from Solidity contracts and interfaces providing compatibility with TypeChain. Publish the exported packages to NPM.
-
-To enable this feature, make sure you've set the `NPM_TOKEN` on your org's secrets. Then set the job's conditional to `true`:
-
-```yaml
-jobs:
-  export:
-    name: Generate Interfaces And Contracts
-    # Remove the following line if you wish to export your Solidity contracts and interfaces and publish them to NPM
-    if: true
-    ...
-```
-
-Also, remember to update the `package_name` param to your package name:
-
-```yaml
-- name: Export Solidity - ${{ matrix.export_type }}
-  uses: defi-wonderland/solidity-exporter-action@1dbf5371c260add4a354e7a8d3467e5d3b9580b8
-  with:
-    # Update package_name with your package name
-    package_name: "my-cool-project"
-    ...
-
-
-- name: Publish to NPM - ${{ matrix.export_type }}
-  # Update `my-cool-project` with your package name
-  run: cd export/my-cool-project-${{ matrix.export_type }} && npm publish --access public
-  ...
-```
-
-You can take a look at our [solidity-exporter-action](https://github.com/defi-wonderland/solidity-exporter-action) repository for more information and usage examples.
-
 ## Licensing
-The primary license for the boilerplate is MIT, see [`LICENSE`](https://github.com/defi-wonderland/solidity-foundry-boilerplate/blob/main/LICENSE)
+The primary license for the boilerplate is MIT, see [`LICENSE`](https://github.com/defi-wonderland/opUSDC/blob/main/LICENSE)

@@ -334,11 +334,21 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
     adapter.burnLockedUSDC();
   }
 
+  function test_burnAmountNotSet(address _circle) external {
+    adapter.forTest_setCircle(_circle);
+
+    // Execute
+    vm.prank(_circle);
+    vm.expectRevert(IL1OpUSDCBridgeAdapter.IL1OpUSDCBridgeAdapter_BurnAmountNotSet.selector);
+    adapter.burnLockedUSDC();
+  }
+
   /**
    * @notice Check that the burn function is called as expected
    */
   function test_expectedCall(uint256 _burnAmount, address _circle) external {
     adapter.forTest_setCircle(_circle);
+    adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Deprecated);
 
     vm.assume(_burnAmount > 0);
 
@@ -359,6 +369,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
   function test_resetStorageValues(uint256 _burnAmount, address _circle) external {
     vm.assume(_burnAmount > 0);
     adapter.forTest_setCircle(_circle);
+    adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Deprecated);
 
     vm.mockCall(
       address(_usdc), abi.encodeWithSignature('burn(address,uint256)', address(adapter), _burnAmount), abi.encode(true)
@@ -380,6 +391,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
   function test_emitEvent(uint256 _burnAmount, address _circle) external {
     vm.assume(_burnAmount > 0);
     adapter.forTest_setCircle(_circle);
+    adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Deprecated);
 
     vm.mockCall(
       address(_usdc), abi.encodeWithSignature('burn(address,uint256)', address(adapter), _burnAmount), abi.encode(true)
