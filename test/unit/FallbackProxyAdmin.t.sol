@@ -17,6 +17,8 @@ abstract contract Base is Helpers {
   }
 }
 
+contract FallbackProxyAdmin_Unit_Constructor is Base {}
+
 contract FallbackProxyAdmin_Unit_ChangeAdmin is Base {
   function test_revertIfNotOwner(address _newOwner) public {
     vm.assume(_newOwner != _owner);
