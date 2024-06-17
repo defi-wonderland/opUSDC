@@ -36,4 +36,18 @@ interface IUSDC is IERC20 {
    * @return _implementation Address of the current implementation
    */
   function implementation() external view returns (address _implementation);
+
+  /**
+   * @dev Function to add/update a new minter
+   * @param _minter The address of the minter
+   * @param _minterAllowedAmount The minting amount allowed for the minter
+   * @return _result True if the operation was successful.
+   */
+  function configureMinter(address _minter, uint256 _minterAllowedAmount) external returns (bool _result);
+
+  /**
+   * @notice Returns the current master minter address
+   * @return _masterMinter Address of the current master minter
+   */
+  function masterMinter() external view returns (address _masterMinter);
 }
