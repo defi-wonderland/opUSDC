@@ -597,6 +597,32 @@ contract L2OpUSDCBridgeAdapter_Unit_CallUsdcTransaction is Base {
   }
 
   /**
+   * @notice Check that the function upgradeTo gets called through the fallback admin
+   */
+  function test_upgradeTo(address _newImplementation) external {
+    address _fallbackAdmin = address(adapter.FALLBACK_PROXY_ADMIN());
+
+    _mockAndExpect(_fallbackAdmin, abi.encodeWithSignature('upgradeTo(address)', _newImplementation), abi.encode());
+    vm.prank(_owner);
+    adapter.callUsdcTransaction(abi.encodeWithSignature('upgradeTo(address)', _newImplementation));
+  }
+
+  /**
+   * @notice Check that the function upgradeTo gets called through the fallback admin
+   */
+  function test_upgradeToAndCall(address _newImplementation, bytes memory _data) external {
+    address _fallbackAdmin = address(adapter.FALLBACK_PROXY_ADMIN());
+
+    _mockAndExpect(
+      _fallbackAdmin,
+      abi.encodeWithSignature('upgradeToAndCall(address,bytes)', _newImplementation, _data),
+      abi.encode()
+    );
+    vm.prank(_owner);
+    adapter.callUsdcTransaction(abi.encodeWithSignature('upgradeToAndCall(address,bytes)', _newImplementation, _data));
+  }
+
+  /**
    * @notice Check that the message is sent as expected
    */
   function test_expectedCall(bytes calldata _data) external {
