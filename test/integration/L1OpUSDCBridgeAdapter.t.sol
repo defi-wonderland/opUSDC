@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.25;
+
 import {IntegrationBase} from './IntegrationBase.sol';
 import {AddressAliasHelper} from 'test/utils/AddressAliasHelper.sol';
 

@@ -50,24 +50,11 @@ contract IntegrationBase is Test {
     mainnet = vm.createFork(vm.rpcUrl('mainnet'), _MAINNET_FORK_BLOCK);
     optimism = vm.createFork(vm.rpcUrl('optimism'), _OPTIMISM_FORK_BLOCK);
 
-    // NOTE: This will change in a future PR so defining here to make refactoring easier later
-    initialize = abi.encodeWithSignature(
-      'initialize(string,string,string,uint8,address,address,address,address)',
-      '',
-      '',
-      '',
-      0,
-      address(1),
-      address(1),
-      address(1),
-      address(1)
-    );
-
     factory = new L1OpUSDCFactory(address(MAINNET_USDC));
 
-    usdcInitTxns[0] = initialize;
-    usdcInitTxns[1] = USDCInitTxs.INITIALIZEV2;
-    usdcInitTxns[2] = USDCInitTxs.INITIALIZEV2_1;
+    usdcInitTxns[0] = USDCInitTxs.INITIALIZEV2;
+    usdcInitTxns[1] = USDCInitTxs.INITIALIZEV2_1;
+    usdcInitTxns[2] = USDCInitTxs.INITIALIZEV2_2;
 
     IL1OpUSDCFactory.L2Deployments memory _l2Deployments =
       IL1OpUSDCFactory.L2Deployments(_owner, USDC_IMPLEMENTATION_CREATION_CODE, usdcInitTxns, 3_000_000);
