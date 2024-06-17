@@ -2,8 +2,25 @@
 pragma solidity 0.8.25;
 
 // solhint-disable func-name-mixedcase
-
 interface IL2OpUSDCFactory {
+  /*///////////////////////////////////////////////////////////////
+                            STRUCTS
+  ///////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice The struct to hold the USDC data for the name, symbol, currency, and decimals when initializing
+   * @param _tokenName The name of the USDC token
+   * @param _tokenSymbol The symbol of the USDC token
+   * @param _tokenCurrency The currency that the USDC token represents
+   * @param _tokenDecimals The number of decimals that the USDC token uses
+   */
+  struct USDCInitializeData {
+    string _tokenName;
+    string _tokenSymbol;
+    string _tokenCurrency;
+    uint8 _tokenDecimals;
+  }
+
   /*///////////////////////////////////////////////////////////////
                             EVENTS
   ///////////////////////////////////////////////////////////////*/
@@ -59,6 +76,7 @@ interface IL2OpUSDCFactory {
    * @param _l1Adapter The address of the L1 adapter contract
    * @param _l2AdapterOwner The address of the L2 adapter owner
    * @param _usdcImplementationInitCode The creation code with the constructor arguments for the USDC implementation
+   * @param _usdcInitializeData The USDC name, symbol, currency, and decimals used on the first `initialize()` call
    * @param _usdcInitTxs The initialization transactions for the USDC proxy and implementation contracts
    * @dev The USDC proxy owner needs to be set on the first init tx
    * @dev Using `CREATE` to guarantee that the addresses are unique among all the L2s
@@ -67,6 +85,7 @@ interface IL2OpUSDCFactory {
     address _l1Adapter,
     address _l2AdapterOwner,
     bytes memory _usdcImplementationInitCode,
+    USDCInitializeData memory _usdcInitializeData,
     bytes[] memory _usdcInitTxs
   ) external;
 

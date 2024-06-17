@@ -20,8 +20,13 @@ contract L2OpUSDCFactoryTest is L2OpUSDCFactory {
     (_newContract, _success) = _deployCreate(_initCode);
   }
 
-  function forTest_executeInitTxs(address _target, bytes[] memory _initTxs, uint256 _length) public {
-    _executeInitTxs(_target, _initTxs, _length);
+  function forTest_executeInitTxs(
+    address _target,
+    USDCInitializeData memory _usdcInitializeData,
+    address _l2Adapter,
+    bytes[] memory _initTxs
+  ) public {
+    _executeInitTxs(_target, _usdcInitializeData, _l2Adapter, _initTxs);
   }
 }
 
@@ -40,6 +45,7 @@ contract Base is Test, Helpers {
   address internal _dummyContract;
   bytes internal _usdcImplInitCode;
 
+  IL2OpUSDCFactory.USDCInitializeData internal _usdcInitializeData;
   bytes[] internal _emptyInitTxs;
   bytes[] internal _initTxsUsdc;
   bytes[] internal _badInitTxs;
@@ -48,6 +54,14 @@ contract Base is Test, Helpers {
     // Deploy the l2 factory
     vm.prank(_create2Deployer);
     factory = new L2OpUSDCFactoryTest(_l1Factory);
+
+    // Set the initialize data
+    _usdcInitializeData = IL2OpUSDCFactory.USDCInitializeData({
+      _tokenName: 'USD Coin',
+      _tokenSymbol: 'USDC',
+      _tokenCurrency: 'USD',
+      _tokenDecimals: 6
+    });
 
     // Set the implementations bytecode and init code
     _usdcImplInitCode = type(ForTestDummyContract).creationCode;
@@ -89,7 +103,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InvalidSender.selector);
     // Execute
     vm.prank(_sender);
-    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _initTxsUsdc);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _initTxsUsdc);
   }
 
   /**
@@ -108,7 +122,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     // Execute
     vm.prank(factory.L2_MESSENGER());
     vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InvalidSender.selector);
-    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _initTxsUsdc);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _initTxsUsdc);
   }
 
   /**
@@ -133,7 +147,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _emptyInitTxs);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
 
     // Assert the USDC implementation was deployed
     assertGt(_usdcImplementation.code.length, 0, 'USDC implementation was not deployed');
@@ -167,7 +181,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _emptyInitTxs);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
 
     // Assert the USDC proxy was deployed
     assertGt(_usdcProxy.code.length, 0, 'USDC proxy was not deployed');
@@ -201,7 +215,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _emptyInitTxs);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
 
     // Assert the adapter was deployed
     assertGt(_l2Adapter.code.length, 0, 'Adapter was not deployed');
@@ -235,7 +249,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _emptyInitTxs);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
   }
 
   /**
@@ -261,7 +275,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _emptyInitTxs);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
   }
 
   /**
@@ -287,7 +301,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _emptyInitTxs);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
   }
 
   /**
@@ -312,7 +326,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _emptyInitTxs);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
   }
 
   /**
@@ -334,7 +348,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _initTxsUsdc);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _initTxsUsdc);
   }
 
   /**
@@ -357,7 +371,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _initTxsUsdc);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _initTxsUsdc);
   }
 }
 
@@ -371,7 +385,7 @@ contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
     _mockAndExpect(_dummyContract, _initTxsUsdc[1], '');
 
     // Execute the initialization transactions
-    factory.forTest_executeInitTxs(_dummyContract, _initTxsUsdc, _initTxsUsdc.length);
+    factory.forTest_executeInitTxs(_dummyContract, _usdcInitializeData, _l2Adapter, _initTxsUsdc);
   }
 
   /**
@@ -382,7 +396,7 @@ contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
     vm.mockCallRevert(_dummyContract, _badInitTxs[1], '');
     vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InitializationFailed.selector);
     // Execute
-    factory.forTest_executeInitTxs(_dummyContract, _badInitTxs, _badInitTxs.length);
+    factory.forTest_executeInitTxs(_dummyContract, _usdcInitializeData, _l2Adapter, _badInitTxs);
   }
 }
 

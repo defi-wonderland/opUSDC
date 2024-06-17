@@ -58,4 +58,38 @@ interface IUSDC is IERC20 {
     address _newBlacklister,
     address _newOwner
   ) external;
+
+  /**
+   * @notice Updates the master minter address.
+   * @param _newMasterMinter The address of the new master minter.
+   */
+  function updateMasterMinter(address _newMasterMinter) external;
+
+  /**
+   * @notice Adds or updates a new minter with a mint allowance.
+   * @param _minter The address of the minter.
+   * @param _minterAllowedAmount The minting amount allowed for the minter.
+   * @return _success True if the minter was added or updated successfully.
+   */
+  function configureMinter(address _minter, uint256 _minterAllowedAmount) external returns (bool _success);
+
+  /**
+   * @return _name The name of the token
+   */
+  function name() external view returns (string memory _name);
+
+  /**
+   * @return _symbol The symbol of the token
+   */
+  function symbol() external view returns (string memory _symbol);
+
+  /**
+   * @return _currency The currency of the token
+   */
+  function currency() external view returns (string memory _currency);
+
+  /**
+   * @return _decimals The decimals of the token
+   */
+  function decimals() external view returns (uint8 _decimals);
 }

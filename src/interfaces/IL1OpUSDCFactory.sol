@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-// solhint-disable func-name-mixedcase
+import {IUSDC} from './external/IUSDC.sol';
 
+// solhint-disable func-name-mixedcase
 interface IL1OpUSDCFactory {
   /**
    * @notice The struct to hold the deployments data to deploy the L2 adapter, and the L2 USDC contracts
    * @param l2AdapterOwner The address of the owner of the L2 adapter
    * @param minGasLimitCreate2Factory The minimum gas limit for the L2 factory deployment
    * @param usdcImplementationInitCode The creation code with the constructor arguments for the USDC implementation
-   * @param usdcInitTxs The initialization transactions to be executed on the USDC contract
+   * @param usdcInitTxs The initialization transactions to be executed on the USDC contract. The `initialize()` first
+   * init tx must not be included since it is defined in the L2 factory contract
    * @param minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
    * @dev Only the values needed in both `deployL2FactoryAndContracts()` and `deployAdapters()` params are included
    */
@@ -33,6 +35,11 @@ interface IL1OpUSDCFactory {
   /*///////////////////////////////////////////////////////////////
                             ERRORS
   ///////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice Thrown when the `initialize()` tx is provided as the first init tx for the USDC contract
+   */
+  error IL1OpUSDCFactory_NoInitializeTx();
 
   /**
    * @notice Thrown when the salt for deploying the L2 factory is already used
@@ -116,7 +123,7 @@ interface IL1OpUSDCFactory {
   /**
    * @return _usdc The address of USDC on L1
    */
-  function USDC() external view returns (address _usdc);
+  function USDC() external view returns (IUSDC _usdc);
 
   /**
    * @notice Tracks the nonce for each L2 factory

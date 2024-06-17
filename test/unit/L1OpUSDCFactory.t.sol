@@ -23,13 +23,6 @@ contract ForTestL1OpUSDCFactory is L1OpUSDCFactory {
     isSaltUsed[_salt] = _isUsed;
   }
 
-  function forTest_setAdapterAsOwner(
-    bytes[] memory _usdcInitTxs,
-    address _l2Adapter
-  ) public pure returns (bytes memory _initializeTx) {
-    _initializeTx = _setAdapterAsOwner(_usdcInitTxs, _l2Adapter);
-  }
-
   function forTest_precalculateCreateAddress(
     address _deployer,
     uint256 _nonce
@@ -119,7 +112,7 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
    */
   function test_setImmutables() public {
     // Assert
-    assertEq(factory.USDC(), _usdc, 'Invalid usdc address');
+    assertEq(address(factory.USDC()), _usdc, 'Invalid usdc address');
   }
 }
 
@@ -474,23 +467,6 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
     // Assert
     assertEq(_l1Adapter, _expectedL1Adapter, 'Invalid l1 adapter address');
     assertEq(_l2Adapter, _expectedL2Adapter, 'Invalid l2 adapter address');
-  }
-}
-
-contract L1OpUSDCFactory_Unit_SetAdapterAsOwner is Base {
-  /**
-   * @notice Check the function sets the L1 adapter as the owner of the L2 adapter
-   */
-  function test_setAdapterAsOwner(address _l2Adapter) public {
-    vm.assume(_l2Adapter != address(0));
-    // Get the expected USDC init txs array with the l2 adapter
-    bytes memory _expectedInitializeTx = _getInitializeTx(_l2Adapter);
-
-    // Execute
-    bytes memory _initializeTx = factory.forTest_setAdapterAsOwner(_usdcInitTxs, _l2Adapter);
-
-    // Assert
-    assertEq(_initializeTx, _expectedInitializeTx, 'Invalid USDC init txs');
   }
 }
 
