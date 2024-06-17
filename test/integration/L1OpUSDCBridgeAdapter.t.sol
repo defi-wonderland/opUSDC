@@ -1,5 +1,7 @@
-import {IntegrationBase} from './IntegrationBase.sol';
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.25;
 
+import {IntegrationBase} from './IntegrationBase.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {AddressAliasHelper} from 'test/utils/AddressAliasHelper.sol';
 
@@ -52,7 +54,7 @@ contract Integration_Bridging is IntegrationBase {
 
     uint256 _amount = 1e18;
     uint32 _minGasLimit = 1_000_000;
-    address _newUser = makeAddr('newUser');
+    address _l2Target = makeAddr('l2Target');
 
     // Deal doesnt work with proxies
     vm.startPrank(MAINNET_USDC.masterMinter());
@@ -62,7 +64,7 @@ contract Integration_Bridging is IntegrationBase {
 
     vm.startPrank(_user);
     MAINNET_USDC.approve(address(l1Adapter), _amount);
-    l1Adapter.sendMessage(_newUser, _amount, _minGasLimit);
+    l1Adapter.sendMessage(_l2Target, _amount, _minGasLimit);
     vm.stopPrank();
 
     assertEq(MAINNET_USDC.balanceOf(_user), 0);
@@ -78,11 +80,11 @@ contract Integration_Bridging is IntegrationBase {
       address(l2Adapter),
       0,
       1_000_000,
-      abi.encodeWithSignature('receiveMessage(address,uint256)', _newUser, _amount)
+      abi.encodeWithSignature('receiveMessage(address,uint256)', _l2Target, _amount)
     );
     vm.stopPrank();
 
-    assertEq(bridgedUSDC.balanceOf(address(_newUser)), _amount);
+    assertEq(bridgedUSDC.balanceOf(address(_l2Target)), _amount);
     assertEq(bridgedUSDC.balanceOf(address(_user)), 0);
   }
 
