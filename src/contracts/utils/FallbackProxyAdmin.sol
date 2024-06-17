@@ -19,7 +19,7 @@ contract FallbackProxyAdmin is Ownable {
    * @notice Changes the admin of the USDC proxy
    * @param newAdmin Address to transfer proxy administration to
    * @dev Owner should always be the L2 Adapter
-   * @dev This contract needs to be the admin of USDC because of the USDC proxy not allowing admin to interact with implementation
+   * @dev USDC admin cant interact proxy with implementation so we use this contract as the middleman
    */
   function changeAdmin(address newAdmin) external onlyOwner {
     IUSDC(USDC).changeAdmin(newAdmin);
