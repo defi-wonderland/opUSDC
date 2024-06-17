@@ -69,5 +69,6 @@ contract Integration_PermissionedUsdcFlows is IntegrationBase {
 
     // Check that the USDC implementation has been upgraded
     assertEq(bridgedUSDC.implementation(), _newImplementation);
+    assertEq(dummyImplementation(l2Adapter.USDC()).minter(), _notOwner);
   }
 }
