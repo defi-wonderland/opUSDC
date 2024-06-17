@@ -145,5 +145,6 @@ contract IntegrationSetup is IntegrationBase {
 
     vm.selectFork(optimism);
     assertEq(l2Adapter.LINKED_ADAPTER(), address(l1Adapter));
+    assertEq(l2Adapter.FALLBACK_PROXY_ADMIN().owner(), address(l2Adapter));
   }
 }
