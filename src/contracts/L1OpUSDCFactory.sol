@@ -44,7 +44,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * @param _firstInitTx The first init tx
    */
   modifier noInitializeTx(bytes calldata _firstInitTx) {
-    if (bytes4(_firstInitTx[:4]) == INITIALIZE_SELECTOR) revert IL1OpUSDCFactory_NoInitializeTx();
+    if (bytes4(_firstInitTx) == INITIALIZE_SELECTOR) revert IL1OpUSDCFactory_NoInitializeTx();
     _;
   }
 
