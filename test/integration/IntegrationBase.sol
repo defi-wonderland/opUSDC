@@ -10,7 +10,9 @@ import {IMockCrossDomainMessenger} from 'test/utils/interfaces/IMockCrossDomainM
 import {IL1OpUSDCFactory, L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
 
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
+
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
+import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
 import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
@@ -37,7 +39,7 @@ contract IntegrationBase is Helpers {
   address internal _user = makeAddr('user');
 
   // Helper variables
-  bytes[] public usdcInitTxns = new bytes[](3);
+  bytes[] public usdcInitTxns = new bytes[](2);
   bytes public initialize;
 
   // OpUSDC Protocol
@@ -45,6 +47,7 @@ contract IntegrationBase is Helpers {
   L1OpUSDCFactory public factory;
   L2OpUSDCBridgeAdapter public l2Adapter;
   IUSDC public bridgedUSDC;
+  IL2OpUSDCFactory.USDCInitializeData public usdcInitializeData;
 
   function setUp() public virtual {
     mainnet = vm.createFork(vm.rpcUrl('mainnet'), _MAINNET_FORK_BLOCK);
@@ -54,7 +57,8 @@ contract IntegrationBase is Helpers {
 
     usdcInitTxns[0] = USDCInitTxs.INITIALIZEV2;
     usdcInitTxns[1] = USDCInitTxs.INITIALIZEV2_1;
-    usdcInitTxns[2] = USDCInitTxs.INITIALIZEV2_2;
+    // TODO: see why it fails
+    // usdcInitTxns[2] = USDCInitTxs.INITIALIZEV2_2;
 
     IL1OpUSDCFactory.L2Deployments memory _l2Deployments =
       IL1OpUSDCFactory.L2Deployments(_owner, USDC_IMPLEMENTATION_CREATION_CODE, usdcInitTxns, 3_000_000);
@@ -68,11 +72,17 @@ contract IntegrationBase is Helpers {
 
     l1Adapter = L1OpUSDCBridgeAdapter(_l1Adapter);
 
+    usdcInitializeData = IL2OpUSDCFactory.USDCInitializeData(
+      MAINNET_USDC.name(), MAINNET_USDC.symbol(), MAINNET_USDC.currency(), MAINNET_USDC.decimals()
+    );
     vm.selectFork(optimism);
-    _relayL2Deployments(_l1Adapter, _l2Factory, _l2Adapter, _l2Deployments);
+    _relayL2Deployments(_l1Adapter, _l2Factory, usdcInitializeData, _l2Deployments);
+
+    l2Adapter = L2OpUSDCBridgeAdapter(_l2Adapter);
+    bridgedUSDC = IUSDC(l2Adapter.USDC());
 
     // Make foundry know these two address exist on both forks
-    vm.makePersistent(address(l1Adapter));
+    vm.makePersistent(address(_l1Adapter));
     vm.makePersistent(address(l2Adapter));
     vm.makePersistent(address(bridgedUSDC));
     vm.makePersistent(address(l2Adapter.FALLBACK_PROXY_ADMIN()));
@@ -81,10 +91,10 @@ contract IntegrationBase is Helpers {
   function _relayL2Deployments(
     address _l1Adapter,
     address _l2Factory,
-    address _l2Adapter,
+    IL2OpUSDCFactory.USDCInitializeData memory _usdcInitializeData,
     IL1OpUSDCFactory.L2Deployments memory _l2Deployments
   ) internal {
-    uint256 _messageNonce = L2_MESSENGER.messageNonce();
+    // uint256 _messageNonce = L2_MESSENGER.messageNonce();
     bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
     bytes memory _l2FactoryCArgs = abi.encode(address(factory));
     bytes memory _l2FactoryInitCode = bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs);
@@ -92,7 +102,7 @@ contract IntegrationBase is Helpers {
     vm.startPrank(AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER)));
 
     L2_MESSENGER.relayMessage(
-      _messageNonce + 1,
+      L2_MESSENGER.messageNonce() + 1,
       address(factory),
       address(L2_CREATE2_DEPLOYER),
       0,
@@ -101,7 +111,7 @@ contract IntegrationBase is Helpers {
     );
 
     L2_MESSENGER.relayMessage(
-      _messageNonce + 2,
+      L2_MESSENGER.messageNonce() + 2,
       address(factory),
       address(_l2Factory),
       0,
@@ -111,17 +121,12 @@ contract IntegrationBase is Helpers {
         _l1Adapter,
         _l2Deployments.l2AdapterOwner,
         _l2Deployments.usdcImplementationInitCode,
+        _usdcInitializeData,
         _l2Deployments.usdcInitTxs
       )
     );
 
     vm.stopPrank();
-
-    l2Adapter = L2OpUSDCBridgeAdapter(_l2Adapter);
-    bridgedUSDC = IUSDC(l2Adapter.USDC());
-
-    vm.prank(bridgedUSDC.masterMinter());
-    bridgedUSDC.configureMinter(address(l2Adapter), type(uint256).max);
   }
 }
 

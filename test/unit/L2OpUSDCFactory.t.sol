@@ -393,7 +393,7 @@ contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
         address(factory),
         _l2Adapter,
         _l2Adapter,
-        _l2Adapter
+        address(factory)
       )
     );
 
@@ -426,6 +426,20 @@ contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
 
     // Expect `updateMasterMinter` to be properly called
     vm.expectCall(_dummyContract, abi.encodeWithSelector(IUSDC.updateMasterMinter.selector, _l2Adapter));
+
+    // Execute
+    factory.forTest_executeInitTxs(_dummyContract, _usdcInitializeData, _l2Adapter, _initTxsUsdc);
+  }
+
+  /**
+   * @notice Check `transferOwnership()` is properly called
+   */
+  function test_callTransferOwnership() public {
+    // Mock the call over the functions
+    _mockExecuteTxsCalls();
+
+    // Expect `transferOwnership` to be properly called
+    vm.expectCall(_dummyContract, abi.encodeWithSelector(IUSDC.transferOwnership.selector, _l2Adapter));
 
     // Execute
     factory.forTest_executeInitTxs(_dummyContract, _usdcInitializeData, _l2Adapter, _initTxsUsdc);
@@ -467,6 +481,9 @@ contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
 
     // Mock the call over `updateMasterMinter()` function
     vm.mockCall(_dummyContract, abi.encodeWithSelector(IUSDC.updateMasterMinter.selector), '');
+
+    // Mock the call over `transferOwnership()` function
+    vm.mockCall(_dummyContract, abi.encodeWithSelector(IUSDC.transferOwnership.selector), '');
   }
 }
 
@@ -533,7 +550,9 @@ contract ForTestDummyContract {
 
   function configureMinter(address, uint256) external returns (bool) {}
 
-  function updateMasterMinter(address _newMasterMinter) external {}
+  function updateMasterMinter(address) external {}
+
+  function transferOwnership(address) external {}
 
   function returnTrue() public pure returns (bool) {
     return true;

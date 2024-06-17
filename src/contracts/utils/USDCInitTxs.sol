@@ -35,5 +35,5 @@ library USDCInitTxs {
    * @dev The `initializeV2_2()` transaction data for the USDC implementation contract.
    */
   bytes public constant INITIALIZEV2_2 =
-    abi.encodeWithSignature('initializeV2_2(address[],string)', new address[](0), '');
+    abi.encodeWithSignature('initializeV2_2(address[],string)', new address[](0), 'USDC');
 }
