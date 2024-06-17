@@ -11,11 +11,11 @@ import {IL1OpUSDCFactory, L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
 
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
-import {Test} from 'forge-std/Test.sol';
+import {Helpers} from 'test/utils/Helpers.sol';
 
 import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
 
-contract IntegrationBase is Test {
+contract IntegrationBase is Helpers {
   // Constants
   uint256 internal constant _MAINNET_FORK_BLOCK = 20_076_176;
   uint256 internal constant _OPTIMISM_FORK_BLOCK = 121_300_856;
@@ -132,5 +132,6 @@ contract IntegrationSetup is IntegrationBase {
 
     vm.selectFork(optimism);
     assertEq(l2Adapter.LINKED_ADAPTER(), address(l1Adapter));
+    assertEq(l2Adapter.FALLBACK_PROXY_ADMIN().owner(), address(l2Adapter));
   }
 }
