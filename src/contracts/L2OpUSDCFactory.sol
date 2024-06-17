@@ -96,6 +96,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     address _l2Adapter,
     bytes[] memory _initTxs
   ) internal {
+    // Initialize the USDC contract
     IUSDC(_usdc).initialize(
       _usdcInitializeData._tokenName,
       _usdcInitializeData._tokenSymbol,
@@ -108,7 +109,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     );
 
     // Add l2 adapter as unlimited minter
-    IUSDC(_usdc).configureMinter(_l2Adapter, type(uint256).max);
+    IUSDC(_usdc).configureMinter(_l2Adapter, type(uint256).max - 1);
     // Set l2 adapter as new master minter
     IUSDC(_usdc).updateMasterMinter(_l2Adapter);
 

@@ -21,12 +21,12 @@ contract L2OpUSDCFactoryTest is L2OpUSDCFactory {
   }
 
   function forTest_executeInitTxs(
-    address _target,
+    address _usdc,
     USDCInitializeData memory _usdcInitializeData,
     address _l2Adapter,
     bytes[] memory _initTxs
   ) public {
-    _executeInitTxs(_target, _usdcInitializeData, _l2Adapter, _initTxs);
+    _executeInitTxs(_usdc, _usdcInitializeData, _l2Adapter, _initTxs);
   }
 }
 
@@ -321,8 +321,8 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
       _l2Messenger, abi.encodeWithSelector(ICrossDomainMessenger.xDomainMessageSender.selector), abi.encode(_l1Factory)
     );
 
-    // Expect the call over 'changeAdmin' function
-    vm.expectCall(_usdcProxy, abi.encodeWithSelector(IUSDC.changeAdmin.selector, address(_l2Adapter)));
+    // Expect the `changeAdmin` function to be called
+    vm.expectCall(_usdcProxy, abi.encodeWithSelector(IUSDC.changeAdmin.selector, _l2Adapter));
 
     // Execute
     vm.prank(_l2Messenger);
@@ -344,7 +344,6 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Expect the init txs to be called
     vm.expectCall(_usdcImplementation, _initTxsUsdc[0]);
-    vm.expectCall(_usdcImplementation, _initTxsUsdc[1]);
 
     // Execute
     vm.prank(_l2Messenger);
@@ -377,9 +376,68 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
 contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
   /**
+   * @notice Check `initialize()` is properly called
+   */
+  function test_callInitialize() public {
+    // Mock the call over the functions
+    _mockExecuteTxsCalls();
+
+    // Expect `initialize` to be properly called
+    vm.expectCall(
+      _dummyContract,
+      abi.encodeWithSelector(
+        IUSDC.initialize.selector,
+        _usdcInitializeData._tokenName,
+        _usdcInitializeData._tokenSymbol,
+        _usdcInitializeData._tokenCurrency,
+        _usdcInitializeData._tokenDecimals,
+        address(factory),
+        _l2Adapter,
+        _l2Adapter,
+        _l2Adapter
+      )
+    );
+
+    // Execute
+    factory.forTest_executeInitTxs(_dummyContract, _usdcInitializeData, _l2Adapter, _initTxsUsdc);
+  }
+
+  /**
+   * @notice Check `configureMinter()` is properly called
+   */
+  function test_callConfigureMinter() public {
+    // Mock the call over the functions
+    _mockExecuteTxsCalls();
+
+    // Expect `configureMinter` to be properly called
+    vm.expectCall(
+      _dummyContract, abi.encodeWithSelector(IUSDC.configureMinter.selector, _l2Adapter, type(uint256).max - 1)
+    );
+
+    // Execute
+    factory.forTest_executeInitTxs(_dummyContract, _usdcInitializeData, _l2Adapter, _initTxsUsdc);
+  }
+
+  /**
+   * @notice Check `updateMasterMinter()` is properly called
+   */
+  function test_callUpdateMasterMinter() public {
+    // Mock the call over the functions
+    _mockExecuteTxsCalls();
+
+    // Expect `updateMasterMinter` to be properly called
+    vm.expectCall(_dummyContract, abi.encodeWithSelector(IUSDC.updateMasterMinter.selector, _l2Adapter));
+
+    // Execute
+    factory.forTest_executeInitTxs(_dummyContract, _usdcInitializeData, _l2Adapter, _initTxsUsdc);
+  }
+
+  /**
    * @notice Check the execution of the initialization transactions over a target contract
    */
-  function test_executeInitTxs() public {
+  function test_executeInitTxsArray(address _l2Adapter) public {
+    _mockExecuteTxsCalls();
+
     // Mock the call to the target contract
     _mockAndExpect(_dummyContract, _initTxsUsdc[0], '');
     _mockAndExpect(_dummyContract, _initTxsUsdc[1], '');
@@ -391,12 +449,25 @@ contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
   /**
    * @notice Check it reverts if the initialization transactions fail
    */
-  function test_revertIfInitTxsFail() public {
+  function test_revertIfInitTxsOnArrayFail() public {
+    _mockExecuteTxsCalls();
+
     vm.mockCallRevert(_dummyContract, _badInitTxs[0], '');
     vm.mockCallRevert(_dummyContract, _badInitTxs[1], '');
     vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InitializationFailed.selector);
     // Execute
     factory.forTest_executeInitTxs(_dummyContract, _usdcInitializeData, _l2Adapter, _badInitTxs);
+  }
+
+  function _mockExecuteTxsCalls() public {
+    // Mock call over `initialize()` function
+    vm.mockCall(_dummyContract, abi.encodeWithSelector(IUSDC.initialize.selector), '');
+
+    // Mock the call over `configureMinter()` function
+    vm.mockCall(_dummyContract, abi.encodeWithSelector(IUSDC.configureMinter.selector), abi.encode(true));
+
+    // Mock the call over `updateMasterMinter()` function
+    vm.mockCall(_dummyContract, abi.encodeWithSelector(IUSDC.updateMasterMinter.selector), '');
   }
 }
 
@@ -457,4 +528,19 @@ contract ForTestDummyContract {
   function returnFalse() public pure returns (bool) {
     return true;
   }
+
+  function initialize(
+    string memory _tokenName,
+    string memory _tokenSymbol,
+    string memory _tokenCurrency,
+    uint8 _tokenDecimals,
+    address _newMasterMinter,
+    address _newPauser,
+    address _newBlacklister,
+    address _newOwner
+  ) external {}
+
+  function configureMinter(address, uint256) external returns (bool) {}
+
+  function updateMasterMinter(address _newMasterMinter) external {}
 }
