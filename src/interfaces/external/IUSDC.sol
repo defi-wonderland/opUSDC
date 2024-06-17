@@ -40,6 +40,19 @@ interface IUSDC is IERC20 {
   function configureMinter(address _minter, uint256 _minterAllowedAmount) external returns (bool _result);
 
   /**
+   * @notice Function to upgrade the usdc proxy to a new implementation
+   * @param _newImplementation Address of the new implementation
+   */
+  function upgradeTo(address _newImplementation) external;
+
+  /**
+   * @notice Upgrades the USDC proxy to a new implementation and calls a function on the new implementation
+   * @param _newImplementation Address of the new implementation
+   * @param _data Data to call on the new implementation
+   */
+  function upgradeToAndCall(address _newImplementation, bytes calldata _data) external;
+
+  /**
    * @notice Returns the current implementation address
    * @return _implementation Address of the current implementation
    */
