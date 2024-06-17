@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
+import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
+import {IUSDC} from 'interfaces/external/IUSDC.sol';
 import {AddressAliasHelper} from 'test/utils/AddressAliasHelper.sol';
 import {USDC_IMPLEMENTATION_CREATION_CODE} from 'test/utils/USDCImplementationCreationCode.sol';
 import {IMockCrossDomainMessenger} from 'test/utils/interfaces/IMockCrossDomainMessenger.sol';
-
-import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 
 import {IL1OpUSDCFactory, L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
 
@@ -19,7 +19,7 @@ contract IntegrationBase is Test {
   // Constants
   uint256 internal constant _MAINNET_FORK_BLOCK = 20_076_176;
   uint256 internal constant _OPTIMISM_FORK_BLOCK = 121_300_856;
-  address public constant MAINNET_USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+  IUSDC public constant MAINNET_USDC = IUSDC(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
   address public constant MAINNET_USDC_IMPLEMENTATION = 0xa2327a938Febf5FEC13baCFb16Ae10EcBc4cbDCF;
   address public constant L2_CREATE2_DEPLOYER = 0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2;
   IMockCrossDomainMessenger public constant L2_MESSENGER =
@@ -44,6 +44,7 @@ contract IntegrationBase is Test {
   L1OpUSDCBridgeAdapter public l1Adapter;
   L1OpUSDCFactory public factory;
   L2OpUSDCBridgeAdapter public l2Adapter;
+  IUSDC public bridgedUSDC;
 
   function setUp() public virtual {
     mainnet = vm.createFork(vm.rpcUrl('mainnet'), _MAINNET_FORK_BLOCK);
@@ -62,7 +63,7 @@ contract IntegrationBase is Test {
       address(1)
     );
 
-    factory = new L1OpUSDCFactory(MAINNET_USDC);
+    factory = new L1OpUSDCFactory(address(MAINNET_USDC));
 
     usdcInitTxns[0] = initialize;
     usdcInitTxns[1] = USDCInitTxs.INITIALIZEV2;
@@ -86,6 +87,8 @@ contract IntegrationBase is Test {
     // Make foundry know these two address exist on both forks
     vm.makePersistent(address(l1Adapter));
     vm.makePersistent(address(l2Adapter));
+    vm.makePersistent(address(bridgedUSDC));
+    vm.makePersistent(address(l2Adapter.FALLBACK_PROXY_ADMIN()));
   }
 
   function _relayL2Deployments(
@@ -128,6 +131,10 @@ contract IntegrationBase is Test {
     vm.stopPrank();
 
     l2Adapter = L2OpUSDCBridgeAdapter(_l2Adapter);
+    bridgedUSDC = IUSDC(l2Adapter.USDC());
+
+    vm.prank(bridgedUSDC.masterMinter());
+    bridgedUSDC.configureMinter(address(l2Adapter), type(uint256).max);
   }
 }
 

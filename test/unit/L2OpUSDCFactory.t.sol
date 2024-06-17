@@ -299,6 +299,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     // Get the adapter address
     uint256 _adapterDeploymentNonce = vm.getNonce(address(factory)) + 2;
     address _l2Adapter = _precalculateCreateAddress(address(factory), _adapterDeploymentNonce);
+    address _fallbackProxyAdmin = _precalculateCreateAddress(address(_l2Adapter), 1);
 
     // Mock the call over `xDomainMessageSender` to return the L1 factory address
     vm.mockCall(
@@ -306,7 +307,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     );
 
     // Expect the call over 'changeAdmin' function
-    vm.expectCall(_usdcProxy, abi.encodeWithSelector(IUSDC.changeAdmin.selector, address(_l2Adapter)));
+    vm.expectCall(_usdcProxy, abi.encodeWithSelector(IUSDC.changeAdmin.selector, address(_fallbackProxyAdmin)));
 
     // Execute
     vm.prank(_l2Messenger);
