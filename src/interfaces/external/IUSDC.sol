@@ -32,12 +32,6 @@ interface IUSDC is IERC20 {
   function changeAdmin(address newAdmin) external;
 
   /**
-   * @notice Returns the current implementation address
-   * @return _implementation Address of the current implementation
-   */
-  function implementation() external view returns (address _implementation);
-
-  /**
    * @notice Initializes the fiat token contract.
    * @param _tokenName       The name of the fiat token.
    * @param _tokenSymbol     The symbol of the fiat token.
@@ -92,4 +86,10 @@ interface IUSDC is IERC20 {
    * @return _decimals The decimals of the token
    */
   function decimals() external view returns (uint8 _decimals);
+
+  /**
+   * @notice Returns the current implementation address
+   * @return _implementation Address of the current implementation
+   */
+  function implementation() external view returns (address _implementation);
 }

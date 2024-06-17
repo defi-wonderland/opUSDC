@@ -39,20 +39,20 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   mapping(bytes32 _salt => bool _isUsed) public isSaltUsed;
 
   /**
-   * @notice Constructs the L1 factory contract
-   * @param _usdc The address of the USDC contract
-   */
-  constructor(address _usdc) {
-    USDC = IUSDC(_usdc);
-  }
-
-  /**
    * @notice Checks that the first init tx selector is not equal to the `initialize()` function one
    * @param _firstInitTx The first init tx
    */
   modifier noInitializeTx(bytes calldata _firstInitTx) {
     if (bytes4(_firstInitTx[:4]) == INITIALIZE_SELECTOR) revert IL1OpUSDCFactory_NoInitializeTx();
     _;
+  }
+
+  /**
+   * @notice Constructs the L1 factory contract
+   * @param _usdc The address of the USDC contract
+   */
+  constructor(address _usdc) {
+    USDC = IUSDC(_usdc);
   }
 
   /**

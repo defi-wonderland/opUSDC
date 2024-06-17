@@ -2,11 +2,9 @@
 pragma solidity 0.8.25;
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
-import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {Test} from 'forge-std/Test.sol';
-import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
@@ -459,7 +457,7 @@ contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
     factory.forTest_executeInitTxs(_dummyContract, _usdcInitializeData, _l2Adapter, _badInitTxs);
   }
 
-  function _mockExecuteTxsCalls() public {
+  function _mockExecuteTxsCalls() internal {
     // Mock call over `initialize()` function
     vm.mockCall(_dummyContract, abi.encodeWithSelector(IUSDC.initialize.selector), '');
 
@@ -521,14 +519,6 @@ contract L2OpUSDCFactory_Unit_DeployCreate is Base {
 contract ForTestDummyContract {
   constructor() {}
 
-  function returnTrue() public pure returns (bool) {
-    return true;
-  }
-
-  function returnFalse() public pure returns (bool) {
-    return true;
-  }
-
   function initialize(
     string memory _tokenName,
     string memory _tokenSymbol,
@@ -543,4 +533,12 @@ contract ForTestDummyContract {
   function configureMinter(address, uint256) external returns (bool) {}
 
   function updateMasterMinter(address _newMasterMinter) external {}
+
+  function returnTrue() public pure returns (bool) {
+    return true;
+  }
+
+  function returnFalse() public pure returns (bool) {
+    return true;
+  }
 }

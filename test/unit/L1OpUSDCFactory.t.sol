@@ -49,13 +49,13 @@ abstract contract Base is Test, Helpers {
   address internal _usdcImplAddress = makeAddr('bridgedUsdcImpl');
   // cant fuzz this because of foundry's VM
   address internal _l1Messenger = makeAddr('messenger');
-  address _newMasterMinter = makeAddr('newMasterMinter');
-  address _newPauser = makeAddr('newPauser');
-  address _newBlacklister = makeAddr('newBlacklister');
-  string _tokenName = 'USDC';
-  string _tokenSymbol = 'USDC';
-  string _tokenCurrency = 'USD';
-  uint8 _tokenDecimals = 6;
+  address internal _newMasterMinter = makeAddr('newMasterMinter');
+  address internal _newPauser = makeAddr('newPauser');
+  address internal _newBlacklister = makeAddr('newBlacklister');
+  string internal _tokenName = 'USDC';
+  string internal _tokenSymbol = 'USDC';
+  string internal _tokenCurrency = 'USD';
+  uint8 internal _tokenDecimals = 6;
 
   IL1OpUSDCFactory.L2Deployments internal _l2Deployments;
   bytes[] internal _usdcInitTxs;
