@@ -17,28 +17,28 @@ contract FallbackProxyAdmin is Ownable {
 
   /**
    * @notice Changes the admin of the USDC proxy
-   * @param newAdmin Address to transfer proxy administration to
+   * @param _newAdmin Address to transfer proxy administration to
    * @dev Owner should always be the L2 Adapter
    * @dev USDC admin cant interact proxy with implementation so we use this contract as the middleman
    */
-  function changeAdmin(address newAdmin) external onlyOwner {
-    IUSDC(USDC).changeAdmin(newAdmin);
+  function changeAdmin(address _newAdmin) external onlyOwner {
+    IUSDC(USDC).changeAdmin(_newAdmin);
   }
 
   /**
    * @notice Function to upgrade the usdc proxy to a new implementation
-   * @param newImplementation Address of the new implementation
+   * @param _newImplementation Address of the new implementation
    */
-  function upgradeTo(address newImplementation) external onlyOwner {
-    IUSDC(USDC).upgradeTo(newImplementation);
+  function upgradeTo(address _newImplementation) external onlyOwner {
+    IUSDC(USDC).upgradeTo(_newImplementation);
   }
 
   /**
    * @notice Upgrades the USDC proxy to a new implementation and calls a function on the new implementation
-   * @param newImplementation Address of the new implementation
-   * @param data Data to call on the new implementation
+   * @param _newImplementation Address of the new implementation
+   * @param _data Data to call on the new implementation
    */
-  function upgradeToAndCall(address newImplementation, bytes calldata data) external onlyOwner {
-    IUSDC(USDC).upgradeToAndCall(newImplementation, data);
+  function upgradeToAndCall(address _newImplementation, bytes calldata _data) external onlyOwner {
+    IUSDC(USDC).upgradeToAndCall(_newImplementation, _data);
   }
 }

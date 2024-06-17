@@ -41,16 +41,16 @@ interface IUSDC is IERC20 {
 
   /**
    * @notice Function to upgrade the usdc proxy to a new implementation
-   * @param newImplementation Address of the new implementation
+   * @param _newImplementation Address of the new implementation
    */
-  function upgradeTo(address newImplementation) external;
+  function upgradeTo(address _newImplementation) external;
 
   /**
    * @notice Upgrades the USDC proxy to a new implementation and calls a function on the new implementation
-   * @param newImplementation Address of the new implementation
-   * @param data Data to call on the new implementation
+   * @param _newImplementation Address of the new implementation
+   * @param _data Data to call on the new implementation
    */
-  function upgradeToAndCall(address newImplementation, bytes calldata data) external;
+  function upgradeToAndCall(address _newImplementation, bytes calldata _data) external;
 
   /**
    * @notice Returns the current implementation address
