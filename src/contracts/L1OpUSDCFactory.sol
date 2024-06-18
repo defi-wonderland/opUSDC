@@ -28,10 +28,10 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   bytes4 public constant INITIALIZE_SELECTOR = 0x07fbc6b5;
 
   /// @inheritdoc IL1OpUSDCFactory
-  string public USDC_NAME = 'Bridged USDC';
+  string public constant USDC_NAME = 'Bridged USDC';
 
   /// @inheritdoc IL1OpUSDCFactory
-  string public USDC_SYMBOL = 'USDC.e';
+  string public constant USDC_SYMBOL = 'USDC.e';
 
   /// @notice Zero value constant to be used on the `CREATE2_DEPLOYER` interaction
   uint256 internal constant _ZERO_VALUE = 0;
