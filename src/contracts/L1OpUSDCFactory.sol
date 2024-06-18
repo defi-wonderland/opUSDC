@@ -144,7 +144,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     address _l1AdapterOwner,
     address _l2Factory,
     uint256 _l2FactoryNonce,
-    L2Deployments memory _l2Deployments
+    L2Deployments calldata _l2Deployments
   ) internal returns (address _l1Adapter, address _l2Adapter) {
     // Calculate the L2 adapter address. Adding 2 since the USDC contracts are already deployed first on the L2 factory
     uint256 _l2AdapterDeploymentNonce = _l2FactoryNonce + 2;
