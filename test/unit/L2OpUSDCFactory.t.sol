@@ -18,8 +18,13 @@ contract L2OpUSDCFactoryTest is L2OpUSDCFactory {
     (_newContract, _success) = _deployCreate(_initCode);
   }
 
-  function forTest_executeInitTxs(address _target, bytes[] memory _initTxs, uint256 _length) public {
-    _executeInitTxs(_target, _initTxs, _length);
+  function forTest_executeInitTxs(
+    address _usdc,
+    USDCInitializeData calldata _usdcInitializeData,
+    address _l2Adapter,
+    bytes[] memory _initTxs
+  ) public {
+    _executeInitTxs(_usdc, _usdcInitializeData, _l2Adapter, _initTxs);
   }
 }
 
@@ -38,6 +43,7 @@ contract Base is Test, Helpers {
   address internal _dummyContract;
   bytes internal _usdcImplInitCode;
 
+  IL2OpUSDCFactory.USDCInitializeData internal _usdcInitializeData;
   bytes[] internal _emptyInitTxs;
   bytes[] internal _initTxsUsdc;
   bytes[] internal _badInitTxs;
@@ -46,6 +52,14 @@ contract Base is Test, Helpers {
     // Deploy the l2 factory
     vm.prank(_create2Deployer);
     factory = new L2OpUSDCFactoryTest(_l1Factory);
+
+    // Set the initialize data
+    _usdcInitializeData = IL2OpUSDCFactory.USDCInitializeData({
+      _tokenName: 'USD Coin',
+      _tokenSymbol: 'USDC',
+      _tokenCurrency: 'USD',
+      _tokenDecimals: 6
+    });
 
     // Set the implementations bytecode and init code
     _usdcImplInitCode = type(ForTestDummyContract).creationCode;
@@ -87,7 +101,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InvalidSender.selector);
     // Execute
     vm.prank(_sender);
-    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _initTxsUsdc);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _initTxsUsdc);
   }
 
   /**
@@ -106,7 +120,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     // Execute
     vm.prank(factory.L2_MESSENGER());
     vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InvalidSender.selector);
-    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _initTxsUsdc);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _initTxsUsdc);
   }
 
   /**
@@ -131,7 +145,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _emptyInitTxs);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
 
     // Assert the USDC implementation was deployed
     assertGt(_usdcImplementation.code.length, 0, 'USDC implementation was not deployed');
@@ -165,7 +179,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _emptyInitTxs);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
 
     // Assert the USDC proxy was deployed
     assertGt(_usdcProxy.code.length, 0, 'USDC proxy was not deployed');
@@ -199,7 +213,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _emptyInitTxs);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
 
     // Assert the adapter was deployed
     assertGt(_l2Adapter.code.length, 0, 'Adapter was not deployed');
@@ -233,7 +247,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _emptyInitTxs);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
   }
 
   /**
@@ -259,7 +273,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _emptyInitTxs);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
   }
 
   /**
@@ -285,7 +299,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _emptyInitTxs);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
   }
 
   /**
@@ -311,7 +325,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _emptyInitTxs);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
   }
 
   /**
@@ -329,11 +343,10 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Expect the init txs to be called
     vm.expectCall(_usdcImplementation, _initTxsUsdc[0]);
-    vm.expectCall(_usdcImplementation, _initTxsUsdc[1]);
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _initTxsUsdc);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _initTxsUsdc);
   }
 
   /**
@@ -356,32 +369,120 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _initTxsUsdc);
+    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _initTxsUsdc);
   }
 }
 
 contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
   /**
+   * @notice Check `initialize()` is properly called
+   */
+  function test_callInitialize() public {
+    // Mock the call over the functions
+    _mockExecuteTxsCalls();
+
+    // Expect `initialize` to be properly called
+    vm.expectCall(
+      _dummyContract,
+      abi.encodeWithSelector(
+        IUSDC.initialize.selector,
+        _usdcInitializeData._tokenName,
+        _usdcInitializeData._tokenSymbol,
+        _usdcInitializeData._tokenCurrency,
+        _usdcInitializeData._tokenDecimals,
+        address(factory),
+        _l2Adapter,
+        _l2Adapter,
+        address(factory)
+      )
+    );
+
+    // Execute
+    factory.forTest_executeInitTxs(_dummyContract, _usdcInitializeData, _l2Adapter, _initTxsUsdc);
+  }
+
+  /**
+   * @notice Check `configureMinter()` is properly called
+   */
+  function test_callConfigureMinter() public {
+    // Mock the call over the functions
+    _mockExecuteTxsCalls();
+
+    // Expect `configureMinter` to be properly called
+    // solhint-disable-next-line max-line-length
+    vm.expectCall(_dummyContract, abi.encodeWithSelector(IUSDC.configureMinter.selector, _l2Adapter, type(uint256).max));
+
+    // Execute
+    factory.forTest_executeInitTxs(_dummyContract, _usdcInitializeData, _l2Adapter, _initTxsUsdc);
+  }
+
+  /**
+   * @notice Check `updateMasterMinter()` is properly called
+   */
+  function test_callUpdateMasterMinter() public {
+    // Mock the call over the functions
+    _mockExecuteTxsCalls();
+
+    // Expect `updateMasterMinter` to be properly called
+    vm.expectCall(_dummyContract, abi.encodeWithSelector(IUSDC.updateMasterMinter.selector, _l2Adapter));
+
+    // Execute
+    factory.forTest_executeInitTxs(_dummyContract, _usdcInitializeData, _l2Adapter, _initTxsUsdc);
+  }
+
+  /**
+   * @notice Check `transferOwnership()` is properly called
+   */
+  function test_callTransferOwnership() public {
+    // Mock the call over the functions
+    _mockExecuteTxsCalls();
+
+    // Expect `transferOwnership` to be properly called
+    vm.expectCall(_dummyContract, abi.encodeWithSelector(IUSDC.transferOwnership.selector, _l2Adapter));
+
+    // Execute
+    factory.forTest_executeInitTxs(_dummyContract, _usdcInitializeData, _l2Adapter, _initTxsUsdc);
+  }
+
+  /**
    * @notice Check the execution of the initialization transactions over a target contract
    */
-  function test_executeInitTxs() public {
+  function test_executeInitTxsArray(address _l2Adapter) public {
+    _mockExecuteTxsCalls();
+
     // Mock the call to the target contract
     _mockAndExpect(_dummyContract, _initTxsUsdc[0], '');
     _mockAndExpect(_dummyContract, _initTxsUsdc[1], '');
 
     // Execute the initialization transactions
-    factory.forTest_executeInitTxs(_dummyContract, _initTxsUsdc, _initTxsUsdc.length);
+    factory.forTest_executeInitTxs(_dummyContract, _usdcInitializeData, _l2Adapter, _initTxsUsdc);
   }
 
   /**
    * @notice Check it reverts if the initialization transactions fail
    */
-  function test_revertIfInitTxsFail() public {
+  function test_revertIfInitTxsOnArrayFail() public {
+    _mockExecuteTxsCalls();
+
     vm.mockCallRevert(_dummyContract, _badInitTxs[0], '');
     vm.mockCallRevert(_dummyContract, _badInitTxs[1], '');
     vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InitializationFailed.selector);
     // Execute
-    factory.forTest_executeInitTxs(_dummyContract, _badInitTxs, _badInitTxs.length);
+    factory.forTest_executeInitTxs(_dummyContract, _usdcInitializeData, _l2Adapter, _badInitTxs);
+  }
+
+  function _mockExecuteTxsCalls() internal {
+    // Mock call over `initialize()` function
+    vm.mockCall(_dummyContract, abi.encodeWithSelector(IUSDC.initialize.selector), '');
+
+    // Mock the call over `configureMinter()` function
+    vm.mockCall(_dummyContract, abi.encodeWithSelector(IUSDC.configureMinter.selector), abi.encode(true));
+
+    // Mock the call over `updateMasterMinter()` function
+    vm.mockCall(_dummyContract, abi.encodeWithSelector(IUSDC.updateMasterMinter.selector), '');
+
+    // Mock the call over `transferOwnership()` function
+    vm.mockCall(_dummyContract, abi.encodeWithSelector(IUSDC.transferOwnership.selector), '');
   }
 }
 
@@ -434,6 +535,23 @@ contract L2OpUSDCFactory_Unit_DeployCreate is Base {
  */
 contract ForTestDummyContract {
   constructor() {}
+
+  function initialize(
+    string memory _tokenName,
+    string memory _tokenSymbol,
+    string memory _tokenCurrency,
+    uint8 _tokenDecimals,
+    address _newMasterMinter,
+    address _newPauser,
+    address _newBlacklister,
+    address _newOwner
+  ) external {}
+
+  function configureMinter(address, uint256) external returns (bool) {}
+
+  function updateMasterMinter(address) external {}
+
+  function transferOwnership(address) external {}
 
   function returnTrue() public pure returns (bool) {
     return true;

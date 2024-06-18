@@ -4,8 +4,10 @@ pragma solidity 0.8.25;
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
 import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
+import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 import {ICreate2Deployer} from 'interfaces/external/ICreate2Deployer.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
+import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 /**
  * @title L1OpUSDCFactory
@@ -22,11 +24,20 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   /// @inheritdoc IL1OpUSDCFactory
   address public constant L2_CREATE2_DEPLOYER = 0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2;
 
+  /// @inheritdoc IL1OpUSDCFactory
+  bytes4 public constant INITIALIZE_SELECTOR = 0x07fbc6b5;
+
+  /// @inheritdoc IL1OpUSDCFactory
+  string public constant USDC_NAME = 'Bridged USDC';
+
+  /// @inheritdoc IL1OpUSDCFactory
+  string public constant USDC_SYMBOL = 'USDC.e';
+
   /// @notice Zero value constant to be used on the `CREATE2_DEPLOYER` interaction
   uint256 internal constant _ZERO_VALUE = 0;
 
   /// @inheritdoc IL1OpUSDCFactory
-  address public immutable USDC;
+  IUSDC public immutable USDC;
 
   /// @inheritdoc IL1OpUSDCFactory
   mapping(address _l2Factory => uint256 _l2FactoryNonce) public l2FactoryNonce;
@@ -35,11 +46,20 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   mapping(bytes32 _salt => bool _isUsed) public isSaltUsed;
 
   /**
+   * @notice Checks that the first init tx selector is not equal to the `initialize()` function one
+   * @param _firstInitTx The first init tx
+   */
+  modifier noInitializeTx(bytes calldata _firstInitTx) {
+    if (bytes4(_firstInitTx) == INITIALIZE_SELECTOR) revert IL1OpUSDCFactory_NoInitializeTx();
+    _;
+  }
+
+  /**
    * @notice Constructs the L1 factory contract
    * @param _usdc The address of the USDC contract
    */
   constructor(address _usdc) {
-    USDC = _usdc;
+    USDC = IUSDC(_usdc);
   }
 
   /**
@@ -58,8 +78,12 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     address _l1Messenger,
     uint32 _minGasLimitCreate2Factory,
     address _l1AdapterOwner,
-    L2Deployments memory _l2Deployments
-  ) external returns (address _l2Factory, address _l1Adapter, address _l2Adapter) {
+    L2Deployments calldata _l2Deployments
+  )
+    external
+    noInitializeTx(_l2Deployments.usdcInitTxs[0])
+    returns (address _l2Factory, address _l1Adapter, address _l2Adapter)
+  {
     if (isSaltUsed[_l2FactorySalt]) revert IL1OpUSDCFactory_SaltAlreadyUsed();
     isSaltUsed[_l2FactorySalt] = true;
 
@@ -98,8 +122,8 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     address _l1Messenger,
     address _l1AdapterOwner,
     address _l2Factory,
-    L2Deployments memory _l2Deployments
-  ) public returns (address _l1Adapter, address _l2Adapter) {
+    L2Deployments calldata _l2Deployments
+  ) external noInitializeTx(_l2Deployments.usdcInitTxs[0]) returns (address _l1Adapter, address _l2Adapter) {
     if (l2FactoryNonce[_l2Factory] == 0) revert IL1OpUSDCFactory_L2FactoryNotDeployed();
     uint256 _l2FactoryNonce = l2FactoryNonce[_l2Factory];
     (_l1Adapter, _l2Adapter) =
@@ -120,17 +144,21 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     address _l1AdapterOwner,
     address _l2Factory,
     uint256 _l2FactoryNonce,
-    L2Deployments memory _l2Deployments
+    L2Deployments calldata _l2Deployments
   ) internal returns (address _l1Adapter, address _l2Adapter) {
     // Calculate the L2 adapter address. Adding 2 since the USDC contracts are already deployed first on the L2 factory
     uint256 _l2AdapterDeploymentNonce = _l2FactoryNonce + 2;
     _l2Adapter = _precalculateCreateAddress(_l2Factory, _l2AdapterDeploymentNonce);
 
     // Deploy the L1 adapter
-    _l1Adapter = address(new L1OpUSDCBridgeAdapter(USDC, _l1Messenger, _l2Adapter, _l1AdapterOwner));
+    _l1Adapter = address(new L1OpUSDCBridgeAdapter(address(USDC), _l1Messenger, _l2Adapter, _l1AdapterOwner));
 
     // Increment the nonce of the L2 factory with all the deployments to be done
     l2FactoryNonce[_l2Factory] = _l2FactoryNonce + 3;
+
+    // Get the L1 USDC naming and decimals to ensure they are the same on the L2, guaranteeing the same standard
+    IL2OpUSDCFactory.USDCInitializeData memory _usdcInitializeData =
+      IL2OpUSDCFactory.USDCInitializeData(USDC_NAME, USDC_SYMBOL, USDC.currency(), USDC.decimals());
 
     // Send the call over the L2 factory `deploy` function message
     bytes memory _l2DeploymentsTx = abi.encodeWithSelector(
@@ -138,6 +166,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
       _l1Adapter,
       _l2Deployments.l2AdapterOwner,
       _l2Deployments.usdcImplementationInitCode,
+      _usdcInitializeData,
       _l2Deployments.usdcInitTxs
     );
     ICrossDomainMessenger(_l1Messenger).sendMessage(_l2Factory, _l2DeploymentsTx, _l2Deployments.minGasLimitDeploy);

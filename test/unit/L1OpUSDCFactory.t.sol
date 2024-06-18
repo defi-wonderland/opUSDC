@@ -2,11 +2,14 @@
 pragma solidity 0.8.25;
 
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
-import {IL1OpUSDCFactory, L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
+import {IL2OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
+import {L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
 import {Test} from 'forge-std/Test.sol';
+import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 import {ICreate2Deployer} from 'interfaces/external/ICreate2Deployer.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
+import {IUSDC} from 'interfaces/external/IUSDC.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
 contract ForTestL1OpUSDCFactory is L1OpUSDCFactory {
@@ -46,6 +49,13 @@ abstract contract Base is Test, Helpers {
   address internal _usdcImplAddress = makeAddr('bridgedUsdcImpl');
   // cant fuzz this because of foundry's VM
   address internal _l1Messenger = makeAddr('messenger');
+  address internal _newMasterMinter = makeAddr('newMasterMinter');
+  address internal _newPauser = makeAddr('newPauser');
+  address internal _newBlacklister = makeAddr('newBlacklister');
+  string internal _tokenName = 'Bridged USDC';
+  string internal _tokenSymbol = 'USDC.e';
+  string internal _tokenCurrency = 'USD';
+  uint8 internal _tokenDecimals = 6;
 
   IL1OpUSDCFactory.L2Deployments internal _l2Deployments;
   bytes[] internal _usdcInitTxs;
@@ -54,9 +64,9 @@ abstract contract Base is Test, Helpers {
     // Deploy factory
     factory = new ForTestL1OpUSDCFactory(_usdc);
 
-    // Add the USDC init tx
-    bytes memory _usdcInitTx = 'tx1';
-    _usdcInitTxs.push(_usdcInitTx);
+    // Set the init txs
+    bytes memory _initTx = abi.encodeWithSignature('randomCall()');
+    _usdcInitTxs.push(_initTx);
 
     // Define the L2 deployments struct data
     uint32 _minGasLimitDeploy = 100;
@@ -77,6 +87,12 @@ abstract contract Base is Test, Helpers {
   function _mockDeployFunctionCalls() internal {
     // Mock the call over the `portal` function on the L1 messenger
     vm.mockCall(_l1Messenger, abi.encodeWithSelector(ICrossDomainMessenger.sendMessage.selector), abi.encode(''));
+
+    // Mock the call over USDC `currency` function
+    vm.mockCall(_usdc, abi.encodeWithSelector(IUSDC.currency.selector), abi.encode(_tokenCurrency));
+
+    // Mock the call over USDC `decimals` function
+    vm.mockCall(_usdc, abi.encodeWithSelector(IUSDC.decimals.selector), abi.encode(_tokenDecimals));
   }
 }
 
@@ -86,11 +102,29 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
    */
   function test_setImmutables() public {
     // Assert
-    assertEq(factory.USDC(), _usdc, 'Invalid usdc address');
+    assertEq(address(factory.USDC()), _usdc, 'Invalid usdc address');
   }
 }
 
 contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
+  /**
+   * @notice Check the function reverts if the `initialize()` tx is the first init tx
+   */
+  function test_revertOnInitializeTx() public {
+    vm.expectRevert(IL1OpUSDCFactory.IL1OpUSDCFactory_NoInitializeTx.selector);
+
+    // Set the `initialize()` tx as the first init tx
+    bytes memory _initializeSelector = abi.encode(keccak256(abi.encodeWithSelector(IUSDC.initialize.selector)));
+    _usdcInitTxs[0] = _initializeSelector;
+    _l2Deployments.usdcInitTxs = _usdcInitTxs;
+
+    // Execute
+    vm.prank(_user);
+    factory.deployL2FactoryAndContracts(
+      _salt, _l1Messenger, _l2Deployments.minGasLimitDeploy, _l1AdapterOwner, _l2Deployments
+    );
+  }
+
   /**
    * @notice Check the function reverts if the salt was already used
    */
@@ -215,12 +249,20 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
     // Mock all the `deployL2FactoryAndContracts` function calls
     _mockDeployFunctionCalls();
 
+    IL2OpUSDCFactory.USDCInitializeData memory _usdcInitializeData = IL2OpUSDCFactory.USDCInitializeData({
+      _tokenName: _tokenName,
+      _tokenSymbol: _tokenSymbol,
+      _tokenCurrency: _tokenCurrency,
+      _tokenDecimals: _tokenDecimals
+    });
+
     // Expect the `sendMessage` to be properly called
     bytes memory _l2DeploymentsTx = abi.encodeWithSelector(
       L2OpUSDCFactory.deploy.selector,
       _l1Adapter,
       _l2Deployments.l2AdapterOwner,
       _l2Deployments.usdcImplementationInitCode,
+      _usdcInitializeData,
       _l2Deployments.usdcInitTxs
     );
     vm.expectCall(
@@ -273,6 +315,24 @@ contract L1OpUSDCFactory_Unit_DeployL2FactoryAndContracts is Base {
 
 contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
   event L1AdapterDeployed(address _l1Adapter);
+
+  /**
+   * @notice Check the function reverts if the `initialize()` tx is the first init tx
+   */
+  function test_revertOnInitializeTx() public {
+    vm.expectRevert(IL1OpUSDCFactory.IL1OpUSDCFactory_NoInitializeTx.selector);
+
+    // Set the `initialize()` tx as the first init tx
+    bytes memory _initializeSelector = abi.encode(keccak256(abi.encodeWithSelector(IUSDC.initialize.selector)));
+    _usdcInitTxs[0] = _initializeSelector;
+    _l2Deployments.usdcInitTxs = _usdcInitTxs;
+
+    // Execute
+    vm.prank(_user);
+    factory.deployL2FactoryAndContracts(
+      _salt, _l1Messenger, _l2Deployments.minGasLimitDeploy, _l1AdapterOwner, _l2Deployments
+    );
+  }
 
   /**
    * @notice Check the function reverts if the given L2 factory was not deployed
@@ -341,6 +401,36 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
     );
   }
 
+  function test_callUsdcCurrency(address _l2Factory) public {
+    // Set the l2 factory nonce to 1 as if it was already deployed
+    factory.forTest_setL2FactoryNonce(_l2Factory, 1);
+
+    // Mock all the `deployAdapters` function calls
+    _mockDeployFunctionCalls();
+
+    // Expect the `name` function to be called
+    vm.expectCall(_usdc, abi.encodeWithSelector(IUSDC.currency.selector));
+
+    // Execute
+    vm.prank(_user);
+    factory.deployAdapters(_l1Messenger, _l1AdapterOwner, _l2Factory, _l2Deployments);
+  }
+
+  function test_callUsdcDecimals(address _l2Factory) public {
+    // Set the l2 factory nonce to 1 as if it was already deployed
+    factory.forTest_setL2FactoryNonce(_l2Factory, 1);
+
+    // Mock all the `deployAdapters` function calls
+    _mockDeployFunctionCalls();
+
+    // Expect the `name` function to be called
+    vm.expectCall(_usdc, abi.encodeWithSelector(IUSDC.decimals.selector));
+
+    // Execute
+    vm.prank(_user);
+    factory.deployAdapters(_l1Messenger, _l1AdapterOwner, _l2Factory, _l2Deployments);
+  }
+
   /**
    * @notice Check the `_deployAdapters` function calls the `sendMessage` correctly
    */
@@ -355,12 +445,20 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
     // Mock all the `deployL2FactoryAndContracts` function calls
     _mockDeployFunctionCalls();
 
+    IL2OpUSDCFactory.USDCInitializeData memory _usdcInitializeData = IL2OpUSDCFactory.USDCInitializeData({
+      _tokenName: _tokenName,
+      _tokenSymbol: _tokenSymbol,
+      _tokenCurrency: _tokenCurrency,
+      _tokenDecimals: _tokenDecimals
+    });
+
     // Expect the `sendMessage` to be properly called
     bytes memory _l2DeploymentsTx = abi.encodeWithSelector(
       L2OpUSDCFactory.deploy.selector,
       _l1Adapter,
       _l2Deployments.l2AdapterOwner,
       _l2Deployments.usdcImplementationInitCode,
+      _usdcInitializeData,
       _l2Deployments.usdcInitTxs
     );
     vm.expectCall(
