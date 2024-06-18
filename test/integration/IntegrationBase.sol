@@ -25,6 +25,8 @@ contract IntegrationBase is Helpers {
   IMockCrossDomainMessenger public constant OPTIMISM_L1_MESSENGER =
     IMockCrossDomainMessenger(0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1);
   bytes32 public constant SALT = keccak256(abi.encode('32'));
+  string public TOKEN_NAME = 'USD Coin';
+  string public TOKEN_SYMBOL = 'USDC';
 
   // Fork variables
   uint256 public optimism;
@@ -68,9 +70,8 @@ contract IntegrationBase is Helpers {
 
     l1Adapter = L1OpUSDCBridgeAdapter(_l1Adapter);
 
-    usdcInitializeData = IL2OpUSDCFactory.USDCInitializeData(
-      MAINNET_USDC.name(), MAINNET_USDC.symbol(), MAINNET_USDC.currency(), MAINNET_USDC.decimals()
-    );
+    usdcInitializeData =
+      IL2OpUSDCFactory.USDCInitializeData(TOKEN_NAME, TOKEN_SYMBOL, MAINNET_USDC.currency(), MAINNET_USDC.decimals());
     vm.selectFork(optimism);
     _relayL2Deployments(_l1Adapter, _l2Factory, usdcInitializeData, _l2Deployments);
 
