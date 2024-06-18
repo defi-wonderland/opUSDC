@@ -52,11 +52,7 @@ contract Integration_Bridging is IntegrationBase {
     uint32 _minGasLimit = 1_000_000;
     address _l2Target = makeAddr('l2Target');
 
-    // Deal doesnt work with proxies
-    vm.startPrank(MAINNET_USDC.masterMinter());
-    MAINNET_USDC.configureMinter(MAINNET_USDC.masterMinter(), type(uint256).max);
-    MAINNET_USDC.mint(_user, _amount);
-    vm.stopPrank();
+    deal(address(MAINNET_USDC), _user, _amount);
 
     vm.startPrank(_user);
     MAINNET_USDC.approve(address(l1Adapter), _amount);
@@ -94,14 +90,10 @@ contract Integration_Bridging is IntegrationBase {
     uint256 _amount = 1e18;
     uint32 _minGasLimit = 1_000_000;
 
-    // Deal doesnt work with proxies
-    vm.startPrank(MAINNET_USDC.masterMinter());
-    MAINNET_USDC.configureMinter(MAINNET_USDC.masterMinter(), type(uint256).max);
-    MAINNET_USDC.mint(_signerAd, _amount);
+    deal(address(MAINNET_USDC), _signerAd, _amount);
 
     // Minting for user to check its not spent when they execute
-    MAINNET_USDC.mint(_user, _amount);
-    vm.stopPrank();
+    deal(address(MAINNET_USDC), _user, _amount);
 
     vm.prank(_signerAd);
     MAINNET_USDC.approve(address(l1Adapter), _amount);
@@ -147,11 +139,7 @@ contract Integration_Bridging is IntegrationBase {
     uint256 _amount = 1e18;
     uint32 _minGasLimit = 1_000_000;
 
-    // Deal doesnt work with proxies
-    vm.startPrank(MAINNET_USDC.masterMinter());
-    MAINNET_USDC.configureMinter(MAINNET_USDC.masterMinter(), type(uint256).max);
-    MAINNET_USDC.mint(_signerAd, _amount);
-    vm.stopPrank();
+    deal(address(MAINNET_USDC), _signerAd, _amount);
 
     vm.prank(_signerAd);
     MAINNET_USDC.approve(address(l1Adapter), _amount);
