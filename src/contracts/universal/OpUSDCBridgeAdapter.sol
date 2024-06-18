@@ -4,7 +4,6 @@ pragma solidity 0.8.25;
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
 import {SignatureChecker} from '@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol';
-
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 
 abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, Ownable {
