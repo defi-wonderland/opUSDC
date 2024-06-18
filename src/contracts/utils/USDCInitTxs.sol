@@ -24,12 +24,12 @@ library USDCInitTxs {
   /**
    * @dev The `initializeV2()` transaction data for the USDC implementation contract.
    */
-  bytes public constant INITIALIZEV2 = abi.encodeWithSignature('initializeV2(string)', '');
+  bytes public constant INITIALIZEV2 = abi.encodeWithSignature('initializeV2(string)', 'USDC');
 
   /**
    * @dev The `initializeV2_1()` transaction data for the USDC implementation contract.
    */
-  bytes public constant INITIALIZEV2_1 = abi.encodeWithSignature('initializeV2_1(address)', address(1));
+  bytes public constant INITIALIZEV2_1 = abi.encodeWithSignature('initializeV2_1(address)', address(0));
 
   /**
    * @dev The `initializeV2_2()` transaction data for the USDC implementation contract.

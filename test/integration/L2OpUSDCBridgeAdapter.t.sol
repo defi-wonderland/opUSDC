@@ -20,11 +20,6 @@ contract Integration_PermissionedUsdcFlows is IntegrationBase {
 
     _newImplementation = address(new dummyImplementation());
 
-    // TODO: ---> Remove after PR #44 is merged
-    vm.startPrank(address(1));
-    bridgedUSDC.transferOwnership(address(l2Adapter));
-    // <----- Remove after PR #44 is merged
-
     // Select the Optimism fork
     vm.selectFork(optimism);
   }

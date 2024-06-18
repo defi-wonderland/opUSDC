@@ -33,6 +33,28 @@ interface IUSDC is IERC20 {
   function changeAdmin(address newAdmin) external;
 
   /**
+   * @notice Initializes the fiat token contract.
+   * @param _tokenName       The name of the fiat token.
+   * @param _tokenSymbol     The symbol of the fiat token.
+   * @param _tokenCurrency   The fiat currency that the token represents.
+   * @param _tokenDecimals   The number of decimals that the token uses.
+   * @param _newMasterMinter The masterMinter address for the fiat token.
+   * @param _newPauser       The pauser address for the fiat token.
+   * @param _newBlacklister  The blacklister address for the fiat token.
+   * @param _newOwner        The owner of the fiat token.
+   */
+  function initialize(
+    string memory _tokenName,
+    string memory _tokenSymbol,
+    string memory _tokenCurrency,
+    uint8 _tokenDecimals,
+    address _newMasterMinter,
+    address _newPauser,
+    address _newBlacklister,
+    address _newOwner
+  ) external;
+
+  /**
    * @dev Function to add/update a new minter
    * @param _minter The address of the minter
    * @param _minterAllowedAmount The minting amount allowed for the minter
@@ -41,6 +63,12 @@ interface IUSDC is IERC20 {
   function configureMinter(address _minter, uint256 _minterAllowedAmount) external returns (bool _result);
 
   /**
+   * @notice Updates the master minter address.
+   * @param _newMasterMinter The address of the new master minter.
+   */
+  function updateMasterMinter(address _newMasterMinter) external;
+
+  /*
    * @notice Function to upgrade the usdc proxy to a new implementation
    * @param _newImplementation Address of the new implementation
    */
@@ -70,4 +98,14 @@ interface IUSDC is IERC20 {
    * @return _owner Address of the current owner
    */
   function owner() external view returns (address _owner);
+  
+ /**
+   * @return _currency The currency of the token
+   */
+  function currency() external view returns (string memory _currency);
+
+  /**
+   * @return _decimals The decimals of the token
+   */
+  function decimals() external view returns (uint8 _decimals);
 }
