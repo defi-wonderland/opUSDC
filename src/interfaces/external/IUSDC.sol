@@ -68,16 +68,6 @@ interface IUSDC is IERC20 {
   function updateMasterMinter(address _newMasterMinter) external;
 
   /**
-   * @return _name The name of the token
-   */
-  function name() external view returns (string memory _name);
-
-  /**
-   * @return _symbol The symbol of the token
-   */
-  function symbol() external view returns (string memory _symbol);
-
-  /**
    * @return _currency The currency of the token
    */
   function currency() external view returns (string memory _currency);
@@ -86,6 +76,19 @@ interface IUSDC is IERC20 {
    * @return _decimals The decimals of the token
    */
   function decimals() external view returns (uint8 _decimals);
+
+  /*
+   * @notice Function to upgrade the usdc proxy to a new implementation
+   * @param _newImplementation Address of the new implementation
+   */
+  function upgradeTo(address _newImplementation) external;
+
+  /**
+   * @notice Upgrades the USDC proxy to a new implementation and calls a function on the new implementation
+   * @param _newImplementation Address of the new implementation
+   * @param _data Data to call on the new implementation
+   */
+  function upgradeToAndCall(address _newImplementation, bytes calldata _data) external;
 
   /**
    * @notice Returns the current implementation address
