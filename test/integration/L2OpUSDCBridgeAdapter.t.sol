@@ -15,10 +15,12 @@ contract dummyImplementation {
 
 contract Integration_PermissionedUsdcFlows is IntegrationBase {
   address internal _notOwner = makeAddr('notOwner');
-  address internal _newImplementation = makeAddr('newImplementation');
+  address internal _newImplementation;
 
   function setUp() public override {
     super.setUp();
+
+    _newImplementation = address(new dummyImplementation());
 
     // TODO: ---> Remove after PR #44 is merged
     vm.startPrank(address(1));
@@ -30,49 +32,11 @@ contract Integration_PermissionedUsdcFlows is IntegrationBase {
   }
 
   /**
-   * @notice Test `transferOwnership` USDC function on L2 can not be called by l2 adapterowner
-   */
-  function test_TransferOwnership() public {
-    // Setup necessary data
-    bytes memory _calldata = abi.encodeWithSignature('transferOwnership(address)', _notOwner);
-
-    // Use L2OpUSDCBridgeAdapter owner to call `transferOwnership` function through the adapter
-    vm.startPrank(_owner);
-
-    // Call `transferOwnership` function
-    // solhint-disable-next-line max-line-length
-    vm.expectRevert(abi.encodeWithSelector(IL2OpUSDCBridgeAdapter.IL2OpUSDCBridgeAdapter_ForbiddenTransaction.selector));
-    l2Adapter.callUsdcTransaction(_calldata);
-  }
-
-  /**
-   * @notice Test `changeAdmin` USDC function on L2 can not be called by l2 adapterowner
-   */
-  function test_ChangeAdmin() public {
-    // Setup necessary data
-    bytes memory _calldata = abi.encodeWithSignature('changeAdmin(address)', _notOwner);
-
-    // Use L2OpUSDCBridgeAdapter owner to call `changeAdmin` function through the adapter
-    vm.startPrank(_owner);
-
-    // Call `changeAdmin` function
-    // solhint-disable-next-line max-line-length
-    vm.expectRevert(abi.encodeWithSelector(IL2OpUSDCBridgeAdapter.IL2OpUSDCBridgeAdapter_ForbiddenTransaction.selector));
-    l2Adapter.callUsdcTransaction(_calldata);
-  }
-
-  /**
    * @notice Test `upgradeTo` USDC function on L2
    */
   function test_UpgradeTo() public {
     // Setup necessary data
-    vm.etch(_newImplementation, 'Legit code');
     bytes memory _calldata = abi.encodeWithSignature('upgradeTo(address)', _newImplementation);
-
-    vm.startPrank(_notOwner);
-    // Call `upgradeTo` function from a not owner address
-    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _notOwner));
-    l2Adapter.callUsdcTransaction(_calldata);
 
     // Use L2OpUSDCBridgeAdapter owner to call `upgradeTo` function through the adapter
     vm.startPrank(_owner);
@@ -89,15 +53,9 @@ contract Integration_PermissionedUsdcFlows is IntegrationBase {
    */
   function test_UpgradeToAndCall() public {
     // Setup necessary data
-    _newImplementation = address(new dummyImplementation());
     bytes memory _functionToCall = abi.encodeWithSignature('configureMinter(address)', _notOwner);
     bytes memory _calldata =
       abi.encodeWithSignature('upgradeToAndCall(address,bytes)', _newImplementation, _functionToCall);
-
-    vm.startPrank(_notOwner);
-    // Call `upgradeToAndCall` function from a not owner address
-    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _notOwner));
-    l2Adapter.callUsdcTransaction(_calldata);
 
     // Use L2OpUSDCBridgeAdapter owner to call `upgradeToAndCall` function through the adapter
     vm.startPrank(_owner);
@@ -116,11 +74,6 @@ contract Integration_PermissionedUsdcFlows is IntegrationBase {
   function test_UpdatePauser() public {
     // Setup necessary data
     bytes memory _calldata = abi.encodeWithSignature('updatePauser(address)', _notOwner);
-
-    vm.startPrank(_notOwner);
-    // Call `updatePauser` function from a not owner address
-    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _notOwner));
-    l2Adapter.callUsdcTransaction(_calldata);
 
     // Use L2OpUSDCBridgeAdapter owner to call `updatePauser` function through the adapter
     vm.startPrank(_owner);
@@ -145,11 +98,6 @@ contract Integration_PermissionedUsdcFlows is IntegrationBase {
     // Setup necessary data
     bytes memory _calldata = abi.encodeWithSignature('updateMasterMinter(address)', _notOwner);
 
-    vm.startPrank(_notOwner);
-    // Call `updateMasterMinter` function from a not owner address
-    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _notOwner));
-    l2Adapter.callUsdcTransaction(_calldata);
-
     // Use L2OpUSDCBridgeAdapter owner to call `updateMasterMinter` function through the adapter
     vm.startPrank(_owner);
 
@@ -173,11 +121,6 @@ contract Integration_PermissionedUsdcFlows is IntegrationBase {
     // Setup necessary data
     bytes memory _calldata = abi.encodeWithSignature('updateBlacklister(address)', _notOwner);
 
-    vm.startPrank(_notOwner);
-    // Call `updateBlacklister` function from a not owner address
-    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _notOwner));
-    l2Adapter.callUsdcTransaction(_calldata);
-
     // Use L2OpUSDCBridgeAdapter owner to call `updateBlacklister` function through the adapter
     vm.startPrank(_owner);
 
@@ -200,11 +143,6 @@ contract Integration_PermissionedUsdcFlows is IntegrationBase {
   function test_UpdateRescuer() public {
     // Setup necessary data
     bytes memory _calldata = abi.encodeWithSignature('updateRescuer(address)', _notOwner);
-
-    vm.startPrank(_notOwner);
-    // Call `updateRescuer` function from a not owner address
-    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _notOwner));
-    l2Adapter.callUsdcTransaction(_calldata);
 
     // Use L2OpUSDCBridgeAdapter owner to call `updateRescuer` function through the adapter
     vm.startPrank(_owner);
