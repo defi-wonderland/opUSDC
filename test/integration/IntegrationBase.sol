@@ -2,18 +2,15 @@
 pragma solidity 0.8.25;
 
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
-import {IUSDC} from 'interfaces/external/IUSDC.sol';
-import {AddressAliasHelper} from 'test/utils/AddressAliasHelper.sol';
-import {USDC_IMPLEMENTATION_CREATION_CODE} from 'test/utils/USDCImplementationCreationCode.sol';
-import {IMockCrossDomainMessenger} from 'test/utils/interfaces/IMockCrossDomainMessenger.sol';
-
 import {IL1OpUSDCFactory, L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
-
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
-import {Helpers} from 'test/utils/Helpers.sol';
-
 import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
+import {IUSDC} from 'interfaces/external/IUSDC.sol';
+import {AddressAliasHelper} from 'test/utils/AddressAliasHelper.sol';
+import {Helpers} from 'test/utils/Helpers.sol';
+import {USDC_IMPLEMENTATION_CREATION_CODE} from 'test/utils/USDCImplementationCreationCode.sol';
+import {IMockCrossDomainMessenger} from 'test/utils/interfaces/IMockCrossDomainMessenger.sol';
 
 contract IntegrationBase is Helpers {
   // Constants
