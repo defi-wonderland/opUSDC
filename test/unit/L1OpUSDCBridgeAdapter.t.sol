@@ -352,9 +352,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
 
     vm.assume(_burnAmount > 0);
 
-    _mockAndExpect(
-      address(_usdc), abi.encodeWithSignature('burn(address,uint256)', address(adapter), _burnAmount), abi.encode(true)
-    );
+    _mockAndExpect(address(_usdc), abi.encodeWithSignature('burn(uint256)', _burnAmount), abi.encode(true));
 
     adapter.forTest_setBurnAmount(_burnAmount);
 
@@ -393,9 +391,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
     adapter.forTest_setCircle(_circle);
     adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Deprecated);
 
-    vm.mockCall(
-      address(_usdc), abi.encodeWithSignature('burn(address,uint256)', address(adapter), _burnAmount), abi.encode(true)
-    );
+    vm.mockCall(address(_usdc), abi.encodeWithSignature('burn(address)', address(adapter)), abi.encode(true));
 
     adapter.forTest_setBurnAmount(_burnAmount);
 

@@ -305,7 +305,12 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessage is Base {
    * @notice Check that burning tokens and sending a message works as expected
    */
   function test_expectedCall(address _to, uint256 _amount, uint32 _minGasLimit) external {
-    _mockAndExpect(address(_usdc), abi.encodeWithSignature('burn(address,uint256)', _user, _amount), abi.encode(true));
+    _mockAndExpect(
+      address(_usdc),
+      abi.encodeWithSignature('transferFrom(address,address,uint256)', _user, address(adapter), _amount),
+      abi.encode(true)
+    );
+    _mockAndExpect(address(_usdc), abi.encodeWithSignature('burn(uint256)', _amount), abi.encode(true));
     _mockAndExpect(
       address(_messenger),
       abi.encodeWithSignature(
@@ -412,7 +417,12 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     vm.warp(_deadline - 1);
     uint256 _nonce = adapter.userNonce(_signerAd);
     bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
-    vm.mockCall(address(_usdc), abi.encodeWithSignature('burn(address,uint256)', _signerAd, _amount), abi.encode(true));
+    vm.mockCall(
+      address(_usdc),
+      abi.encodeWithSignature('transferFrom(address,address,uint256)', _user, address(adapter), _amount),
+      abi.encode(true)
+    );
+    vm.mockCall(address(_usdc), abi.encodeWithSignature('burn(uint256)', _amount), abi.encode(true));
     vm.mockCall(
       address(_messenger),
       abi.encodeWithSignature(
@@ -439,8 +449,11 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     uint256 _nonce = adapter.userNonce(_signerAd);
     bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
     _mockAndExpect(
-      address(_usdc), abi.encodeWithSignature('burn(address,uint256)', _signerAd, _amount), abi.encode(true)
+      address(_usdc),
+      abi.encodeWithSignature('transferFrom(address,address,uint256)', _signerAd, address(adapter), _amount),
+      abi.encode(true)
     );
+    _mockAndExpect(address(_usdc), abi.encodeWithSignature('burn(uint256)', _amount), abi.encode(true));
     _mockAndExpect(
       address(_messenger),
       abi.encodeWithSignature(
@@ -465,7 +478,12 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     vm.warp(_deadline - 1);
     uint256 _nonce = adapter.userNonce(_signerAd);
     bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
-    vm.mockCall(address(_usdc), abi.encodeWithSignature('burn(address,uint256)', _signerAd, _amount), abi.encode(true));
+    vm.mockCall(
+      address(_usdc),
+      abi.encodeWithSignature('transferFrom(address,address,uint256)', _user, address(adapter), _amount),
+      abi.encode(true)
+    );
+    vm.mockCall(address(_usdc), abi.encodeWithSignature('burn(uint256)', _amount), abi.encode(true));
     vm.mockCall(
       address(_messenger),
       abi.encodeWithSignature(
