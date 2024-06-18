@@ -98,8 +98,8 @@ interface IUSDC is IERC20 {
    * @return _owner Address of the current owner
    */
   function owner() external view returns (address _owner);
-  
- /**
+
+  /**
    * @return _currency The currency of the token
    */
   function currency() external view returns (string memory _currency);
