@@ -2,8 +2,6 @@
 pragma solidity ^0.8.25;
 
 import {IntegrationBase} from './IntegrationBase.sol';
-import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
-import {IL2OpUSDCBridgeAdapter} from 'interfaces/IL2OpUSDCBridgeAdapter.sol';
 
 contract dummyImplementation {
   address public minter;
