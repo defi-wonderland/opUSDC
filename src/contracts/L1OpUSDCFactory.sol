@@ -27,6 +27,12 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   /// @inheritdoc IL1OpUSDCFactory
   bytes4 public constant INITIALIZE_SELECTOR = 0x07fbc6b5;
 
+  /// @inheritdoc IL1OpUSDCFactory
+  string public USDC_NAME = 'Bridged USDC';
+
+  /// @inheritdoc IL1OpUSDCFactory
+  string public USDC_SYMBOL = 'USDC.e';
+
   /// @notice Zero value constant to be used on the `CREATE2_DEPLOYER` interaction
   uint256 internal constant _ZERO_VALUE = 0;
 
@@ -152,7 +158,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
 
     // Get the L1 USDC naming and decimals to ensure they are the same on the L2, guaranteeing the same standard
     IL2OpUSDCFactory.USDCInitializeData memory _usdcInitializeData =
-      IL2OpUSDCFactory.USDCInitializeData(USDC.name(), USDC.symbol(), USDC.currency(), USDC.decimals());
+      IL2OpUSDCFactory.USDCInitializeData(USDC_NAME, USDC_SYMBOL, USDC.currency(), USDC.decimals());
 
     // Send the call over the L2 factory `deploy` function message
     bytes memory _l2DeploymentsTx = abi.encodeWithSelector(

@@ -52,8 +52,8 @@ abstract contract Base is Test, Helpers {
   address internal _newMasterMinter = makeAddr('newMasterMinter');
   address internal _newPauser = makeAddr('newPauser');
   address internal _newBlacklister = makeAddr('newBlacklister');
-  string internal _tokenName = 'USDC';
-  string internal _tokenSymbol = 'USDC';
+  string internal _tokenName = 'Bridged USDC';
+  string internal _tokenSymbol = 'USDC.e';
   string internal _tokenCurrency = 'USD';
   uint8 internal _tokenDecimals = 6;
 
@@ -87,12 +87,6 @@ abstract contract Base is Test, Helpers {
   function _mockDeployFunctionCalls() internal {
     // Mock the call over the `portal` function on the L1 messenger
     vm.mockCall(_l1Messenger, abi.encodeWithSelector(ICrossDomainMessenger.sendMessage.selector), abi.encode(''));
-
-    // Mock the call over USDC `name` function
-    vm.mockCall(_usdc, abi.encodeWithSelector(IUSDC.name.selector), abi.encode(_tokenName));
-
-    // Mock the call over USDC `symbol` function
-    vm.mockCall(_usdc, abi.encodeWithSelector(IUSDC.symbol.selector), abi.encode(_tokenSymbol));
 
     // Mock the call over USDC `currency` function
     vm.mockCall(_usdc, abi.encodeWithSelector(IUSDC.currency.selector), abi.encode(_tokenCurrency));
@@ -405,36 +399,6 @@ contract L1OpUSDCFactory_Unit_DeployAdapters is Base {
     assertEq(
       factory.l2FactoryNonce(_l2Factory), _l2FactoryNonceBefore + _numberOfDeployments, 'Invalid l2 factory nonce'
     );
-  }
-
-  function test_callUsdcName(address _l2Factory) public {
-    // Set the l2 factory nonce to 1 as if it was already deployed
-    factory.forTest_setL2FactoryNonce(_l2Factory, 1);
-
-    // Mock all the `deployAdapters` function calls
-    _mockDeployFunctionCalls();
-
-    // Expect the `name` function to be called
-    vm.expectCall(_usdc, abi.encodeWithSelector(IUSDC.name.selector));
-
-    // Execute
-    vm.prank(_user);
-    factory.deployAdapters(_l1Messenger, _l1AdapterOwner, _l2Factory, _l2Deployments);
-  }
-
-  function test_callUsdcSymbol(address _l2Factory) public {
-    // Set the l2 factory nonce to 1 as if it was already deployed
-    factory.forTest_setL2FactoryNonce(_l2Factory, 1);
-
-    // Mock all the `deployAdapters` function calls
-    _mockDeployFunctionCalls();
-
-    // Expect the `name` function to be called
-    vm.expectCall(_usdc, abi.encodeWithSelector(IUSDC.symbol.selector));
-
-    // Execute
-    vm.prank(_user);
-    factory.deployAdapters(_l1Messenger, _l1AdapterOwner, _l2Factory, _l2Deployments);
   }
 
   function test_callUsdcCurrency(address _l2Factory) public {

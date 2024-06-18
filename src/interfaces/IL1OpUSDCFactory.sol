@@ -132,6 +132,17 @@ interface IL1OpUSDCFactory {
   function USDC() external view returns (IUSDC _usdc);
 
   /**
+   * @return _name The name of the USDC token
+   * @dev If the 3rd party team wants to update the name, it can be done on the `initialize2()` 2nd init tx
+   */
+  function USDC_NAME() external view returns (string memory _name);
+
+  /**
+   * @return _symbol The symbol of the USDC token
+   */
+  function USDC_SYMBOL() external view returns (string memory _symbol);
+
+  /**
    * @notice Tracks the nonce for each L2 factory
    * @param _l2Factory The address of the L2 factory
    * @return _l2FactoryNonce The nonce of the L2 factory
