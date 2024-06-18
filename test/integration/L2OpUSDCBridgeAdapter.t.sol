@@ -40,6 +40,7 @@ contract Integration_PermissionedUsdcFlows is IntegrationBase {
     vm.startPrank(_owner);
 
     // Call `transferOwnership` function
+    // solhint-disable-next-line max-line-length
     vm.expectRevert(abi.encodeWithSelector(IL2OpUSDCBridgeAdapter.IL2OpUSDCBridgeAdapter_ForbiddenTransaction.selector));
     l2Adapter.callUsdcTransaction(_calldata);
   }
@@ -55,6 +56,7 @@ contract Integration_PermissionedUsdcFlows is IntegrationBase {
     vm.startPrank(_owner);
 
     // Call `changeAdmin` function
+    // solhint-disable-next-line max-line-length
     vm.expectRevert(abi.encodeWithSelector(IL2OpUSDCBridgeAdapter.IL2OpUSDCBridgeAdapter_ForbiddenTransaction.selector));
     l2Adapter.callUsdcTransaction(_calldata);
   }
