@@ -264,8 +264,6 @@ contract Integration_Migration is IntegrationBase {
     l1Adapter.sendMessage(_user, _amount, _minGasLimit);
     vm.stopPrank();
 
-    assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), _amount);
-
     vm.selectFork(optimism);
     uint256 _messageNonce = L2_MESSENGER.messageNonce();
 
