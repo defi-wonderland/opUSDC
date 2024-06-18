@@ -45,7 +45,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     address _l2AdapterOwner,
     bytes calldata _usdcImplementationInitCode,
     USDCInitializeData calldata _usdcInitializeData,
-    bytes[] memory _usdcInitTxs
+    bytes[] calldata _usdcInitTxs
   ) external {
     if (msg.sender != L2_MESSENGER || ICrossDomainMessenger(L2_MESSENGER).xDomainMessageSender() != L1_FACTORY) {
       revert IL2OpUSDCFactory_InvalidSender();
@@ -56,14 +56,14 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     if (_usdcImplSuccess) emit USDCImplementationDeployed(_usdcImplementation);
 
     // Deploy USDC proxy
-    bytes memory _usdcProxyCArgs = abi.encode(_usdcImplementation);
-    bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);
+    bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, abi.encode(_usdcImplementation));
     (address _usdcProxy, bool _usdcProxySuccess) = _deployCreate(_usdcProxyInitCode);
     if (_usdcProxySuccess) emit USDCProxyDeployed(_usdcProxy);
 
     // Deploy L2 Adapter
-    bytes memory _l2AdapterCArgs = abi.encode(_usdcProxy, msg.sender, _l1Adapter, _l2AdapterOwner);
-    bytes memory _l2AdapterInitCode = bytes.concat(type(L2OpUSDCBridgeAdapter).creationCode, _l2AdapterCArgs);
+    bytes memory _l2AdapterInitCode = bytes.concat(
+      type(L2OpUSDCBridgeAdapter).creationCode, abi.encode(_usdcProxy, msg.sender, _l1Adapter, _l2AdapterOwner)
+    );
     (address _l2Adapter, bool _l2AdapterSuccess) = _deployCreate(_l2AdapterInitCode);
     if (_l2AdapterSuccess) emit L2AdapterDeployed(_l2Adapter);
 
@@ -96,7 +96,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     address _usdc,
     USDCInitializeData calldata _usdcInitializeData,
     address _l2Adapter,
-    bytes[] memory _initTxs
+    bytes[] calldata _initTxs
   ) internal {
     // Initialize the USDC contract
     IUSDC(_usdc).initialize(
