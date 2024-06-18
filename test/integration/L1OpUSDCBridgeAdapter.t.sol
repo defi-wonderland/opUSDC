@@ -2,6 +2,9 @@
 pragma solidity ^0.8.25;
 
 import {IntegrationBase} from './IntegrationBase.sol';
+
+import {StdStorage, stdStorage} from 'forge-std/StdStorage.sol';
+import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {AddressAliasHelper} from 'test/utils/AddressAliasHelper.sol';
 
@@ -154,6 +157,127 @@ contract Integration_Bridging is IntegrationBase {
     vm.startPrank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSignature.selector);
     l1Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _minGasLimit);
+    vm.stopPrank();
+  }
+}
+
+contract Integration_Migration is IntegrationBase {
+  using stdStorage for StdStorage;
+
+  address internal _circle = makeAddr('circle');
+  uint32 internal _minGasLimitReceiveOnL2 = 1_000_000;
+  uint32 internal _minGasLimitSetBurnAmount = 1_000_000;
+  uint256 internal _amount = 1e18;
+  uint32 internal _minGasLimit = 1_000_000;
+
+  function setUp() public override {
+    super.setUp();
+
+    _mintSupplyOnL2();
+
+    // // TODO: ---> Remove after PR #44 is merged
+    vm.selectFork(optimism);
+    vm.startPrank(bridgedUSDC.owner());
+    bridgedUSDC.transferOwnership(address(l2Adapter));
+    // <----- Remove after PR #44 is merged
+
+    vm.selectFork(mainnet);
+    // Adapter needs to be minter to burn
+    vm.startPrank(MAINNET_USDC.masterMinter());
+    MAINNET_USDC.configureMinter(address(l1Adapter), 0);
+    vm.stopPrank();
+  }
+
+  /**
+   * @notice Test the migration to native usdc flow
+   */
+  function test_migrationToNativeUSDC() public {
+    vm.selectFork(mainnet);
+
+    vm.startPrank(_owner);
+    l1Adapter.migrateToNative(_circle, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
+    vm.stopPrank();
+
+    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Upgrading));
+    assertEq(l1Adapter.circle(), _circle);
+
+    vm.selectFork(optimism);
+
+    uint256 _messageNonce = L2_MESSENGER.messageNonce();
+    vm.startPrank(AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER)));
+    L2_MESSENGER.relayMessage(
+      _messageNonce + 1,
+      address(l1Adapter),
+      address(l2Adapter),
+      0,
+      _minGasLimitReceiveOnL2,
+      abi.encodeWithSignature('receiveMigrateToNative(address,uint32)', _circle, _minGasLimitSetBurnAmount)
+    );
+    vm.stopPrank();
+
+    uint256 _burnAmount = bridgedUSDC.totalSupply();
+
+    assertEq(l2Adapter.isMessagingDisabled(), true);
+    assertEq(bridgedUSDC.owner(), _circle);
+
+    vm.selectFork(mainnet);
+    _messageNonce = OPTIMISM_L1_MESSENGER.messageNonce();
+
+    // For simplicity we do this as this slot is not exposed until prove and finalize is done
+    stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(address(L2_MESSENGER));
+
+    vm.startPrank(OPTIMISM_PORTAL);
+    OPTIMISM_L1_MESSENGER.relayMessage(
+      _messageNonce + 1,
+      address(l2Adapter),
+      address(l1Adapter),
+      0,
+      _minGasLimitSetBurnAmount,
+      abi.encodeWithSignature('setBurnAmount(uint256)', _burnAmount)
+    );
+    vm.stopPrank();
+
+    assertEq(l1Adapter.burnAmount(), _burnAmount);
+    assertEq(l1Adapter.USDC(), address(MAINNET_USDC));
+    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Deprecated));
+
+    vm.startPrank(_circle);
+    l1Adapter.burnLockedUSDC();
+    vm.stopPrank();
+
+    assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), 0);
+    assertEq(l1Adapter.burnAmount(), 0);
+    assertEq(l1Adapter.circle(), address(0));
+  }
+
+  function _mintSupplyOnL2() internal {
+    vm.selectFork(mainnet);
+
+    // We need to do this instead of `deal` because deal doesnt change `totalSupply` state
+    vm.startPrank(MAINNET_USDC.masterMinter());
+    MAINNET_USDC.configureMinter(MAINNET_USDC.masterMinter(), _amount);
+    MAINNET_USDC.mint(_user, _amount);
+    vm.stopPrank();
+
+    vm.startPrank(_user);
+    MAINNET_USDC.approve(address(l1Adapter), _amount);
+    l1Adapter.sendMessage(_user, _amount, _minGasLimit);
+    vm.stopPrank();
+
+    assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), _amount);
+
+    vm.selectFork(optimism);
+    uint256 _messageNonce = L2_MESSENGER.messageNonce();
+
+    vm.startPrank(AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER)));
+    L2_MESSENGER.relayMessage(
+      _messageNonce + 1,
+      address(l1Adapter),
+      address(l2Adapter),
+      0,
+      1_000_000,
+      abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _amount)
+    );
     vm.stopPrank();
   }
 }

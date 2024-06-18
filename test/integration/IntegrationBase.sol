@@ -19,6 +19,7 @@ contract IntegrationBase is Helpers {
   IUSDC public constant MAINNET_USDC = IUSDC(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
   address public constant MAINNET_USDC_IMPLEMENTATION = 0xa2327a938Febf5FEC13baCFb16Ae10EcBc4cbDCF;
   address public constant L2_CREATE2_DEPLOYER = 0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2;
+  address public constant OPTIMISM_PORTAL = 0xbEb5Fc579115071764c7423A4f12eDde41f106Ed;
   IMockCrossDomainMessenger public constant L2_MESSENGER =
     IMockCrossDomainMessenger(0x4200000000000000000000000000000000000007);
   IMockCrossDomainMessenger public constant OPTIMISM_L1_MESSENGER =

@@ -12,11 +12,12 @@ interface IUSDC is IERC20 {
   function mint(address _to, uint256 _amount) external;
 
   /**
-   * @notice Burns USDC tokens
-   * @param _account Address to burn tokens from
-   * @param _amount Amount of tokens to burn
+   * @notice allows a minter to burn some of its own tokens
+   * Validates that caller is a minter and that sender is not blacklisted
+   * amount is less than or equal to the minter's account balance
+   * @param _amount uint256 the amount of tokens to be burned
    */
-  function burn(address _account, uint256 _amount) external;
+  function burn(uint256 _amount) external;
 
   /**
    * @notice Transfers USDC ownership  to another address
@@ -63,4 +64,10 @@ interface IUSDC is IERC20 {
    * @return _masterMinter Address of the current master minter
    */
   function masterMinter() external view returns (address _masterMinter);
+
+  /**
+   * @notice Returns the current owner address
+   * @return _owner Address of the current owner
+   */
+  function owner() external view returns (address _owner);
 }

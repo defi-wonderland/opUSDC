@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
+import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
 import {FallbackProxyAdmin} from 'contracts/utils/FallbackProxyAdmin.sol';
 import {IL2OpUSDCBridgeAdapter} from 'interfaces/IL2OpUSDCBridgeAdapter.sol';
@@ -8,6 +9,8 @@ import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.s
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
+  using SafeERC20 for IUSDC;
+
   /**
    * @notice USDC function signatures
    */
@@ -113,8 +116,10 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     // Ensure messaging is enabled
     if (isMessagingDisabled) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
+    IUSDC(USDC).safeTransferFrom(msg.sender, address(this), _amount);
+
     // Burn the tokens
-    IUSDC(USDC).burn(msg.sender, _amount);
+    IUSDC(USDC).burn(_amount);
 
     // Send the message to the linked adapter
     ICrossDomainMessenger(MESSENGER).sendMessage(
@@ -152,8 +157,10 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
 
     _checkSignature(_signer, _messageHash, _signature);
 
+    IUSDC(USDC).safeTransferFrom(_signer, address(this), _amount);
+
     // Burn the tokens
-    IUSDC(USDC).burn(_signer, _amount);
+    IUSDC(USDC).burn(_amount);
 
     // Send the message to the linked adapter
     ICrossDomainMessenger(MESSENGER).sendMessage(
