@@ -195,7 +195,7 @@ contract Integration_PermissionedUsdcFlows is IntegrationBase {
   }
 
   /**
-   * @notice Test `updateCapper` USDC function on L2
+   * @notice Test `updateRescuer` USDC function on L2
    */
   function test_UpdateRescuer() public {
     // Setup necessary data
