@@ -20,7 +20,7 @@ contract L2OpUSDCFactoryTest is L2OpUSDCFactory {
 
   function forTest_executeInitTxs(
     address _usdc,
-    USDCInitializeData memory _usdcInitializeData,
+    USDCInitializeData calldata _usdcInitializeData,
     address _l2Adapter,
     bytes[] memory _initTxs
   ) public {

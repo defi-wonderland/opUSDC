@@ -43,8 +43,8 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
   function deploy(
     address _l1Adapter,
     address _l2AdapterOwner,
-    bytes memory _usdcImplementationInitCode,
-    USDCInitializeData memory _usdcInitializeData,
+    bytes calldata _usdcImplementationInitCode,
+    USDCInitializeData calldata _usdcInitializeData,
     bytes[] memory _usdcInitTxs
   ) external {
     if (msg.sender != L2_MESSENGER || ICrossDomainMessenger(L2_MESSENGER).xDomainMessageSender() != L1_FACTORY) {
@@ -76,7 +76,6 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     address _fallbackProxyAdmin = address(L2OpUSDCBridgeAdapter(_l2Adapter).FALLBACK_PROXY_ADMIN());
     // Change the USDC admin so the init txs can be executed over the proxy from this contract
 
-    // IUSDC(_usdcImplementation).changeAdmin(_fallbackProxyAdmin);
     IUSDC(_usdcProxy).changeAdmin(_fallbackProxyAdmin);
     // Execute the USDC initialization transactions over the USDC contracts
     _executeInitTxs(_usdcImplementation, _usdcInitializeData, _l2Adapter, _usdcInitTxs);
@@ -95,7 +94,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
    */
   function _executeInitTxs(
     address _usdc,
-    USDCInitializeData memory _usdcInitializeData,
+    USDCInitializeData calldata _usdcInitializeData,
     address _l2Adapter,
     bytes[] memory _initTxs
   ) internal {
