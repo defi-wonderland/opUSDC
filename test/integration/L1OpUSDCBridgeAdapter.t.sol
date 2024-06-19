@@ -278,7 +278,8 @@ contract Integration_Integration_PermissionedFlows is IntegrationBase {
   uint32 internal _minGasLimit = 1_000_000;
 
   /**
-   * @notice Test permissioned `stopMessaging` function
+   * @notice Test that the messaging is stopped and resumed correctly from L1 on
+   * both layers
    */
   function test_stopAndResumeMessaging() public {
     vm.selectFork(mainnet);
