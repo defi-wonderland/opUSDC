@@ -69,7 +69,7 @@ contract IntegrationBase is Helpers {
     vm.selectFork(mainnet);
 
     vm.startPrank(_owner);
-    (address _l2Factory, address _l1Adapter, address _l2Adapter) =
+    (address _l1Adapter, address _l2Factory, address _l2Adapter) =
       factory.deploy(address(OPTIMISM_L1_MESSENGER), _owner, _l2Deployments);
     vm.stopPrank();
 
