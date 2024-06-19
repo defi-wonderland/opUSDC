@@ -2,21 +2,20 @@
 pragma solidity 0.8.25;
 
 import {IntegrationBase} from './IntegrationBase.sol';
-
 import {StdStorage, stdStorage} from 'forge-std/StdStorage.sol';
 import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {AddressAliasHelper} from 'test/utils/AddressAliasHelper.sol';
 
 contract Integration_Bridging is IntegrationBase {
+  uint256 internal constant _amount = 1e18;
+  uint32 internal constant _minGasLimit = 1_000_000;
+
   /**
    * @notice Test the bridging process from L1 -> L2
    */
   function test_bridgeFromL1() public {
     vm.selectFork(mainnet);
-
-    uint256 _amount = 1e18;
-    uint32 _minGasLimit = 1_000_000;
 
     deal(address(MAINNET_USDC), _user, _amount);
 
@@ -51,8 +50,6 @@ contract Integration_Bridging is IntegrationBase {
   function test_bridgeFromL1DifferentTarget() public {
     vm.selectFork(mainnet);
 
-    uint256 _amount = 1e18;
-    uint32 _minGasLimit = 1_000_000;
     address _l2Target = makeAddr('l2Target');
 
     deal(address(MAINNET_USDC), _user, _amount);
@@ -89,9 +86,6 @@ contract Integration_Bridging is IntegrationBase {
   function test_bridgeFromL1WithSig() public {
     (address _signerAd, uint256 _signerPk) = makeAddrAndKey('signer');
     vm.selectFork(mainnet);
-
-    uint256 _amount = 1e18;
-    uint32 _minGasLimit = 1_000_000;
 
     deal(address(MAINNET_USDC), _signerAd, _amount);
 
@@ -138,9 +132,6 @@ contract Integration_Bridging is IntegrationBase {
   function test_bridgeFromL1WithIncorrectSignature() public {
     (address _signerAd, uint256 _signerPk) = makeAddrAndKey('signer');
     vm.selectFork(mainnet);
-
-    uint256 _amount = 1e18;
-    uint32 _minGasLimit = 1_000_000;
 
     deal(address(MAINNET_USDC), _signerAd, _amount);
 
