@@ -197,7 +197,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     //Check forbidden transactions
     bytes4 _signature = bytes4(_data);
     if (_signature == _TRANSFER_OWNERSHIP_SELECTOR || _signature == _CHANGE_ADMIN_SELECTOR) {
-      revert IL2OpUSDCBridgeAdapter_ForbiddenTransaction();
+      revert IOpUSDCBridgeAdapter_ForbiddenTransaction();
     }
     bool _success;
 
@@ -209,7 +209,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     }
 
     if (!_success) {
-      revert IL2OpUSDCBridgeAdapter_InvalidTransaction();
+      revert IOpUSDCBridgeAdapter_InvalidTransaction();
     }
 
     emit UsdcOwnableFunctionSent(_signature);

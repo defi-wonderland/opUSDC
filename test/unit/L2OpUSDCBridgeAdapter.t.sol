@@ -588,7 +588,7 @@ contract L2OpUSDCBridgeAdapter_Unit_CallUsdcTransaction is Base {
     _data = bytes.concat(bytes4(0xf2fde38b), _data);
     // Execute
     vm.prank(_owner);
-    vm.expectRevert(IL2OpUSDCBridgeAdapter.IL2OpUSDCBridgeAdapter_ForbiddenTransaction.selector);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_ForbiddenTransaction.selector);
     adapter.callUsdcTransaction(_data);
   }
 
@@ -599,7 +599,7 @@ contract L2OpUSDCBridgeAdapter_Unit_CallUsdcTransaction is Base {
     _data = bytes.concat(bytes4(0x8f283970), _data);
     // Execute
     vm.prank(_owner);
-    vm.expectRevert(IL2OpUSDCBridgeAdapter.IL2OpUSDCBridgeAdapter_ForbiddenTransaction.selector);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_ForbiddenTransaction.selector);
     adapter.callUsdcTransaction(_data);
   }
 
@@ -613,7 +613,7 @@ contract L2OpUSDCBridgeAdapter_Unit_CallUsdcTransaction is Base {
 
     // Execute
     vm.prank(_owner);
-    vm.expectRevert(IL2OpUSDCBridgeAdapter.IL2OpUSDCBridgeAdapter_InvalidTransaction.selector);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidTransaction.selector);
     adapter.callUsdcTransaction(_data);
   }
 
