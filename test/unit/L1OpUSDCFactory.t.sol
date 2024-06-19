@@ -68,7 +68,7 @@ abstract contract Base is Test, Helpers {
       l2AdapterOwner: _l2AdapterOwner,
       usdcImplementationInitCode: _usdcImplementationInitCode,
       usdcInitTxs: _usdcInitTxs,
-      minGasLimitCreate2Factory: _minGasLimitDeploy,
+      minGasLimitCreate2Factory: _minGasLimitCreate2Factory,
       minGasLimitDeploy: _minGasLimitDeploy
     });
   }
@@ -206,7 +206,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
   /**
    * @notice Check it calls the `currency` function on the USDC contract
    */
-  function test_callUsdcCurrency(address _l2Factory) public {
+  function test_callUsdcCurrency() public {
     // Mock all the `deploy` function calls
     _mockDeployCalls();
 
@@ -221,7 +221,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
   /**
    * @notice Check it calls the `decimals` function on the USDC contract
    */
-  function test_callUsdcDecimals(address _l2Factory) public {
+  function test_callUsdcDecimals() public {
     // Mock all the `deploy` function calls
     _mockDeployCalls();
 
@@ -283,7 +283,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
   /**
    * @notice Check the `L1AdapterDeployed` event is properly emitted
    */
-  function test_emitEvent(address _l2Factory) public {
+  function test_emitEvent() public {
     // Calculate the l1 adapter address
     uint256 _factoryNonce = vm.getNonce(address(factory));
     address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce);
