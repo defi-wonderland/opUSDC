@@ -23,6 +23,9 @@ contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
 }
 
 abstract contract Base is Helpers {
+  bytes4 internal constant _UPGRADE_TO_SELECTOR = 0x3659cfe6;
+  bytes4 internal constant _UPGRADE_TO_AND_CALL_SELECTOR = 0x4f1ef286;
+
   ForTestL2OpUSDCBridgeAdapter public adapter;
 
   address internal _user = makeAddr('user');
@@ -645,6 +648,10 @@ contract L2OpUSDCBridgeAdapter_Unit_CallUsdcTransaction is Base {
    */
   function test_expectedCall(bytes calldata _data) external {
     vm.assume(_data.length >= 4);
+    // Assume that the function selector is not upgradeTo or upgradeToAndCall so the call can be properly mocked
+    bytes4 _selector = bytes4(_data);
+    vm.assume(_selector != _UPGRADE_TO_SELECTOR && _selector != _UPGRADE_TO_AND_CALL_SELECTOR);
+
     _mockAndExpect(_usdc, _data, abi.encode(true, ''));
 
     // Execute
@@ -657,6 +664,10 @@ contract L2OpUSDCBridgeAdapter_Unit_CallUsdcTransaction is Base {
    */
   function test_emitEvent(bytes calldata _data) external {
     vm.assume(_data.length >= 4);
+    // Assume that the function selector is not upgradeTo or upgradeToAndCall so the call can be properly mocked
+    bytes4 _selector = bytes4(_data);
+    vm.assume(_selector != _UPGRADE_TO_SELECTOR && _selector != _UPGRADE_TO_AND_CALL_SELECTOR);
+
     // Mock calls
     vm.mockCall(_usdc, _data, abi.encode(true, ''));
 
