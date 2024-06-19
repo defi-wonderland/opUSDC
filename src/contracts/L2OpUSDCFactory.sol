@@ -39,6 +39,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
    * @param _usdcInitTxs The initialization transactions for the USDC proxy and implementation contracts
    * @dev The USDC proxy owner needs to be set on the first init tx, and will be set to the L2 adapter address
    * @dev Using `CREATE` to guarantee that the addresses are unique among all the L2s
+   * @dev No external call should ever fail, it will instead emit a failure event
    */
   function deploy(
     address _l1Adapter,
@@ -129,7 +130,9 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
 
     bool _success;
 
-    // NOTE: If any of these calls fail we assume they will all fail as they are chained calls so we return early to save gas
+    // NOTE: If any of these calls fail we assume they will all fail because they are chained calls.
+    // So we return early to save gas
+
     // Initialize USDC
     (_success,) = _usdc.call(_initialize);
     if (!_success) {
