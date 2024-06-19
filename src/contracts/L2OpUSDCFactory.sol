@@ -105,10 +105,15 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     address _l2Adapter,
     bytes[] memory _initTxs
   ) internal {
-    // Initialize the USDC contract
-
     // We need to make all of these low level calls to ensure this function never reverts
     // Instead of reverting we will emit a failed event for each step
+
+    bool _success;
+
+    // NOTE: If any of these calls fail we assume they will all fail because they are chained calls.
+    // So we return early to save gas
+
+    // Initialize USDC
     bytes memory _initialize = abi.encodeWithSelector(
       IUSDC.initialize.selector,
       _usdcInitializeData._tokenName,
@@ -121,19 +126,6 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
       address(this)
     );
 
-    bytes memory _configureMinter =
-      abi.encodeWithSelector(IUSDC.configureMinter.selector, _l2Adapter, type(uint256).max);
-
-    bytes memory _updateMasterMinter = abi.encodeWithSelector(IUSDC.updateMasterMinter.selector, _l2Adapter);
-
-    bytes memory _transferOwnership = abi.encodeWithSelector(IUSDC.transferOwnership.selector, _l2Adapter);
-
-    bool _success;
-
-    // NOTE: If any of these calls fail we assume they will all fail because they are chained calls.
-    // So we return early to save gas
-
-    // Initialize USDC
     (_success,) = _usdc.call(_initialize);
     if (!_success) {
       emit InitializationFailed(0);
@@ -141,6 +133,9 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     }
 
     // Add l2 adapter as unlimited minter
+    bytes memory _configureMinter =
+      abi.encodeWithSelector(IUSDC.configureMinter.selector, _l2Adapter, type(uint256).max);
+
     (_success,) = _usdc.call(_configureMinter);
     if (!_success) {
       emit ConfigureMinterFailed(_l2Adapter);
@@ -148,6 +143,8 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     }
 
     // Set l2 adapter as new master minter
+    bytes memory _updateMasterMinter = abi.encodeWithSelector(IUSDC.updateMasterMinter.selector, _l2Adapter);
+
     (_success,) = _usdc.call(_updateMasterMinter);
     if (!_success) {
       emit UpdateMasterMinterFailed(_l2Adapter);
@@ -155,6 +152,8 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     }
 
     // Transfer USDC ownership to the L2 adapter
+    bytes memory _transferOwnership = abi.encodeWithSelector(IUSDC.transferOwnership.selector, _l2Adapter);
+
     (_success,) = _usdc.call(_transferOwnership);
     if (!_success) {
       emit TransferOwnershipFailed(_l2Adapter);
