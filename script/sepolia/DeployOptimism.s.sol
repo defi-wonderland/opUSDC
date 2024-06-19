@@ -25,7 +25,7 @@ contract DeployOptimism is Script {
       minGasLimitCreate2Factory: MIN_GAS_LIMIT_FACTORY,
       minGasLimitDeploy: MIN_GAS_LIMIT_DEPLOY
     });
-    (address _l2Factory, address _l1Adapter, address _l2Adapter) =
+    (address _l1Adapter, address _l2Factory, address _l2Adapter) =
       L1_FACTORY.deploy(L1_MESSENGER, deployer, _l2Deployments);
     vm.stopBroadcast();
 

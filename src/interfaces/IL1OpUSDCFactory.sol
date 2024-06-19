@@ -79,15 +79,15 @@ interface IL1OpUSDCFactory {
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
    * @param _l1AdapterOwner The address of the owner of the L1 adapter
    * @param _l2Deployments The deployments data for the L2 adapter, and the L2 USDC contracts
-   * @return _l2Factory The address of the L2 factory
    * @return _l1Adapter The address of the L1 adapter
+   * @return _l2Factory The address of the L2 factory
    * @return _l2Adapter The address of the L2 adapter
    */
   function deploy(
     address _l1Messenger,
     address _l1AdapterOwner,
     L2Deployments memory _l2Deployments
-  ) external returns (address _l2Factory, address _l1Adapter, address _l2Adapter);
+  ) external returns (address _l1Adapter, address _l2Factory, address _l2Adapter);
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES

@@ -59,8 +59,8 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
    * @param _l1AdapterOwner The address of the owner of the L1 adapter
    * @param _l2Deployments The deployments data for the L2 adapter, and the L2 USDC contracts
-   * @return _l2Factory The address of the L2 factory
    * @return _l1Adapter The address of the L1 adapter
+   * @return _l2Factory The address of the L2 factory
    * @return _l2Adapter The address of the L2 adapter
    * @dev It can fail on L2 due to a gas miscalculation, but in that case the tx can be replayed. It only deploys 1 L2
    * factory per L2 deployments, to make sure the nonce is being tracked correctly while precalculating addresses
@@ -71,7 +71,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     address _l1Messenger,
     address _l1AdapterOwner,
     L2Deployments calldata _l2Deployments
-  ) external returns (address _l2Factory, address _l1Adapter, address _l2Adapter) {
+  ) external returns (address _l1Adapter, address _l2Factory, address _l2Adapter) {
     // Checks that the first init tx selector is not equal to the `initialize()` function since
     if (bytes4(_l2Deployments.usdcInitTxs[0]) == INITIALIZE_SELECTOR) revert IL1OpUSDCFactory_NoInitializeTx();
 
