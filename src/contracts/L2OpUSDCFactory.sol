@@ -56,27 +56,33 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     if (_usdcImplSuccess) emit USDCImplementationDeployed(_usdcImplementation);
 
     // Deploy USDC proxy
-    bytes memory _usdcProxyCArgs = abi.encode(_usdcImplementation);
-    bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);
-    (address _usdcProxy, bool _usdcProxySuccess) = _deployCreate(_usdcProxyInitCode);
+    bytes memory _args = abi.encode(_usdcImplementation);
+    bytes memory _initCode = bytes.concat(USDC_PROXY_CREATION_CODE, _args);
+    (address _usdcProxy, bool _usdcProxySuccess) = _deployCreate(_initCode);
     if (_usdcProxySuccess) emit USDCProxyDeployed(_usdcProxy);
 
     // Deploy L2 Adapter
-    bytes memory _l2AdapterCArgs = abi.encode(_usdcProxy, msg.sender, _l1Adapter, _l2AdapterOwner);
-    bytes memory _l2AdapterInitCode = bytes.concat(type(L2OpUSDCBridgeAdapter).creationCode, _l2AdapterCArgs);
-    (address _l2Adapter, bool _l2AdapterSuccess) = _deployCreate(_l2AdapterInitCode);
+    _args = abi.encode(_usdcProxy, msg.sender, _l1Adapter, _l2AdapterOwner);
+    _initCode = bytes.concat(type(L2OpUSDCBridgeAdapter).creationCode, _args);
+    (address _l2Adapter, bool _l2AdapterSuccess) = _deployCreate(_initCode);
     if (_l2AdapterSuccess) emit L2AdapterDeployed(_l2Adapter);
 
-    // We need to first deploy everything and then revert so we can always track the nonce on the L1 factory
     if (!_usdcImplSuccess || !_usdcProxySuccess || !_l2AdapterSuccess) {
-      revert IL2OpUSDCFactory_DeploymentsFailed();
+      // If any deployments failed we return early
+      return;
     }
 
     // Deploy the FallbackProxyAdmin internally in the L2 Adapter to keep it unique
     address _fallbackProxyAdmin = address(L2OpUSDCBridgeAdapter(_l2Adapter).FALLBACK_PROXY_ADMIN());
     // Change the USDC admin so the init txs can be executed over the proxy from this contract
+    bytes memory _usdcChangeAdmin = abi.encodeWithSelector(IUSDC.changeAdmin.selector, _fallbackProxyAdmin);
 
-    IUSDC(_usdcProxy).changeAdmin(_fallbackProxyAdmin);
+    (_usdcProxySuccess,) = _usdcProxy.call(_usdcChangeAdmin);
+    if (!_usdcProxySuccess) {
+      emit ChangeAdminFailed(_fallbackProxyAdmin);
+      return;
+    }
+
     // Execute the USDC initialization transactions over the USDC contracts
     _executeInitTxs(_usdcImplementation, _usdcInitializeData, _l2Adapter, _usdcInitTxs);
     _executeInitTxs(_usdcProxy, _usdcInitializeData, _l2Adapter, _usdcInitTxs);
@@ -99,7 +105,11 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     bytes[] memory _initTxs
   ) internal {
     // Initialize the USDC contract
-    IUSDC(_usdc).initialize(
+
+    // We need to make all of these low level calls to ensure this function never reverts
+    // Instead of reverting we will emit a failed event for each step
+    bytes memory _initialize = abi.encodeWithSelector(
+      IUSDC.initialize.selector,
       _usdcInitializeData._tokenName,
       _usdcInitializeData._tokenSymbol,
       _usdcInitializeData._tokenCurrency,
@@ -110,17 +120,49 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
       address(this)
     );
 
+    bytes memory _configureMinter =
+      abi.encodeWithSelector(IUSDC.configureMinter.selector, _l2Adapter, type(uint256).max);
+
+    bytes memory _updateMasterMinter = abi.encodeWithSelector(IUSDC.updateMasterMinter.selector, _l2Adapter);
+
+    bytes memory _transferOwnership = abi.encodeWithSelector(IUSDC.transferOwnership.selector, _l2Adapter);
+
+    bool _success;
+
+    // NOTE: If any of these calls fail we assume they will all fail as they are chained calls so we return early to save gas
+    // Initialize USDC
+    (_success,) = _usdc.call(_initialize);
+    if (!_success) {
+      emit InitializationFailed(0);
+      return;
+    }
+
     // Add l2 adapter as unlimited minter
-    IUSDC(_usdc).configureMinter(_l2Adapter, type(uint256).max);
+    (_success,) = _usdc.call(_configureMinter);
+    if (!_success) {
+      emit ConfigureMinterFailed(_l2Adapter);
+      return;
+    }
+
     // Set l2 adapter as new master minter
-    IUSDC(_usdc).updateMasterMinter(_l2Adapter);
+    (_success,) = _usdc.call(_updateMasterMinter);
+    if (!_success) {
+      emit UpdateMasterMinterFailed(_l2Adapter);
+      return;
+    }
+
     // Transfer USDC ownership to the L2 adapter
-    IUSDC(_usdc).transferOwnership(_l2Adapter);
+    (_success,) = _usdc.call(_transferOwnership);
+    if (!_success) {
+      emit TransferOwnershipFailed(_l2Adapter);
+      return;
+    }
 
     for (uint256 _i; _i < _initTxs.length; _i++) {
-      (bool _success,) = _usdc.call(_initTxs[_i]);
+      (_success,) = _usdc.call(_initTxs[_i]);
       if (!_success) {
-        revert IL2OpUSDCFactory_InitializationFailed();
+        emit InitializationFailed(_i + 1);
+        return;
       }
     }
   }
