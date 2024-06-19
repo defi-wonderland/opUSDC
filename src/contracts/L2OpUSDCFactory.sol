@@ -46,7 +46,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     address _l2AdapterOwner,
     bytes calldata _usdcImplementationInitCode,
     USDCInitializeData calldata _usdcInitializeData,
-    bytes[] memory _usdcInitTxs
+    bytes[] calldata _usdcInitTxs
   ) external {
     if (msg.sender != L2_MESSENGER || ICrossDomainMessenger(L2_MESSENGER).xDomainMessageSender() != L1_FACTORY) {
       revert IL2OpUSDCFactory_InvalidSender();
@@ -103,7 +103,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     address _usdc,
     USDCInitializeData calldata _usdcInitializeData,
     address _l2Adapter,
-    bytes[] memory _initTxs
+    bytes[] calldata _initTxs
   ) internal {
     // We need to make all of these low level calls to ensure this function never reverts
     // Instead of reverting we will emit a failed event for each step
