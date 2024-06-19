@@ -26,8 +26,8 @@ contract IntegrationBase is Helpers {
   IMockCrossDomainMessenger public constant OPTIMISM_L1_MESSENGER =
     IMockCrossDomainMessenger(0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1);
   bytes32 public constant SALT = keccak256(abi.encode('32'));
-  string public TOKEN_NAME = 'USD Coin';
-  string public TOKEN_SYMBOL = 'USDC';
+  string public constant TOKEN_NAME = 'USD Coin';
+  string public constant TOKEN_SYMBOL = 'USDC';
   uint32 public constant MIN_GAS_LIMIT_FACTORY = 4_000_000;
   uint32 public constant MIN_GAS_LIMIT_DEPLOY = 8_000_000;
   uint32 internal constant _ZERO_VALUE = 0;
@@ -72,13 +72,14 @@ contract IntegrationBase is Helpers {
     (address _l1Adapter, address _l2Factory, address _l2Adapter) =
       factory.deploy(address(OPTIMISM_L1_MESSENGER), _owner, _l2Deployments);
     vm.stopPrank();
+    bytes32 _salt = bytes32(factory.deploymentsSaltCounter());
 
     l1Adapter = L1OpUSDCBridgeAdapter(_l1Adapter);
 
     usdcInitializeData =
       IL2OpUSDCFactory.USDCInitializeData(TOKEN_NAME, TOKEN_SYMBOL, MAINNET_USDC.currency(), MAINNET_USDC.decimals());
     vm.selectFork(optimism);
-    _relayL2Deployments(_l1Adapter, _l2Factory, usdcInitializeData, _l2Deployments);
+    _relayL2Deployments(_salt, _l1Adapter, _l2Factory, usdcInitializeData, _l2Deployments);
 
     l2Adapter = L2OpUSDCBridgeAdapter(_l2Adapter);
     bridgedUSDC = IUSDC(l2Adapter.USDC());
@@ -91,6 +92,7 @@ contract IntegrationBase is Helpers {
   }
 
   function _relayL2Deployments(
+    bytes32 _salt,
     address _l1Adapter,
     address _l2Factory,
     IL2OpUSDCFactory.USDCInitializeData memory _usdcInitializeData,
@@ -108,7 +110,7 @@ contract IntegrationBase is Helpers {
       address(L2_CREATE2_DEPLOYER),
       _ZERO_VALUE,
       MIN_GAS_LIMIT_FACTORY,
-      abi.encodeWithSignature('deploy(uint256,bytes32,bytes)', _ZERO_VALUE, SALT, _l2FactoryInitCode)
+      abi.encodeWithSignature('deploy(uint256,bytes32,bytes)', _ZERO_VALUE, _salt, _l2FactoryInitCode)
     );
 
     L2_MESSENGER.relayMessage(
