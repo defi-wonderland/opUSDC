@@ -36,23 +36,14 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   /// @notice Zero value constant to be used on the `CREATE2_DEPLOYER` interaction
   uint256 internal constant _ZERO_VALUE = 0;
 
+  /// @notice The L2 Adapter is the third contract to be deployed on the L2 factory so its nonce is 3
+  uint256 internal constant _L2_ADAPTER_DEPLOYMENT_NONCE = 3;
+
   /// @inheritdoc IL1OpUSDCFactory
   IUSDC public immutable USDC;
 
   /// @inheritdoc IL1OpUSDCFactory
-  mapping(address _l2Factory => uint256 _l2FactoryNonce) public l2FactoryNonce;
-
-  /// @inheritdoc IL1OpUSDCFactory
-  mapping(bytes32 _salt => bool _isUsed) public isSaltUsed;
-
-  /**
-   * @notice Checks that the first init tx selector is not equal to the `initialize()` function one
-   * @param _firstInitTx The first init tx
-   */
-  modifier noInitializeTx(bytes calldata _firstInitTx) {
-    if (bytes4(_firstInitTx) == INITIALIZE_SELECTOR) revert IL1OpUSDCFactory_NoInitializeTx();
-    _;
-  }
+  uint256 public deploymentsSaltCounter;
 
   /**
    * @notice Constructs the L1 factory contract
@@ -63,98 +54,46 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   }
 
   /**
-   * @notice Sends the L2 factory creation tx along with the L2 deployments to be done on it through the messenger
-   * @param _l2FactorySalt The salt for the L2 factory deployment
+   * @notice Deploys the L1 Adapter, and sends the deployment txs for the L2 factory, L2 adapter and the L2 USDC through
+   * the L1 messenger
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
-   * @param _minGasLimitCreate2Factory The minimum gas limit for the L2 factory deployment
    * @param _l1AdapterOwner The address of the owner of the L1 adapter
    * @param _l2Deployments The deployments data for the L2 adapter, and the L2 USDC contracts
    * @return _l2Factory The address of the L2 factory
    * @return _l1Adapter The address of the L1 adapter
    * @return _l2Adapter The address of the L2 adapter
+   * @dev It can fail on L2 due to a gas miscalculation, but in that case the tx can be replayed. It only deploys 1 L2
+   * factory per L2 deployments, to make sure the nonce is being tracked correctly while precalculating addresses
+   * @dev There is one message for the L2 factory deployment and another for the L2 adapter deployment because if the L2
+   * factory is already deployed, that message will fail but the other will be executed
    */
-  function deployL2FactoryAndContracts(
-    bytes32 _l2FactorySalt,
+  function deploy(
     address _l1Messenger,
-    uint32 _minGasLimitCreate2Factory,
     address _l1AdapterOwner,
     L2Deployments calldata _l2Deployments
-  )
-    external
-    noInitializeTx(_l2Deployments.usdcInitTxs[0])
-    returns (address _l2Factory, address _l1Adapter, address _l2Adapter)
-  {
-    if (isSaltUsed[_l2FactorySalt]) revert IL1OpUSDCFactory_SaltAlreadyUsed();
-    isSaltUsed[_l2FactorySalt] = true;
+  ) external returns (address _l2Factory, address _l1Adapter, address _l2Adapter) {
+    // Checks that the first init tx selector is not equal to the `initialize()` function since
+    if (bytes4(_l2Deployments.usdcInitTxs[0]) == INITIALIZE_SELECTOR) revert IL1OpUSDCFactory_NoInitializeTx();
 
-    // Get the L2 factory init code and precalculate the address
+    // Update the salt counter so the L2 factory is deployed with a different salt to a different address and get it
+    bytes32 _salt = bytes32(++deploymentsSaltCounter);
+
+    // Get the L2 factory init code and precalculate its address
     bytes memory _l2FactoryCArgs = abi.encode(address(this));
     bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
+    _l2Factory = _precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), L2_CREATE2_DEPLOYER);
 
-    // Precalculate the L2 factory address and store it in the struct
-    _l2Factory = _precalculateCreate2Address(_l2FactorySalt, keccak256(_l2FactoryInitCode), L2_CREATE2_DEPLOYER);
-
-    // Increment the nonce of the L2 factory to the value it will be after is deployed and update it in the struct
-    uint256 _l2FactoryNonce = ++l2FactoryNonce[_l2Factory];
-
-    // Send the L2 factory deployment tx
-    bytes memory _l2FactoryCreate2Tx =
-      abi.encodeWithSelector(ICreate2Deployer.deploy.selector, _ZERO_VALUE, _l2FactorySalt, _l2FactoryInitCode);
-    ICrossDomainMessenger(_l1Messenger).sendMessage(
-      L2_CREATE2_DEPLOYER, _l2FactoryCreate2Tx, _minGasLimitCreate2Factory
-    );
-
-    /// NOTE: Breaking CEI pattern here, but it is safe to trust in the messenger
-    (_l1Adapter, _l2Adapter) =
-      _deployAdapters(_l1Messenger, _l1AdapterOwner, _l2Factory, _l2FactoryNonce, _l2Deployments);
-  }
-
-  /**
-   * @notice Sends the L2 adapter and USDC proxy and implementation deployments tx through the messenger
-   * to be executed on the l2 factory
-   * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
-   * @param _l1AdapterOwner The address of the owner of the L1 adapter
-   * @param _l2Deployments The deployments data for the L2 adapter, and the L2 USDC contracts
-   * @return _l1Adapter The address of the L1 adapter
-   * @return _l2Adapter The address of the L2 adapter
-   */
-  function deployAdapters(
-    address _l1Messenger,
-    address _l1AdapterOwner,
-    address _l2Factory,
-    L2Deployments calldata _l2Deployments
-  ) external noInitializeTx(_l2Deployments.usdcInitTxs[0]) returns (address _l1Adapter, address _l2Adapter) {
-    if (l2FactoryNonce[_l2Factory] == 0) revert IL1OpUSDCFactory_L2FactoryNotDeployed();
-    uint256 _l2FactoryNonce = l2FactoryNonce[_l2Factory];
-    (_l1Adapter, _l2Adapter) =
-      _deployAdapters(_l1Messenger, _l1AdapterOwner, _l2Factory, _l2FactoryNonce, _l2Deployments);
-  }
-
-  /**
-   * @notice Sends the L2 adapter and USDC proxy and implementation deployments tx through the messenger
-   * to be executed on the l2 factory
-   * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
-   * @param _l1AdapterOwner The address of the owner of the L1 adapter
-   * @param _l2Deployments The deployments data for the L2 adapter, and the L2 USDC contracts
-   * @return _l1Adapter The address of the L1 adapter
-   * @return _l2Adapter The address of the L2 adapter
-   */
-  function _deployAdapters(
-    address _l1Messenger,
-    address _l1AdapterOwner,
-    address _l2Factory,
-    uint256 _l2FactoryNonce,
-    L2Deployments calldata _l2Deployments
-  ) internal returns (address _l1Adapter, address _l2Adapter) {
-    // Calculate the L2 adapter address. Adding 2 since the USDC contracts are already deployed first on the L2 factory
-    uint256 _l2AdapterDeploymentNonce = _l2FactoryNonce + 2;
-    _l2Adapter = _precalculateCreateAddress(_l2Factory, _l2AdapterDeploymentNonce);
-
+    // Precalculate the L2 adapter address
+    _l2Adapter = _precalculateCreateAddress(_l2Factory, _L2_ADAPTER_DEPLOYMENT_NONCE);
     // Deploy the L1 adapter
     _l1Adapter = address(new L1OpUSDCBridgeAdapter(address(USDC), _l1Messenger, _l2Adapter, _l1AdapterOwner));
 
-    // Increment the nonce of the L2 factory with all the deployments to be done
-    l2FactoryNonce[_l2Factory] = _l2FactoryNonce + 3;
+    // Send the L2 factory deployment tx
+    bytes memory _l2FactoryCreate2Tx =
+      abi.encodeWithSelector(ICreate2Deployer.deploy.selector, _ZERO_VALUE, _salt, _l2FactoryInitCode);
+    ICrossDomainMessenger(_l1Messenger).sendMessage(
+      L2_CREATE2_DEPLOYER, _l2FactoryCreate2Tx, _l2Deployments.minGasLimitCreate2Factory
+    );
 
     // Get the L1 USDC naming and decimals to ensure they are the same on the L2, guaranteeing the same standard
     IL2OpUSDCFactory.USDCInitializeData memory _usdcInitializeData =

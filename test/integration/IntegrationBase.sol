@@ -28,6 +28,9 @@ contract IntegrationBase is Helpers {
   bytes32 public constant SALT = keccak256(abi.encode('32'));
   string public TOKEN_NAME = 'USD Coin';
   string public TOKEN_SYMBOL = 'USDC';
+  uint32 public constant MIN_GAS_LIMIT_FACTORY = 4_000_000;
+  uint32 public constant MIN_GAS_LIMIT_DEPLOY = 8_000_000;
+  uint32 internal constant _ZERO_VALUE = 0;
 
   // Fork variables
   uint256 public optimism;
@@ -59,14 +62,15 @@ contract IntegrationBase is Helpers {
     usdcInitTxns[1] = USDCInitTxs.INITIALIZEV2_1;
     usdcInitTxns[2] = USDCInitTxs.INITIALIZEV2_2;
     // Define the L2 deployments data
-    IL1OpUSDCFactory.L2Deployments memory _l2Deployments =
-      IL1OpUSDCFactory.L2Deployments(_owner, USDC_IMPLEMENTATION_CREATION_CODE, usdcInitTxns, 3_000_000);
+    IL1OpUSDCFactory.L2Deployments memory _l2Deployments = IL1OpUSDCFactory.L2Deployments(
+      _owner, USDC_IMPLEMENTATION_CREATION_CODE, usdcInitTxns, MIN_GAS_LIMIT_FACTORY, MIN_GAS_LIMIT_DEPLOY
+    );
 
     vm.selectFork(mainnet);
 
     vm.startPrank(_owner);
     (address _l2Factory, address _l1Adapter, address _l2Adapter) =
-      factory.deployL2FactoryAndContracts(SALT, address(OPTIMISM_L1_MESSENGER), 3_000_000, _owner, _l2Deployments);
+      factory.deploy(address(OPTIMISM_L1_MESSENGER), _owner, _l2Deployments);
     vm.stopPrank();
 
     l1Adapter = L1OpUSDCBridgeAdapter(_l1Adapter);
@@ -92,7 +96,6 @@ contract IntegrationBase is Helpers {
     IL2OpUSDCFactory.USDCInitializeData memory _usdcInitializeData,
     IL1OpUSDCFactory.L2Deployments memory _l2Deployments
   ) internal {
-    // uint256 _messageNonce = L2_MESSENGER.messageNonce();
     bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
     bytes memory _l2FactoryCArgs = abi.encode(address(factory));
     bytes memory _l2FactoryInitCode = bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs);
@@ -103,17 +106,17 @@ contract IntegrationBase is Helpers {
       L2_MESSENGER.messageNonce() + 1,
       address(factory),
       address(L2_CREATE2_DEPLOYER),
-      0,
-      3_000_000,
-      abi.encodeWithSignature('deploy(uint256,bytes32,bytes)', 0, SALT, _l2FactoryInitCode)
+      _ZERO_VALUE,
+      MIN_GAS_LIMIT_FACTORY,
+      abi.encodeWithSignature('deploy(uint256,bytes32,bytes)', _ZERO_VALUE, SALT, _l2FactoryInitCode)
     );
 
     L2_MESSENGER.relayMessage(
       L2_MESSENGER.messageNonce() + 2,
       address(factory),
       address(_l2Factory),
-      0,
-      8_000_000,
+      _ZERO_VALUE,
+      MIN_GAS_LIMIT_DEPLOY,
       abi.encodeWithSelector(
         L2OpUSDCFactory.deploy.selector,
         _l1Adapter,

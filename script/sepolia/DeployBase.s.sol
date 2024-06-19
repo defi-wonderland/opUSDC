@@ -18,16 +18,16 @@ contract DeployBase is Script {
   function run() public {
     vm.startBroadcast(deployer);
     // Deploy the L2 contracts
-    bytes32 _salt = bytes32('33');
     bytes[] memory _usdcInitTxs = new bytes[](0);
     IL1OpUSDCFactory.L2Deployments memory _l2Deployments = IL1OpUSDCFactory.L2Deployments({
       l2AdapterOwner: deployer,
       usdcImplementationInitCode: USDC_IMPLEMENTATION_CREATION_CODE,
       usdcInitTxs: _usdcInitTxs,
+      minGasLimitCreate2Factory: MIN_GAS_LIMIT_FACTORY,
       minGasLimitDeploy: MIN_GAS_LIMIT_DEPLOY
     });
     (address _l2Factory, address _l1Adapter, address _l2Adapter) =
-      L1_FACTORY.deployL2FactoryAndContracts(_salt, L1_MESSENGER, MIN_GAS_LIMIT_FACTORY, deployer, _l2Deployments);
+      L1_FACTORY.deploy(L1_MESSENGER, deployer, _l2Deployments);
     vm.stopBroadcast();
 
     console.log('L1 Adapter:', _l1Adapter);
