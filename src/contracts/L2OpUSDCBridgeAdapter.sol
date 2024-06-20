@@ -195,13 +195,13 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    */
   function callUsdcTransaction(bytes calldata _data) external onlyOwner {
     //Check forbidden transactions
-    bytes4 _signature = bytes4(_data);
-    if (_signature == _TRANSFER_OWNERSHIP_SELECTOR || _signature == _CHANGE_ADMIN_SELECTOR) {
-      revert IL2OpUSDCBridgeAdapter_ForbiddenTransaction();
+    bytes4 _selector = bytes4(_data);
+    if (_selector == _TRANSFER_OWNERSHIP_SELECTOR || _selector == _CHANGE_ADMIN_SELECTOR) {
+      revert IOpUSDCBridgeAdapter_ForbiddenTransaction();
     }
     bool _success;
 
-    if (_signature == _UPGRADE_TO_SELECTOR || _signature == _UPGRADE_TO_AND_CALL_SELECTOR) {
+    if (_selector == _UPGRADE_TO_SELECTOR || _selector == _UPGRADE_TO_AND_CALL_SELECTOR) {
       // If it is an upgrade transaction we need to go through the fallback admin
       (_success,) = address(FALLBACK_PROXY_ADMIN).call(_data);
     } else {
@@ -209,9 +209,9 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     }
 
     if (!_success) {
-      revert IL2OpUSDCBridgeAdapter_InvalidTransaction();
+      revert IOpUSDCBridgeAdapter_InvalidTransaction();
     }
 
-    emit UsdcOwnableFunctionSent(_signature);
+    emit UsdcOwnableFunctionSent(_selector);
   }
 }

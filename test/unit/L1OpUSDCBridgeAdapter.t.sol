@@ -92,7 +92,7 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
   function test_revertOnAddressZero(uint32 _minGasLimitReceiveOnL2, uint32 _minGasLimitSetBurnAmount) external {
     // Execute
     vm.prank(_owner);
-    vm.expectRevert(abi.encodeWithSelector(IL1OpUSDCBridgeAdapter.IL1OpUSDCBridgeAdapter_InvalidAddress.selector));
+    vm.expectRevert(abi.encodeWithSelector(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidAddress.selector));
     adapter.migrateToNative(address(0), _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
   }
 
@@ -339,7 +339,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
 
     // Execute
     vm.prank(_circle);
-    vm.expectRevert(IL1OpUSDCBridgeAdapter.IL1OpUSDCBridgeAdapter_BurnAmountNotSet.selector);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_BurnAmountNotSet.selector);
     adapter.burnLockedUSDC();
   }
 
