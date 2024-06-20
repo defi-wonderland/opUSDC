@@ -17,8 +17,8 @@ contract ForTestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
     burnAmount = _amount;
   }
 
-  function forTest_setCircle(address _circle) external {
-    circle = _circle;
+  function forTest_setNewOwner(address _newOwner) external {
+    newOwner = _newOwner;
   }
 
   function forTest_setMessengerStatus(Status _status) external {
@@ -136,7 +136,7 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
     // Execute
     vm.prank(_owner);
     adapter.migrateToNative(_newOwner, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
-    assertEq(adapter.circle(), _newOwner, 'Circle should be set to the new owner');
+    assertEq(adapter.newOwner(), _newOwner, 'Circle should be set to the new owner');
     assertEq(
       uint256(adapter.messengerStatus()),
       uint256(IL1OpUSDCBridgeAdapter.Status.Upgrading),
@@ -178,7 +178,7 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
     uint32 _minGasLimitSetBurnAmount
   ) external {
     vm.assume(_newOwner != address(0));
-    adapter.forTest_setCircle(_newOwner);
+    adapter.forTest_setNewOwner(_newOwner);
     adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Upgrading);
 
     _mockAndExpect(
@@ -335,7 +335,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
   }
 
   function test_burnAmountNotSet(address _circle) external {
-    adapter.forTest_setCircle(_circle);
+    adapter.forTest_setNewOwner(_circle);
 
     // Execute
     vm.prank(_circle);
@@ -347,7 +347,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
    * @notice Check that the burn function is called as expected
    */
   function test_expectedCall(uint256 _burnAmount, address _circle) external {
-    adapter.forTest_setCircle(_circle);
+    adapter.forTest_setNewOwner(_circle);
     adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Deprecated);
 
     vm.assume(_burnAmount > 0);
@@ -366,7 +366,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
    */
   function test_resetStorageValues(uint256 _burnAmount, address _circle) external {
     vm.assume(_burnAmount > 0);
-    adapter.forTest_setCircle(_circle);
+    adapter.forTest_setNewOwner(_circle);
     adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Deprecated);
 
     vm.mockCall(
@@ -380,7 +380,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
     adapter.burnLockedUSDC();
 
     assertEq(adapter.burnAmount(), 0, 'Burn amount should be set to 0');
-    assertEq(adapter.circle(), address(0), 'Circle should be set to 0');
+    assertEq(adapter.newOwner(), address(0), 'Circle should be set to 0');
   }
 
   /**
@@ -388,7 +388,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
    */
   function test_emitEvent(uint256 _burnAmount, address _circle) external {
     vm.assume(_burnAmount > 0);
-    adapter.forTest_setCircle(_circle);
+    adapter.forTest_setNewOwner(_circle);
     adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Deprecated);
 
     vm.mockCall(address(_usdc), abi.encodeWithSignature('burn(address)', address(adapter)), abi.encode(true));

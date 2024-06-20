@@ -193,7 +193,7 @@ contract Integration_Migration is IntegrationBase {
     vm.stopPrank();
 
     assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Upgrading));
-    assertEq(l1Adapter.circle(), _circle);
+    assertEq(l1Adapter.newOwner(), _circle);
 
     vm.selectFork(optimism);
 
@@ -241,7 +241,7 @@ contract Integration_Migration is IntegrationBase {
 
     assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), 0);
     assertEq(l1Adapter.burnAmount(), 0);
-    assertEq(l1Adapter.circle(), address(0));
+    assertEq(l1Adapter.newOwner(), address(0));
   }
 
   function _mintSupplyOnL2() internal {
