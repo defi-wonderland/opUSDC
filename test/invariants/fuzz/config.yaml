@@ -3,3 +3,4 @@ testMode: assertion
 corpusDir: test/invariants/fuzz/corpus/
 coverageFormats: ["html","lcov"]
 allContracts: true
+codeSize: 0x9999
