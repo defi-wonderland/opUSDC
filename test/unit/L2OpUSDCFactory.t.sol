@@ -22,7 +22,7 @@ contract L2OpUSDCFactoryTest is L2OpUSDCFactory {
     address _usdc,
     USDCInitializeData calldata _usdcInitializeData,
     address _l2Adapter,
-    bytes[] calldata _initTxs
+    bytes[] memory _initTxs
   ) public {
     _executeInitTxs(_usdc, _usdcInitializeData, _l2Adapter, _initTxs);
   }
@@ -92,8 +92,6 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
   event USDCImplementationDeployed(address _l2UsdcImplementation);
   event USDCProxyDeployed(address _l2UsdcProxy);
   event L2AdapterDeployed(address _l2Adapter);
-  event ChangeAdminFailed(address _newAdmin);
-  event CreateDeploymentFailed();
 
   /**
    * @notice Check it reverts if the sender is not the L2 messenger
@@ -227,9 +225,9 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
   }
 
   /**
-   * @notice Check it emits a failure event if the USDC implementation deployment fail
+   * @notice Check it reverts if the USDC implementation deployment fail
    */
-  function test_emitOnFailedUsdcImplementationDeployment() public {
+  function test_revertOnFailedUsdcImplementationDeployment() public {
     // Deploy the USDC implementation to the same address as the factory to make it fail
     uint256 _usdcImplDeploymentNonce = vm.getNonce(address(factory));
     address _usdcImplementation = _precalculateCreateAddress(address(factory), _usdcImplDeploymentNonce);
@@ -244,9 +242,8 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
       abi.encode(factory.L1_FACTORY())
     );
 
-    // Expect the tx to emit the failure
-    vm.expectEmit(true, true, true, true);
-    emit CreateDeploymentFailed();
+    // Expect the tx to revert
+    vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_DeploymentsFailed.selector);
 
     // Execute
     vm.prank(_l2Messenger);
@@ -254,9 +251,9 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
   }
 
   /**
-   * @notice Check it emits a failure event if the USDC proxy deployment fail
+   * @notice Check it reverts if the USDC proxy deployment fail
    */
-  function test_emitOnFailedUsdcProxyDeployment() public {
+  function test_revertOnFailedUsdcProxyDeployment() public {
     // Calculate the usdc proxy address
     uint256 _usdcProxyDeploymentNonce = vm.getNonce(address(factory)) + 1;
     address _usdcProxy = _precalculateCreateAddress(address(factory), _usdcProxyDeploymentNonce);
@@ -271,9 +268,8 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
       abi.encode(factory.L1_FACTORY())
     );
 
-    // Expect the tx to emit the failure
-    vm.expectEmit(true, true, true, true);
-    emit CreateDeploymentFailed();
+    // Expect the tx to revert
+    vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_DeploymentsFailed.selector);
 
     // Execute
     vm.prank(_l2Messenger);
@@ -281,9 +277,9 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
   }
 
   /**
-   * @notice Check it emits a failure event if the adapter deployment fail
+   * @notice Check it reverts if the adapter deployment fail
    */
-  function test_emitOnFailedAdapterDeployment() public {
+  function test_revertOnFailedAdapterDeployment() public {
     // Get the adapter address
     uint256 _adapterDeploymentNonce = vm.getNonce(address(factory)) + 2;
     address _l2Adapter = _precalculateCreateAddress(address(factory), _adapterDeploymentNonce);
@@ -298,9 +294,9 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
       abi.encode(factory.L1_FACTORY())
     );
 
-    // Expect the tx to emit the failure
-    vm.expectEmit(true, true, true, true);
-    emit CreateDeploymentFailed();
+    // Expect the tx to revert
+    vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_DeploymentsFailed.selector);
+
     // Execute
     vm.prank(_l2Messenger);
     factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
@@ -326,37 +322,6 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 
     // Expect the call over 'changeAdmin' function
     vm.expectCall(_usdcProxy, abi.encodeWithSelector(IUSDC.changeAdmin.selector, address(_fallbackProxyAdmin)));
-
-    // Execute
-    vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
-  }
-
-  /**
-   * @notice Check the `changeAdmin` emits event if it fails
-   */
-  function test_emitsEventIfChangeAdminFails() public {
-    // Get the usdc proxy address
-    uint256 _usdcProxyDeploymentNonce = vm.getNonce(address(factory)) + 1;
-    address _usdcProxy = _precalculateCreateAddress(address(factory), _usdcProxyDeploymentNonce);
-
-    // Get the adapter address
-    uint256 _adapterDeploymentNonce = vm.getNonce(address(factory)) + 2;
-    address _l2Adapter = _precalculateCreateAddress(address(factory), _adapterDeploymentNonce);
-    address _fallbackProxyAdmin = _precalculateCreateAddress(address(_l2Adapter), 1);
-
-    // Mock the call over `xDomainMessageSender` to return the L1 factory address
-    vm.mockCall(
-      _l2Messenger, abi.encodeWithSelector(ICrossDomainMessenger.xDomainMessageSender.selector), abi.encode(_l1Factory)
-    );
-
-    // Expect the call over 'changeAdmin' function
-    vm.mockCallRevert(
-      _usdcProxy, abi.encodeWithSelector(IUSDC.changeAdmin.selector, address(_fallbackProxyAdmin)), abi.encode()
-    );
-
-    vm.expectEmit(true, true, true, true);
-    emit ChangeAdminFailed(_fallbackProxyAdmin);
 
     // Execute
     vm.prank(_l2Messenger);
@@ -409,14 +374,9 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
 }
 
 contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
-  event InitializationFailed(uint256 _index);
-  event ConfigureMinterFailed(address _minter);
-  event UpdateMasterMinterFailed(address _newMasterMinter);
-  event TransferOwnershipFailed(address _newOwner);
   /**
    * @notice Check `initialize()` is properly called
    */
-
   function test_callInitialize() public {
     // Mock the call over the functions
     _mockExecuteTxsCalls();
@@ -442,37 +402,6 @@ contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
   }
 
   /**
-   * @notice Check `initialize()` emits a failure event
-   */
-  function test_emitsEventIfInitializeFails() public {
-    // Mock the call over the functions
-    _mockExecuteTxsCalls();
-
-    // Expect `initialize` to be properly called
-    vm.mockCallRevert(
-      _dummyContract,
-      abi.encodeWithSelector(
-        IUSDC.initialize.selector,
-        _usdcInitializeData._tokenName,
-        _usdcInitializeData._tokenSymbol,
-        _usdcInitializeData._tokenCurrency,
-        _usdcInitializeData._tokenDecimals,
-        address(factory),
-        _l2Adapter,
-        _l2Adapter,
-        address(factory)
-      ),
-      abi.encode()
-    );
-
-    vm.expectEmit(true, true, true, true);
-    emit InitializationFailed(0);
-
-    // Execute
-    factory.forTest_executeInitTxs(_dummyContract, _usdcInitializeData, _l2Adapter, _initTxsUsdc);
-  }
-
-  /**
    * @notice Check `configureMinter()` is properly called
    */
   function test_callConfigureMinter() public {
@@ -482,27 +411,6 @@ contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
     // Expect `configureMinter` to be properly called
     // solhint-disable-next-line max-line-length
     vm.expectCall(_dummyContract, abi.encodeWithSelector(IUSDC.configureMinter.selector, _l2Adapter, type(uint256).max));
-
-    // Execute
-    factory.forTest_executeInitTxs(_dummyContract, _usdcInitializeData, _l2Adapter, _initTxsUsdc);
-  }
-
-  /**
-   * @notice Check `configureMinter()` emits a failure event
-   */
-  function test_emitsEventIfConfigureMinterFails() public {
-    // Mock the call over the functions
-    _mockExecuteTxsCalls();
-
-    // Expect `configureMinter` to be properly called
-    // solhint-disable-next-line max-line-length
-    vm.mockCallRevert(
-      _dummyContract,
-      abi.encodeWithSelector(IUSDC.configureMinter.selector, _l2Adapter, type(uint256).max),
-      abi.encode()
-    );
-    vm.expectEmit(true, true, true, true);
-    emit ConfigureMinterFailed(_l2Adapter);
 
     // Execute
     factory.forTest_executeInitTxs(_dummyContract, _usdcInitializeData, _l2Adapter, _initTxsUsdc);
@@ -523,24 +431,6 @@ contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
   }
 
   /**
-   * @notice Check `updateMasterMinter()` emits a failure event
-   */
-  function test_emitsEventIfUpdateMasterMinterFails() public {
-    // Mock the call over the functions
-    _mockExecuteTxsCalls();
-
-    // Expect `updateMasterMinter` to be properly called
-    vm.mockCallRevert(
-      _dummyContract, abi.encodeWithSelector(IUSDC.updateMasterMinter.selector, _l2Adapter), abi.encode()
-    );
-    vm.expectEmit(true, true, true, true);
-    emit UpdateMasterMinterFailed(_l2Adapter);
-
-    // Execute
-    factory.forTest_executeInitTxs(_dummyContract, _usdcInitializeData, _l2Adapter, _initTxsUsdc);
-  }
-
-  /**
    * @notice Check `transferOwnership()` is properly called
    */
   function test_callTransferOwnership() public {
@@ -549,24 +439,6 @@ contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
 
     // Expect `transferOwnership` to be properly called
     vm.expectCall(_dummyContract, abi.encodeWithSelector(IUSDC.transferOwnership.selector, _l2Adapter));
-
-    // Execute
-    factory.forTest_executeInitTxs(_dummyContract, _usdcInitializeData, _l2Adapter, _initTxsUsdc);
-  }
-
-  /**
-   * @notice Check `transferOwnership()` emits a failure event
-   */
-  function test_emitsEventIfTransferOwnershipFails() public {
-    // Mock the call over the functions
-    _mockExecuteTxsCalls();
-
-    // Expect `transferOwnership` to be properly called
-    vm.mockCallRevert(
-      _dummyContract, abi.encodeWithSelector(IUSDC.transferOwnership.selector, _l2Adapter), abi.encode()
-    );
-    vm.expectEmit(true, true, true, true);
-    emit TransferOwnershipFailed(_l2Adapter);
 
     // Execute
     factory.forTest_executeInitTxs(_dummyContract, _usdcInitializeData, _l2Adapter, _initTxsUsdc);
@@ -587,31 +459,14 @@ contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
   }
 
   /**
-   * @notice Check it emits a failure if the initialization transactions fail
+   * @notice Check it reverts if the initialization transactions fail
    */
   function test_revertIfInitTxsOnArrayFail() public {
     _mockExecuteTxsCalls();
 
     vm.mockCallRevert(_dummyContract, _badInitTxs[0], '');
     vm.mockCallRevert(_dummyContract, _badInitTxs[1], '');
-
-    vm.expectEmit(true, true, true, true);
-    emit InitializationFailed(1);
-    // Execute
-    factory.forTest_executeInitTxs(_dummyContract, _usdcInitializeData, _l2Adapter, _badInitTxs);
-  }
-
-  /**
-   * @notice Check it emits a failure if the initialization transactions fail
-   */
-  function test_revertIfInitTxsOnArrayDifferentIndexFail() public {
-    _mockExecuteTxsCalls();
-
-    vm.mockCall(_dummyContract, _badInitTxs[0], abi.encode());
-    vm.mockCallRevert(_dummyContract, _badInitTxs[1], '');
-
-    vm.expectEmit(true, true, true, true);
-    emit InitializationFailed(2);
+    vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InitializationFailed.selector);
     // Execute
     factory.forTest_executeInitTxs(_dummyContract, _usdcInitializeData, _l2Adapter, _badInitTxs);
   }
