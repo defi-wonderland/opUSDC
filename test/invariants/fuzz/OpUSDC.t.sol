@@ -30,9 +30,6 @@ contract OpUsdcTest is EchidnaTest {
   Create2Deployer public create2Deployer;
 
   constructor() {
-    create2Deployer = new Create2Deployer();
-    mockMessenger = new MockBridge();
-
     IL1OpUSDCFactory.L2Deployments memory _l2Deployments = _mainnetSetup();
     _l2Setup(_l2Deployments);
   }
@@ -74,6 +71,8 @@ contract OpUsdcTest is EchidnaTest {
 
     factory = new L1OpUSDCFactory(address(usdcMainnet));
 
+    mockMessenger = new MockBridge(address(factory));
+
     // owner is this contract, as managed in the agents handler
     _l2Deployments =
       IL1OpUSDCFactory.L2Deployments(address(this), USDC_IMPLEMENTATION_CREATION_CODE, usdcInitTxns, 3_000_000);
@@ -94,10 +93,11 @@ contract OpUsdcTest is EchidnaTest {
     mockMessenger.relayMessage(
       mockMessenger.messageNonce() + 1,
       address(factory),
-      address(create2Deployer),
+      address(0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2),
       0,
       3_000_000,
-      abi.encodeWithSignature('deploy(uint256,bytes32,bytes)', 0, keccak256(abi.encode('32')), _l2FactoryInitCode)
+      // AAAA avoid non collision (as we're on the same chain in our test)
+      abi.encodeWithSignature('deploy(uint256,bytes32,bytes)', 0, keccak256(abi.encode('33')), _l2FactoryInitCode)
     );
 
     IL2OpUSDCFactory.USDCInitializeData memory usdcInitializeData =
@@ -130,13 +130,18 @@ contract OpUsdcTest is EchidnaTest {
 // Relay any message
 contract MockBridge is IMockCrossDomainMessenger {
   uint256 public messageNonce;
+  address public l1factory;
+
+  constructor(address _l1Factory) {
+    l1factory = _l1Factory;
+  }
 
   function OTHER_MESSENGER() external view returns (address) {
     return address(0);
   }
 
   function xDomainMessageSender() external view returns (address _sender) {
-    return msg.sender;
+    return l1factory;
   }
 
   function sendMessage(address _target, bytes calldata _message, uint32 _minGasLimit) external {
@@ -152,18 +157,24 @@ contract MockBridge is IMockCrossDomainMessenger {
     uint256 _minGasLimit,
     bytes calldata _message
   ) external payable {
-    _target.call{value: _value}(_message);
     messageNonce++;
+    (bool succ, bytes memory ret) = _target.call{value: _value}(_message);
+
+    if (!succ) {
+      revert(string(ret));
+    }
   }
 }
 
 // Identical to the OZ implementation used
-contract Create2Deployer {
+contract Create2Deployer is EchidnaTest {
   // solhint-disable custom-errors
   function deploy(uint256 _value, bytes32 _salt, bytes memory _initCode) public returns (address) {
     address addr;
     require(address(this).balance >= _value, 'Create2: insufficient balance');
     require(_initCode.length != 0, 'Create2: bytecode length is zero');
+
+    // hevm.prank(0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2); //L1OpUSDCFactory.L2_CREATE2_DEPLOYER)
     assembly {
       addr := create2(_value, add(_initCode, 0x20), mload(_initCode), _salt)
     }
