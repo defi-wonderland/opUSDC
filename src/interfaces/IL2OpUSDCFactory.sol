@@ -89,14 +89,15 @@ interface IL2OpUSDCFactory {
   error IL2OpUSDCFactory_InvalidSender();
 
   /**
-   * @notice Thrown when any of the deployments fails
+   * @notice Thrown when a contract deployment fails
    */
-  error IL2OpUSDCFactory_DeploymentsFailed();
+  error IL2OpUSDCFactory_DeploymentFailed();
 
   /**
    * @notice Thrown when an USDC initialization tx failed
+   * @param _txIndex The index of the failed initialization tx
    */
-  error IL2OpUSDCFactory_InitializationFailed();
+  error IL2OpUSDCFactory_InitializationFailed(uint256 _txIndex);
 
   /*///////////////////////////////////////////////////////////////
                             LOGIC

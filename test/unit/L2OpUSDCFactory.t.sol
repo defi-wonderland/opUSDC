@@ -14,15 +14,15 @@ import {Helpers} from 'test/utils/Helpers.sol';
 contract L2OpUSDCFactoryTest is L2OpUSDCFactory {
   constructor(address _l1Factory) L2OpUSDCFactory(_l1Factory) {}
 
-  function forTest_deployCreate(bytes memory _initCode) public returns (address _newContract, bool _success) {
-    (_newContract, _success) = _deployCreate(_initCode);
+  function forTest_deployCreate(bytes memory _initCode) public returns (address _newContract) {
+    _newContract = _deployCreate(_initCode);
   }
 
   function forTest_executeInitTxs(
     address _usdc,
     USDCInitializeData calldata _usdcInitializeData,
     address _l2Adapter,
-    bytes[] memory _initTxs
+    bytes[] calldata _initTxs
   ) public {
     _executeInitTxs(_usdc, _usdcInitializeData, _l2Adapter, _initTxs);
   }
@@ -67,9 +67,11 @@ contract Base is Test, Helpers {
     // Set the init txs for the USDC implementation contract (DummyContract)
     bytes memory _initTxOne = abi.encodeWithSignature('returnTrue()');
     bytes memory _initTxTwo = abi.encodeWithSignature('returnFalse()');
-    _initTxsUsdc = new bytes[](2);
+    bytes memory _initTxThree = abi.encodeWithSignature('returnOne()');
+    _initTxsUsdc = new bytes[](3);
     _initTxsUsdc[0] = _initTxOne;
     _initTxsUsdc[1] = _initTxTwo;
+    _initTxsUsdc[2] = _initTxThree;
 
     // Set the bad init transaction to test when the initialization fails
     bytes memory _badInitTx = abi.encodeWithSignature('nonExistentFunction()');
@@ -222,84 +224,6 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     assertEq(IOpUSDCBridgeAdapter(_l2Adapter).MESSENGER(), _l2Messenger, 'Messenger address was not set');
     assertEq(IOpUSDCBridgeAdapter(_l2Adapter).LINKED_ADAPTER(), _l1Adapter, 'Linked adapter address was not set');
     assertEq(Ownable(_l2Adapter).owner(), _l2AdapterOwner, 'Owner address was not set');
-  }
-
-  /**
-   * @notice Check it reverts if the USDC implementation deployment fail
-   */
-  function test_revertOnFailedUsdcImplementationDeployment() public {
-    // Deploy the USDC implementation to the same address as the factory to make it fail
-    uint256 _usdcImplDeploymentNonce = vm.getNonce(address(factory));
-    address _usdcImplementation = _precalculateCreateAddress(address(factory), _usdcImplDeploymentNonce);
-
-    // Set bytecode to the address where the USDC implementation will be deployed to make it fail
-    vm.etch(_usdcImplementation, _usdcImplInitCode);
-
-    // Mock the call over `xDomainMessageSender` to return the L1 factory address
-    vm.mockCall(
-      factory.L2_MESSENGER(),
-      abi.encodeWithSelector(ICrossDomainMessenger.xDomainMessageSender.selector),
-      abi.encode(factory.L1_FACTORY())
-    );
-
-    // Expect the tx to revert
-    vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_DeploymentsFailed.selector);
-
-    // Execute
-    vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
-  }
-
-  /**
-   * @notice Check it reverts if the USDC proxy deployment fail
-   */
-  function test_revertOnFailedUsdcProxyDeployment() public {
-    // Calculate the usdc proxy address
-    uint256 _usdcProxyDeploymentNonce = vm.getNonce(address(factory)) + 1;
-    address _usdcProxy = _precalculateCreateAddress(address(factory), _usdcProxyDeploymentNonce);
-
-    // Set bytecode to the address where the USDC will be deployed to make it fail
-    vm.etch(_usdcProxy, _usdcImplInitCode);
-
-    // Mock the call over `xDomainMessageSender` to return the L1 factory address
-    vm.mockCall(
-      factory.L2_MESSENGER(),
-      abi.encodeWithSelector(ICrossDomainMessenger.xDomainMessageSender.selector),
-      abi.encode(factory.L1_FACTORY())
-    );
-
-    // Expect the tx to revert
-    vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_DeploymentsFailed.selector);
-
-    // Execute
-    vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
-  }
-
-  /**
-   * @notice Check it reverts if the adapter deployment fail
-   */
-  function test_revertOnFailedAdapterDeployment() public {
-    // Get the adapter address
-    uint256 _adapterDeploymentNonce = vm.getNonce(address(factory)) + 2;
-    address _l2Adapter = _precalculateCreateAddress(address(factory), _adapterDeploymentNonce);
-
-    // Set bytecode to the address where the L2 Adapter will be deployed
-    vm.etch(_l2Adapter, _usdcImplInitCode);
-
-    // Mock the call over `xDomainMessageSender` to return the L1 factory address
-    vm.mockCall(
-      factory.L2_MESSENGER(),
-      abi.encodeWithSelector(ICrossDomainMessenger.xDomainMessageSender.selector),
-      abi.encode(factory.L1_FACTORY())
-    );
-
-    // Expect the tx to revert
-    vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_DeploymentsFailed.selector);
-
-    // Execute
-    vm.prank(_l2Messenger);
-    factory.deploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
   }
 
   /**
@@ -459,16 +383,26 @@ contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
   }
 
   /**
-   * @notice Check it reverts if the initialization transactions fail
+   * @notice Check it properly reverts if the initialization transactions fail
    */
   function test_revertIfInitTxsOnArrayFail() public {
     _mockExecuteTxsCalls();
 
-    vm.mockCallRevert(_dummyContract, _badInitTxs[0], '');
-    vm.mockCallRevert(_dummyContract, _badInitTxs[1], '');
-    vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InitializationFailed.selector);
-    // Execute
-    factory.forTest_executeInitTxs(_dummyContract, _usdcInitializeData, _l2Adapter, _badInitTxs);
+    bytes[] memory _badInitTxs = _initTxsUsdc;
+    for (uint256 _i; _i < _badInitTxs.length; _i++) {
+      // Mock the calls
+      vm.mockCall(_dummyContract, _badInitTxs[0], abi.encode(true));
+      vm.mockCall(_dummyContract, _badInitTxs[1], abi.encode(false));
+      vm.mockCall(_dummyContract, _badInitTxs[2], abi.encode(1));
+
+      // Mock a revert only on the call corresponding to the for loop index
+      vm.mockCallRevert(_dummyContract, _badInitTxs[_i], '');
+
+      // Expect it to revert with the right index as argument
+      vm.expectRevert(abi.encodeWithSelector(IL2OpUSDCFactory.IL2OpUSDCFactory_InitializationFailed.selector, _i + 1));
+      // Execute
+      factory.forTest_executeInitTxs(_dummyContract, _usdcInitializeData, _l2Adapter, _badInitTxs);
+    }
   }
 
   function _mockExecuteTxsCalls() internal {
@@ -487,8 +421,6 @@ contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
 }
 
 contract L2OpUSDCFactory_Unit_DeployCreate is Base {
-  event CreateDeploymentFailed();
-
   /**
    * @notice Check the deployment of a contract using the `CREATE2` opcode is properly done to the expected addrtess
    */
@@ -501,12 +433,11 @@ contract L2OpUSDCFactory_Unit_DeployCreate is Base {
     address _expectedAddress = _precalculateCreateAddress(address(factory), _deploymentNonce);
 
     // Execute
-    (address _newContract, bool _success) = factory.forTest_deployCreate(_initCode);
+    (address _newContract) = factory.forTest_deployCreate(_initCode);
 
     // Assert the deployed was deployed at the correct address and contract has code
     assertEq(_newContract, _expectedAddress);
     assertGt(_newContract.code.length, 0);
-    assertTrue(_success);
   }
 
   /**
@@ -516,15 +447,11 @@ contract L2OpUSDCFactory_Unit_DeployCreate is Base {
     // Create a bad format for the init code to make the deployment revert
     bytes memory _badInitCode = '0x0000405060';
 
-    // Expect the `CreateDeploymentFailed` event to be emitted
-    vm.expectEmit(true, true, true, true);
-    emit CreateDeploymentFailed();
+    // Expect the tx to revert
+    vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_DeploymentFailed.selector);
 
     // Execute
-    (, bool _success) = factory.forTest_deployCreate(_badInitCode);
-
-    // Assert the deployment failed
-    assertFalse(_success);
+    factory.forTest_deployCreate(_badInitCode);
   }
 }
 
@@ -559,5 +486,9 @@ contract ForTestDummyContract {
 
   function returnFalse() public pure returns (bool) {
     return true;
+  }
+
+  function returnOne() public pure returns (uint256) {
+    return 1;
   }
 }

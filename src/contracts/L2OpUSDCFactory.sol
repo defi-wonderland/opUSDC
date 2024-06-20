@@ -45,38 +45,33 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     address _l2AdapterOwner,
     bytes calldata _usdcImplementationInitCode,
     USDCInitializeData calldata _usdcInitializeData,
-    bytes[] memory _usdcInitTxs
+    bytes[] calldata _usdcInitTxs
   ) external {
     if (msg.sender != L2_MESSENGER || ICrossDomainMessenger(L2_MESSENGER).xDomainMessageSender() != L1_FACTORY) {
       revert IL2OpUSDCFactory_InvalidSender();
     }
 
     // Deploy USDC implementation
-    (address _usdcImplementation, bool _usdcImplSuccess) = _deployCreate(_usdcImplementationInitCode);
-    if (_usdcImplSuccess) emit USDCImplementationDeployed(_usdcImplementation);
+    (address _usdcImplementation) = _deployCreate(_usdcImplementationInitCode);
+    emit USDCImplementationDeployed(_usdcImplementation);
 
     // Deploy USDC proxy
     bytes memory _usdcProxyCArgs = abi.encode(_usdcImplementation);
     bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);
-    (address _usdcProxy, bool _usdcProxySuccess) = _deployCreate(_usdcProxyInitCode);
-    if (_usdcProxySuccess) emit USDCProxyDeployed(_usdcProxy);
+    (address _usdcProxy) = _deployCreate(_usdcProxyInitCode);
+    emit USDCProxyDeployed(_usdcProxy);
 
     // Deploy L2 Adapter
     bytes memory _l2AdapterCArgs = abi.encode(_usdcProxy, msg.sender, _l1Adapter, _l2AdapterOwner);
     bytes memory _l2AdapterInitCode = bytes.concat(type(L2OpUSDCBridgeAdapter).creationCode, _l2AdapterCArgs);
-    (address _l2Adapter, bool _l2AdapterSuccess) = _deployCreate(_l2AdapterInitCode);
-    if (_l2AdapterSuccess) emit L2AdapterDeployed(_l2Adapter);
-
-    // We need to first deploy everything and then revert so we can always track the nonce on the L1 factory
-    if (!_usdcImplSuccess || !_usdcProxySuccess || !_l2AdapterSuccess) {
-      revert IL2OpUSDCFactory_DeploymentsFailed();
-    }
+    (address _l2Adapter) = _deployCreate(_l2AdapterInitCode);
+    emit L2AdapterDeployed(_l2Adapter);
 
     // Deploy the FallbackProxyAdmin internally in the L2 Adapter to keep it unique
     address _fallbackProxyAdmin = address(L2OpUSDCBridgeAdapter(_l2Adapter).FALLBACK_PROXY_ADMIN());
     // Change the USDC admin so the init txs can be executed over the proxy from this contract
-
     IUSDC(_usdcProxy).changeAdmin(_fallbackProxyAdmin);
+
     // Execute the USDC initialization transactions over the USDC contracts
     _executeInitTxs(_usdcImplementation, _usdcInitializeData, _l2Adapter, _usdcInitTxs);
     _executeInitTxs(_usdcProxy, _usdcInitializeData, _l2Adapter, _usdcInitTxs);
@@ -96,7 +91,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     address _usdc,
     USDCInitializeData calldata _usdcInitializeData,
     address _l2Adapter,
-    bytes[] memory _initTxs
+    bytes[] calldata _initTxs
   ) internal {
     // Initialize the USDC contract
     IUSDC(_usdc).initialize(
@@ -117,10 +112,11 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     // Transfer USDC ownership to the L2 adapter
     IUSDC(_usdc).transferOwnership(_l2Adapter);
 
+    // Execute the input init txs, use `_i+1` as revert argument since the first tx is already executed on the contract
     for (uint256 _i; _i < _initTxs.length; _i++) {
       (bool _success,) = _usdc.call(_initTxs[_i]);
       if (!_success) {
-        revert IL2OpUSDCFactory_InitializationFailed();
+        revert IL2OpUSDCFactory_InitializationFailed(_i + 1);
       }
     }
   }
@@ -130,14 +126,12 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
    * @param _initCode The creation bytecode.
    * @return _newContract The 20-byte address where the contract was deployed.
    */
-  function _deployCreate(bytes memory _initCode) internal returns (address _newContract, bool _success) {
+  function _deployCreate(bytes memory _initCode) internal returns (address _newContract) {
     assembly ("memory-safe") {
       _newContract := create(0x0, add(_initCode, 0x20), mload(_initCode))
     }
     if (_newContract == address(0) || _newContract.code.length == 0) {
-      emit CreateDeploymentFailed();
-    } else {
-      _success = true;
+      revert IL2OpUSDCFactory_DeploymentFailed();
     }
   }
 }
