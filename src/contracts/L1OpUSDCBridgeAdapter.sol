@@ -62,7 +62,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     // Leave this flow open to resend upgrading flow incase message fails on L2
 
     // Circle implementation of `transferOwnership` reverts on address(0)
-    if (_circle == address(0)) revert IL1OpUSDCBridgeAdapter_InvalidAddress();
+    if (_circle == address(0)) revert IOpUSDCBridgeAdapter_InvalidAddress();
 
     // Ensure messaging is enabled
     if (messengerStatus != Status.Active && messengerStatus != Status.Upgrading) {
@@ -103,7 +103,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     if (msg.sender != circle) revert IOpUSDCBridgeAdapter_InvalidSender();
 
     // If the adapter is not deprecated the burn amount has not been set
-    if (messengerStatus != Status.Deprecated) revert IL1OpUSDCBridgeAdapter_BurnAmountNotSet();
+    if (messengerStatus != Status.Deprecated) revert IOpUSDCBridgeAdapter_BurnAmountNotSet();
 
     // Burn the USDC tokens
     IUSDC(USDC).burn(burnAmount);
