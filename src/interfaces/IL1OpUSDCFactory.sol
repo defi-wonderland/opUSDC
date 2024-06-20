@@ -6,12 +6,13 @@ import {IUSDC} from './external/IUSDC.sol';
 // solhint-disable func-name-mixedcase
 interface IL1OpUSDCFactory {
   /**
-   * @notice The struct to hold the deployments data to deploy the L2 adapter, and the L2 USDC contracts
+   * @notice The struct to hold the deployments data to deploy the L2 Factory, L2 adapter, and the L2 USDC contracts
    * @param l2AdapterOwner The address of the owner of the L2 adapter
    * @param minGasLimitCreate2Factory The minimum gas limit for the L2 factory deployment
    * @param usdcImplementationInitCode The creation code with the constructor arguments for the USDC implementation
    * @param usdcInitTxs The initialization transactions to be executed on the USDC contract. The `initialize()` first
    * init tx must not be included since it is defined in the L2 factory contract
+   * @param minGasLimitCreate2Factory The minimum gas limit for the L2 factory deployment
    * @param minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
    * @dev Only the values needed in both `deployL2FactoryAndContracts()` and `deployAdapters()` params are included
    */
@@ -19,6 +20,7 @@ interface IL1OpUSDCFactory {
     address l2AdapterOwner;
     bytes usdcImplementationInitCode;
     bytes[] usdcInitTxs;
+    uint32 minGasLimitCreate2Factory;
     uint32 minGasLimitDeploy;
   }
 
@@ -72,39 +74,20 @@ interface IL1OpUSDCFactory {
   ///////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Sends the L2 factory creation tx along with the L2 deployments to be done on it through the messenger
-   * @param _l2FactorySalt The salt for the L2 factory deployment
+   * @notice Deploys the L1 Adapter, and sends the deployment txs for the L2 factory, L2 adapter and the L2 USDC through
+   * the L1 messenger
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
-   * @param _minGasLimitCreate2Factory The minimum gas limit for the L2 factory deployment
    * @param _l1AdapterOwner The address of the owner of the L1 adapter
    * @param _l2Deployments The deployments data for the L2 adapter, and the L2 USDC contracts
+   * @return _l1Adapter The address of the L1 adapter
    * @return _l2Factory The address of the L2 factory
-   * @return _l1Adapter The address of the L1 adapter
    * @return _l2Adapter The address of the L2 adapter
    */
-  function deployL2FactoryAndContracts(
-    bytes32 _l2FactorySalt,
-    address _l1Messenger,
-    uint32 _minGasLimitCreate2Factory,
-    address _l1AdapterOwner,
-    L2Deployments memory _l2Deployments
-  ) external returns (address _l2Factory, address _l1Adapter, address _l2Adapter);
-
-  /**
-   * @notice Sends the L2 adapter and USDC proxy and implementation deployments tx through the messenger
-   * to be executed on the l2 factory
-   * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
-   * @param _l1AdapterOwner The address of the owner of the L1 adapter
-   * @param _l2Deployments The deployments data for the L2 adapter, and the L2 USDC contracts
-   * @return _l1Adapter The address of the L1 adapter
-   * @return _l2Adapter The address of the L2 adapter
-   */
-  function deployAdapters(
+  function deploy(
     address _l1Messenger,
     address _l1AdapterOwner,
-    address _l2Factory,
     L2Deployments memory _l2Deployments
-  ) external returns (address _l1Adapter, address _l2Adapter);
+  ) external returns (address _l1Adapter, address _l2Factory, address _l2Adapter);
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
@@ -143,18 +126,7 @@ interface IL1OpUSDCFactory {
   function USDC_SYMBOL() external view returns (string memory _symbol);
 
   /**
-   * @notice Tracks the nonce for each L2 factory
-   * @param _l2Factory The address of the L2 factory
-   * @return _l2FactoryNonce The nonce of the L2 factory
+   * @return _deploymentsSaltCounter The counter for the deployments salt to be used on the L2 factory deployment
    */
-  function l2FactoryNonce(address _l2Factory) external view returns (uint256 _l2FactoryNonce);
-
-  /**
-   * @notice Checks if the salt has been used for deploying the L2 factory
-   * @param _salt The salt for the L2 factory deployment
-   * @return _isUsed Whether the salt has been used
-   * @dev Is important to track this to avoid having the L2 Factory deployed in the same address on different chains,
-   * which would lead to having the same addresses for L2 contracts owned by different owners
-   */
-  function isSaltUsed(bytes32 _salt) external view returns (bool _isUsed);
+  function deploymentsSaltCounter() external view returns (uint256 _deploymentsSaltCounter);
 }
