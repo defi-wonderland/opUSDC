@@ -287,6 +287,7 @@ contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
     _mockExecuteTxsCalls();
 
     // Expect `updateMasterMinter` to be properly called
+    vm.expectCall(address(factory), abi.encodeWithSelector(IUSDC.updateMasterMinter.selector, _l2Adapter));
 
     // Execute
     factory.forTest_executeInitTxs(address(factory), _usdcInitializeData, _l2Adapter, _emptyInitTxs);
