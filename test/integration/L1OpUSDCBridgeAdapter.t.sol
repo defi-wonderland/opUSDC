@@ -8,9 +8,6 @@ import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {AddressAliasHelper} from 'test/utils/AddressAliasHelper.sol';
 
 contract Integration_Bridging is IntegrationBase {
-  uint256 internal constant _amount = 1e18;
-  uint32 internal constant _minGasLimit = 1_000_000;
-
   /**
    * @notice Test the bridging process from L1 -> L2
    */
@@ -158,8 +155,6 @@ contract Integration_Migration is IntegrationBase {
   address internal _circle = makeAddr('circle');
   uint32 internal _minGasLimitReceiveOnL2 = 1_000_000;
   uint32 internal _minGasLimitSetBurnAmount = 1_000_000;
-  uint256 internal _amount = 1e18;
-  uint32 internal _minGasLimit = 1_000_000;
 
   function setUp() public override {
     super.setUp();
@@ -234,40 +229,9 @@ contract Integration_Migration is IntegrationBase {
     assertEq(l1Adapter.burnAmount(), 0);
     assertEq(l1Adapter.newOwner(), address(0));
   }
-
-  function _mintSupplyOnL2() internal {
-    vm.selectFork(mainnet);
-
-    // We need to do this instead of `deal` because deal doesnt change `totalSupply` state
-    vm.startPrank(MAINNET_USDC.masterMinter());
-    MAINNET_USDC.configureMinter(MAINNET_USDC.masterMinter(), _amount);
-    MAINNET_USDC.mint(_user, _amount);
-    vm.stopPrank();
-
-    vm.startPrank(_user);
-    MAINNET_USDC.approve(address(l1Adapter), _amount);
-    l1Adapter.sendMessage(_user, _amount, _minGasLimit);
-    vm.stopPrank();
-
-    vm.selectFork(optimism);
-    uint256 _messageNonce = L2_MESSENGER.messageNonce();
-
-    vm.startPrank(AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER)));
-    L2_MESSENGER.relayMessage(
-      _messageNonce + 1,
-      address(l1Adapter),
-      address(l2Adapter),
-      0,
-      1_000_000,
-      abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _amount)
-    );
-    vm.stopPrank();
-  }
 }
 
 contract Integration_Integration_PermissionedFlows is IntegrationBase {
-  uint32 internal _minGasLimit = 1_000_000;
-
   /**
    * @notice Test that the messaging is stopped and resumed correctly from L1 on
    * both layers

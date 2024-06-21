@@ -31,6 +31,8 @@ contract IntegrationBase is Helpers {
   uint32 public constant MIN_GAS_LIMIT_FACTORY = 4_000_000;
   uint32 public constant MIN_GAS_LIMIT_DEPLOY = 8_000_000;
   uint32 internal constant _ZERO_VALUE = 0;
+  uint256 internal _amount = 1e18;
+  uint32 internal _minGasLimit = 1_000_000;
 
   // Fork variables
   uint256 public optimism;
@@ -129,6 +131,35 @@ contract IntegrationBase is Helpers {
       )
     );
 
+    vm.stopPrank();
+  }
+
+  function _mintSupplyOnL2() internal {
+    vm.selectFork(mainnet);
+
+    // We need to do this instead of `deal` because deal doesnt change `totalSupply` state
+    vm.startPrank(MAINNET_USDC.masterMinter());
+    MAINNET_USDC.configureMinter(MAINNET_USDC.masterMinter(), _amount);
+    MAINNET_USDC.mint(_user, _amount);
+    vm.stopPrank();
+
+    vm.startPrank(_user);
+    MAINNET_USDC.approve(address(l1Adapter), _amount);
+    l1Adapter.sendMessage(_user, _amount, _minGasLimit);
+    vm.stopPrank();
+
+    vm.selectFork(optimism);
+    uint256 _messageNonce = L2_MESSENGER.messageNonce();
+
+    vm.startPrank(AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER)));
+    L2_MESSENGER.relayMessage(
+      _messageNonce + 1,
+      address(l1Adapter),
+      address(l2Adapter),
+      0,
+      1_000_000,
+      abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _amount)
+    );
     vm.stopPrank();
   }
 }

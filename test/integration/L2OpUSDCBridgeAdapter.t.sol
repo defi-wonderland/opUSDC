@@ -16,8 +16,11 @@ contract dummyImplementation {
 contract Integration_Bridging is IntegrationBase {
   using stdStorage for StdStorage;
 
-  uint256 internal constant _amount = 1e18;
-  uint32 internal constant _minGasLimit = 1_000_000;
+  function setUp() public override {
+    super.setUp();
+
+    _mintSupplyOnL2();
+  }
 
   /**
    * @notice Test the bridging process from L2 -> L1
@@ -25,9 +28,8 @@ contract Integration_Bridging is IntegrationBase {
   function test_bridgeFromL2() public {
     vm.selectFork(optimism);
 
-    // Mint to increment total supply of bridgedUSDC and balance of _user
-    vm.prank(address(l2Adapter));
-    bridgedUSDC.mint(_user, _amount);
+    assertEq(bridgedUSDC.balanceOf(_user), _amount);
+    assertEq(bridgedUSDC.balanceOf(address(l2Adapter)), 0);
 
     vm.startPrank(_user);
     bridgedUSDC.approve(address(l2Adapter), _amount);
@@ -38,9 +40,6 @@ contract Integration_Bridging is IntegrationBase {
     assertEq(bridgedUSDC.balanceOf(address(l2Adapter)), 0);
 
     vm.selectFork(mainnet);
-
-    // Increase balance of l1Adapter to simulate the transfer from adapter to user on L1
-    deal(address(MAINNET_USDC), address(l1Adapter), _amount);
 
     uint256 _messageNonce = OPTIMISM_L1_MESSENGER.messageNonce();
 
@@ -79,7 +78,7 @@ contract Integration_Bridging is IntegrationBase {
     l2Adapter.sendMessage(_l1Target, _amount, _minGasLimit);
     vm.stopPrank();
 
-    assertEq(bridgedUSDC.balanceOf(_user), 0);
+    assertEq(bridgedUSDC.balanceOf(_user), _amount);
     assertEq(bridgedUSDC.balanceOf(address(l2Adapter)), 0);
 
     vm.selectFork(mainnet);
@@ -115,10 +114,8 @@ contract Integration_Bridging is IntegrationBase {
     vm.selectFork(optimism);
 
     // Mint to increment total supply of bridgedUSDC and balance of _user
-    vm.startPrank(address(l2Adapter));
+    vm.prank(address(l2Adapter));
     bridgedUSDC.mint(_signerAd, _amount);
-    bridgedUSDC.mint(_user, _amount);
-    vm.stopPrank();
 
     vm.prank(_signerAd);
     bridgedUSDC.approve(address(l2Adapter), _amount);
@@ -137,9 +134,6 @@ contract Integration_Bridging is IntegrationBase {
     assertEq(bridgedUSDC.balanceOf(address(l2Adapter)), 0);
 
     vm.selectFork(mainnet);
-
-    // Increase balance of l1Adapter to simulate the transfer from adapter to user on L1
-    deal(address(MAINNET_USDC), address(l1Adapter), _amount);
 
     uint256 _messageNonce = OPTIMISM_L1_MESSENGER.messageNonce();
 
