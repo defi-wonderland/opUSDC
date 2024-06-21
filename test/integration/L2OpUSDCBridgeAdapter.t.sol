@@ -40,13 +40,14 @@ contract Integration_Bridging is IntegrationBase {
     assertEq(bridgedUSDC.balanceOf(address(l2Adapter)), 0);
 
     vm.selectFork(mainnet);
+    uint256 _userBalanceBefore = MAINNET_USDC.balanceOf(_user);
 
     uint256 _messageNonce = OPTIMISM_L1_MESSENGER.messageNonce();
 
     // For simplicity we do this as this slot is not exposed until prove and finalize is done
     stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(address(L2_MESSENGER));
 
-    vm.startPrank(OPTIMISM_PORTAL);
+    vm.prank(OPTIMISM_PORTAL);
     OPTIMISM_L1_MESSENGER.relayMessage(
       _messageNonce + 1,
       address(l2Adapter),
@@ -55,11 +56,10 @@ contract Integration_Bridging is IntegrationBase {
       1_000_000,
       abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _amount)
     );
-    vm.stopPrank();
 
     stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(_DEFAULT_L2_SENDER);
 
-    assertEq(MAINNET_USDC.balanceOf(_user), _amount);
+    assertEq(MAINNET_USDC.balanceOf(_user), _userBalanceBefore + _amount);
     assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), 0);
   }
 
@@ -84,16 +84,14 @@ contract Integration_Bridging is IntegrationBase {
     assertEq(bridgedUSDC.balanceOf(address(l2Adapter)), 0);
 
     vm.selectFork(mainnet);
-
-    // Increase balance of l1Adapter to simulate the transfer from adapter to user on L1
-    deal(address(MAINNET_USDC), address(l1Adapter), _amount);
+    uint256 _userBalanceBefore = MAINNET_USDC.balanceOf(_user);
 
     uint256 _messageNonce = OPTIMISM_L1_MESSENGER.messageNonce();
 
     // For simplicity we do this as this slot is not exposed until prove and finalize is done
     stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(address(L2_MESSENGER));
 
-    vm.startPrank(OPTIMISM_PORTAL);
+    vm.prank(OPTIMISM_PORTAL);
     OPTIMISM_L1_MESSENGER.relayMessage(
       _messageNonce + 1,
       address(l2Adapter),
@@ -102,11 +100,10 @@ contract Integration_Bridging is IntegrationBase {
       1_000_000,
       abi.encodeWithSignature('receiveMessage(address,uint256)', _l1Target, _amount)
     );
-    vm.stopPrank();
 
     stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(_DEFAULT_L2_SENDER);
 
-    assertEq(MAINNET_USDC.balanceOf(_l1Target), _amount);
+    assertEq(MAINNET_USDC.balanceOf(_l1Target), _userBalanceBefore + _amount);
     assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), 0);
   }
 
@@ -129,22 +126,22 @@ contract Integration_Bridging is IntegrationBase {
     uint256 _deadline = block.timestamp + 1 days;
 
     // Different address can execute the message
-    vm.startPrank(_user);
+    vm.prank(_user);
     l2Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _minGasLimit);
-    vm.stopPrank();
 
     assertEq(bridgedUSDC.balanceOf(_signerAd), 0);
     assertEq(bridgedUSDC.balanceOf(_user), _amount);
     assertEq(bridgedUSDC.balanceOf(address(l2Adapter)), 0);
 
     vm.selectFork(mainnet);
+    uint256 _userBalanceBefore = MAINNET_USDC.balanceOf(_user);
 
     uint256 _messageNonce = OPTIMISM_L1_MESSENGER.messageNonce();
 
     // For simplicity we do this as this slot is not exposed until prove and finalize is done
     stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(address(L2_MESSENGER));
 
-    vm.startPrank(OPTIMISM_PORTAL);
+    vm.prank(OPTIMISM_PORTAL);
     OPTIMISM_L1_MESSENGER.relayMessage(
       _messageNonce + 1,
       address(l2Adapter),
@@ -153,11 +150,10 @@ contract Integration_Bridging is IntegrationBase {
       1_000_000,
       abi.encodeWithSignature('receiveMessage(address,uint256)', _signerAd, _amount)
     );
-    vm.stopPrank();
 
     stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(_DEFAULT_L2_SENDER);
 
-    assertEq(MAINNET_USDC.balanceOf(_signerAd), _amount);
+    assertEq(MAINNET_USDC.balanceOf(_signerAd), _userBalanceBefore + _amount);
     assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), 0);
   }
 
@@ -231,8 +227,7 @@ contract Integration_PermissionedUsdcFlows is IntegrationBase {
       abi.encodeWithSignature('upgradeToAndCall(address,bytes)', _newImplementation, _functionToCall);
 
     // Use L2OpUSDCBridgeAdapter owner to call `upgradeToAndCall` function through the adapter
-    vm.startPrank(_owner);
-
+    vm.prank(_owner);
     // Call `upgradeToAndCall` function
     l2Adapter.callUsdcTransaction(_calldata);
 
@@ -254,7 +249,7 @@ contract Integration_PermissionedUsdcFlows is IntegrationBase {
     // Call `updatePauser` function
     l2Adapter.callUsdcTransaction(_calldata);
 
-    //Call pauser function to get the pauser
+    // Call pauser function to get the pauser
     (, bytes memory _data) = address(bridgedUSDC).call(abi.encodeWithSignature('pauser()'));
 
     //Get pauser from _data
