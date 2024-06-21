@@ -24,17 +24,13 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   /// @inheritdoc IL1OpUSDCFactory
   address public constant L2_CREATE2_DEPLOYER = 0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2;
 
-  /// @inheritdoc IL1OpUSDCFactory
-  bytes4 public constant INITIALIZE_SELECTOR = 0x07fbc6b5;
+  bytes4 internal constant INITIALIZE_SELECTOR = 0x07fbc6b5;
 
   /// @inheritdoc IL1OpUSDCFactory
   string public constant USDC_NAME = 'Bridged USDC';
 
   /// @inheritdoc IL1OpUSDCFactory
   string public constant USDC_SYMBOL = 'USDC.e';
-
-  /// @notice Zero value constant to be used on the `CREATE2_DEPLOYER` interaction
-  uint256 internal constant _ZERO_VALUE = 0;
 
   /// @notice The L2 Adapter is the third contract to be deployed on the L2 factory so its nonce is 3
   uint256 internal constant _L2_ADAPTER_DEPLOYMENT_NONCE = 3;
@@ -77,39 +73,39 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     if (bytes4(_l2Deployments.usdcInitTxs[0]) == INITIALIZE_SELECTOR) revert IL1OpUSDCFactory_NoInitializeTx();
 
     // Update the salt counter so the L2 factory is deployed with a different salt to a different address and get it
-    bytes32 _salt = bytes32(++deploymentsSaltCounter);
+    uint256 _currentNonce = ++deploymentsSaltCounter;
 
-    // Get the L2 factory init code and precalculate its address
-    bytes memory _l2FactoryCArgs = abi.encode(address(this));
-    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
-    _l2Factory = _precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), L2_CREATE2_DEPLOYER);
-
-    // Precalculate the L2 adapter address
-    _l2Adapter = _precalculateCreateAddress(_l2Factory, _L2_ADAPTER_DEPLOYMENT_NONCE);
-    // Deploy the L1 adapter
-    _l1Adapter = address(new L1OpUSDCBridgeAdapter(address(USDC), _l1Messenger, _l2Adapter, _l1AdapterOwner));
-
-    // Send the L2 factory deployment tx
-    bytes memory _l2FactoryCreate2Tx =
-      abi.encodeWithSelector(ICreate2Deployer.deploy.selector, _ZERO_VALUE, _salt, _l2FactoryInitCode);
-    ICrossDomainMessenger(_l1Messenger).sendMessage(
-      L2_CREATE2_DEPLOYER, _l2FactoryCreate2Tx, _l2Deployments.minGasLimitCreate2Factory
-    );
+    // Precalculate the l1 adapter
+    _l1Adapter = _precalculateCreateAddress(address(this), _currentNonce);
 
     // Get the L1 USDC naming and decimals to ensure they are the same on the L2, guaranteeing the same standard
     IL2OpUSDCFactory.USDCInitializeData memory _usdcInitializeData =
       IL2OpUSDCFactory.USDCInitializeData(USDC_NAME, USDC_SYMBOL, USDC.currency(), USDC.decimals());
 
-    // Send the call over the L2 factory `deploy` function message
-    bytes memory _l2DeploymentsTx = abi.encodeWithSelector(
-      L2OpUSDCFactory.deploy.selector,
+    // Use the nonce as salt to ensure always a different salt since the nonce is always increasing
+    bytes32 _salt = bytes32(_currentNonce);
+    // Get the L2 factory init code and precalculate its address
+    bytes memory _l2FactoryCArgs = abi.encode(
       _l1Adapter,
       _l2Deployments.l2AdapterOwner,
       _l2Deployments.usdcImplementationInitCode,
       _usdcInitializeData,
       _l2Deployments.usdcInitTxs
     );
-    ICrossDomainMessenger(_l1Messenger).sendMessage(_l2Factory, _l2DeploymentsTx, _l2Deployments.minGasLimitDeploy);
+    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
+    _l2Factory = _precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), L2_CREATE2_DEPLOYER);
+
+    // Precalculate the L2 adapter address
+    _l2Adapter = _precalculateCreateAddress(_l2Factory, _L2_ADAPTER_DEPLOYMENT_NONCE);
+    // Deploy the L1 adapter
+    address(new L1OpUSDCBridgeAdapter(address(USDC), _l1Messenger, _l2Adapter, _l1AdapterOwner));
+
+    // Send the L2 factory deployment tx
+    bytes memory _l2FactoryCreate2Tx =
+      abi.encodeWithSelector(ICreate2Deployer.deploy.selector, 0, _salt, _l2FactoryInitCode);
+    ICrossDomainMessenger(_l1Messenger).sendMessage(
+      L2_CREATE2_DEPLOYER, _l2FactoryCreate2Tx, _l2Deployments.minGasLimitCreate2Factory
+    );
 
     emit L1AdapterDeployed(_l1Adapter);
   }
@@ -119,7 +115,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * @param _deployer The deployer address
    * @param _nonce The next nonce of the deployer address
    * @return _precalculatedAddress The address where the contract will be stored
-   * @dev Only works for nonces between 1 and 2**64-2, which is enough for this use case
+   * @dev Only works for nonces between 1 and 127, which is enough for this use case
    */
   function _precalculateCreateAddress(
     address _deployer,
@@ -128,39 +124,9 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     bytes memory _data;
     bytes1 _len = bytes1(0x94);
 
-    // The theoretical allowed limit, based on EIP-2681, for an account nonce is 2**64-2:
-    // https://web.archive.org/web/20230921113252/https://eips.ethereum.org/EIPS/eip-2681.
-    if (_nonce > type(uint64).max - 1) {
-      revert IL1OpUSDCFactory_InvalidNonce();
-    }
     // A one-byte integer in the [0x00, 0x7f] range uses its own value as a length prefix, there is no
     // additional "0x80 + length" prefix that precedes it.
-    else if (_nonce <= 0x7f) {
-      _data = abi.encodePacked(bytes1(0xd6), _len, _deployer, uint8(_nonce));
-    }
-    // In the case of `_nonce > 0x7f` and `_nonce <= type(uint8).max`, we have the following encoding scheme
-    // (the same calculation can be carried over for higher _nonce bytes):
-    // 0xda = 0xc0 (short RLP prefix) + 0x1a (= the bytes length of: 0x94 + address + 0x84 + _nonce, in hex),
-    // 0x94 = 0x80 + 0x14 (= the bytes length of an address, 20 bytes, in hex),
-    // 0x84 = 0x80 + 0x04 (= the bytes length of the _nonce, 4 bytes, in hex).
-    else if (_nonce <= type(uint8).max) {
-      _data = abi.encodePacked(bytes1(0xd7), _len, _deployer, bytes1(0x81), uint8(_nonce));
-    } else if (_nonce <= type(uint16).max) {
-      _data = abi.encodePacked(bytes1(0xd8), _len, _deployer, bytes1(0x82), uint16(_nonce));
-    } else if (_nonce <= type(uint24).max) {
-      _data = abi.encodePacked(bytes1(0xd9), _len, _deployer, bytes1(0x83), uint24(_nonce));
-    } else if (_nonce <= type(uint32).max) {
-      _data = abi.encodePacked(bytes1(0xda), _len, _deployer, bytes1(0x84), uint32(_nonce));
-    } else if (_nonce <= type(uint40).max) {
-      _data = abi.encodePacked(bytes1(0xdb), _len, _deployer, bytes1(0x85), uint40(_nonce));
-    } else if (_nonce <= type(uint48).max) {
-      _data = abi.encodePacked(bytes1(0xdc), _len, _deployer, bytes1(0x86), uint48(_nonce));
-    } else if (_nonce <= type(uint56).max) {
-      _data = abi.encodePacked(bytes1(0xdd), _len, _deployer, bytes1(0x87), uint56(_nonce));
-    } else {
-      _data = abi.encodePacked(bytes1(0xde), _len, _deployer, bytes1(0x88), uint64(_nonce));
-    }
-
+    _data = abi.encodePacked(bytes1(0xd6), _len, _deployer, uint8(_nonce));
     _precalculatedAddress = address(uint160(uint256(keccak256(_data))));
   }
 

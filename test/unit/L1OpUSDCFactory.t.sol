@@ -50,6 +50,7 @@ abstract contract Base is Test, Helpers {
 
   IL1OpUSDCFactory.L2Deployments internal _l2Deployments;
   bytes[] internal _usdcInitTxs;
+  IL2OpUSDCFactory.USDCInitializeData internal _usdcInitializeData;
 
   function setUp() public virtual {
     // Deploy factory
@@ -70,6 +71,13 @@ abstract contract Base is Test, Helpers {
       usdcInitTxs: _usdcInitTxs,
       minGasLimitCreate2Factory: _minGasLimitCreate2Factory,
       minGasLimitDeploy: _minGasLimitDeploy
+    });
+
+    _usdcInitializeData = IL2OpUSDCFactory.USDCInitializeData({
+      _tokenName: _tokenName,
+      _tokenSymbol: _tokenSymbol,
+      _tokenCurrency: _tokenCurrency,
+      _tokenDecimals: _tokenDecimals
     });
   }
 
@@ -145,8 +153,14 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
     uint256 _factoryNonce = vm.getNonce(address(factory));
     address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce);
 
-    // Calculate the L2 factory address
-    bytes memory _l2FactoryCArgs = abi.encode(address(factory));
+    // Calculate the l2 factory address
+    bytes memory _l2FactoryCArgs = abi.encode(
+      _l1Adapter,
+      _l2Deployments.l2AdapterOwner,
+      _l2Deployments.usdcImplementationInitCode,
+      _usdcInitializeData,
+      _l2Deployments.usdcInitTxs
+    );
     bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
     address _l2Factory =
       factory.forTest_precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), factory.L2_CREATE2_DEPLOYER());
@@ -168,39 +182,6 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
     assertEq(L1OpUSDCBridgeAdapter(_l1Adapter).MESSENGER(), _l1Messenger, 'Invalid messenger address');
     assertEq(L1OpUSDCBridgeAdapter(_l1Adapter).LINKED_ADAPTER(), _l2Adapter, 'Invalid linked adapter address');
     assertEq(L1OpUSDCBridgeAdapter(_l1Adapter).owner(), _l1AdapterOwner, 'Invalid owner address');
-  }
-
-  /**
-   * @notice Check the `deploy` call over the `create2Deployer` is correctly sent through the messenger
-   */
-  function test_sendFactoryDeploymentMessage() public {
-    uint256 _zeroValue = 0;
-    bytes32 _salt = bytes32(factory.deploymentsSaltCounter() + 1);
-
-    // Mock all the `deploy` function calls
-    _mockDeployCalls();
-
-    // Get the L2 factory deployment tx
-    bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
-    bytes memory _l2FactoryCArgs = abi.encode(address(factory));
-    bytes memory _l2FactoryInitCode = bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs);
-    bytes memory _l2FactoryCreate2Tx =
-      abi.encodeWithSelector(ICreate2Deployer.deploy.selector, _zeroValue, _salt, _l2FactoryInitCode);
-
-    // Expect the `sendMessage` to be properly called
-    vm.expectCall(
-      _l1Messenger,
-      abi.encodeWithSelector(
-        ICrossDomainMessenger.sendMessage.selector,
-        factory.L2_CREATE2_DEPLOYER(),
-        _l2FactoryCreate2Tx,
-        _l2Deployments.minGasLimitCreate2Factory
-      )
-    );
-
-    // Execute
-    vm.prank(_user);
-    factory.deploy(_l1Messenger, _l1AdapterOwner, _l2Deployments);
   }
 
   /**
@@ -234,44 +215,39 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
   }
 
   /**
-   * @notice Check the L2 Factory `deploy()` call is properly sent through the messenger
+   * @notice Check the `deploy` call over the `create2Deployer` is correctly sent through the messenger
    */
-  function test_sendL2ContractsDeploymentMessage() public {
+  function test_sendFactoryDeploymentMessage() public {
+    uint256 _zeroValue = 0;
     bytes32 _salt = bytes32(factory.deploymentsSaltCounter() + 1);
-
-    // Get the l1 adapter address
-    uint256 _factoryNonce = vm.getNonce(address(factory));
-    address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce);
-
-    // Precalculate L2 factory
-    bytes memory _l2FactoryCArgs = abi.encode(address(factory));
-    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
-    address _l2Factory =
-      _precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), factory.L2_CREATE2_DEPLOYER());
 
     // Mock all the `deploy` function calls
     _mockDeployCalls();
 
-    IL2OpUSDCFactory.USDCInitializeData memory _usdcInitializeData = IL2OpUSDCFactory.USDCInitializeData({
-      _tokenName: _tokenName,
-      _tokenSymbol: _tokenSymbol,
-      _tokenCurrency: _tokenCurrency,
-      _tokenDecimals: _tokenDecimals
-    });
+    // Precalculate the L1 adapter address
+    uint256 _factoryNonce = vm.getNonce(address(factory));
+    address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce);
 
-    // Expect the `sendMessage` to be properly called
-    bytes memory _l2DeploymentsTx = abi.encodeWithSelector(
-      L2OpUSDCFactory.deploy.selector,
+    // Get the L2 factory deployment tx
+    bytes memory _l2FactoryCArgs = abi.encode(
       _l1Adapter,
       _l2Deployments.l2AdapterOwner,
       _l2Deployments.usdcImplementationInitCode,
       _usdcInitializeData,
       _l2Deployments.usdcInitTxs
     );
+    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
+    bytes memory _l2FactoryCreate2Tx =
+      abi.encodeWithSelector(ICreate2Deployer.deploy.selector, _zeroValue, _salt, _l2FactoryInitCode);
+
+    // Expect the `sendMessage` to be properly called
     vm.expectCall(
       _l1Messenger,
       abi.encodeWithSelector(
-        ICrossDomainMessenger.sendMessage.selector, _l2Factory, _l2DeploymentsTx, _l2Deployments.minGasLimitDeploy
+        ICrossDomainMessenger.sendMessage.selector,
+        factory.L2_CREATE2_DEPLOYER(),
+        _l2FactoryCreate2Tx,
+        _l2Deployments.minGasLimitCreate2Factory
       )
     );
 
@@ -306,16 +282,23 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
   function test_returnAdapters() public {
     bytes32 _salt = bytes32(factory.deploymentsSaltCounter() + 1);
 
-    // Calculate the expected l2 factory address
-    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, abi.encode(address(factory)));
+    // Calculate the L1 Adapter address
+    uint256 _factoryNonce = vm.getNonce(address(factory));
+    address _expectedL1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce);
+
+    // Calculate the l2 factory address
+    bytes memory _l2FactoryCArgs = abi.encode(
+      _expectedL1Adapter,
+      _l2Deployments.l2AdapterOwner,
+      _l2Deployments.usdcImplementationInitCode,
+      _usdcInitializeData,
+      _l2Deployments.usdcInitTxs
+    );
+    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
     address _expectedL2Factory =
-      _precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), factory.L2_CREATE2_DEPLOYER());
+      factory.forTest_precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), factory.L2_CREATE2_DEPLOYER());
 
-    // Calculate the expected l1 adapter address
-    address _expectedL1Adapter =
-      factory.forTest_precalculateCreateAddress(address(factory), vm.getNonce(address(factory)));
-
-    // Calculate the expected l2 adapter address
+    // Calculate the L2 adapter address
     address _expectedL2Adapter = factory.forTest_precalculateCreateAddress(_expectedL2Factory, 3);
 
     // Mock all the `deploy` function calls
@@ -334,41 +317,28 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
 
 contract L1OpUSDCFactory_Unit_PrecalculateCreateAddress is Base {
   /**
-   * @notice Check the function reverts if the nonce is higher than the max possible value (2^64 - 2)
-   */
-  function test_revertOnInvalidNonce() public {
-    uint64 _maxNonce = 2 ** 64 - 2;
-    uint64 _nonce = _maxNonce + 1;
-    // Setting a higher nonce than the deployer's current one will revert
-    vm.setNonce(_user, _nonce);
-
-    // Expect the call to revert
-    vm.expectRevert(IL1OpUSDCFactory.IL1OpUSDCFactory_InvalidNonce.selector);
-
-    // Execute
-    factory.forTest_precalculateCreateAddress(_user, _nonce);
-  }
-
-  /**
    * @notice Check the `precalculateCreateAddress` function returns the correct address for the given deployer and nonce
-   * We are testing the range from 1 to (2**64 -2)
+   * We are testing the range from 1 to 127
    */
-  function test_precalculateCreateAddress(address _deployer, uint256 _nonce) public {
-    uint256 _maxNonce = 2 ** 64 - 2;
-    _nonce = bound(_nonce, 1, _maxNonce);
-    // Setting a lower nonce than the deployer's current one will revert
-    vm.assume(vm.getNonce(_deployer) <= _nonce);
-    vm.setNonce(_deployer, uint64(_nonce));
+  function test_precalculateCreateAddress(address _deployer) public {
+    // Assume the deployer's nonce is less than 1 since setting to a higher value will revert
+    vm.assume(vm.getNonce(_deployer) <= 1);
 
-    // Precalculate the address
-    address _precalculatedAddress = factory.forTest_precalculateCreateAddress(_deployer, _nonce);
+    uint256 _maxNonce = 127;
+    for (uint256 _i = 1; _i <= _maxNonce; _i++) {
+      // Precalculate the address
+      address _precalculatedAddress = factory.forTest_precalculateCreateAddress(_deployer, _i);
 
-    // Execute
-    vm.prank(_deployer);
-    address _newAddress = address(new ForTest_DummyContract());
+      // Setting a lower nonce than the deployer's current one will revert
+      vm.setNonce(_deployer, uint64(_i));
 
-    // Assert
-    assertEq(_newAddress, _precalculatedAddress, 'Invalid create precalculated address');
+      // Execute
+      vm.prank(_deployer);
+      address _newAddress = address(new ForTest_DummyContract());
+
+      // Assert
+      assertEq(_newAddress, _precalculatedAddress, 'Invalid create precalculated address');
+    }
   }
 }
 

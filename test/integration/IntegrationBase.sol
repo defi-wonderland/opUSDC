@@ -113,21 +113,23 @@ contract IntegrationBase is Helpers {
       abi.encodeWithSignature('deploy(uint256,bytes32,bytes)', _ZERO_VALUE, _salt, _l2FactoryInitCode)
     );
 
-    L2_MESSENGER.relayMessage(
-      L2_MESSENGER.messageNonce() + 2,
-      address(factory),
-      address(_l2Factory),
-      _ZERO_VALUE,
-      MIN_GAS_LIMIT_DEPLOY,
-      abi.encodeWithSelector(
-        L2OpUSDCFactory.deploy.selector,
-        _l1Adapter,
-        _l2Deployments.l2AdapterOwner,
-        _l2Deployments.usdcImplementationInitCode,
-        _usdcInitializeData,
-        _l2Deployments.usdcInitTxs
-      )
-    );
+    // TODO: update
+
+    // L2_MESSENGER.relayMessage(
+    //   L2_MESSENGER.messageNonce() + 2,
+    //   address(factory),
+    //   address(_l2Factory),
+    //   _ZERO_VALUE,
+    //   MIN_GAS_LIMIT_DEPLOY,
+    //   abi.encodeWithSelector(
+    //     L2OpUSDCFactory.deploy.selector,
+    //     _l1Adapter,
+    //     _l2Deployments.l2AdapterOwner,
+    //     _l2Deployments.usdcImplementationInitCode,
+    //     _usdcInitializeData,
+    //     _l2Deployments.usdcInitTxs
+    //   )
+    // );
 
     vm.stopPrank();
   }
