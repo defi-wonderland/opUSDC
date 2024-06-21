@@ -12,7 +12,7 @@ import {IUSDC} from 'interfaces/external/IUSDC.sol';
 /**
  * @title L1OpUSDCFactory
  * @notice Factory contract to deploy and setup the `L1OpUSDCBridgeAdapter` contract on L1, and
- * triggers the dpeloyment of the L2 factory, L2 adapter, and L2 USDC contracts.
+ * triggers the deployment of the L2 factory, L2 adapter, and L2 USDC contracts.
  * @dev The salt is always different for each deployed instance of this contract on the L1 Factory, and the L2 contracts
  * are deployed with `CREATE` to guarantee that the addresses are unique among all the L2s, so we avoid a scenario where
  * L2 contracts have the same address on different L2s when triggered by different owners.
