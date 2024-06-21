@@ -14,7 +14,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   uint256 public burnAmount;
 
   /// @inheritdoc IL1OpUSDCBridgeAdapter
-  address public circle;
+  address public newOwner;
 
   /// @inheritdoc IL1OpUSDCBridgeAdapter
   Status public messengerStatus;
@@ -50,35 +50,34 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
 
   /**
    * @notice Initiates the process to migrate the bridged USDC to native USDC
-   * @param _circle The address to transfer ownerships to
+   * @param _newOwner The address to transfer ownerships to
    * @param _minGasLimitReceiveOnL2 Minimum gas limit that the message can be executed with on L2
    * @param _minGasLimitSetBurnAmount Minimum gas limit that the message can be executed with to set the burn amount
    */
   function migrateToNative(
-    address _circle,
+    address _newOwner,
     uint32 _minGasLimitReceiveOnL2,
     uint32 _minGasLimitSetBurnAmount
   ) external onlyOwner {
     // Leave this flow open to resend upgrading flow incase message fails on L2
-
-    // Circle implementation of `transferOwnership` reverts on address(0)
-    if (_circle == address(0)) revert IL1OpUSDCBridgeAdapter_InvalidAddress();
+    // Circle's USDC implementation of `transferOwnership` reverts on address(0)
+    if (_newOwner == address(0)) revert IOpUSDCBridgeAdapter_InvalidAddress();
 
     // Ensure messaging is enabled
     if (messengerStatus != Status.Active && messengerStatus != Status.Upgrading) {
       revert IOpUSDCBridgeAdapter_MessagingDisabled();
     }
 
-    circle = _circle;
+    newOwner = _newOwner;
     messengerStatus = Status.Upgrading;
 
     ICrossDomainMessenger(MESSENGER).sendMessage(
       LINKED_ADAPTER,
-      abi.encodeWithSignature('receiveMigrateToNative(address,uint32)', _circle, _minGasLimitSetBurnAmount),
+      abi.encodeWithSignature('receiveMigrateToNative(address,uint32)', _newOwner, _minGasLimitSetBurnAmount),
       _minGasLimitReceiveOnL2
     );
 
-    emit MigratingToNative(MESSENGER, _circle);
+    emit MigratingToNative(MESSENGER, _newOwner);
   }
 
   /**
@@ -100,17 +99,17 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @dev The amount is determined by the burnAmount variable, which is set in the setBurnAmount function
    */
   function burnLockedUSDC() external {
-    if (msg.sender != circle) revert IOpUSDCBridgeAdapter_InvalidSender();
+    if (msg.sender != newOwner) revert IOpUSDCBridgeAdapter_InvalidSender();
 
     // If the adapter is not deprecated the burn amount has not been set
-    if (messengerStatus != Status.Deprecated) revert IL1OpUSDCBridgeAdapter_BurnAmountNotSet();
+    if (messengerStatus != Status.Deprecated) revert IOpUSDCBridgeAdapter_BurnAmountNotSet();
 
     // Burn the USDC tokens
     IUSDC(USDC).burn(burnAmount);
 
     // Set the burn amount to 0
     burnAmount = 0;
-    circle = address(0);
+    newOwner = address(0);
 
     emit MigrationComplete();
   }
