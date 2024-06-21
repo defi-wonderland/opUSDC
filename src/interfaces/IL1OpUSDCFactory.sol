@@ -12,15 +12,12 @@ interface IL1OpUSDCFactory {
    * @param usdcImplementationInitCode The creation code with the constructor arguments for the USDC implementation
    * @param usdcInitTxs The initialization transactions to be executed on the USDC contract. The `initialize()` first
    * init tx must not be included since it is defined in the L2 factory contract
-   * @param minGasLimitCreate2Factory The minimum gas limit for the L2 factory deployment
-   * @param minGasLimitDeploy The minimum gas limit for calling the `deploy` function on the L2 factory
-   * @dev Only the values needed in both `deployL2FactoryAndContracts()` and `deployAdapters()` params are included
+   * @param minGasLimitDeploy The minimum gas limit for calling the deploying the L2 Factory, L2 adapter, and L2 USDC
    */
   struct L2Deployments {
     address l2AdapterOwner;
     bytes usdcImplementationInitCode;
     bytes[] usdcInitTxs;
-    uint32 minGasLimitCreate2Factory;
     uint32 minGasLimitDeploy;
   }
 
@@ -102,12 +99,6 @@ interface IL1OpUSDCFactory {
    * @return _l2Create2Deployer The address of the `create2Deployer` contract on L2
    */
   function L2_CREATE2_DEPLOYER() external view returns (address _l2Create2Deployer);
-
-  /**
-   * @return _initializeSelector The selector of the `initialize()` function
-   * @dev Used to check the first init tx doesn't match it since it is already defined in the L2 factory contract
-   */
-  function INITIALIZE_SELECTOR() external view returns (bytes4 _initializeSelector);
 
   /**
    * @return _usdc The address of USDC on L1

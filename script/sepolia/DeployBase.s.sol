@@ -9,7 +9,6 @@ import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementation
 
 contract DeployBase is Script {
   address public constant L1_MESSENGER = 0xC34855F4De64F1840e5686e64278da901e261f20;
-  uint32 public constant MIN_GAS_LIMIT_FACTORY = 4_000_000;
   uint32 public constant MIN_GAS_LIMIT_DEPLOY = 8_000_000;
   IL1OpUSDCFactory public immutable L1_FACTORY = IL1OpUSDCFactory(vm.envAddress('L1_FACTORY_SEPOLIA'));
 
@@ -23,7 +22,6 @@ contract DeployBase is Script {
       l2AdapterOwner: deployer,
       usdcImplementationInitCode: USDC_IMPLEMENTATION_CREATION_CODE,
       usdcInitTxs: _usdcInitTxs,
-      minGasLimitCreate2Factory: MIN_GAS_LIMIT_FACTORY,
       minGasLimitDeploy: MIN_GAS_LIMIT_DEPLOY
     });
     (address _l1Adapter, address _l2Factory, address _l2Adapter) =

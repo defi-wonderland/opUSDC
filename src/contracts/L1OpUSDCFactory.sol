@@ -12,7 +12,7 @@ import {IUSDC} from 'interfaces/external/IUSDC.sol';
 /**
  * @title L1OpUSDCFactory
  * @notice Factory contract to deploy and setup the `L1OpUSDCBridgeAdapter` contract on L1, and
- * precalculates the addresses of the L2 deployments to be done on the L2 factory.
+ * triggers the deployment of the L2 factory, L2 adapter, and L2 USDC contracts.
  * @dev The salt is always different for each deployed instance of this contract on the L1 Factory, and the L2 contracts
  * are deployed with `CREATE` to guarantee that the addresses are unique among all the L2s, so we avoid a scenario where
  * L2 contracts have the same address on different L2s when triggered by different owners.
@@ -25,16 +25,14 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   address public constant L2_CREATE2_DEPLOYER = 0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2;
 
   /// @inheritdoc IL1OpUSDCFactory
-  bytes4 public constant INITIALIZE_SELECTOR = 0x07fbc6b5;
-
-  /// @inheritdoc IL1OpUSDCFactory
   string public constant USDC_NAME = 'Bridged USDC';
 
   /// @inheritdoc IL1OpUSDCFactory
   string public constant USDC_SYMBOL = 'USDC.e';
 
-  /// @notice Zero value constant to be used on the `CREATE2_DEPLOYER` interaction
-  uint256 internal constant _ZERO_VALUE = 0;
+  /// @notice The selector of the `initialize()` function.
+  /// @dev Used to check the first init tx doesn't match it since it is already defined in the L2 factory contract
+  bytes4 internal constant _INITIALIZE_SELECTOR = 0x07fbc6b5;
 
   /// @notice The L2 Adapter is the third contract to be deployed on the L2 factory so its nonce is 3
   uint256 internal constant _L2_ADAPTER_DEPLOYMENT_NONCE = 3;
@@ -74,42 +72,42 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   ) external returns (address _l1Adapter, address _l2Factory, address _l2Adapter) {
     // Checks that the first init tx selector is not equal to the `initialize()` function since  we manually
     // construct this function on the L2 factory contract
-    if (bytes4(_l2Deployments.usdcInitTxs[0]) == INITIALIZE_SELECTOR) revert IL1OpUSDCFactory_NoInitializeTx();
+    if (bytes4(_l2Deployments.usdcInitTxs[0]) == _INITIALIZE_SELECTOR) revert IL1OpUSDCFactory_NoInitializeTx();
 
     // Update the salt counter so the L2 factory is deployed with a different salt to a different address and get it
-    bytes32 _salt = bytes32(++deploymentsSaltCounter);
+    uint256 _currentNonce = ++deploymentsSaltCounter;
 
-    // Get the L2 factory init code and precalculate its address
-    bytes memory _l2FactoryCArgs = abi.encode(address(this));
-    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
-    _l2Factory = _precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), L2_CREATE2_DEPLOYER);
-
-    // Precalculate the L2 adapter address
-    _l2Adapter = _precalculateCreateAddress(_l2Factory, _L2_ADAPTER_DEPLOYMENT_NONCE);
-    // Deploy the L1 adapter
-    _l1Adapter = address(new L1OpUSDCBridgeAdapter(address(USDC), _l1Messenger, _l2Adapter, _l1AdapterOwner));
-
-    // Send the L2 factory deployment tx
-    bytes memory _l2FactoryCreate2Tx =
-      abi.encodeWithSelector(ICreate2Deployer.deploy.selector, _ZERO_VALUE, _salt, _l2FactoryInitCode);
-    ICrossDomainMessenger(_l1Messenger).sendMessage(
-      L2_CREATE2_DEPLOYER, _l2FactoryCreate2Tx, _l2Deployments.minGasLimitCreate2Factory
-    );
+    // Precalculate the l1 adapter
+    _l1Adapter = _precalculateCreateAddress(address(this), _currentNonce);
 
     // Get the L1 USDC naming and decimals to ensure they are the same on the L2, guaranteeing the same standard
     IL2OpUSDCFactory.USDCInitializeData memory _usdcInitializeData =
       IL2OpUSDCFactory.USDCInitializeData(USDC_NAME, USDC_SYMBOL, USDC.currency(), USDC.decimals());
 
-    // Send the call over the L2 factory `deploy` function message
-    bytes memory _l2DeploymentsTx = abi.encodeWithSelector(
-      L2OpUSDCFactory.deploy.selector,
+    // Use the nonce as salt to ensure always a different salt since the nonce is always increasing
+    bytes32 _salt = bytes32(_currentNonce);
+    // Get the L2 factory init code and precalculate its address
+    bytes memory _l2FactoryCArgs = abi.encode(
       _l1Adapter,
       _l2Deployments.l2AdapterOwner,
       _l2Deployments.usdcImplementationInitCode,
       _usdcInitializeData,
       _l2Deployments.usdcInitTxs
     );
-    ICrossDomainMessenger(_l1Messenger).sendMessage(_l2Factory, _l2DeploymentsTx, _l2Deployments.minGasLimitDeploy);
+    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
+    _l2Factory = _precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), L2_CREATE2_DEPLOYER);
+
+    // Precalculate the L2 adapter address
+    _l2Adapter = _precalculateCreateAddress(_l2Factory, _L2_ADAPTER_DEPLOYMENT_NONCE);
+    // Deploy the L1 adapter
+    address(new L1OpUSDCBridgeAdapter(address(USDC), _l1Messenger, _l2Adapter, _l1AdapterOwner));
+
+    // Send the L2 factory deployment tx
+    bytes memory _l2FactoryDeploymentsTx =
+      abi.encodeWithSelector(ICreate2Deployer.deploy.selector, 0, _salt, _l2FactoryInitCode);
+    ICrossDomainMessenger(_l1Messenger).sendMessage(
+      L2_CREATE2_DEPLOYER, _l2FactoryDeploymentsTx, _l2Deployments.minGasLimitDeploy
+    );
 
     emit L1AdapterDeployed(_l1Adapter);
   }
@@ -119,7 +117,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * @param _deployer The deployer address
    * @param _nonce The next nonce of the deployer address
    * @return _precalculatedAddress The address where the contract will be stored
-   * @dev Only works for nonces between 1 and 2**64-2, which is enough for this use case
+   * @dev Only works for nonces between 1 and (2 ** 64 - 2), which is enough for this use case
    */
   function _precalculateCreateAddress(
     address _deployer,
@@ -128,14 +126,11 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     bytes memory _data;
     bytes1 _len = bytes1(0x94);
 
-    // The theoretical allowed limit, based on EIP-2681, for an account nonce is 2**64-2:
-    // https://web.archive.org/web/20230921113252/https://eips.ethereum.org/EIPS/eip-2681.
-    if (_nonce > type(uint64).max - 1) {
-      revert IL1OpUSDCFactory_InvalidNonce();
-    }
     // A one-byte integer in the [0x00, 0x7f] range uses its own value as a length prefix, there is no
     // additional "0x80 + length" prefix that precedes it.
-    else if (_nonce <= 0x7f) {
+    // A one-byte integer in the [0x00, 0x7f] range uses its own value as a length prefix, there is no
+    // additional "0x80 + length" prefix that precedes it.
+    if (_nonce <= 0x7f) {
       _data = abi.encodePacked(bytes1(0xd6), _len, _deployer, uint8(_nonce));
     }
     // In the case of `_nonce > 0x7f` and `_nonce <= type(uint8).max`, we have the following encoding scheme
