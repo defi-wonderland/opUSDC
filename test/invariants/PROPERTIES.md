@@ -13,3 +13,4 @@
 | Assuming the adapter is the only minter the amount locked in L1 should always equal the amount minted on L2 | High level |
 | USDC proxy admin and token ownership rights can only be transferred during the migration to native flow     | High level |
 | Different L2 deployed contracts addresses can never match on different L2s                                  | High level |
+| Precalculated addresses on the L1 Factory should always match the deployed addresses on L2s                 | High level |
