@@ -83,6 +83,11 @@ contract IntegrationBase is Helpers {
       factory.USDC_NAME(), factory.USDC_SYMBOL(), MAINNET_USDC.currency(), MAINNET_USDC.decimals()
     );
 
+    // Give max minting power to the master minter
+    vm.startPrank(MAINNET_USDC.masterMinter());
+    MAINNET_USDC.configureMinter(MAINNET_USDC.masterMinter(), type(uint256).max);
+    vm.stopPrank();
+
     vm.selectFork(optimism);
     _relayL2Deployments(_salt, _l1Adapter, usdcInitializeData, _l2Deployments);
 
