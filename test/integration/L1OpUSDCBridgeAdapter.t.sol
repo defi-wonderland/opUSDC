@@ -25,6 +25,8 @@ contract Integration_Bridging is IntegrationBase {
     assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), _amount);
 
     vm.selectFork(optimism);
+    uint256 _userBalanceBefore = bridgedUSDC.balanceOf(_user);
+
     uint256 _messageNonce = L2_MESSENGER.messageNonce();
 
     vm.startPrank(AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER)));
@@ -38,7 +40,7 @@ contract Integration_Bridging is IntegrationBase {
     );
     vm.stopPrank();
 
-    assertEq(bridgedUSDC.balanceOf(address(_user)), _amount);
+    assertEq(bridgedUSDC.balanceOf(address(_user)), _userBalanceBefore + _amount);
   }
 
   /**
@@ -60,6 +62,8 @@ contract Integration_Bridging is IntegrationBase {
     assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), _amount);
 
     vm.selectFork(optimism);
+    uint256 _userBalanceBefore = bridgedUSDC.balanceOf(_user);
+
     uint256 _messageNonce = L2_MESSENGER.messageNonce();
 
     vm.startPrank(AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER)));
@@ -73,7 +77,7 @@ contract Integration_Bridging is IntegrationBase {
     );
     vm.stopPrank();
 
-    assertEq(bridgedUSDC.balanceOf(address(_l2Target)), _amount);
+    assertEq(bridgedUSDC.balanceOf(address(_l2Target)), _userBalanceBefore + _amount);
     assertEq(bridgedUSDC.balanceOf(address(_user)), 0);
   }
 
@@ -106,6 +110,8 @@ contract Integration_Bridging is IntegrationBase {
     assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), _amount);
 
     vm.selectFork(optimism);
+    uint256 _userBalanceBefore = bridgedUSDC.balanceOf(_user);
+
     uint256 _messageNonce = L2_MESSENGER.messageNonce();
 
     vm.startPrank(AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER)));
@@ -119,7 +125,7 @@ contract Integration_Bridging is IntegrationBase {
     );
     vm.stopPrank();
 
-    assertEq(bridgedUSDC.balanceOf(address(_signerAd)), _amount);
+    assertEq(bridgedUSDC.balanceOf(address(_signerAd)), _userBalanceBefore + _amount);
     assertEq(bridgedUSDC.balanceOf(address(_user)), 0);
   }
 

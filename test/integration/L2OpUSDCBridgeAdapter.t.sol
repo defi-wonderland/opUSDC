@@ -40,6 +40,7 @@ contract Integration_Bridging is IntegrationBase {
     assertEq(bridgedUSDC.balanceOf(address(l2Adapter)), 0);
 
     vm.selectFork(mainnet);
+    uint256 _userBalanceBefore = MAINNET_USDC.balanceOf(_user);
 
     uint256 _messageNonce = OPTIMISM_L1_MESSENGER.messageNonce();
 
@@ -59,7 +60,7 @@ contract Integration_Bridging is IntegrationBase {
 
     stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(_DEFAULT_L2_SENDER);
 
-    assertEq(MAINNET_USDC.balanceOf(_user), _amount);
+    assertEq(MAINNET_USDC.balanceOf(_user), _userBalanceBefore + _amount);
     assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), 0);
   }
 
@@ -84,6 +85,7 @@ contract Integration_Bridging is IntegrationBase {
     assertEq(bridgedUSDC.balanceOf(address(l2Adapter)), 0);
 
     vm.selectFork(mainnet);
+    uint256 _userBalanceBefore = MAINNET_USDC.balanceOf(_user);
 
     // Increase balance of l1Adapter to simulate the transfer from adapter to user on L1
     deal(address(MAINNET_USDC), address(l1Adapter), _amount);
@@ -106,7 +108,7 @@ contract Integration_Bridging is IntegrationBase {
 
     stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(_DEFAULT_L2_SENDER);
 
-    assertEq(MAINNET_USDC.balanceOf(_l1Target), _amount);
+    assertEq(MAINNET_USDC.balanceOf(_l1Target), _userBalanceBefore + _amount);
     assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), 0);
   }
 
@@ -138,6 +140,7 @@ contract Integration_Bridging is IntegrationBase {
     assertEq(bridgedUSDC.balanceOf(address(l2Adapter)), 0);
 
     vm.selectFork(mainnet);
+    uint256 _userBalanceBefore = MAINNET_USDC.balanceOf(_user);
 
     uint256 _messageNonce = OPTIMISM_L1_MESSENGER.messageNonce();
 
@@ -157,7 +160,7 @@ contract Integration_Bridging is IntegrationBase {
 
     stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(_DEFAULT_L2_SENDER);
 
-    assertEq(MAINNET_USDC.balanceOf(_signerAd), _amount);
+    assertEq(MAINNET_USDC.balanceOf(_signerAd), _userBalanceBefore + _amount);
     assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), 0);
   }
 

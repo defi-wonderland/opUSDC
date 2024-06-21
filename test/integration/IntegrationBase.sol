@@ -13,8 +13,6 @@ import {Helpers} from 'test/utils/Helpers.sol';
 import {USDC_IMPLEMENTATION_CREATION_CODE} from 'test/utils/USDCImplementationCreationCode.sol';
 import {IMockCrossDomainMessenger} from 'test/utils/interfaces/IMockCrossDomainMessenger.sol';
 
-import 'forge-std/Test.sol';
-
 contract IntegrationBase is Helpers {
   // Constants
   uint256 internal constant _MAINNET_FORK_BLOCK = 20_076_176;
@@ -36,6 +34,8 @@ contract IntegrationBase is Helpers {
   ///         CrossDomainMessenger contracts before an actual sender is set. This value is
   ///         non-zero to reduce the gas cost of message passing transactions.
   address internal constant _DEFAULT_L2_SENDER = 0x000000000000000000000000000000000000dEaD;
+
+  address public immutable ALIASED_L1_MESSENGER = AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER));
 
   // Fork variables
   uint256 public optimism;
@@ -109,10 +109,9 @@ contract IntegrationBase is Helpers {
       _usdcInitializeData,
       _l2Deployments.usdcInitTxs
     );
-    console.logBytes32(keccak256(_l2FactoryCArgs));
     bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
 
-    vm.startPrank(AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER)));
+    vm.startPrank(ALIASED_L1_MESSENGER);
 
     L2_MESSENGER.relayMessage(
       L2_MESSENGER.messageNonce() + 1,
@@ -143,7 +142,7 @@ contract IntegrationBase is Helpers {
     vm.selectFork(optimism);
     uint256 _messageNonce = L2_MESSENGER.messageNonce();
 
-    vm.startPrank(AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER)));
+    vm.startPrank(ALIASED_L1_MESSENGER);
     L2_MESSENGER.relayMessage(
       _messageNonce + 1,
       address(l1Adapter),
