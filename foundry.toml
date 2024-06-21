@@ -8,7 +8,8 @@ number_underscore = 'thousands'
 multiline_func_header = 'params_first'
 sort_imports = true
 
-[optimizer]
+[profile.default]
+optimizer = true
 optimizer_runs = 70
 
 [profile.optimized]
