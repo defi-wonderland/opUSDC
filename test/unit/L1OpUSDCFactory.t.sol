@@ -10,6 +10,8 @@ import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 import {ICreate2Deployer} from 'interfaces/external/ICreate2Deployer.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
+
+import {CrossChainDeployments} from 'libraries/CrossChainDeployments.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
 contract ForTestL1OpUSDCFactory is L1OpUSDCFactory {
@@ -19,7 +21,7 @@ contract ForTestL1OpUSDCFactory is L1OpUSDCFactory {
     address _deployer,
     uint256 _nonce
   ) public pure returns (address _precalculatedAddress) {
-    _precalculatedAddress = _precalculateCreateAddress(_deployer, _nonce);
+    _precalculatedAddress = CrossChainDeployments.precalculateCreateAddress(_deployer, _nonce);
   }
 
   function forTest_precalculateCreate2Address(
@@ -27,7 +29,7 @@ contract ForTestL1OpUSDCFactory is L1OpUSDCFactory {
     bytes32 _initCodeHash,
     address _deployer
   ) public pure returns (address _precalculatedAddress) {
-    _precalculatedAddress = _precalculateCreate2Address(_salt, _initCodeHash, _deployer);
+    _precalculatedAddress = CrossChainDeployments.precalculateCreate2Address(_salt, _initCodeHash, _deployer);
   }
 }
 
