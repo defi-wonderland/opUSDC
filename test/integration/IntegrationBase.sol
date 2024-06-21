@@ -29,6 +29,13 @@ contract IntegrationBase is Helpers {
     IMockCrossDomainMessenger(0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1);
   uint32 public constant MIN_GAS_LIMIT_DEPLOY = 8_000_000;
   uint32 internal constant _ZERO_VALUE = 0;
+  uint256 internal constant _amount = 1e18;
+  uint32 internal constant _minGasLimit = 1_000_000;
+
+  /// @notice Value used for the L2 sender storage slot in both the OptimismPortal and the
+  ///         CrossDomainMessenger contracts before an actual sender is set. This value is
+  ///         non-zero to reduce the gas cost of message passing transactions.
+  address internal constant _DEFAULT_L2_SENDER = 0x000000000000000000000000000000000000dEaD;
 
   // Fork variables
   uint256 public optimism;
@@ -116,6 +123,35 @@ contract IntegrationBase is Helpers {
       abi.encodeWithSignature('deploy(uint256,bytes32,bytes)', _ZERO_VALUE, _salt, _l2FactoryInitCode)
     );
 
+    vm.stopPrank();
+  }
+
+  function _mintSupplyOnL2(uint256 _supply) internal {
+    vm.selectFork(mainnet);
+
+    // We need to do this instead of `deal` because deal doesnt change `totalSupply` state
+    vm.startPrank(MAINNET_USDC.masterMinter());
+    MAINNET_USDC.configureMinter(MAINNET_USDC.masterMinter(), _supply);
+    MAINNET_USDC.mint(_user, _supply);
+    vm.stopPrank();
+
+    vm.startPrank(_user);
+    MAINNET_USDC.approve(address(l1Adapter), _supply);
+    l1Adapter.sendMessage(_user, _supply, _minGasLimit);
+    vm.stopPrank();
+
+    vm.selectFork(optimism);
+    uint256 _messageNonce = L2_MESSENGER.messageNonce();
+
+    vm.startPrank(AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER)));
+    L2_MESSENGER.relayMessage(
+      _messageNonce + 1,
+      address(l1Adapter),
+      address(l2Adapter),
+      0,
+      1_000_000,
+      abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _supply)
+    );
     vm.stopPrank();
   }
 }
