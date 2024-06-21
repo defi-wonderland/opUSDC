@@ -40,7 +40,7 @@ library CrossChainDeployments {
     bytes32 _salt,
     bytes32 _initCodeHash,
     address _deployer
-  ) public pure returns (address _precalculatedAddress) {
+  ) internal pure returns (address _precalculatedAddress) {
     assembly ("memory-safe") {
       let _ptr := mload(0x40)
       mstore(add(_ptr, 0x40), _initCodeHash)
@@ -62,7 +62,7 @@ library CrossChainDeployments {
   function precalculateCreateAddress(
     address _deployer,
     uint256 _nonce
-  ) public pure returns (address _precalculatedAddress) {
+  ) internal pure returns (address _precalculatedAddress) {
     bytes memory _data;
     bytes1 _len = bytes1(0x94);
 
