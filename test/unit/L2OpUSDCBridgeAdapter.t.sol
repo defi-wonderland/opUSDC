@@ -168,8 +168,8 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
 /*///////////////////////////////////////////////////////////////
                           MESSAGING CONTROL
   ///////////////////////////////////////////////////////////////*/
-contract L2OpUSDCBridgeAdapter_Unit_ReceiveStopMessaging is Base {
-  event MessagingStopped(address _messenger);
+contract L2OpUSDCBridgeAdapter_Unit_receiveToggleMessaging is Base {
+  event MessagingDisabled(bool _isMessagingDisabled);
 
   /**
    * @notice Check that the function reverts if the sender is not the messenger
@@ -180,7 +180,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveStopMessaging is Base {
     // Execute
     vm.prank(_notMessenger);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
-    adapter.receiveStopMessaging();
+    adapter.receiveToggleMessaging();
     assertEq(adapter.isMessagingDisabled(), false, 'Messaging should not be disabled');
   }
 
@@ -195,7 +195,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveStopMessaging is Base {
     // Execute
     vm.prank(_messenger);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
-    adapter.receiveStopMessaging();
+    adapter.receiveToggleMessaging();
     assertEq(adapter.isMessagingDisabled(), false, 'Messaging should not be disabled');
   }
 
@@ -207,54 +207,8 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveStopMessaging is Base {
 
     // Execute
     vm.prank(_messenger);
-    adapter.receiveStopMessaging();
+    adapter.receiveToggleMessaging();
     assertEq(adapter.isMessagingDisabled(), true, 'Messaging should be disabled');
-  }
-
-  /**
-   * @notice Check that the event is emitted as expected
-   */
-  function test_emitEvent() external {
-    // Mock calls
-    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
-
-    // Expect events
-    vm.expectEmit(true, true, true, true);
-    emit MessagingStopped(_messenger);
-
-    // Execute
-    vm.prank(_messenger);
-    adapter.receiveStopMessaging();
-  }
-}
-
-contract L2OpUSDCBridgeAdapter_Unit_ReceiveResumeMessaging is Base {
-  event MessagingResumed(address _messenger);
-
-  /**
-   * @notice Check that the function reverts if the sender is not the messenger
-   */
-  function test_wrongMessenger(address _notMessenger) external {
-    vm.assume(_notMessenger != _messenger);
-
-    // Execute
-    vm.prank(_notMessenger);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
-    adapter.receiveResumeMessaging();
-  }
-
-  /**
-   * @notice Check that the function reverts if the linked adapter didn't send the message
-   */
-  function test_wrongLinkedAdapter() external {
-    address _notLinkedAdapter = makeAddr('notLinkedAdapter');
-
-    _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_notLinkedAdapter));
-
-    // Execute
-    vm.prank(_messenger);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
-    adapter.receiveResumeMessaging();
   }
 
   /**
@@ -263,26 +217,46 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveResumeMessaging is Base {
   function test_setIsMessagingDisabledToFalse() external {
     _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
+    adapter.forTest_setIsMessagingDisabled();
+
     // Execute
     vm.prank(_messenger);
-    adapter.receiveResumeMessaging();
+    adapter.receiveToggleMessaging();
     assertEq(adapter.isMessagingDisabled(), false, 'Messaging should be disabled');
   }
 
   /**
    * @notice Check that the event is emitted as expected
    */
-  function test_emitEvent() external {
+  function test_emitEventWhenDisabled() external {
     // Mock calls
     vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
     // Expect events
     vm.expectEmit(true, true, true, true);
-    emit MessagingResumed(_messenger);
+    emit MessagingDisabled(true);
 
     // Execute
     vm.prank(_messenger);
-    adapter.receiveResumeMessaging();
+    adapter.receiveToggleMessaging();
+  }
+
+  /**
+   * @notice Check that the event is emitted as expected
+   */
+  function test_emitEventWhenEnabled() external {
+    // Mock calls
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+
+    adapter.forTest_setIsMessagingDisabled();
+
+    // Expect events
+    vm.expectEmit(true, true, true, true);
+    emit MessagingDisabled(false);
+
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveToggleMessaging();
   }
 }
 

@@ -437,7 +437,7 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
    * @notice Check that messenger status gets set to paused
    */
   function test_setMessengerStatusToPaused(uint32 _minGasLimit) public {
-    bytes memory _messageData = abi.encodeWithSignature('receiveStopMessaging()');
+    bytes memory _messageData = abi.encodeWithSignature('receiveToggleMessaging()');
 
     _mockAndExpect(
       _messenger,
@@ -457,7 +457,7 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
    * @notice Check that the event is emitted as expected
    */
   function test_emitEvent(uint32 _minGasLimit) public {
-    bytes memory _messageData = abi.encodeWithSignature('receiveStopMessaging()');
+    bytes memory _messageData = abi.encodeWithSignature('receiveToggleMessaging()');
 
     /// Mock calls
     vm.mockCall(
@@ -510,7 +510,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ResumeMessaging is Base {
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
-        abi.encodeWithSignature('receiveResumeMessaging()'),
+        abi.encodeWithSignature('receiveToggleMessaging()'),
         _minGasLimit
       ),
       abi.encode('')
@@ -532,7 +532,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ResumeMessaging is Base {
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
-        abi.encodeWithSignature('receiveResumeMessaging()'),
+        abi.encodeWithSignature('receiveToggleMessaging()'),
         _minGasLimit
       ),
       abi.encode('')

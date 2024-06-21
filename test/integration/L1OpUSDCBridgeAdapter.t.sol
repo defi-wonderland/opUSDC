@@ -258,7 +258,7 @@ contract Integration_Integration_PermissionedFlows is IntegrationBase {
       address(l2Adapter),
       0,
       _minGasLimit,
-      abi.encodeWithSignature('receiveStopMessaging()')
+      abi.encodeWithSignature('receiveToggleMessaging()')
     );
 
     assertEq(l2Adapter.isMessagingDisabled(), true);
@@ -279,7 +279,7 @@ contract Integration_Integration_PermissionedFlows is IntegrationBase {
       address(l2Adapter),
       0,
       _minGasLimit,
-      abi.encodeWithSignature('receiveResumeMessaging()')
+      abi.encodeWithSignature('receiveToggleMessaging()')
     );
 
     assertEq(l2Adapter.isMessagingDisabled(), false);

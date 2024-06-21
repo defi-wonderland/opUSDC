@@ -11,6 +11,8 @@ interface IL2OpUSDCBridgeAdapter {
    */
   event UsdcOwnableFunctionSent(bytes4 _functionSignature);
 
+  event MessagingDisabled(bool _isMessagingDisabled);
+
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   ///////////////////////////////////////////////////////////////*/
@@ -23,14 +25,9 @@ interface IL2OpUSDCBridgeAdapter {
   function receiveMigrateToNative(address _newOwner, uint32 _setBurnAmountMinGasLimit) external;
 
   /**
-   * @notice Receive the stop messaging message from the linked adapter and stop outgoing messages
+   * @notice Receive the switch messaging message from the linked adapter and stop/resume outgoing messages
    */
-  function receiveStopMessaging() external;
-
-  /**
-   * @notice Resume messaging after it was stopped
-   */
-  function receiveResumeMessaging() external;
+  function receiveToggleMessaging() external;
 
   /**
    * @notice Call with abitrary calldata on USDC contract.

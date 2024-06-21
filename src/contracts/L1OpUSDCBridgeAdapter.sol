@@ -64,7 +64,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     if (_newOwner == address(0)) revert IOpUSDCBridgeAdapter_InvalidAddress();
 
     // Ensure messaging is enabled
-    if (messengerStatus != Status.Active && messengerStatus != Status.Upgrading) {
+    if (messengerStatus == Status.Paused || messengerStatus == Status.Deprecated) {
       revert IOpUSDCBridgeAdapter_MessagingDisabled();
     }
 
@@ -119,7 +119,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   ///////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Send a message to the linked adapter to call receiveStopMessaging() and stop outgoing messages.
+   * @notice Send a message to the linked adapter to call receiveToggleMessaging() and stop outgoing messages.
    * @dev Only callable by the owner of the adapter
    * @dev Setting isMessagingDisabled to true is an irreversible operation
    * @param _minGasLimit Minimum gas limit that the message can be executed with
@@ -131,7 +131,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     messengerStatus = Status.Paused;
 
     ICrossDomainMessenger(MESSENGER).sendMessage(
-      LINKED_ADAPTER, abi.encodeWithSignature('receiveStopMessaging()'), _minGasLimit
+      LINKED_ADAPTER, abi.encodeWithSignature('receiveToggleMessaging()'), _minGasLimit
     );
 
     emit MessagingStopped(MESSENGER);
@@ -150,7 +150,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     messengerStatus = Status.Active;
 
     ICrossDomainMessenger(MESSENGER).sendMessage(
-      LINKED_ADAPTER, abi.encodeWithSignature('receiveResumeMessaging()'), _minGasLimit
+      LINKED_ADAPTER, abi.encodeWithSignature('receiveToggleMessaging()'), _minGasLimit
     );
 
     emit MessagingResumed(MESSENGER);

@@ -86,20 +86,10 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /**
    * @notice Receive the stop messaging message from the linked adapter and stop outgoing messages
    */
-  function receiveStopMessaging() external checkSender {
-    isMessagingDisabled = true;
+  function receiveToggleMessaging() external checkSender {
+    isMessagingDisabled = !isMessagingDisabled;
 
-    emit MessagingStopped(MESSENGER);
-  }
-
-  /**
-   * @notice Resume messaging after it was stopped
-   */
-  function receiveResumeMessaging() external checkSender {
-    // NOTE: This is safe because this message can only be received when messaging is not deprecated on the L1 messenger
-    isMessagingDisabled = false;
-
-    emit MessagingResumed(MESSENGER);
+    emit MessagingDisabled(isMessagingDisabled);
   }
 
   /*///////////////////////////////////////////////////////////////
