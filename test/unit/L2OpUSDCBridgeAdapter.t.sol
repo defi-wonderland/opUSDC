@@ -50,7 +50,7 @@ contract L2OpUSDCBridgeAdapter_Unit_Constructor is Base {
   /**
    * @notice Check that the constructor works as expected
    */
-  function test_constructorParams() public {
+  function test_constructorParams() public view {
     assertEq(adapter.USDC(), _usdc, 'USDC should be set to the provided address');
     assertEq(adapter.MESSENGER(), _messenger, 'Messenger should be set to the provided address');
     assertEq(adapter.LINKED_ADAPTER(), _linkedAdapter, 'Linked adapter should be set to the provided address');

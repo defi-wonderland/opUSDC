@@ -14,7 +14,11 @@ contract Integration_Bridging is IntegrationBase {
   function test_bridgeFromL1() public {
     vm.selectFork(mainnet);
 
-    deal(address(MAINNET_USDC), _user, _amount);
+    // We need to do this instead of `deal` because deal doesnt change `totalSupply` state
+    vm.startPrank(MAINNET_USDC.masterMinter());
+    MAINNET_USDC.configureMinter(MAINNET_USDC.masterMinter(), _amount);
+    MAINNET_USDC.mint(_user, _amount);
+    vm.stopPrank();
 
     vm.startPrank(_user);
     MAINNET_USDC.approve(address(l1Adapter), _amount);
@@ -51,7 +55,11 @@ contract Integration_Bridging is IntegrationBase {
 
     address _l2Target = makeAddr('l2Target');
 
-    deal(address(MAINNET_USDC), _user, _amount);
+    // We need to do this instead of `deal` because deal doesnt change `totalSupply` state
+    vm.startPrank(MAINNET_USDC.masterMinter());
+    MAINNET_USDC.configureMinter(MAINNET_USDC.masterMinter(), _amount);
+    MAINNET_USDC.mint(_user, _amount);
+    vm.stopPrank();
 
     vm.startPrank(_user);
     MAINNET_USDC.approve(address(l1Adapter), _amount);
@@ -88,10 +96,18 @@ contract Integration_Bridging is IntegrationBase {
     (address _signerAd, uint256 _signerPk) = makeAddrAndKey('signer');
     vm.selectFork(mainnet);
 
-    deal(address(MAINNET_USDC), _signerAd, _amount);
+    // We need to do this instead of `deal` because deal doesnt change `totalSupply` state
+    vm.startPrank(MAINNET_USDC.masterMinter());
+    MAINNET_USDC.configureMinter(MAINNET_USDC.masterMinter(), _amount);
+    MAINNET_USDC.mint(_signerAd, _amount);
+    vm.stopPrank();
 
     // Minting for user to check its not spent when they execute
-    deal(address(MAINNET_USDC), _user, _amount);
+    // We need to do this instead of `deal` because deal doesnt change `totalSupply` state
+    vm.startPrank(MAINNET_USDC.masterMinter());
+    MAINNET_USDC.configureMinter(MAINNET_USDC.masterMinter(), _amount);
+    MAINNET_USDC.mint(_user, _amount);
+    vm.stopPrank();
 
     vm.prank(_signerAd);
     MAINNET_USDC.approve(address(l1Adapter), _amount);
@@ -136,7 +152,11 @@ contract Integration_Bridging is IntegrationBase {
     (address _signerAd, uint256 _signerPk) = makeAddrAndKey('signer');
     vm.selectFork(mainnet);
 
-    deal(address(MAINNET_USDC), _signerAd, _amount);
+    // We need to do this instead of `deal` because deal doesnt change `totalSupply` state
+    vm.startPrank(MAINNET_USDC.masterMinter());
+    MAINNET_USDC.configureMinter(MAINNET_USDC.masterMinter(), _amount);
+    MAINNET_USDC.mint(_signerAd, _amount);
+    vm.stopPrank();
 
     vm.prank(_signerAd);
     MAINNET_USDC.approve(address(l1Adapter), _amount);

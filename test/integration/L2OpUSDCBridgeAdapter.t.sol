@@ -87,9 +87,6 @@ contract Integration_Bridging is IntegrationBase {
     vm.selectFork(mainnet);
     uint256 _userBalanceBefore = MAINNET_USDC.balanceOf(_user);
 
-    // Increase balance of l1Adapter to simulate the transfer from adapter to user on L1
-    deal(address(MAINNET_USDC), address(l1Adapter), _amount);
-
     uint256 _messageNonce = OPTIMISM_L1_MESSENGER.messageNonce();
 
     // For simplicity we do this as this slot is not exposed until prove and finalize is done
