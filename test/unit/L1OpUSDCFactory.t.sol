@@ -99,7 +99,7 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
   /**
    * @notice Test the constructor params are correctly set
    */
-  function test_setImmutables() public {
+  function test_setImmutables() public view {
     // Assert
     assertEq(address(factory.USDC()), _usdc, 'Invalid usdc address');
   }
@@ -316,27 +316,24 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
 contract L1OpUSDCFactory_Unit_PrecalculateCreateAddress is Base {
   /**
    * @notice Check the `precalculateCreateAddress` function returns the correct address for the given deployer and nonce
-   * We are testing the range from 1 to 127
+   * We are testing the range from 1 to (2**64 -2)
    */
-  function test_precalculateCreateAddress(address _deployer) public {
-    // Assume the deployer's nonce is less than 1 since setting to a higher value will revert
-    vm.assume(vm.getNonce(_deployer) <= 1);
+  function test_precalculateCreateAddress(address _deployer, uint256 _nonce) public {
+    uint256 _maxNonce = 2 ** 64 - 2;
+    _nonce = bound(_nonce, 1, _maxNonce);
+    // Setting a lower nonce than the deployer's current one will revert
+    vm.assume(vm.getNonce(_deployer) <= _nonce);
+    vm.setNonce(_deployer, uint64(_nonce));
 
-    uint256 _maxNonce = 127;
-    for (uint256 _i = 1; _i <= _maxNonce; _i++) {
-      // Precalculate the address
-      address _precalculatedAddress = factory.forTest_precalculateCreateAddress(_deployer, _i);
+    // Precalculate the address
+    address _precalculatedAddress = factory.forTest_precalculateCreateAddress(_deployer, _nonce);
 
-      // Setting a lower nonce than the deployer's current one will revert
-      vm.setNonce(_deployer, uint64(_i));
+    // Execute
+    vm.prank(_deployer);
+    address _newAddress = address(new ForTest_DummyContract());
 
-      // Execute
-      vm.prank(_deployer);
-      address _newAddress = address(new ForTest_DummyContract());
-
-      // Assert
-      assertEq(_newAddress, _precalculatedAddress, 'Invalid create precalculated address');
-    }
+    // Assert
+    assertEq(_newAddress, _precalculatedAddress, 'Invalid create precalculated address');
   }
 }
 

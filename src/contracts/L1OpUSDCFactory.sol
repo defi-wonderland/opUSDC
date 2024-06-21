@@ -12,7 +12,7 @@ import {IUSDC} from 'interfaces/external/IUSDC.sol';
 /**
  * @title L1OpUSDCFactory
  * @notice Factory contract to deploy and setup the `L1OpUSDCBridgeAdapter` contract on L1, and
- * precalculates the addresses of the L2 deployments to be done on the L2 factory.
+ * triggers the dpeloyment of the L2 factory, L2 adapter, and L2 USDC contracts.
  * @dev The salt is always different for each deployed instance of this contract on the L1 Factory, and the L2 contracts
  * are deployed with `CREATE` to guarantee that the addresses are unique among all the L2s, so we avoid a scenario where
  * L2 contracts have the same address on different L2s when triggered by different owners.
@@ -128,7 +128,34 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
 
     // A one-byte integer in the [0x00, 0x7f] range uses its own value as a length prefix, there is no
     // additional "0x80 + length" prefix that precedes it.
-    _data = abi.encodePacked(bytes1(0xd6), _len, _deployer, uint8(_nonce));
+    // A one-byte integer in the [0x00, 0x7f] range uses its own value as a length prefix, there is no
+    // additional "0x80 + length" prefix that precedes it.
+    if (_nonce <= 0x7f) {
+      _data = abi.encodePacked(bytes1(0xd6), _len, _deployer, uint8(_nonce));
+    }
+    // In the case of `_nonce > 0x7f` and `_nonce <= type(uint8).max`, we have the following encoding scheme
+    // (the same calculation can be carried over for higher _nonce bytes):
+    // 0xda = 0xc0 (short RLP prefix) + 0x1a (= the bytes length of: 0x94 + address + 0x84 + _nonce, in hex),
+    // 0x94 = 0x80 + 0x14 (= the bytes length of an address, 20 bytes, in hex),
+    // 0x84 = 0x80 + 0x04 (= the bytes length of the _nonce, 4 bytes, in hex).
+    else if (_nonce <= type(uint8).max) {
+      _data = abi.encodePacked(bytes1(0xd7), _len, _deployer, bytes1(0x81), uint8(_nonce));
+    } else if (_nonce <= type(uint16).max) {
+      _data = abi.encodePacked(bytes1(0xd8), _len, _deployer, bytes1(0x82), uint16(_nonce));
+    } else if (_nonce <= type(uint24).max) {
+      _data = abi.encodePacked(bytes1(0xd9), _len, _deployer, bytes1(0x83), uint24(_nonce));
+    } else if (_nonce <= type(uint32).max) {
+      _data = abi.encodePacked(bytes1(0xda), _len, _deployer, bytes1(0x84), uint32(_nonce));
+    } else if (_nonce <= type(uint40).max) {
+      _data = abi.encodePacked(bytes1(0xdb), _len, _deployer, bytes1(0x85), uint40(_nonce));
+    } else if (_nonce <= type(uint48).max) {
+      _data = abi.encodePacked(bytes1(0xdc), _len, _deployer, bytes1(0x86), uint48(_nonce));
+    } else if (_nonce <= type(uint56).max) {
+      _data = abi.encodePacked(bytes1(0xdd), _len, _deployer, bytes1(0x87), uint56(_nonce));
+    } else {
+      _data = abi.encodePacked(bytes1(0xde), _len, _deployer, bytes1(0x88), uint64(_nonce));
+    }
+
     _precalculatedAddress = address(uint160(uint256(keccak256(_data))));
   }
 
