@@ -43,42 +43,6 @@ interface IL2OpUSDCFactory {
    */
   event L2AdapterDeployed(address _l2Adapter);
 
-  /**
-   * @notice Emitted if a CREATE deployment fails
-   */
-  event CreateDeploymentFailed();
-
-  /**
-   * @notice Emitted when an USDC initialization tx failed
-   * @param _index The index of the failed initialization tx
-   * @dev First index will be hardcoded so index 1 is the start of the provided array
-   */
-  event InitializationFailed(uint256 _index);
-
-  /**
-   * @notice Emitted when configure minter fails
-   * @param _minter The address of the minter
-   */
-  event ConfigureMinterFailed(address _minter);
-
-  /**
-   * @notice Emitted when update master minter fails
-   * @param _newMasterMinter The address of the new master minter
-   */
-  event UpdateMasterMinterFailed(address _newMasterMinter);
-
-  /**
-   * @notice Emitted when transfer ownership fails
-   * @param _newOwner The address of the new owner
-   */
-  event TransferOwnershipFailed(address _newOwner);
-
-  /**
-   * @notice Emitted when change admin fails
-   * @param _newAdmin The address of the new admin
-   */
-  event ChangeAdminFailed(address _newAdmin);
-
   /*///////////////////////////////////////////////////////////////
                             ERRORS
   ///////////////////////////////////////////////////////////////*/
@@ -89,14 +53,15 @@ interface IL2OpUSDCFactory {
   error IL2OpUSDCFactory_InvalidSender();
 
   /**
-   * @notice Thrown when any of the deployments fails
+   * @notice Thrown when a contract deployment fails
    */
-  error IL2OpUSDCFactory_DeploymentsFailed();
+  error IL2OpUSDCFactory_DeploymentFailed();
 
   /**
    * @notice Thrown when an USDC initialization tx failed
+   * @param _txIndex The index of the failed initialization tx
    */
-  error IL2OpUSDCFactory_InitializationFailed();
+  error IL2OpUSDCFactory_InitializationFailed(uint256 _txIndex);
 
   /*///////////////////////////////////////////////////////////////
                             LOGIC

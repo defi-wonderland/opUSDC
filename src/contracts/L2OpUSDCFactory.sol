@@ -39,7 +39,6 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
    * @param _usdcInitTxs The initialization transactions for the USDC proxy and implementation contracts
    * @dev The USDC proxy owner needs to be set on the first init tx, and will be set to the L2 adapter address
    * @dev Using `CREATE` to guarantee that the addresses are unique among all the L2s
-   * @dev No external call should ever cause this function to revert, it will instead emit a failure event
    */
   function deploy(
     address _l1Adapter,
@@ -53,36 +52,25 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     }
 
     // Deploy USDC implementation
-    (address _usdcImplementation, bool _usdcImplSuccess) = _deployCreate(_usdcImplementationInitCode);
-    if (_usdcImplSuccess) emit USDCImplementationDeployed(_usdcImplementation);
+    (address _usdcImplementation) = _deployCreate(_usdcImplementationInitCode);
+    emit USDCImplementationDeployed(_usdcImplementation);
 
     // Deploy USDC proxy
-    bytes memory _args = abi.encode(_usdcImplementation);
-    bytes memory _initCode = bytes.concat(USDC_PROXY_CREATION_CODE, _args);
-    (address _usdcProxy, bool _usdcProxySuccess) = _deployCreate(_initCode);
-    if (_usdcProxySuccess) emit USDCProxyDeployed(_usdcProxy);
+    bytes memory _usdcProxyCArgs = abi.encode(_usdcImplementation);
+    bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);
+    (address _usdcProxy) = _deployCreate(_usdcProxyInitCode);
+    emit USDCProxyDeployed(_usdcProxy);
 
     // Deploy L2 Adapter
-    _args = abi.encode(_usdcProxy, msg.sender, _l1Adapter, _l2AdapterOwner);
-    _initCode = bytes.concat(type(L2OpUSDCBridgeAdapter).creationCode, _args);
-    (address _l2Adapter, bool _l2AdapterSuccess) = _deployCreate(_initCode);
-    if (_l2AdapterSuccess) emit L2AdapterDeployed(_l2Adapter);
-
-    if (!_usdcImplSuccess || !_usdcProxySuccess || !_l2AdapterSuccess) {
-      // If any deployments failed we return early
-      return;
-    }
+    bytes memory _l2AdapterCArgs = abi.encode(_usdcProxy, msg.sender, _l1Adapter, _l2AdapterOwner);
+    bytes memory _l2AdapterInitCode = bytes.concat(type(L2OpUSDCBridgeAdapter).creationCode, _l2AdapterCArgs);
+    (address _l2Adapter) = _deployCreate(_l2AdapterInitCode);
+    emit L2AdapterDeployed(_l2Adapter);
 
     // Deploy the FallbackProxyAdmin internally in the L2 Adapter to keep it unique
     address _fallbackProxyAdmin = address(L2OpUSDCBridgeAdapter(_l2Adapter).FALLBACK_PROXY_ADMIN());
     // Change the USDC admin so the init txs can be executed over the proxy from this contract
-    bytes memory _usdcChangeAdmin = abi.encodeWithSelector(IUSDC.changeAdmin.selector, _fallbackProxyAdmin);
-
-    (_usdcProxySuccess,) = _usdcProxy.call(_usdcChangeAdmin);
-    if (!_usdcProxySuccess) {
-      emit ChangeAdminFailed(_fallbackProxyAdmin);
-      return;
-    }
+    IUSDC(_usdcProxy).changeAdmin(_fallbackProxyAdmin);
 
     // Execute the USDC initialization transactions over the USDC contracts
     _executeInitTxs(_usdcImplementation, _usdcInitializeData, _l2Adapter, _usdcInitTxs);
@@ -105,17 +93,8 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     address _l2Adapter,
     bytes[] calldata _initTxs
   ) internal {
-    // We need to make all of these low level calls to ensure this function never reverts
-    // Instead of reverting we will emit a failed event for each step
-
-    bool _success;
-
-    // NOTE: If any of these calls fail we assume they will all fail because they are chained calls.
-    // So we return early to save gas
-
-    // Initialize USDC
-    bytes memory _initialize = abi.encodeWithSelector(
-      IUSDC.initialize.selector,
+    // Initialize the USDC contract
+    IUSDC(_usdc).initialize(
       _usdcInitializeData._tokenName,
       _usdcInitializeData._tokenSymbol,
       _usdcInitializeData._tokenCurrency,
@@ -126,45 +105,18 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
       address(this)
     );
 
-    (_success,) = _usdc.call(_initialize);
-    if (!_success) {
-      emit InitializationFailed(0);
-      return;
-    }
-
     // Add l2 adapter as unlimited minter
-    bytes memory _configureMinter =
-      abi.encodeWithSelector(IUSDC.configureMinter.selector, _l2Adapter, type(uint256).max);
-
-    (_success,) = _usdc.call(_configureMinter);
-    if (!_success) {
-      emit ConfigureMinterFailed(_l2Adapter);
-      return;
-    }
-
+    IUSDC(_usdc).configureMinter(_l2Adapter, type(uint256).max);
     // Set l2 adapter as new master minter
-    bytes memory _updateMasterMinter = abi.encodeWithSelector(IUSDC.updateMasterMinter.selector, _l2Adapter);
-
-    (_success,) = _usdc.call(_updateMasterMinter);
-    if (!_success) {
-      emit UpdateMasterMinterFailed(_l2Adapter);
-      return;
-    }
-
+    IUSDC(_usdc).updateMasterMinter(_l2Adapter);
     // Transfer USDC ownership to the L2 adapter
-    bytes memory _transferOwnership = abi.encodeWithSelector(IUSDC.transferOwnership.selector, _l2Adapter);
+    IUSDC(_usdc).transferOwnership(_l2Adapter);
 
-    (_success,) = _usdc.call(_transferOwnership);
-    if (!_success) {
-      emit TransferOwnershipFailed(_l2Adapter);
-      return;
-    }
-
+    // Execute the input init txs, use `_i+1` as revert argument since the first tx is already executed on the contract
     for (uint256 _i; _i < _initTxs.length; _i++) {
-      (_success,) = _usdc.call(_initTxs[_i]);
+      (bool _success,) = _usdc.call(_initTxs[_i]);
       if (!_success) {
-        emit InitializationFailed(_i + 1);
-        return;
+        revert IL2OpUSDCFactory_InitializationFailed(_i + 1);
       }
     }
   }
@@ -174,14 +126,12 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
    * @param _initCode The creation bytecode.
    * @return _newContract The 20-byte address where the contract was deployed.
    */
-  function _deployCreate(bytes memory _initCode) internal returns (address _newContract, bool _success) {
+  function _deployCreate(bytes memory _initCode) internal returns (address _newContract) {
     assembly ("memory-safe") {
       _newContract := create(0x0, add(_initCode, 0x20), mload(_initCode))
     }
     if (_newContract == address(0) || _newContract.code.length == 0) {
-      emit CreateDeploymentFailed();
-    } else {
-      _success = true;
+      revert IL2OpUSDCFactory_DeploymentFailed();
     }
   }
 }
