@@ -117,7 +117,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * @param _deployer The deployer address
    * @param _nonce The next nonce of the deployer address
    * @return _precalculatedAddress The address where the contract will be stored
-   * @dev Only works for nonces between 1 and 127, which is enough for this use case
+   * @dev Only works for nonces between 1 and (2 ** 64 - 2), which is enough for this use case
    */
   function _precalculateCreateAddress(
     address _deployer,
