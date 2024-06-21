@@ -72,21 +72,21 @@ contract IntegrationBase is Helpers {
 
     vm.selectFork(mainnet);
 
-    vm.startPrank(_owner);
+    vm.prank(_owner);
     (address _l1Adapter,, address _l2Adapter) = factory.deploy(address(OPTIMISM_L1_MESSENGER), _owner, _l2Deployments);
-    vm.stopPrank();
-    bytes32 _salt = bytes32(factory.deploymentsSaltCounter());
 
     l1Adapter = L1OpUSDCBridgeAdapter(_l1Adapter);
 
+    // Get salt and initialize data for l2 deployments
+    bytes32 _salt = bytes32(factory.deploymentsSaltCounter());
     usdcInitializeData = IL2OpUSDCFactory.USDCInitializeData(
       factory.USDC_NAME(), factory.USDC_SYMBOL(), MAINNET_USDC.currency(), MAINNET_USDC.decimals()
     );
 
     // Give max minting power to the master minter
-    vm.startPrank(MAINNET_USDC.masterMinter());
-    MAINNET_USDC.configureMinter(MAINNET_USDC.masterMinter(), type(uint256).max);
-    vm.stopPrank();
+    address _masterMinter = MAINNET_USDC.masterMinter();
+    vm.prank(_masterMinter);
+    MAINNET_USDC.configureMinter(_masterMinter, type(uint256).max);
 
     vm.selectFork(optimism);
     _relayL2Deployments(_salt, _l1Adapter, usdcInitializeData, _l2Deployments);
@@ -115,19 +115,17 @@ contract IntegrationBase is Helpers {
       _l2Deployments.usdcInitTxs
     );
     bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
+    uint256 _messageNonce = L2_MESSENGER.messageNonce();
 
-    vm.startPrank(ALIASED_L1_MESSENGER);
-
+    vm.prank(ALIASED_L1_MESSENGER);
     L2_MESSENGER.relayMessage(
-      L2_MESSENGER.messageNonce() + 1,
+      _messageNonce + 1,
       address(factory),
       L2_CREATE2_DEPLOYER,
       _ZERO_VALUE,
       _l2Deployments.minGasLimitDeploy,
       abi.encodeWithSignature('deploy(uint256,bytes32,bytes)', _ZERO_VALUE, _salt, _l2FactoryInitCode)
     );
-
-    vm.stopPrank();
   }
 
   function _mintSupplyOnL2(uint256 _supply) internal {
@@ -147,7 +145,7 @@ contract IntegrationBase is Helpers {
     vm.selectFork(optimism);
     uint256 _messageNonce = L2_MESSENGER.messageNonce();
 
-    vm.startPrank(ALIASED_L1_MESSENGER);
+    vm.prank(ALIASED_L1_MESSENGER);
     L2_MESSENGER.relayMessage(
       _messageNonce + 1,
       address(l1Adapter),
@@ -156,7 +154,6 @@ contract IntegrationBase is Helpers {
       1_000_000,
       abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _supply)
     );
-    vm.stopPrank();
   }
 }
 
