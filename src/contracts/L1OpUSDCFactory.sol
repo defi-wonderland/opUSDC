@@ -146,14 +146,6 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
       _data = abi.encodePacked(bytes1(0xd9), _len, _deployer, bytes1(0x83), uint24(_nonce));
     } else if (_nonce <= type(uint32).max) {
       _data = abi.encodePacked(bytes1(0xda), _len, _deployer, bytes1(0x84), uint32(_nonce));
-    } else if (_nonce <= type(uint40).max) {
-      _data = abi.encodePacked(bytes1(0xdb), _len, _deployer, bytes1(0x85), uint40(_nonce));
-    } else if (_nonce <= type(uint48).max) {
-      _data = abi.encodePacked(bytes1(0xdc), _len, _deployer, bytes1(0x86), uint48(_nonce));
-    } else if (_nonce <= type(uint56).max) {
-      _data = abi.encodePacked(bytes1(0xdd), _len, _deployer, bytes1(0x87), uint56(_nonce));
-    } else {
-      _data = abi.encodePacked(bytes1(0xde), _len, _deployer, bytes1(0x88), uint64(_nonce));
     }
 
     _precalculatedAddress = address(uint160(uint256(keccak256(_data))));

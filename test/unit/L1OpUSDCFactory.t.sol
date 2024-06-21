@@ -319,7 +319,7 @@ contract L1OpUSDCFactory_Unit_PrecalculateCreateAddress is Base {
    * We are testing the range from 1 to (2**64 -2)
    */
   function test_precalculateCreateAddress(address _deployer, uint256 _nonce) public {
-    uint256 _maxNonce = 2 ** 64 - 2;
+    uint256 _maxNonce = 2 ** 32 - 2;
     _nonce = bound(_nonce, 1, _maxNonce);
     // Setting a lower nonce than the deployer's current one will revert
     vm.assume(vm.getNonce(_deployer) <= _nonce);

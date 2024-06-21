@@ -154,35 +154,6 @@ contract IntegrationBase is Helpers {
     );
     vm.stopPrank();
   }
-
-  function _mintSupplyOnL2(uint256 _supply) internal {
-    vm.selectFork(mainnet);
-
-    // We need to do this instead of `deal` because deal doesnt change `totalSupply` state
-    vm.startPrank(MAINNET_USDC.masterMinter());
-    MAINNET_USDC.configureMinter(MAINNET_USDC.masterMinter(), _supply);
-    MAINNET_USDC.mint(_user, _supply);
-    vm.stopPrank();
-
-    vm.startPrank(_user);
-    MAINNET_USDC.approve(address(l1Adapter), _supply);
-    l1Adapter.sendMessage(_user, _supply, _minGasLimit);
-    vm.stopPrank();
-
-    vm.selectFork(optimism);
-    uint256 _messageNonce = L2_MESSENGER.messageNonce();
-
-    vm.startPrank(AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER)));
-    L2_MESSENGER.relayMessage(
-      _messageNonce + 1,
-      address(l1Adapter),
-      address(l2Adapter),
-      0,
-      1_000_000,
-      abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _supply)
-    );
-    vm.stopPrank();
-  }
 }
 
 contract IntegrationSetup is IntegrationBase {
