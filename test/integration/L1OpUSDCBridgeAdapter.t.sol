@@ -217,6 +217,8 @@ contract Integration_Migration is IntegrationBase {
     );
     vm.stopPrank();
 
+    stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(DEFAULT_L2_SENDER);
+
     assertEq(l1Adapter.burnAmount(), _burnAmount);
     assertEq(l1Adapter.USDC(), address(MAINNET_USDC));
     assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Deprecated));

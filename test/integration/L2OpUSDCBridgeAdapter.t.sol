@@ -57,6 +57,8 @@ contract Integration_Bridging is IntegrationBase {
     );
     vm.stopPrank();
 
+    stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(DEFAULT_L2_SENDER);
+
     assertEq(MAINNET_USDC.balanceOf(_user), _amount);
     assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), 0);
   }
@@ -101,6 +103,8 @@ contract Integration_Bridging is IntegrationBase {
       abi.encodeWithSignature('receiveMessage(address,uint256)', _l1Target, _amount)
     );
     vm.stopPrank();
+
+    stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(DEFAULT_L2_SENDER);
 
     assertEq(MAINNET_USDC.balanceOf(_l1Target), _amount);
     assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), 0);
@@ -150,6 +154,8 @@ contract Integration_Bridging is IntegrationBase {
       abi.encodeWithSignature('receiveMessage(address,uint256)', _signerAd, _amount)
     );
     vm.stopPrank();
+
+    stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(DEFAULT_L2_SENDER);
 
     assertEq(MAINNET_USDC.balanceOf(_signerAd), _amount);
     assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), 0);
