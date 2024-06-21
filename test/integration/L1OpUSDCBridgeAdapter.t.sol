@@ -159,7 +159,7 @@ contract Integration_Migration is IntegrationBase {
   function setUp() public override {
     super.setUp();
 
-    _mintSupplyOnL2();
+    _mintSupplyOnL2(_amount);
 
     vm.selectFork(mainnet);
     // Adapter needs to be minter to burn
