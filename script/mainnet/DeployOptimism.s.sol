@@ -8,7 +8,6 @@ import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementation
 
 contract DeployOptimism is Script {
   address public constant L1_MESSENGER = 0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1;
-  uint32 public constant MIN_GAS_LIMIT_FACTORY = 2_000_000;
   uint32 public constant MIN_GAS_LIMIT_DEPLOY = 6_000_000;
   IL1OpUSDCFactory public immutable L1_FACTORY = IL1OpUSDCFactory(vm.envAddress('L1_FACTORY_MAINNET'));
   address public deployer = vm.rememberKey(vm.envUint('MAINNET_DEPLOYER_PK'));
@@ -21,7 +20,6 @@ contract DeployOptimism is Script {
       l2AdapterOwner: deployer,
       usdcImplementationInitCode: USDC_IMPLEMENTATION_CREATION_CODE,
       usdcInitTxs: _usdcInitTxs,
-      minGasLimitCreate2Factory: MIN_GAS_LIMIT_FACTORY,
       minGasLimitDeploy: MIN_GAS_LIMIT_DEPLOY
     });
     (address _l1Adapter, address _l2Factory, address _l2Adapter) =

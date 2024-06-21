@@ -7,6 +7,8 @@ import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
+import 'forge-std/Test.sol';
+
 /**
  * @title L2OpUSDCFactory
  * @notice Factory contract for deploying the L2 USDC implementation, proxy, and `L2OpUSDCBridgeAdapter` contract,
@@ -33,9 +35,12 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     USDCInitializeData memory _usdcInitializeData,
     bytes[] memory _usdcInitTxs
   ) {
+    console.log('addressthis: ', address(this));
     // Deploy USDC implementation
     (address _usdcImplementation) = _deployCreate(_usdcImplementationInitCode);
     emit USDCImplementationDeployed(_usdcImplementation);
+
+    console.log('usdcImplementation: ', _usdcImplementation);
 
     // Deploy USDC proxy
     bytes memory _usdcProxyCArgs = abi.encode(_usdcImplementation);
@@ -43,12 +48,16 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     (address _usdcProxy) = _deployCreate(_usdcProxyInitCode);
     emit USDCProxyDeployed(_usdcProxy);
 
+    console.log('usdcProxy: ', _usdcProxy);
+
     // Deploy L2 Adapter
     address _l2Messenger = 0x4200000000000000000000000000000000000007;
     bytes memory _l2AdapterCArgs = abi.encode(_usdcProxy, _l2Messenger, _l1Adapter, _l2AdapterOwner);
     bytes memory _l2AdapterInitCode = bytes.concat(type(L2OpUSDCBridgeAdapter).creationCode, _l2AdapterCArgs);
     (address _l2Adapter) = _deployCreate(_l2AdapterInitCode);
     emit L2AdapterDeployed(_l2Adapter);
+
+    console.log('l2Adapter: ', _l2Adapter);
 
     // Deploy the FallbackProxyAdmin internally in the L2 Adapter to keep it unique
     address _fallbackProxyAdmin = address(L2OpUSDCBridgeAdapter(_l2Adapter).FALLBACK_PROXY_ADMIN());

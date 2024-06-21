@@ -69,7 +69,6 @@ abstract contract Base is Test, Helpers {
       l2AdapterOwner: _l2AdapterOwner,
       usdcImplementationInitCode: _usdcImplementationInitCode,
       usdcInitTxs: _usdcInitTxs,
-      minGasLimitCreate2Factory: _minGasLimitCreate2Factory,
       minGasLimitDeploy: _minGasLimitDeploy
     });
 
@@ -247,7 +246,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
         ICrossDomainMessenger.sendMessage.selector,
         factory.L2_CREATE2_DEPLOYER(),
         _l2FactoryCreate2Tx,
-        _l2Deployments.minGasLimitCreate2Factory
+        _l2Deployments.minGasLimitDeploy
       )
     );
 

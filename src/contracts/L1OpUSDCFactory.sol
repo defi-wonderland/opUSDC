@@ -9,6 +9,8 @@ import {ICreate2Deployer} from 'interfaces/external/ICreate2Deployer.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
+import 'forge-std/Test.sol';
+
 /**
  * @title L1OpUSDCFactory
  * @notice Factory contract to deploy and setup the `L1OpUSDCBridgeAdapter` contract on L1, and
@@ -85,6 +87,14 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     // Use the nonce as salt to ensure always a different salt since the nonce is always increasing
     bytes32 _salt = bytes32(_currentNonce);
     // Get the L2 factory init code and precalculate its address
+    console.log('l1Adapter ', _l1Adapter);
+    console.log('l2Deployments ', _l2Deployments.l2AdapterOwner);
+    console.log('usdcImplementationInitCode ');
+    console.logBytes32(keccak256(_l2Deployments.usdcImplementationInitCode));
+    console.log('usdcInitializeData ');
+    console.logBytes32(keccak256(abi.encode(_usdcInitializeData)));
+    console.log('usdcInitTxs ');
+    console.logBytes32(keccak256(abi.encode(_l2Deployments.usdcInitTxs)));
     bytes memory _l2FactoryCArgs = abi.encode(
       _l1Adapter,
       _l2Deployments.l2AdapterOwner,
@@ -92,6 +102,8 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
       _usdcInitializeData,
       _l2Deployments.usdcInitTxs
     );
+    console.log('l2 facotry cargs: ');
+    console.logBytes32(keccak256(_l2FactoryCArgs));
     bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
     _l2Factory = _precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), L2_CREATE2_DEPLOYER);
 
@@ -101,10 +113,10 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     address(new L1OpUSDCBridgeAdapter(address(USDC), _l1Messenger, _l2Adapter, _l1AdapterOwner));
 
     // Send the L2 factory deployment tx
-    bytes memory _l2FactoryCreate2Tx =
+    bytes memory _l2FactoryDeploymentsTx =
       abi.encodeWithSelector(ICreate2Deployer.deploy.selector, 0, _salt, _l2FactoryInitCode);
     ICrossDomainMessenger(_l1Messenger).sendMessage(
-      L2_CREATE2_DEPLOYER, _l2FactoryCreate2Tx, _l2Deployments.minGasLimitCreate2Factory
+      L2_CREATE2_DEPLOYER, _l2FactoryDeploymentsTx, _l2Deployments.minGasLimitDeploy
     );
 
     emit L1AdapterDeployed(_l1Adapter);
