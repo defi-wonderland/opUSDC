@@ -9,8 +9,6 @@ import {ICreate2Deployer} from 'interfaces/external/ICreate2Deployer.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
-import 'forge-std/Test.sol';
-
 /**
  * @title L1OpUSDCFactory
  * @notice Factory contract to deploy and setup the `L1OpUSDCBridgeAdapter` contract on L1, and
@@ -26,13 +24,15 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   /// @inheritdoc IL1OpUSDCFactory
   address public constant L2_CREATE2_DEPLOYER = 0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2;
 
-  bytes4 internal constant INITIALIZE_SELECTOR = 0x07fbc6b5;
-
   /// @inheritdoc IL1OpUSDCFactory
   string public constant USDC_NAME = 'Bridged USDC';
 
   /// @inheritdoc IL1OpUSDCFactory
   string public constant USDC_SYMBOL = 'USDC.e';
+
+  /// @notice The selector of the `initialize()` function.
+  /// @dev Used to check the first init tx doesn't match it since it is already defined in the L2 factory contract
+  bytes4 internal constant _INITIALIZE_SELECTOR = 0x07fbc6b5;
 
   /// @notice The L2 Adapter is the third contract to be deployed on the L2 factory so its nonce is 3
   uint256 internal constant _L2_ADAPTER_DEPLOYMENT_NONCE = 3;
@@ -72,7 +72,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   ) external returns (address _l1Adapter, address _l2Factory, address _l2Adapter) {
     // Checks that the first init tx selector is not equal to the `initialize()` function since  we manually
     // construct this function on the L2 factory contract
-    if (bytes4(_l2Deployments.usdcInitTxs[0]) == INITIALIZE_SELECTOR) revert IL1OpUSDCFactory_NoInitializeTx();
+    if (bytes4(_l2Deployments.usdcInitTxs[0]) == _INITIALIZE_SELECTOR) revert IL1OpUSDCFactory_NoInitializeTx();
 
     // Update the salt counter so the L2 factory is deployed with a different salt to a different address and get it
     uint256 _currentNonce = ++deploymentsSaltCounter;
@@ -87,14 +87,6 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     // Use the nonce as salt to ensure always a different salt since the nonce is always increasing
     bytes32 _salt = bytes32(_currentNonce);
     // Get the L2 factory init code and precalculate its address
-    console.log('l1Adapter ', _l1Adapter);
-    console.log('l2Deployments ', _l2Deployments.l2AdapterOwner);
-    console.log('usdcImplementationInitCode ');
-    console.logBytes32(keccak256(_l2Deployments.usdcImplementationInitCode));
-    console.log('usdcInitializeData ');
-    console.logBytes32(keccak256(abi.encode(_usdcInitializeData)));
-    console.log('usdcInitTxs ');
-    console.logBytes32(keccak256(abi.encode(_l2Deployments.usdcInitTxs)));
     bytes memory _l2FactoryCArgs = abi.encode(
       _l1Adapter,
       _l2Deployments.l2AdapterOwner,
@@ -102,8 +94,6 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
       _usdcInitializeData,
       _l2Deployments.usdcInitTxs
     );
-    console.log('l2 facotry cargs: ');
-    console.logBytes32(keccak256(_l2FactoryCArgs));
     bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
     _l2Factory = _precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), L2_CREATE2_DEPLOYER);
 

@@ -100,12 +100,6 @@ interface IL1OpUSDCFactory {
    */
   function L2_CREATE2_DEPLOYER() external view returns (address _l2Create2Deployer);
 
-  // /**
-  //  * @return _initializeSelector The selector of the `initialize()` function
-  //  * @dev Used to check the first init tx doesn't match it since it is already defined in the L2 factory contract
-  //  */
-  // function INITIALIZE_SELECTOR() external view returns (bytes4 _initializeSelector);
-
   /**
    * @return _usdc The address of USDC on L1
    */

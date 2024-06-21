@@ -61,7 +61,6 @@ abstract contract Base is Test, Helpers {
     _usdcInitTxs.push(_initTx);
 
     // Define the L2 deployments struct data
-    uint32 _minGasLimitCreate2Factory = 3_000_000;
     uint32 _minGasLimitDeploy = 8_000_000;
     address _l2AdapterOwner = makeAddr('l2AdapterOwner');
     bytes memory _usdcImplementationInitCode = '0x6080333333';

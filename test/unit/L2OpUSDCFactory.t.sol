@@ -7,7 +7,6 @@ import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.so
 import {Test} from 'forge-std/Test.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
-import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
