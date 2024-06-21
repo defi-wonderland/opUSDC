@@ -40,32 +40,6 @@ interface IL1OpUSDCFactory {
    */
   error IL1OpUSDCFactory_NoInitializeTx();
 
-  /**
-   * @notice Thrown when the salt for deploying the L2 factory is already used
-   */
-  error IL1OpUSDCFactory_SaltAlreadyUsed();
-
-  /**
-   * @notice Thrown when the factory on L2 for the given messenger is not deployed and the `deployL2USDCAndAdapter` is
-   * called
-   */
-  error IL1OpUSDCFactory_L2FactoryNotDeployed();
-
-  /**
-   * @notice Thrown when there are no init txs provided for the USDC contract
-   */
-  error IL1OpUSDCFactory_NoInitTxs();
-
-  /**
-   * @notice Thrown when the 1st provided init tx's selector is not the `initialize()` function one
-   */
-  error IL1OpUSDCFactory_InvalidInitTx();
-
-  /**
-   * @notice Thrown if the nonce is greater than 2**64-2 while precalculating the L1 Adapter using `CREATE`
-   */
-  error IL1OpUSDCFactory_InvalidNonce();
-
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   ///////////////////////////////////////////////////////////////*/

@@ -38,7 +38,7 @@ abstract contract Base is Helpers {
   event MigratingToNative(address _messenger, address _newOwner);
   event MessageSent(address _user, address _to, uint256 _amount, address _messenger, uint32 _minGasLimit);
   event MessageReceived(address _user, uint256 _amount, address _messenger);
-  event UsdcOwnableFunctionSent(bytes4 _functionSignature);
+  event UsdcFunctionSent(bytes4 _functionSignature);
 
   function setUp() public virtual {
     (_signerAd, _signerPk) = makeAddrAndKey('signer');
@@ -702,7 +702,7 @@ contract L2OpUSDCBridgeAdapter_Unit_CallUsdcTransaction is Base {
 
     // Expect events
     vm.expectEmit(true, true, true, true);
-    emit UsdcOwnableFunctionSent(bytes4(_data));
+    emit UsdcFunctionSent(bytes4(_data));
 
     // Execute
     vm.prank(_owner);
