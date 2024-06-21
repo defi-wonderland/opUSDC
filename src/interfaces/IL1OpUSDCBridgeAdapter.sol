@@ -36,25 +36,6 @@ interface IL1OpUSDCBridgeAdapter {
   event MigrationComplete();
 
   /*///////////////////////////////////////////////////////////////
-                            ERRORS
-  ///////////////////////////////////////////////////////////////*/
-
-  /**
-   * @notice Error when the messenger is not paused
-   */
-  error IL1OpUSDCBridgeAdapter_MessengerNotPaused();
-
-  /**
-   * @notice Error when burnLockedUSDC is called before a burn amount is set
-   */
-  error IL1OpUSDCBridgeAdapter_BurnAmountNotSet();
-
-  /**
-   * @notice Error when address is not valid
-   */
-  error IL1OpUSDCBridgeAdapter_InvalidAddress();
-
-  /*///////////////////////////////////////////////////////////////
                             LOGIC
   ///////////////////////////////////////////////////////////////*/
 
@@ -106,10 +87,10 @@ interface IL1OpUSDCBridgeAdapter {
   function burnAmount() external view returns (uint256 _burnAmount);
 
   /**
-   * @notice Fetches the address of the Circle contract
-   * @return _circle The address of the Circle contract
+   * @notice Fetches the address of the new owner for the USDC tokens
+   * @return _newOwner The address of the new owner for the USDC tokens
    */
-  function circle() external view returns (address _circle);
+  function newOwner() external view returns (address _newOwner);
 
   /**
    * @notice Fetches the status of the messenger

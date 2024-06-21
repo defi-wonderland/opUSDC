@@ -46,6 +46,25 @@ interface IOpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
                             ERRORS
   ///////////////////////////////////////////////////////////////*/
+  /**
+   * @notice Error when burnLockedUSDC is called before a burn amount is set
+   */
+  error IOpUSDCBridgeAdapter_BurnAmountNotSet();
+
+  /**
+   * @notice Error when address is not valid
+   */
+  error IOpUSDCBridgeAdapter_InvalidAddress();
+
+  /**
+   * @notice Error when the owner transaction is invalid
+   */
+  error IOpUSDCBridgeAdapter_InvalidTransaction();
+
+  /**
+   * @notice Error when signature is not valid
+   */
+  error IOpUSDCBridgeAdapter_ForbiddenTransaction();
 
   /**
    * @notice Error when messaging is disabled

@@ -175,12 +175,6 @@ contract Integration_Migration is IntegrationBase {
 
     _mintSupplyOnL2();
 
-    // // TODO: ---> Remove after PR #44 is merged
-    vm.selectFork(optimism);
-    vm.startPrank(bridgedUSDC.owner());
-    bridgedUSDC.transferOwnership(address(l2Adapter));
-    // <----- Remove after PR #44 is merged
-
     vm.selectFork(mainnet);
     // Adapter needs to be minter to burn
     vm.startPrank(MAINNET_USDC.masterMinter());
@@ -199,7 +193,7 @@ contract Integration_Migration is IntegrationBase {
     vm.stopPrank();
 
     assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Upgrading));
-    assertEq(l1Adapter.circle(), _circle);
+    assertEq(l1Adapter.newOwner(), _circle);
 
     vm.selectFork(optimism);
 
@@ -247,7 +241,7 @@ contract Integration_Migration is IntegrationBase {
 
     assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), 0);
     assertEq(l1Adapter.burnAmount(), 0);
-    assertEq(l1Adapter.circle(), address(0));
+    assertEq(l1Adapter.newOwner(), address(0));
   }
 
   function _mintSupplyOnL2() internal {
@@ -277,5 +271,60 @@ contract Integration_Migration is IntegrationBase {
       abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _amount)
     );
     vm.stopPrank();
+  }
+}
+
+contract Integration_Integration_PermissionedFlows is IntegrationBase {
+  uint32 internal _minGasLimit = 1_000_000;
+
+  /**
+   * @notice Test that the messaging is stopped and resumed correctly from L1 on
+   * both layers
+   */
+  function test_stopAndResumeMessaging() public {
+    vm.selectFork(mainnet);
+
+    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Active));
+
+    vm.prank(_owner);
+    l1Adapter.stopMessaging(_minGasLimit);
+
+    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Paused));
+
+    vm.selectFork(optimism);
+    uint256 _messageNonce = L2_MESSENGER.messageNonce();
+
+    vm.prank(AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER)));
+    L2_MESSENGER.relayMessage(
+      _messageNonce + 1,
+      address(l1Adapter),
+      address(l2Adapter),
+      0,
+      _minGasLimit,
+      abi.encodeWithSignature('receiveStopMessaging()')
+    );
+
+    assertEq(l2Adapter.isMessagingDisabled(), true);
+
+    vm.selectFork(mainnet);
+
+    vm.prank(_owner);
+    l1Adapter.resumeMessaging(_minGasLimit);
+
+    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Active));
+
+    vm.selectFork(optimism);
+
+    vm.prank(AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER)));
+    L2_MESSENGER.relayMessage(
+      _messageNonce + 2,
+      address(l1Adapter),
+      address(l2Adapter),
+      0,
+      _minGasLimit,
+      abi.encodeWithSignature('receiveResumeMessaging()')
+    );
+
+    assertEq(l2Adapter.isMessagingDisabled(), false);
   }
 }

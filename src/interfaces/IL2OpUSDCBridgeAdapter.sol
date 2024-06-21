@@ -12,20 +12,6 @@ interface IL2OpUSDCBridgeAdapter {
   event UsdcOwnableFunctionSent(bytes4 _functionSignature);
 
   /*///////////////////////////////////////////////////////////////
-                            ERRORS
-  ///////////////////////////////////////////////////////////////*/
-
-  /**
-   * @notice Error when the owner transaction is invalid
-   */
-  error IL2OpUSDCBridgeAdapter_InvalidTransaction();
-
-  /**
-   * @notice Error when signature is not valid
-   */
-  error IL2OpUSDCBridgeAdapter_ForbiddenTransaction();
-
-  /*///////////////////////////////////////////////////////////////
                             LOGIC
   ///////////////////////////////////////////////////////////////*/
   /**
