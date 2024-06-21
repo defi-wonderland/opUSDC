@@ -603,20 +603,6 @@ contract L2OpUSDCBridgeAdapter_Unit_CallUsdcTransaction is Base {
   }
 
   /**
-   * @notice Check that reverts if a call reverts
-   */
-  function test_revertOnCallRevert(bytes memory _data) external {
-    vm.assume(_data.length >= 4);
-    // Mock calls
-    vm.mockCallRevert(_usdc, _data, abi.encode(false, ''));
-
-    // Execute
-    vm.prank(_owner);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidTransaction.selector);
-    adapter.callUsdcTransaction(_data);
-  }
-
-  /**
    * @notice Check that the function upgradeTo gets called through the fallback admin
    */
   function test_upgradeTo(address _newImplementation) external {
@@ -640,6 +626,50 @@ contract L2OpUSDCBridgeAdapter_Unit_CallUsdcTransaction is Base {
     );
     vm.prank(_owner);
     adapter.callUsdcTransaction(abi.encodeWithSignature('upgradeToAndCall(address,bytes)', _newImplementation, _data));
+  }
+
+  /**
+   * @notice Check that the function upgradeTo reverts if the call reverts
+   */
+  function test_upgradeToRevert(address _newImplementation) external {
+    address _fallbackAdmin = address(adapter.FALLBACK_PROXY_ADMIN());
+
+    vm.mockCallRevert(
+      _fallbackAdmin, abi.encodeWithSignature('upgradeTo(address)', _newImplementation), abi.encode(false, '')
+    );
+    vm.prank(_owner);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidTransaction.selector);
+    adapter.callUsdcTransaction(abi.encodeWithSignature('upgradeTo(address)', _newImplementation));
+  }
+
+  /**
+   * @notice Check that the function upgradeTo reverts if the call reverts
+   */
+  function test_upgradeToAndCallRevert(address _newImplementation, bytes memory _data) external {
+    address _fallbackAdmin = address(adapter.FALLBACK_PROXY_ADMIN());
+
+    vm.mockCallRevert(
+      _fallbackAdmin,
+      abi.encodeWithSignature('upgradeToAndCall(address,bytes)', _newImplementation, _data),
+      abi.encode(false, '')
+    );
+    vm.prank(_owner);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidTransaction.selector);
+    adapter.callUsdcTransaction(abi.encodeWithSignature('upgradeToAndCall(address,bytes)', _newImplementation, _data));
+  }
+
+  /**
+   * @notice Check that reverts if a call reverts
+   */
+  function test_revertOnCallRevert(bytes memory _data) external {
+    vm.assume(_data.length >= 4);
+    // Mock calls
+    vm.mockCallRevert(_usdc, _data, abi.encode(false, ''));
+
+    // Execute
+    vm.prank(_owner);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidTransaction.selector);
+    adapter.callUsdcTransaction(_data);
   }
 
   /**
