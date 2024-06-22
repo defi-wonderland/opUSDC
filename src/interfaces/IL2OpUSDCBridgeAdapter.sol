@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
+import {FallbackProxyAdmin} from 'contracts/utils/FallbackProxyAdmin.sol';
+
 interface IL2OpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
                             EVENTS
@@ -49,4 +51,9 @@ interface IL2OpUSDCBridgeAdapter {
    * @return _isMessagingDisabled Whether messaging is disabled
    */
   function isMessagingDisabled() external view returns (bool _isMessagingDisabled);
+
+  /**
+   * @return _fallbackProxyAdmin The address of the fallback proxy admin
+   */
+  function FALLBACK_PROXY_ADMIN() external view returns (FallbackProxyAdmin _fallbackProxyAdmin);
 }

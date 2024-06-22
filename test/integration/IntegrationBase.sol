@@ -55,6 +55,7 @@ contract IntegrationBase is Helpers {
   L2OpUSDCBridgeAdapter public l2Adapter;
   IUSDC public bridgedUSDC;
   IL2OpUSDCFactory.USDCInitializeData public usdcInitializeData;
+  IL1OpUSDCFactory.L2Deployments public l2Deployments;
 
   function setUp() public virtual {
     mainnet = vm.createFork(vm.rpcUrl('mainnet'), _MAINNET_FORK_BLOCK);
@@ -67,13 +68,13 @@ contract IntegrationBase is Helpers {
     usdcInitTxns[1] = USDCInitTxs.INITIALIZEV2_1;
     usdcInitTxns[2] = USDCInitTxs.INITIALIZEV2_2;
     // Define the L2 deployments data
-    IL1OpUSDCFactory.L2Deployments memory _l2Deployments =
+    l2Deployments =
       IL1OpUSDCFactory.L2Deployments(_owner, USDC_IMPLEMENTATION_CREATION_CODE, usdcInitTxns, MIN_GAS_LIMIT_DEPLOY);
 
     vm.selectFork(mainnet);
 
     vm.prank(_owner);
-    (address _l1Adapter,, address _l2Adapter) = factory.deploy(address(OPTIMISM_L1_MESSENGER), _owner, _l2Deployments);
+    (address _l1Adapter,, address _l2Adapter) = factory.deploy(address(OPTIMISM_L1_MESSENGER), _owner, l2Deployments);
 
     l1Adapter = L1OpUSDCBridgeAdapter(_l1Adapter);
 
@@ -89,7 +90,7 @@ contract IntegrationBase is Helpers {
     MAINNET_USDC.configureMinter(_masterMinter, type(uint256).max);
 
     vm.selectFork(optimism);
-    _relayL2Deployments(_salt, _l1Adapter, usdcInitializeData, _l2Deployments);
+    _relayL2Deployments(_salt, _l1Adapter, usdcInitializeData, l2Deployments);
 
     l2Adapter = L2OpUSDCBridgeAdapter(_l2Adapter);
     bridgedUSDC = IUSDC(l2Adapter.USDC());
