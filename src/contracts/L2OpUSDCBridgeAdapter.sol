@@ -212,6 +212,6 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
       revert IOpUSDCBridgeAdapter_InvalidTransaction();
     }
 
-    emit UsdcOwnableFunctionSent(_selector);
+    emit UsdcFunctionSent(_selector);
   }
 }
