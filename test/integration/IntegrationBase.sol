@@ -119,11 +119,8 @@ contract IntegrationBase is Helpers {
       _l2Deployments.usdcInitTxs
     );
     bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
-    uint256 _messageNonce = L2_MESSENGER.messageNonce();
 
-    vm.prank(ALIASED_L1_MESSENGER);
-    L2_MESSENGER.relayMessage(
-      _messageNonce + 1,
+    _relayL1ToL2Message(
       address(factory),
       L2_CREATE2_DEPLOYER,
       _ZERO_VALUE,
@@ -147,11 +144,7 @@ contract IntegrationBase is Helpers {
     vm.stopPrank();
 
     vm.selectFork(optimism);
-    uint256 _messageNonce = L2_MESSENGER.messageNonce();
-
-    vm.prank(ALIASED_L1_MESSENGER);
-    L2_MESSENGER.relayMessage(
-      _messageNonce + 1,
+    _relayL1ToL2Message(
       address(l1Adapter),
       address(l2Adapter),
       0,
@@ -170,7 +163,7 @@ contract IntegrationBase is Helpers {
     // NOTE: Changes current fork to optimism
     vm.selectFork(optimism);
     uint256 _messageNonce = L2_MESSENGER.messageNonce();
-    vm.startPrank(AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER)));
+    vm.startPrank(ALIASED_L1_MESSENGER);
     L2_MESSENGER.relayMessage(_messageNonce + 1, _sender, _target, _value, _minGasLimit, _data);
     vm.stopPrank();
   }
