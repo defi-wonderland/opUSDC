@@ -3,3 +3,4 @@ forge-std/=node_modules/forge-std/src
 contracts/=src/contracts
 interfaces/=src/interfaces
 halmos-cheatcodes/=node_modules/halmos-cheatcodes/src
+libraries/=src/libraries

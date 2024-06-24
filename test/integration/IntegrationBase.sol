@@ -25,12 +25,17 @@ contract IntegrationBase is Helpers {
     IMockCrossDomainMessenger(0x4200000000000000000000000000000000000007);
   IMockCrossDomainMessenger public constant OPTIMISM_L1_MESSENGER =
     IMockCrossDomainMessenger(0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1);
-  bytes32 public constant SALT = keccak256(abi.encode('32'));
-  string public constant TOKEN_NAME = 'USD Coin';
-  string public constant TOKEN_SYMBOL = 'USDC';
-  uint32 public constant MIN_GAS_LIMIT_FACTORY = 4_000_000;
   uint32 public constant MIN_GAS_LIMIT_DEPLOY = 8_000_000;
   uint32 internal constant _ZERO_VALUE = 0;
+  uint256 internal constant _amount = 1e18;
+  uint32 internal constant _minGasLimit = 1_000_000;
+
+  /// @notice Value used for the L2 sender storage slot in both the OptimismPortal and the
+  ///         CrossDomainMessenger contracts before an actual sender is set. This value is
+  ///         non-zero to reduce the gas cost of message passing transactions.
+  address internal constant _DEFAULT_L2_SENDER = 0x000000000000000000000000000000000000dEaD;
+
+  address public immutable ALIASED_L1_MESSENGER = AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER));
 
   // Fork variables
   uint256 public optimism;
@@ -62,24 +67,29 @@ contract IntegrationBase is Helpers {
     usdcInitTxns[1] = USDCInitTxs.INITIALIZEV2_1;
     usdcInitTxns[2] = USDCInitTxs.INITIALIZEV2_2;
     // Define the L2 deployments data
-    IL1OpUSDCFactory.L2Deployments memory _l2Deployments = IL1OpUSDCFactory.L2Deployments(
-      _owner, USDC_IMPLEMENTATION_CREATION_CODE, usdcInitTxns, MIN_GAS_LIMIT_FACTORY, MIN_GAS_LIMIT_DEPLOY
-    );
+    IL1OpUSDCFactory.L2Deployments memory _l2Deployments =
+      IL1OpUSDCFactory.L2Deployments(_owner, USDC_IMPLEMENTATION_CREATION_CODE, usdcInitTxns, MIN_GAS_LIMIT_DEPLOY);
 
     vm.selectFork(mainnet);
 
-    vm.startPrank(_owner);
-    (address _l1Adapter, address _l2Factory, address _l2Adapter) =
-      factory.deploy(address(OPTIMISM_L1_MESSENGER), _owner, _l2Deployments);
-    vm.stopPrank();
-    bytes32 _salt = bytes32(factory.deploymentsSaltCounter());
+    vm.prank(_owner);
+    (address _l1Adapter,, address _l2Adapter) = factory.deploy(address(OPTIMISM_L1_MESSENGER), _owner, _l2Deployments);
 
     l1Adapter = L1OpUSDCBridgeAdapter(_l1Adapter);
 
-    usdcInitializeData =
-      IL2OpUSDCFactory.USDCInitializeData(TOKEN_NAME, TOKEN_SYMBOL, MAINNET_USDC.currency(), MAINNET_USDC.decimals());
+    // Get salt and initialize data for l2 deployments
+    bytes32 _salt = bytes32(factory.deploymentsSaltCounter());
+    usdcInitializeData = IL2OpUSDCFactory.USDCInitializeData(
+      factory.USDC_NAME(), factory.USDC_SYMBOL(), MAINNET_USDC.currency(), MAINNET_USDC.decimals()
+    );
+
+    // Give max minting power to the master minter
+    address _masterMinter = MAINNET_USDC.masterMinter();
+    vm.prank(_masterMinter);
+    MAINNET_USDC.configureMinter(_masterMinter, type(uint256).max);
+
     vm.selectFork(optimism);
-    _relayL2Deployments(_salt, _l1Adapter, _l2Factory, usdcInitializeData, _l2Deployments);
+    _relayL2Deployments(_salt, _l1Adapter, usdcInitializeData, _l2Deployments);
 
     l2Adapter = L2OpUSDCBridgeAdapter(_l2Adapter);
     bridgedUSDC = IUSDC(l2Adapter.USDC());
@@ -94,42 +104,56 @@ contract IntegrationBase is Helpers {
   function _relayL2Deployments(
     bytes32 _salt,
     address _l1Adapter,
-    address _l2Factory,
     IL2OpUSDCFactory.USDCInitializeData memory _usdcInitializeData,
     IL1OpUSDCFactory.L2Deployments memory _l2Deployments
   ) internal {
-    bytes memory _l2FactoryCreationCode = type(L2OpUSDCFactory).creationCode;
-    bytes memory _l2FactoryCArgs = abi.encode(address(factory));
-    bytes memory _l2FactoryInitCode = bytes.concat(_l2FactoryCreationCode, _l2FactoryCArgs);
+    bytes memory _l2FactoryCArgs = abi.encode(
+      _l1Adapter,
+      _l2Deployments.l2AdapterOwner,
+      _l2Deployments.usdcImplementationInitCode,
+      _usdcInitializeData,
+      _l2Deployments.usdcInitTxs
+    );
+    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
+    uint256 _messageNonce = L2_MESSENGER.messageNonce();
 
-    vm.startPrank(AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER)));
-
+    vm.prank(ALIASED_L1_MESSENGER);
     L2_MESSENGER.relayMessage(
-      L2_MESSENGER.messageNonce() + 1,
+      _messageNonce + 1,
       address(factory),
-      address(L2_CREATE2_DEPLOYER),
+      L2_CREATE2_DEPLOYER,
       _ZERO_VALUE,
-      MIN_GAS_LIMIT_FACTORY,
+      _l2Deployments.minGasLimitDeploy,
       abi.encodeWithSignature('deploy(uint256,bytes32,bytes)', _ZERO_VALUE, _salt, _l2FactoryInitCode)
     );
+  }
 
-    L2_MESSENGER.relayMessage(
-      L2_MESSENGER.messageNonce() + 2,
-      address(factory),
-      address(_l2Factory),
-      _ZERO_VALUE,
-      MIN_GAS_LIMIT_DEPLOY,
-      abi.encodeWithSelector(
-        L2OpUSDCFactory.deploy.selector,
-        _l1Adapter,
-        _l2Deployments.l2AdapterOwner,
-        _l2Deployments.usdcImplementationInitCode,
-        _usdcInitializeData,
-        _l2Deployments.usdcInitTxs
-      )
-    );
+  function _mintSupplyOnL2(uint256 _supply) internal {
+    vm.selectFork(mainnet);
 
+    // We need to do this instead of `deal` because deal doesnt change `totalSupply` state
+    vm.startPrank(MAINNET_USDC.masterMinter());
+    MAINNET_USDC.configureMinter(MAINNET_USDC.masterMinter(), _supply);
+    MAINNET_USDC.mint(_user, _supply);
     vm.stopPrank();
+
+    vm.startPrank(_user);
+    MAINNET_USDC.approve(address(l1Adapter), _supply);
+    l1Adapter.sendMessage(_user, _supply, _minGasLimit);
+    vm.stopPrank();
+
+    vm.selectFork(optimism);
+    uint256 _messageNonce = L2_MESSENGER.messageNonce();
+
+    vm.prank(ALIASED_L1_MESSENGER);
+    L2_MESSENGER.relayMessage(
+      _messageNonce + 1,
+      address(l1Adapter),
+      address(l2Adapter),
+      0,
+      1_000_000,
+      abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _supply)
+    );
   }
 }
 
