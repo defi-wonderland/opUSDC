@@ -47,11 +47,6 @@ interface IL2OpUSDCFactory {
   ///////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Thrown when the caller is not the L2 messenger, or the cross domain caller is not the L1 factory
-   */
-  error IL2OpUSDCFactory_InvalidSender();
-
-  /**
    * @notice Thrown when a contract deployment fails
    */
   error IL2OpUSDCFactory_DeploymentFailed();

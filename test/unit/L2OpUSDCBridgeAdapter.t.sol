@@ -38,7 +38,7 @@ abstract contract Base is Helpers {
   event MigratingToNative(address _messenger, address _newOwner);
   event MessageSent(address _user, address _to, uint256 _amount, address _messenger, uint32 _minGasLimit);
   event MessageReceived(address _user, uint256 _amount, address _messenger);
-  event UsdcOwnableFunctionSent(bytes4 _functionSignature);
+  event UsdcFunctionSent(bytes4 _functionSignature);
 
   function setUp() public virtual {
     (_signerAd, _signerPk) = makeAddrAndKey('signer');
@@ -77,7 +77,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
    */
   function test_revertIfNotLinkedAdapter(address _newOwner, uint32 _setBurnAmountMinGasLimit) external {
     // Mock calls
-    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_user));
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_user));
 
     // Execute
     vm.prank(_messenger);
@@ -90,13 +90,13 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
    */
   function test_expectCall(address _newOwner, uint32 _setBurnAmountMinGasLimit, uint256 _burnAmount) external {
     // Mock calls
-    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
-    _mockAndExpect(address(_usdc), abi.encodeWithSignature('transferOwnership(address)', _newOwner), abi.encode());
-    _mockAndExpect(address(_usdc), abi.encodeWithSignature('changeAdmin(address)', _newOwner), abi.encode());
-    _mockAndExpect(address(_usdc), abi.encodeWithSignature('totalSupply()'), abi.encode(_burnAmount));
+    _mockAndExpect(_usdc, abi.encodeWithSignature('transferOwnership(address)', _newOwner), abi.encode());
+    _mockAndExpect(_usdc, abi.encodeWithSignature('changeAdmin(address)', _newOwner), abi.encode());
+    _mockAndExpect(_usdc, abi.encodeWithSignature('totalSupply()'), abi.encode(_burnAmount));
     _mockAndExpect(
-      address(_messenger),
+      _messenger,
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
@@ -113,13 +113,13 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
 
   function test_stateChange(address _newOwner, uint32 _setBurnAmountMinGasLimit) external {
     // Mock calls
-    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
-    _mockAndExpect(address(_usdc), abi.encodeWithSignature('transferOwnership(address)', _newOwner), abi.encode());
-    _mockAndExpect(address(_usdc), abi.encodeWithSignature('changeAdmin(address)', _newOwner), abi.encode());
-    _mockAndExpect(address(_usdc), abi.encodeWithSignature('totalSupply()'), abi.encode(100));
+    _mockAndExpect(_usdc, abi.encodeWithSignature('transferOwnership(address)', _newOwner), abi.encode());
+    _mockAndExpect(_usdc, abi.encodeWithSignature('changeAdmin(address)', _newOwner), abi.encode());
+    _mockAndExpect(_usdc, abi.encodeWithSignature('totalSupply()'), abi.encode(100));
     _mockAndExpect(
-      address(_messenger),
+      _messenger,
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
@@ -140,12 +140,12 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
    */
   function test_emitEvent(address _newOwner, uint32 _setBurnAmountMinGasLimit, uint256 _burnAmount) external {
     // Mock calls
-    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
-    vm.mockCall(address(_usdc), abi.encodeWithSignature('transferOwnership(address)', _newOwner), abi.encode());
-    vm.mockCall(address(_usdc), abi.encodeWithSignature('changeAdmin(address)', _newOwner), abi.encode());
-    vm.mockCall(address(_usdc), abi.encodeWithSignature('totalSupply()'), abi.encode(_burnAmount));
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    vm.mockCall(_usdc, abi.encodeWithSignature('transferOwnership(address)', _newOwner), abi.encode());
+    vm.mockCall(_usdc, abi.encodeWithSignature('changeAdmin(address)', _newOwner), abi.encode());
+    vm.mockCall(_usdc, abi.encodeWithSignature('totalSupply()'), abi.encode(_burnAmount));
     vm.mockCall(
-      address(_messenger),
+      _messenger,
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
@@ -308,13 +308,13 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessage is Base {
    */
   function test_expectedCall(address _to, uint256 _amount, uint32 _minGasLimit) external {
     _mockAndExpect(
-      address(_usdc),
+      _usdc,
       abi.encodeWithSignature('transferFrom(address,address,uint256)', _user, address(adapter), _amount),
       abi.encode(true)
     );
-    _mockAndExpect(address(_usdc), abi.encodeWithSignature('burn(uint256)', _amount), abi.encode(true));
+    _mockAndExpect(_usdc, abi.encodeWithSignature('burn(uint256)', _amount), abi.encode(true));
     _mockAndExpect(
-      address(_messenger),
+      _messenger,
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
@@ -334,10 +334,10 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessage is Base {
    */
   function test_emitEvent(address _to, uint256 _amount, uint32 _minGasLimit) external {
     // Mock calls
-    vm.mockCall(address(_usdc), abi.encodeWithSignature('burn(address,uint256)', _user, _amount), abi.encode(true));
+    vm.mockCall(_usdc, abi.encodeWithSignature('burn(address,uint256)', _user, _amount), abi.encode(true));
 
     vm.mockCall(
-      address(_messenger),
+      _messenger,
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
@@ -420,13 +420,13 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     uint256 _nonce = adapter.userNonce(_signerAd);
     bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
     vm.mockCall(
-      address(_usdc),
+      _usdc,
       abi.encodeWithSignature('transferFrom(address,address,uint256)', _user, address(adapter), _amount),
       abi.encode(true)
     );
-    vm.mockCall(address(_usdc), abi.encodeWithSignature('burn(uint256)', _amount), abi.encode(true));
+    vm.mockCall(_usdc, abi.encodeWithSignature('burn(uint256)', _amount), abi.encode(true));
     vm.mockCall(
-      address(_messenger),
+      _messenger,
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
@@ -451,13 +451,13 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     uint256 _nonce = adapter.userNonce(_signerAd);
     bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
     _mockAndExpect(
-      address(_usdc),
+      _usdc,
       abi.encodeWithSignature('transferFrom(address,address,uint256)', _signerAd, address(adapter), _amount),
       abi.encode(true)
     );
-    _mockAndExpect(address(_usdc), abi.encodeWithSignature('burn(uint256)', _amount), abi.encode(true));
+    _mockAndExpect(_usdc, abi.encodeWithSignature('burn(uint256)', _amount), abi.encode(true));
     _mockAndExpect(
-      address(_messenger),
+      _messenger,
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
@@ -481,13 +481,13 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     uint256 _nonce = adapter.userNonce(_signerAd);
     bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
     vm.mockCall(
-      address(_usdc),
+      _usdc,
       abi.encodeWithSignature('transferFrom(address,address,uint256)', _user, address(adapter), _amount),
       abi.encode(true)
     );
-    vm.mockCall(address(_usdc), abi.encodeWithSignature('burn(uint256)', _amount), abi.encode(true));
+    vm.mockCall(_usdc, abi.encodeWithSignature('burn(uint256)', _amount), abi.encode(true));
     vm.mockCall(
-      address(_messenger),
+      _messenger,
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
@@ -525,7 +525,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
     vm.assume(_linkedAdapter != _messageSender);
 
     // Mock calls
-    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_messageSender));
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_messageSender));
 
     // Execute
     vm.prank(_messenger);
@@ -538,9 +538,9 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
    */
   function test_mintTokens(uint256 _amount) external {
     // Mock calls
-    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
-    _mockAndExpect(address(_usdc), abi.encodeWithSignature('mint(address,uint256)', _user, _amount), abi.encode(true));
+    _mockAndExpect(_usdc, abi.encodeWithSignature('mint(address,uint256)', _user, _amount), abi.encode(true));
 
     // Execute
     vm.prank(_messenger);
@@ -552,9 +552,9 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
    */
   function test_emitEvent(uint256 _amount) external {
     // Mock calls
-    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
-    vm.mockCall(address(_usdc), abi.encodeWithSignature('mint(address,uint256)', _user, _amount), abi.encode(true));
+    vm.mockCall(_usdc, abi.encodeWithSignature('mint(address,uint256)', _user, _amount), abi.encode(true));
 
     // Execute
     vm.expectEmit(true, true, true, true);
@@ -603,20 +603,6 @@ contract L2OpUSDCBridgeAdapter_Unit_CallUsdcTransaction is Base {
   }
 
   /**
-   * @notice Check that reverts if a call reverts
-   */
-  function test_revertOnCallRevert(bytes memory _data) external {
-    vm.assume(_data.length >= 4);
-    // Mock calls
-    vm.mockCallRevert(_usdc, _data, abi.encode(false, ''));
-
-    // Execute
-    vm.prank(_owner);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidTransaction.selector);
-    adapter.callUsdcTransaction(_data);
-  }
-
-  /**
    * @notice Check that the function upgradeTo gets called through the fallback admin
    */
   function test_upgradeTo(address _newImplementation) external {
@@ -640,6 +626,50 @@ contract L2OpUSDCBridgeAdapter_Unit_CallUsdcTransaction is Base {
     );
     vm.prank(_owner);
     adapter.callUsdcTransaction(abi.encodeWithSignature('upgradeToAndCall(address,bytes)', _newImplementation, _data));
+  }
+
+  /**
+   * @notice Check that the function upgradeTo reverts if the call reverts
+   */
+  function test_upgradeToRevert(address _newImplementation) external {
+    address _fallbackAdmin = address(adapter.FALLBACK_PROXY_ADMIN());
+
+    vm.mockCallRevert(
+      _fallbackAdmin, abi.encodeWithSignature('upgradeTo(address)', _newImplementation), abi.encode(false, '')
+    );
+    vm.prank(_owner);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidTransaction.selector);
+    adapter.callUsdcTransaction(abi.encodeWithSignature('upgradeTo(address)', _newImplementation));
+  }
+
+  /**
+   * @notice Check that the function upgradeTo reverts if the call reverts
+   */
+  function test_upgradeToAndCallRevert(address _newImplementation, bytes memory _data) external {
+    address _fallbackAdmin = address(adapter.FALLBACK_PROXY_ADMIN());
+
+    vm.mockCallRevert(
+      _fallbackAdmin,
+      abi.encodeWithSignature('upgradeToAndCall(address,bytes)', _newImplementation, _data),
+      abi.encode(false, '')
+    );
+    vm.prank(_owner);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidTransaction.selector);
+    adapter.callUsdcTransaction(abi.encodeWithSignature('upgradeToAndCall(address,bytes)', _newImplementation, _data));
+  }
+
+  /**
+   * @notice Check that reverts if a call reverts
+   */
+  function test_revertOnCallRevert(bytes memory _data) external {
+    vm.assume(_data.length >= 4);
+    // Mock calls
+    vm.mockCallRevert(_usdc, _data, abi.encode(false, ''));
+
+    // Execute
+    vm.prank(_owner);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidTransaction.selector);
+    adapter.callUsdcTransaction(_data);
   }
 
   /**
@@ -672,7 +702,7 @@ contract L2OpUSDCBridgeAdapter_Unit_CallUsdcTransaction is Base {
 
     // Expect events
     vm.expectEmit(true, true, true, true);
-    emit UsdcOwnableFunctionSent(bytes4(_data));
+    emit UsdcFunctionSent(bytes4(_data));
 
     // Execute
     vm.prank(_owner);

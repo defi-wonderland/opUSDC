@@ -11,7 +11,7 @@ interface IL2OpUSDCBridgeAdapter {
   /**
    * @notice Emitted when the owner message is sent
    */
-  event UsdcOwnableFunctionSent(bytes4 _functionSignature);
+  event UsdcFunctionSent(bytes4 _functionSignature);
 
   /*///////////////////////////////////////////////////////////////
                             LOGIC

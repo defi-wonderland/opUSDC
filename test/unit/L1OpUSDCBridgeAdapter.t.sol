@@ -123,7 +123,7 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
   ) external {
     vm.assume(_newOwner != address(0));
     vm.mockCall(
-      address(_messenger),
+      _messenger,
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
@@ -154,7 +154,7 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
   ) external {
     vm.assume(_newOwner != address(0));
     _mockAndExpect(
-      address(_messenger),
+      _messenger,
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
@@ -182,7 +182,7 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
     adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Upgrading);
 
     _mockAndExpect(
-      address(_messenger),
+      _messenger,
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
@@ -208,7 +208,7 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
     vm.assume(_newOwner != address(0));
     // Mock calls
     vm.mockCall(
-      address(_messenger),
+      _messenger,
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
@@ -246,7 +246,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SetBurnAmount is Base {
   function test_revertIfLinkedAdapterDidntSendTheMessage(uint256 _amount, address _messageSender) external {
     vm.assume(_messageSender != _linkedAdapter);
     // Mock calls
-    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_messageSender));
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_messageSender));
 
     // Execute
     vm.prank(_messenger);
@@ -263,7 +263,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SetBurnAmount is Base {
 
     adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status(_status));
 
-    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
     // Execute
     vm.prank(_messenger);
@@ -275,7 +275,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SetBurnAmount is Base {
    * @notice Check that the burn amount is set as expected
    */
   function test_setAmount(uint256 _burnAmount) external {
-    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
     adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Upgrading);
 
@@ -291,7 +291,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SetBurnAmount is Base {
    * @notice Check that the status is set as expected
    */
   function test_setStatus(uint256 _burnAmount) external {
-    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
     adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Upgrading);
 
@@ -311,7 +311,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SetBurnAmount is Base {
    */
 
   function test_emitEvent(uint256 _burnAmount) external {
-    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
     adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Upgrading);
 
@@ -352,7 +352,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
 
     vm.assume(_burnAmount > 0);
 
-    _mockAndExpect(address(_usdc), abi.encodeWithSignature('burn(uint256)', _burnAmount), abi.encode(true));
+    _mockAndExpect(_usdc, abi.encodeWithSignature('burn(uint256)', _burnAmount), abi.encode(true));
 
     adapter.forTest_setBurnAmount(_burnAmount);
 
@@ -370,7 +370,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
     adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Deprecated);
 
     vm.mockCall(
-      address(_usdc), abi.encodeWithSignature('burn(address,uint256)', address(adapter), _burnAmount), abi.encode(true)
+      _usdc, abi.encodeWithSignature('burn(address,uint256)', address(adapter), _burnAmount), abi.encode(true)
     );
 
     adapter.forTest_setBurnAmount(_burnAmount);
@@ -391,7 +391,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
     adapter.forTest_setNewOwner(_circle);
     adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Deprecated);
 
-    vm.mockCall(address(_usdc), abi.encodeWithSignature('burn(address)', address(adapter)), abi.encode(true));
+    vm.mockCall(_usdc, abi.encodeWithSignature('burn(address)', address(adapter)), abi.encode(true));
 
     adapter.forTest_setBurnAmount(_burnAmount);
 
@@ -506,7 +506,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ResumeMessaging is Base {
   function test_setMessengerStatusToActive(uint32 _minGasLimit) external {
     adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Paused);
     _mockAndExpect(
-      address(_messenger),
+      _messenger,
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
@@ -528,7 +528,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ResumeMessaging is Base {
     adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Paused);
     // Mock calls
     vm.mockCall(
-      address(_messenger),
+      _messenger,
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
@@ -568,12 +568,12 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessage is Base {
    */
   function test_expectedCall(address _to, uint256 _amount, uint32 _minGasLimit) external {
     _mockAndExpect(
-      address(_usdc),
+      _usdc,
       abi.encodeWithSignature('transferFrom(address,address,uint256)', _user, address(adapter), _amount),
       abi.encode(true)
     );
     _mockAndExpect(
-      address(_messenger),
+      _messenger,
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
@@ -594,13 +594,13 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessage is Base {
   function test_emitEvent(address _to, uint256 _amount, uint32 _minGasLimit) external {
     // Mock calls
     vm.mockCall(
-      address(_usdc),
+      _usdc,
       abi.encodeWithSignature('transferFrom(address,address,uint256)', _user, address(adapter), _amount),
       abi.encode(true)
     );
 
     vm.mockCall(
-      address(_messenger),
+      _messenger,
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
@@ -684,12 +684,12 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
 
     vm.mockCall(
-      address(_usdc),
+      _usdc,
       abi.encodeWithSignature('transferFrom(address,address,uint256)', _signerAd, address(adapter), _amount),
       abi.encode(true)
     );
     vm.mockCall(
-      address(_messenger),
+      _messenger,
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
@@ -715,12 +715,12 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
 
     _mockAndExpect(
-      address(_usdc),
+      _usdc,
       abi.encodeWithSignature('transferFrom(address,address,uint256)', _signerAd, address(adapter), _amount),
       abi.encode(true)
     );
     _mockAndExpect(
-      address(_messenger),
+      _messenger,
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
@@ -745,12 +745,12 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
 
     vm.mockCall(
-      address(_usdc),
+      _usdc,
       abi.encodeWithSignature('transferFrom(address,address,uint256)', _signerAd, address(adapter), _amount),
       abi.encode(true)
     );
     vm.mockCall(
-      address(_messenger),
+      _messenger,
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
@@ -786,7 +786,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
   function test_revertIfLinkedAdapterDidntSendTheMessage(uint256 _amount, address _messageSender) external {
     vm.assume(_messageSender != _linkedAdapter);
     // Mock calls
-    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_messageSender));
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_messageSender));
 
     // Execute
     vm.prank(_messenger);
@@ -799,11 +799,9 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
    */
   function test_sendTokens(uint256 _amount) external {
     // Mock calls
-    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
-    _mockAndExpect(
-      address(_usdc), abi.encodeWithSignature('transfer(address,uint256)', _user, _amount), abi.encode(true)
-    );
+    _mockAndExpect(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _user, _amount), abi.encode(true));
 
     // Execute
     vm.prank(_messenger);
@@ -815,9 +813,9 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
    */
   function test_emitEvent(uint256 _amount) external {
     // Mock calls
-    vm.mockCall(address(_messenger), abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
-    vm.mockCall(address(_usdc), abi.encodeWithSignature('transfer(address,uint256)', _user, _amount), abi.encode(true));
+    vm.mockCall(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _user, _amount), abi.encode(true));
 
     // Execute
     vm.expectEmit(true, true, true, true);
