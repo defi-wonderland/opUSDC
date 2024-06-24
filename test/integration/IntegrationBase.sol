@@ -155,6 +155,39 @@ contract IntegrationBase is Helpers {
       abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _supply)
     );
   }
+
+  function _relayL1ToL2Message(
+    address _sender,
+    address _target,
+    uint256 _value,
+    uint256 _minGasLimit,
+    bytes memory _data
+  ) internal {
+    // NOTE: Changes current fork to optimism
+    vm.selectFork(optimism);
+    uint256 _messageNonce = L2_MESSENGER.messageNonce();
+    vm.startPrank(AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER)));
+    L2_MESSENGER.relayMessage(_messageNonce + 1, _sender, _target, _value, _minGasLimit, _data);
+    vm.stopPrank();
+  }
+
+  function _relayL2ToL1Message(
+    address _sender,
+    address _target,
+    uint256 _value,
+    uint256 _minGasLimit,
+    bytes memory _data
+  ) internal {
+    vm.selectFork(mainnet);
+    _messageNonce = OPTIMISM_L1_MESSENGER.messageNonce();
+
+    // For simplicity we do this as this slot is not exposed until prove and finalize is done
+    stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(address(L2_MESSENGER));
+    vm.startPrank(OPTIMISM_PORTAL);
+    OPTIMISM_L1_MESSENGER.relayMessage(_messageNonce + 1, _target, _sender, _value, _minGasLimit, _data);
+    // Needs to be reset to mimic production
+    stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(_DEFAULT_L2_SENDER);
+  }
 }
 
 contract IntegrationSetup is IntegrationBase {
