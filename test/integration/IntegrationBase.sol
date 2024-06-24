@@ -95,7 +95,7 @@ contract IntegrationBase is Helpers {
     bridgedUSDC = IUSDC(l2Adapter.USDC());
 
     // Make foundry know these two address exist on both forks
-    vm.makePersistent(address(_l1Adapter));
+    vm.makePersistent(_l1Adapter);
     vm.makePersistent(address(l2Adapter));
     vm.makePersistent(address(bridgedUSDC));
     vm.makePersistent(address(l2Adapter.FALLBACK_PROXY_ADMIN()));
