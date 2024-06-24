@@ -51,7 +51,8 @@ contract IntegrationBase is Helpers {
 
   // OpUSDC Protocol
   L1OpUSDCBridgeAdapter public l1Adapter;
-  L1OpUSDCFactory public factory;
+  L1OpUSDCFactory public l1Factory;
+  L2OpUSDCFactory public l2Factory;
   L2OpUSDCBridgeAdapter public l2Adapter;
   IUSDC public bridgedUSDC;
   IL2OpUSDCFactory.USDCInitializeData public usdcInitializeData;
@@ -61,7 +62,7 @@ contract IntegrationBase is Helpers {
     mainnet = vm.createFork(vm.rpcUrl('mainnet'), _MAINNET_FORK_BLOCK);
     optimism = vm.createFork(vm.rpcUrl('optimism'), _OPTIMISM_FORK_BLOCK);
 
-    factory = new L1OpUSDCFactory(address(MAINNET_USDC));
+    l1Factory = new L1OpUSDCFactory(address(MAINNET_USDC));
 
     // Define the initialization transactions
     usdcInitTxns[0] = USDCInitTxs.INITIALIZEV2;
@@ -74,14 +75,15 @@ contract IntegrationBase is Helpers {
     vm.selectFork(mainnet);
 
     vm.prank(_owner);
-    (address _l1Adapter,, address _l2Adapter) = factory.deploy(address(OPTIMISM_L1_MESSENGER), _owner, l2Deployments);
+    (address _l1Adapter, address _l2Factory, address _l2Adapter) =
+      l1Factory.deploy(address(OPTIMISM_L1_MESSENGER), _owner, l2Deployments);
 
     l1Adapter = L1OpUSDCBridgeAdapter(_l1Adapter);
 
     // Get salt and initialize data for l2 deployments
-    bytes32 _salt = bytes32(factory.deploymentsSaltCounter());
+    bytes32 _salt = bytes32(l1Factory.deploymentsSaltCounter());
     usdcInitializeData = IL2OpUSDCFactory.USDCInitializeData(
-      factory.USDC_NAME(), factory.USDC_SYMBOL(), MAINNET_USDC.currency(), MAINNET_USDC.decimals()
+      l1Factory.USDC_NAME(), l1Factory.USDC_SYMBOL(), MAINNET_USDC.currency(), MAINNET_USDC.decimals()
     );
 
     // Give max minting power to the master minter
@@ -94,12 +96,14 @@ contract IntegrationBase is Helpers {
 
     l2Adapter = L2OpUSDCBridgeAdapter(_l2Adapter);
     bridgedUSDC = IUSDC(l2Adapter.USDC());
+    l2Factory = L2OpUSDCFactory(_l2Factory);
 
     // Make foundry know these two address exist on both forks
-    vm.makePersistent(address(_l1Adapter));
+    vm.makePersistent(address(l1Adapter));
     vm.makePersistent(address(l2Adapter));
     vm.makePersistent(address(bridgedUSDC));
     vm.makePersistent(address(l2Adapter.FALLBACK_PROXY_ADMIN()));
+    vm.makePersistent(address(l2Factory));
   }
 
   function _relayL2Deployments(
@@ -121,7 +125,7 @@ contract IntegrationBase is Helpers {
     vm.prank(ALIASED_L1_MESSENGER);
     L2_MESSENGER.relayMessage(
       _messageNonce + 1,
-      address(factory),
+      address(l1Factory),
       L2_CREATE2_DEPLOYER,
       _ZERO_VALUE,
       _l2Deployments.minGasLimitDeploy,
