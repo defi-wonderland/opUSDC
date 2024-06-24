@@ -2,12 +2,14 @@
 pragma solidity 0.8.25;
 
 import {Script} from 'forge-std/Script.sol';
-
 import {console} from 'forge-std/Test.sol';
 import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementationCreationCode.sol';
+import {USDCInitTxs} from 'src/contracts/utils/USDCInitTxs.sol';
 
 contract DeployBase is Script {
+  using USDCInitTxs for bytes;
+
   address public constant L1_MESSENGER = 0xC34855F4De64F1840e5686e64278da901e261f20;
   uint32 public constant MIN_GAS_LIMIT_DEPLOY = 8_000_000;
   IL1OpUSDCFactory public immutable L1_FACTORY = IL1OpUSDCFactory(vm.envAddress('L1_FACTORY_SEPOLIA'));
@@ -17,7 +19,11 @@ contract DeployBase is Script {
   function run() public {
     vm.startBroadcast(deployer);
     // Deploy the L2 contracts
-    bytes[] memory _usdcInitTxs = new bytes[](0);
+    bytes[] memory _usdcInitTxs = new bytes[](3);
+    _usdcInitTxs[0] = USDCInitTxs.INITIALIZEV2;
+    _usdcInitTxs[1] = USDCInitTxs.INITIALIZEV2_1;
+    _usdcInitTxs[2] = USDCInitTxs.INITIALIZEV2_2;
+
     IL1OpUSDCFactory.L2Deployments memory _l2Deployments = IL1OpUSDCFactory.L2Deployments({
       l2AdapterOwner: deployer,
       usdcImplementationInitCode: USDC_IMPLEMENTATION_CREATION_CODE,
