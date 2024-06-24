@@ -5,6 +5,8 @@ import {ICreate2Deployer} from 'interfaces/external/ICreate2Deployer.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 
 library CrossChainDeployments {
+  bytes1 internal constant _len = bytes1(0x94);
+
   /**
    * @notice Deploys the L2 factory contract through the L1 messenger
    * @param _args The initialization arguments for the L2 factory
@@ -64,7 +66,6 @@ library CrossChainDeployments {
     uint256 _nonce
   ) internal pure returns (address _precalculatedAddress) {
     bytes memory _data;
-    bytes1 _len = bytes1(0x94);
 
     // A one-byte integer in the [0x00, 0x7f] range uses its own value as a length prefix, there is no
     // additional "0x80 + length" prefix that precedes it.
