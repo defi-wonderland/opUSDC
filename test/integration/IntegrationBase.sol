@@ -6,6 +6,8 @@ import {IL1OpUSDCFactory, L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
 import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
+
+import {StdStorage, stdStorage} from 'forge-std/StdStorage.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 import {AddressAliasHelper} from 'test/utils/AddressAliasHelper.sol';
@@ -14,6 +16,8 @@ import {USDC_IMPLEMENTATION_CREATION_CODE} from 'test/utils/USDCImplementationCr
 import {IMockCrossDomainMessenger} from 'test/utils/interfaces/IMockCrossDomainMessenger.sol';
 
 contract IntegrationBase is Helpers {
+  using stdStorage for StdStorage;
+
   // Constants
   uint256 internal constant _MAINNET_FORK_BLOCK = 20_076_176;
   uint256 internal constant _OPTIMISM_FORK_BLOCK = 121_300_856;
@@ -179,12 +183,13 @@ contract IntegrationBase is Helpers {
     bytes memory _data
   ) internal {
     vm.selectFork(mainnet);
-    _messageNonce = OPTIMISM_L1_MESSENGER.messageNonce();
+    uint256 _messageNonce = OPTIMISM_L1_MESSENGER.messageNonce();
 
     // For simplicity we do this as this slot is not exposed until prove and finalize is done
     stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(address(L2_MESSENGER));
     vm.startPrank(OPTIMISM_PORTAL);
-    OPTIMISM_L1_MESSENGER.relayMessage(_messageNonce + 1, _target, _sender, _value, _minGasLimit, _data);
+    OPTIMISM_L1_MESSENGER.relayMessage(_messageNonce + 1, _sender, _target, _value, _minGasLimit, _data);
+    vm.stopPrank();
     // Needs to be reset to mimic production
     stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(_DEFAULT_L2_SENDER);
   }
