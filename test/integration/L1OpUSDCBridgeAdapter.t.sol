@@ -42,7 +42,7 @@ contract Integration_Bridging is IntegrationBase {
     );
     vm.stopPrank();
 
-    assertEq(bridgedUSDC.balanceOf(address(_user)), _userBalanceBefore + _amount);
+    assertEq(bridgedUSDC.balanceOf(_user), _userBalanceBefore + _amount);
   }
 
   /**
@@ -81,8 +81,8 @@ contract Integration_Bridging is IntegrationBase {
     );
     vm.stopPrank();
 
-    assertEq(bridgedUSDC.balanceOf(address(_l2Target)), _userBalanceBefore + _amount);
-    assertEq(bridgedUSDC.balanceOf(address(_user)), 0);
+    assertEq(bridgedUSDC.balanceOf(_l2Target), _userBalanceBefore + _amount);
+    assertEq(bridgedUSDC.balanceOf(_user), 0);
   }
 
   /**
@@ -130,8 +130,8 @@ contract Integration_Bridging is IntegrationBase {
       abi.encodeWithSignature('receiveMessage(address,uint256)', _signerAd, _amount)
     );
 
-    assertEq(bridgedUSDC.balanceOf(address(_signerAd)), _userBalanceBefore + _amount);
-    assertEq(bridgedUSDC.balanceOf(address(_user)), 0);
+    assertEq(bridgedUSDC.balanceOf(_signerAd), _userBalanceBefore + _amount);
+    assertEq(bridgedUSDC.balanceOf(_user), 0);
   }
 
   /**

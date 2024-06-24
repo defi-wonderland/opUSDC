@@ -183,7 +183,7 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
     address _fallbackProxyAdmin = _precalculateCreateAddress(_l2Adapter, _fallbackProxyAdminNonce);
 
     // Expect the call over 'changeAdmin' function
-    vm.expectCall(_usdcProxy, abi.encodeWithSelector(IUSDC.changeAdmin.selector, address(_fallbackProxyAdmin)));
+    vm.expectCall(_usdcProxy, abi.encodeWithSelector(IUSDC.changeAdmin.selector, _fallbackProxyAdmin));
 
     // Execute
     vm.prank(_create2Deployer);
