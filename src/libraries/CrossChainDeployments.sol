@@ -5,7 +5,7 @@ import {ICreate2Deployer} from 'interfaces/external/ICreate2Deployer.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 
 library CrossChainDeployments {
-  bytes1 internal constant _len = bytes1(0x94);
+  bytes1 internal constant _LEN = bytes1(0x94);
 
   /**
    * @notice Deploys the L2 factory contract through the L1 messenger
@@ -72,7 +72,7 @@ library CrossChainDeployments {
     // A one-byte integer in the [0x00, 0x7f] range uses its own value as a length prefix, there is no
     // additional "0x80 + length" prefix that precedes it.
     if (_nonce <= 0x7f) {
-      _data = abi.encodePacked(bytes1(0xd6), _len, _deployer, uint8(_nonce));
+      _data = abi.encodePacked(bytes1(0xd6), _LEN, _deployer, uint8(_nonce));
     }
     // In the case of `_nonce > 0x7f` and `_nonce <= type(uint8).max`, we have the following encoding scheme
     // (the same calculation can be carried over for higher _nonce bytes):
@@ -80,21 +80,21 @@ library CrossChainDeployments {
     // 0x94 = 0x80 + 0x14 (= the bytes length of an address, 20 bytes, in hex),
     // 0x84 = 0x80 + 0x04 (= the bytes length of the _nonce, 4 bytes, in hex).
     else if (_nonce <= type(uint8).max) {
-      _data = abi.encodePacked(bytes1(0xd7), _len, _deployer, bytes1(0x81), uint8(_nonce));
+      _data = abi.encodePacked(bytes1(0xd7), _LEN, _deployer, bytes1(0x81), uint8(_nonce));
     } else if (_nonce <= type(uint16).max) {
-      _data = abi.encodePacked(bytes1(0xd8), _len, _deployer, bytes1(0x82), uint16(_nonce));
+      _data = abi.encodePacked(bytes1(0xd8), _LEN, _deployer, bytes1(0x82), uint16(_nonce));
     } else if (_nonce <= type(uint24).max) {
-      _data = abi.encodePacked(bytes1(0xd9), _len, _deployer, bytes1(0x83), uint24(_nonce));
+      _data = abi.encodePacked(bytes1(0xd9), _LEN, _deployer, bytes1(0x83), uint24(_nonce));
     } else if (_nonce <= type(uint32).max) {
-      _data = abi.encodePacked(bytes1(0xda), _len, _deployer, bytes1(0x84), uint32(_nonce));
+      _data = abi.encodePacked(bytes1(0xda), _LEN, _deployer, bytes1(0x84), uint32(_nonce));
     } else if (_nonce <= type(uint40).max) {
-      _data = abi.encodePacked(bytes1(0xdb), _len, _deployer, bytes1(0x85), uint40(_nonce));
+      _data = abi.encodePacked(bytes1(0xdb), _LEN, _deployer, bytes1(0x85), uint40(_nonce));
     } else if (_nonce <= type(uint48).max) {
-      _data = abi.encodePacked(bytes1(0xdc), _len, _deployer, bytes1(0x86), uint48(_nonce));
+      _data = abi.encodePacked(bytes1(0xdc), _LEN, _deployer, bytes1(0x86), uint48(_nonce));
     } else if (_nonce <= type(uint56).max) {
-      _data = abi.encodePacked(bytes1(0xdd), _len, _deployer, bytes1(0x87), uint56(_nonce));
+      _data = abi.encodePacked(bytes1(0xdd), _LEN, _deployer, bytes1(0x87), uint56(_nonce));
     } else {
-      _data = abi.encodePacked(bytes1(0xde), _len, _deployer, bytes1(0x88), uint64(_nonce));
+      _data = abi.encodePacked(bytes1(0xde), _LEN, _deployer, bytes1(0x88), uint64(_nonce));
     }
 
     _precalculatedAddress = address(uint160(uint256(keccak256(_data))));
