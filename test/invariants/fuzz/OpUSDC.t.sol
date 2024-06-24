@@ -46,24 +46,6 @@ contract OpUsdcTest is EchidnaTest {
     assert(l1Adapter.USDC() == address(usdcMainnet));
   }
 
-  // debug: forge debug setup
-
-  function setUp() public {
-    IL1OpUSDCFactory.L2Deployments memory _l2Deployments = _mainnetSetup();
-    bytes32 _salt = bytes32(factory.deploymentsSaltCounter());
-    _l2Setup(_l2Deployments);
-  }
-
-  function test_test() public {
-    assert(l2Adapter.LINKED_ADAPTER() == address(l1Adapter));
-    assert(l2Adapter.MESSENGER() == address(mockMessenger));
-    assert(l2Adapter.USDC() == address(usdcBridged));
-
-    assert(l1Adapter.LINKED_ADAPTER() == address(l2Adapter));
-    assert(l1Adapter.MESSENGER() == address(mockMessenger));
-    assert(l1Adapter.USDC() == address(usdcMainnet));
-  }
-
   /////////////////////////////////////////////////////////////////////
   //                          Initial setup                          //
   /////////////////////////////////////////////////////////////////////
@@ -87,7 +69,7 @@ contract OpUsdcTest is EchidnaTest {
 
     factory = new L1OpUSDCFactory(address(usdcMainnet));
 
-    mockMessenger = new MockBridge(address(factory));
+    mockMessenger = MockBridge(0x4200000000000000000000000000000000000007);
 
     // owner is this contract, as managed in the agents handler
     _l2Deployments =
@@ -117,13 +99,16 @@ contract OpUsdcTest is EchidnaTest {
 
     bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2factoryConstructorArgs);
 
+    // !!!! Nonce incremented to avoid collision !!!
     mockMessenger.relayMessage(
       mockMessenger.messageNonce() + 1,
       address(factory),
       address(0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2),
       0,
       3_000_000,
-      abi.encodeWithSignature('deploy(uint256,bytes32,bytes)', 0, factory.deploymentsSaltCounter(), _l2FactoryInitCode)
+      abi.encodeWithSignature(
+        'deploy(uint256,bytes32,bytes)', 0, factory.deploymentsSaltCounter() + 1, _l2FactoryInitCode
+      )
     );
 
     usdcBridged = IUSDC(l2Adapter.USDC());
@@ -139,9 +124,7 @@ contract MockBridge is IMockCrossDomainMessenger {
   uint256 public messageNonce;
   address public l1factory;
 
-  constructor(address _l1Factory) {
-    l1factory = _l1Factory;
-  }
+  constructor() {}
 
   function OTHER_MESSENGER() external view returns (address) {
     return address(0);
