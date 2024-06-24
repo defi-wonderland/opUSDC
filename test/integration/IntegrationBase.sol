@@ -6,6 +6,8 @@ import {IL1OpUSDCFactory, L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
 import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
+
+import {StdStorage, stdStorage} from 'forge-std/StdStorage.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 import {AddressAliasHelper} from 'test/utils/AddressAliasHelper.sol';
@@ -14,6 +16,8 @@ import {USDC_IMPLEMENTATION_CREATION_CODE} from 'test/utils/USDCImplementationCr
 import {IMockCrossDomainMessenger} from 'test/utils/interfaces/IMockCrossDomainMessenger.sol';
 
 contract IntegrationBase is Helpers {
+  using stdStorage for StdStorage;
+
   // Constants
   uint256 internal constant _MAINNET_FORK_BLOCK = 20_076_176;
   uint256 internal constant _OPTIMISM_FORK_BLOCK = 121_300_856;
@@ -115,11 +119,8 @@ contract IntegrationBase is Helpers {
       _l2Deployments.usdcInitTxs
     );
     bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
-    uint256 _messageNonce = L2_MESSENGER.messageNonce();
 
-    vm.prank(ALIASED_L1_MESSENGER);
-    L2_MESSENGER.relayMessage(
-      _messageNonce + 1,
+    _relayL1ToL2Message(
       address(factory),
       L2_CREATE2_DEPLOYER,
       _ZERO_VALUE,
@@ -143,17 +144,47 @@ contract IntegrationBase is Helpers {
     vm.stopPrank();
 
     vm.selectFork(optimism);
-    uint256 _messageNonce = L2_MESSENGER.messageNonce();
-
-    vm.prank(ALIASED_L1_MESSENGER);
-    L2_MESSENGER.relayMessage(
-      _messageNonce + 1,
+    _relayL1ToL2Message(
       address(l1Adapter),
       address(l2Adapter),
       0,
       1_000_000,
       abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _supply)
     );
+  }
+
+  function _relayL1ToL2Message(
+    address _sender,
+    address _target,
+    uint256 _value,
+    uint256 _minGasLimit,
+    bytes memory _data
+  ) internal {
+    // NOTE: Changes current fork to optimism
+    vm.selectFork(optimism);
+    uint256 _messageNonce = L2_MESSENGER.messageNonce();
+    vm.startPrank(ALIASED_L1_MESSENGER);
+    L2_MESSENGER.relayMessage(_messageNonce + 1, _sender, _target, _value, _minGasLimit, _data);
+    vm.stopPrank();
+  }
+
+  function _relayL2ToL1Message(
+    address _sender,
+    address _target,
+    uint256 _value,
+    uint256 _minGasLimit,
+    bytes memory _data
+  ) internal {
+    vm.selectFork(mainnet);
+    uint256 _messageNonce = OPTIMISM_L1_MESSENGER.messageNonce();
+
+    // For simplicity we do this as this slot is not exposed until prove and finalize is done
+    stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(address(L2_MESSENGER));
+    vm.startPrank(OPTIMISM_PORTAL);
+    OPTIMISM_L1_MESSENGER.relayMessage(_messageNonce + 1, _sender, _target, _value, _minGasLimit, _data);
+    vm.stopPrank();
+    // Needs to be reset to mimic production
+    stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(_DEFAULT_L2_SENDER);
   }
 }
 
