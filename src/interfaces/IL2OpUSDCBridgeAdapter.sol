@@ -55,5 +55,6 @@ interface IL2OpUSDCBridgeAdapter {
   /**
    * @return _fallbackProxyAdmin The address of the fallback proxy admin
    */
+  // solhint-disable-next-line func-name-mixedcase
   function FALLBACK_PROXY_ADMIN() external view returns (FallbackProxyAdmin _fallbackProxyAdmin);
 }
