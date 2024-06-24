@@ -35,6 +35,7 @@ contract OpUsdcTest is EchidnaTest {
     _l2Setup(_l2Deployments);
   }
 
+  // debug: echidna debug setup
   function fuzz_testDeployments() public {
     assert(l2Adapter.LINKED_ADAPTER() == address(l1Adapter));
     assert(l2Adapter.MESSENGER() == address(mockMessenger));
@@ -45,8 +46,22 @@ contract OpUsdcTest is EchidnaTest {
     assert(l1Adapter.USDC() == address(usdcMainnet));
   }
 
+  // debug: forge debug setup
+
+  function setUp() public {
+    IL1OpUSDCFactory.L2Deployments memory _l2Deployments = _mainnetSetup();
+    bytes32 _salt = bytes32(factory.deploymentsSaltCounter());
+    _l2Setup(_l2Deployments);
+  }
+
   function test_test() public {
-    assert(true);
+    assert(l2Adapter.LINKED_ADAPTER() == address(l1Adapter));
+    assert(l2Adapter.MESSENGER() == address(mockMessenger));
+    assert(l2Adapter.USDC() == address(usdcBridged));
+
+    assert(l1Adapter.LINKED_ADAPTER() == address(l2Adapter));
+    assert(l1Adapter.MESSENGER() == address(mockMessenger));
+    assert(l1Adapter.USDC() == address(usdcMainnet));
   }
 
   /////////////////////////////////////////////////////////////////////
@@ -78,7 +93,7 @@ contract OpUsdcTest is EchidnaTest {
     _l2Deployments =
       IL1OpUSDCFactory.L2Deployments(address(this), USDC_IMPLEMENTATION_CREATION_CODE, usdcInitTxns, 3_000_000);
 
-    (address _l2Factory, address _l1Adapter, address _l2Adapter) =
+    (address _l1Adapter, address _l2Factory, address _l2Adapter) =
       factory.deploy(address(mockMessenger), address(this), _l2Deployments);
 
     l2Factory = L2OpUSDCFactory(_l2Factory);
