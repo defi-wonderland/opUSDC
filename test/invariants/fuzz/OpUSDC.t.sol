@@ -31,6 +31,7 @@ contract OpUsdcTest is EchidnaTest {
 
   constructor() {
     IL1OpUSDCFactory.L2Deployments memory _l2Deployments = _mainnetSetup();
+    bytes32 _salt = bytes32(factory.deploymentsSaltCounter());
     _l2Setup(_l2Deployments);
   }
 
@@ -77,9 +78,8 @@ contract OpUsdcTest is EchidnaTest {
     _l2Deployments =
       IL1OpUSDCFactory.L2Deployments(address(this), USDC_IMPLEMENTATION_CREATION_CODE, usdcInitTxns, 3_000_000);
 
-    (address _l2Factory, address _l1Adapter, address _l2Adapter) = factory.deployL2FactoryAndContracts(
-      keccak256(abi.encode('32')), address(mockMessenger), 3_000_000, address(this), _l2Deployments
-    );
+    (address _l2Factory, address _l1Adapter, address _l2Adapter) =
+      factory.deploy(address(mockMessenger), address(this), _l2Deployments);
 
     l2Factory = L2OpUSDCFactory(_l2Factory);
     l1Adapter = L1OpUSDCBridgeAdapter(_l1Adapter);
@@ -88,7 +88,19 @@ contract OpUsdcTest is EchidnaTest {
 
   // Send a (mock) message to the L2 messenger to deploy the L2 factory and the L2 adapter (which deploys usdc L2 too)
   function _l2Setup(IL1OpUSDCFactory.L2Deployments memory _l2Deployments) internal {
-    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, abi.encode(address(factory)));
+    IL2OpUSDCFactory.USDCInitializeData memory usdcInitializeData = IL2OpUSDCFactory.USDCInitializeData(
+      factory.USDC_NAME(), factory.USDC_SYMBOL(), usdcMainnet.currency(), usdcMainnet.decimals()
+    );
+
+    bytes memory _l2factoryConstructorArgs = abi.encode(
+      address(l1Adapter),
+      _l2Deployments.l2AdapterOwner,
+      _l2Deployments.usdcImplementationInitCode,
+      usdcInitializeData, // encode?
+      _l2Deployments.usdcInitTxs // encodePacked?
+    );
+
+    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2factoryConstructorArgs);
 
     mockMessenger.relayMessage(
       mockMessenger.messageNonce() + 1,
@@ -96,27 +108,7 @@ contract OpUsdcTest is EchidnaTest {
       address(0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2),
       0,
       3_000_000,
-      // AAAA avoid non collision (as we're on the same chain in our test)
-      abi.encodeWithSignature('deploy(uint256,bytes32,bytes)', 0, keccak256(abi.encode('33')), _l2FactoryInitCode)
-    );
-
-    IL2OpUSDCFactory.USDCInitializeData memory usdcInitializeData =
-      IL2OpUSDCFactory.USDCInitializeData('USD Coin', 'USDC', usdcMainnet.currency(), usdcMainnet.decimals());
-
-    mockMessenger.relayMessage(
-      mockMessenger.messageNonce() + 2,
-      address(factory),
-      address(l2Factory),
-      0,
-      8_000_000,
-      abi.encodeWithSelector(
-        L2OpUSDCFactory.deploy.selector,
-        l1Adapter,
-        _l2Deployments.l2AdapterOwner,
-        _l2Deployments.usdcImplementationInitCode,
-        usdcInitializeData,
-        _l2Deployments.usdcInitTxs
-      )
+      abi.encodeWithSignature('deploy(uint256,bytes32,bytes)', 0, factory.deploymentsSaltCounter(), _l2FactoryInitCode)
     );
 
     usdcBridged = IUSDC(l2Adapter.USDC());

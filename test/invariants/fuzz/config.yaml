@@ -4,3 +4,9 @@ corpusDir: test/invariants/fuzz/corpus/
 coverageFormats: ["html","lcov"]
 allContracts: true
 codeSize: 0x9999
+rpcUrl: "https://rpc.ankr.com/optimism" # optimism create2 factory address is hardcoded as OP
+rpcBlock: 121300856
+deployContracts: [
+  ["0x1f", "USDCInitTxs"],
+  ["0x20", "CrossChainDeployments"]]
+cryticArgs: ["--compile-libraries=(USDCInitTxs,0x1f),(CrossChainDeployments,0x20)"]
