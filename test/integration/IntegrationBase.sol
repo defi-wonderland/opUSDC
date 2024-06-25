@@ -20,8 +20,10 @@ contract IntegrationBase is Helpers {
   using stdStorage for StdStorage;
 
   // Constants
-  uint256 internal constant _MAINNET_FORK_BLOCK = 20_076_176;
-  uint256 internal constant _OPTIMISM_FORK_BLOCK = 121_300_856;
+  uint256 internal constant _MAINNET_FORK_BLOCK = 20_171_419;
+  uint256 internal constant _OPTIMISM_FORK_BLOCK = 121_876_282;
+  uint256 internal constant _BASE_FORK_BLOCK = 16_281_004;
+
   IUSDC public constant MAINNET_USDC = IUSDC(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
   address public constant MAINNET_USDC_IMPLEMENTATION = 0x43506849D7C04F9138D1A2050bbF3A0c054402dd;
   address public constant L2_CREATE2_DEPLOYER = 0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2;
@@ -30,6 +32,8 @@ contract IntegrationBase is Helpers {
     IMockCrossDomainMessenger(0x4200000000000000000000000000000000000007);
   IMockCrossDomainMessenger public constant OPTIMISM_L1_MESSENGER =
     IMockCrossDomainMessenger(0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1);
+  IMockCrossDomainMessenger public constant BASE_L1_MESSENGER =
+    IMockCrossDomainMessenger(0x866E82a600A1414e583f7F13623F1aC5d58b0Afa);
   uint32 public constant MIN_GAS_LIMIT_DEPLOY = 8_000_000;
   uint32 internal constant _ZERO_VALUE = 0;
   uint256 internal constant _amount = 1e18;
@@ -40,11 +44,13 @@ contract IntegrationBase is Helpers {
   ///         non-zero to reduce the gas cost of message passing transactions.
   address internal constant _DEFAULT_L2_SENDER = 0x000000000000000000000000000000000000dEaD;
 
-  address public immutable ALIASED_L1_MESSENGER = AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER));
+  address public immutable OP_ALIASED_L1_MESSENGER = AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER));
+  address public immutable BASE_ALIASED_L1_MESSENGER = AddressAliasHelper.applyL1ToL2Alias(address(BASE_L1_MESSENGER));
 
   // Fork variables
-  uint256 public optimism;
   uint256 public mainnet;
+  uint256 public optimism;
+  uint256 public base;
 
   // EOA addresses
   address internal _owner = makeAddr('owner');
@@ -66,6 +72,7 @@ contract IntegrationBase is Helpers {
   function setUp() public virtual {
     mainnet = vm.createFork(vm.rpcUrl('mainnet'), _MAINNET_FORK_BLOCK);
     optimism = vm.createFork(vm.rpcUrl('optimism'), _OPTIMISM_FORK_BLOCK);
+    base = vm.createFork(vm.rpcUrl('base'), _BASE_FORK_BLOCK);
 
     l1Factory = new L1OpUSDCFactory(address(MAINNET_USDC));
 
@@ -97,7 +104,7 @@ contract IntegrationBase is Helpers {
     MAINNET_USDC.configureMinter(_masterMinter, type(uint256).max);
 
     vm.selectFork(optimism);
-    _relayL2Deployments(_salt, _l1Adapter, usdcInitializeData, l2Deployments);
+    _relayL2Deployments(OP_ALIASED_L1_MESSENGER, _salt, _l1Adapter, usdcInitializeData, l2Deployments);
 
     l2Adapter = L2OpUSDCBridgeAdapter(_l2Adapter);
     bridgedUSDC = IUSDC(l2Adapter.USDC());
@@ -112,6 +119,7 @@ contract IntegrationBase is Helpers {
   }
 
   function _relayL2Deployments(
+    address _aliasedL1Messenger,
     bytes32 _salt,
     address _l1Adapter,
     IL2OpUSDCFactory.USDCInitializeData memory _usdcInitializeData,
@@ -127,6 +135,7 @@ contract IntegrationBase is Helpers {
     bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
 
     _relayL1ToL2Message(
+      _aliasedL1Messenger,
       address(l1Factory),
       L2_CREATE2_DEPLOYER,
       _ZERO_VALUE,
@@ -135,7 +144,7 @@ contract IntegrationBase is Helpers {
     );
   }
 
-  function _mintSupplyOnL2(uint256 _supply) internal {
+  function _mintSupplyOnL2(uint256 _network, address _aliasedL1Messenger, uint256 _supply) internal {
     vm.selectFork(mainnet);
 
     // We need to do this instead of `deal` because deal doesnt change `totalSupply` state
@@ -149,8 +158,9 @@ contract IntegrationBase is Helpers {
     l1Adapter.sendMessage(_user, _supply, _minGasLimit);
     vm.stopPrank();
 
-    vm.selectFork(optimism);
+    vm.selectFork(_network);
     _relayL1ToL2Message(
+      _aliasedL1Messenger,
       address(l1Adapter),
       address(l2Adapter),
       0,
@@ -160,16 +170,15 @@ contract IntegrationBase is Helpers {
   }
 
   function _relayL1ToL2Message(
+    address _aliasedL1Messenger,
     address _sender,
     address _target,
     uint256 _value,
     uint256 _minGasLimit,
     bytes memory _data
   ) internal {
-    // NOTE: Changes current fork to optimism
-    vm.selectFork(optimism);
     uint256 _messageNonce = L2_MESSENGER.messageNonce();
-    vm.startPrank(ALIASED_L1_MESSENGER);
+    vm.startPrank(_aliasedL1Messenger);
     L2_MESSENGER.relayMessage(_messageNonce + 1, _sender, _target, _value, _minGasLimit, _data);
     vm.stopPrank();
   }
@@ -181,7 +190,6 @@ contract IntegrationBase is Helpers {
     uint256 _minGasLimit,
     bytes memory _data
   ) internal {
-    vm.selectFork(mainnet);
     uint256 _messageNonce = OPTIMISM_L1_MESSENGER.messageNonce();
 
     // For simplicity we do this as this slot is not exposed until prove and finalize is done

@@ -36,7 +36,7 @@ contract Integration_Factories is IntegrationBase {
 
     vm.selectFork(optimism);
     // Relay the L2 deployments message through the factory on L2
-    _relayL2Deployments(_salt, _l1Adapter, usdcInitializeData, l2Deployments);
+    _relayL2Deployments(OP_ALIASED_L1_MESSENGER, _salt, _l1Adapter, usdcInitializeData, l2Deployments);
 
     // Check the adapter was properly deployed on L2
     IUSDC _l2Usdc = IUSDC(IOpUSDCBridgeAdapter(_l2Adapter).USDC());
@@ -78,7 +78,7 @@ contract Integration_Factories is IntegrationBase {
     vm.selectFork(optimism);
 
     // Relay the second triggered L2 deployments message
-    _relayL2Deployments(_secondSalt, _secondL1Adapter, usdcInitializeData, l2Deployments);
+    _relayL2Deployments(OP_ALIASED_L1_MESSENGER, _secondSalt, _secondL1Adapter, usdcInitializeData, l2Deployments);
 
     // Get the usdc proxy and implementation addresses
     IUSDC _secondL2Usdc = IUSDC(IOpUSDCBridgeAdapter(_secondL2Adapter).USDC());
@@ -89,5 +89,38 @@ contract Integration_Factories is IntegrationBase {
     assertTrue(_secondL2Adapter != address(l2Adapter));
     assertTrue(_secondL2Usdc != bridgedUSDC);
     assertTrue(_secondL2Usdc.implementation() != IUSDC(bridgedUSDC).implementation());
+  }
+}
+
+import 'forge-std/Test.sol';
+
+contract Integration_MultipleFactories is IntegrationBase {
+  function test_deployOnMultipleL2s() public {
+    // Deploy L1 Adapter and trigger the contracts deployments on OP
+    vm.selectFork(mainnet);
+
+    vm.startPrank(_owner);
+    (address _opL1Adapter, address _opL2Factory, address _opL2Adapter) =
+      l1Factory.deploy(address(OPTIMISM_L1_MESSENGER), _owner, l2Deployments);
+    bytes32 _opSalt = bytes32(l1Factory.deploymentsSaltCounter());
+
+    // Deploy L1 Adapter and trigger the contracts deployments on BASE
+    (address _baseL1Adapter, address _baseL2Factory, address _baseL2Adapter) =
+      l1Factory.deploy(address(BASE_L1_MESSENGER), _owner, l2Deployments);
+    bytes32 _baseSalt = bytes32(l1Factory.deploymentsSaltCounter());
+
+    // Relay the L2 deployments on OP
+    vm.selectFork(optimism);
+    console.log(1);
+    _relayL2Deployments(OP_ALIASED_L1_MESSENGER, _opSalt, _opL1Adapter, usdcInitializeData, l2Deployments);
+    console.log(2);
+
+    // Relay the L2 deployments on BASE
+    vm.selectFork(base);
+    console.log(3);
+    _relayL2Deployments(BASE_ALIASED_L1_MESSENGER, _baseSalt, _baseL1Adapter, usdcInitializeData, l2Deployments);
+    console.log(4);
+
+    // Check the deployed addresses always differ
   }
 }

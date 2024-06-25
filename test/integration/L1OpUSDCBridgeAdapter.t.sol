@@ -28,6 +28,7 @@ contract Integration_Bridging is IntegrationBase {
     uint256 _userBalanceBefore = bridgedUSDC.balanceOf(_user);
 
     _relayL1ToL2Message(
+      OP_ALIASED_L1_MESSENGER,
       address(l1Adapter),
       address(l2Adapter),
       0,
@@ -61,6 +62,7 @@ contract Integration_Bridging is IntegrationBase {
     vm.selectFork(optimism);
     uint256 _userBalanceBefore = bridgedUSDC.balanceOf(_user);
     _relayL1ToL2Message(
+      OP_ALIASED_L1_MESSENGER,
       address(l1Adapter),
       address(l2Adapter),
       0,
@@ -105,6 +107,7 @@ contract Integration_Bridging is IntegrationBase {
     vm.selectFork(optimism);
     uint256 _userBalanceBefore = bridgedUSDC.balanceOf(_user);
     _relayL1ToL2Message(
+      OP_ALIASED_L1_MESSENGER,
       address(l1Adapter),
       address(l2Adapter),
       0,
@@ -152,7 +155,7 @@ contract Integration_Migration is IntegrationBase {
   function setUp() public override {
     super.setUp();
 
-    _mintSupplyOnL2(_amount);
+    _mintSupplyOnL2(optimism, OP_ALIASED_L1_MESSENGER, _amount);
 
     vm.selectFork(mainnet);
     // Adapter needs to be minter to burn
@@ -174,6 +177,7 @@ contract Integration_Migration is IntegrationBase {
 
     vm.selectFork(optimism);
     _relayL1ToL2Message(
+      OP_ALIASED_L1_MESSENGER,
       address(l1Adapter),
       address(l2Adapter),
       0,
@@ -225,7 +229,12 @@ contract Integration_Integration_PermissionedFlows is IntegrationBase {
 
     vm.selectFork(optimism);
     _relayL1ToL2Message(
-      address(l1Adapter), address(l2Adapter), 0, _minGasLimit, abi.encodeWithSignature('receiveStopMessaging()')
+      OP_ALIASED_L1_MESSENGER,
+      address(l1Adapter),
+      address(l2Adapter),
+      0,
+      _minGasLimit,
+      abi.encodeWithSignature('receiveStopMessaging()')
     );
 
     assertEq(l2Adapter.isMessagingDisabled(), true);
@@ -240,7 +249,12 @@ contract Integration_Integration_PermissionedFlows is IntegrationBase {
     vm.selectFork(optimism);
 
     _relayL1ToL2Message(
-      address(l1Adapter), address(l2Adapter), 0, _minGasLimit, abi.encodeWithSignature('receiveResumeMessaging()')
+      OP_ALIASED_L1_MESSENGER,
+      address(l1Adapter),
+      address(l2Adapter),
+      0,
+      _minGasLimit,
+      abi.encodeWithSignature('receiveResumeMessaging()')
     );
 
     assertEq(l2Adapter.isMessagingDisabled(), false);
