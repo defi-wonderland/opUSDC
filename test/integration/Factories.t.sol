@@ -90,11 +90,10 @@ contract Integration_Factories is IntegrationBase {
     assertTrue(_secondL2Usdc != bridgedUSDC);
     assertTrue(_secondL2Usdc.implementation() != IUSDC(bridgedUSDC).implementation());
   }
-}
 
-import 'forge-std/Test.sol';
-
-contract Integration_MultipleFactories is IntegrationBase {
+  /**
+   * @notice Check that deployments on OP and BASE succeeds, and the contracts addresses are different
+   */
   function test_deployOnMultipleL2s() public {
     // Deploy L1 Adapter and trigger the contracts deployments on OP
     vm.selectFork(mainnet);
@@ -104,23 +103,43 @@ contract Integration_MultipleFactories is IntegrationBase {
       l1Factory.deploy(address(OPTIMISM_L1_MESSENGER), _owner, l2Deployments);
     bytes32 _opSalt = bytes32(l1Factory.deploymentsSaltCounter());
 
+    // Check the L1 adapter was deployed
+    assertGt(_opL1Adapter.code.length, 0);
+
     // Deploy L1 Adapter and trigger the contracts deployments on BASE
     (address _baseL1Adapter, address _baseL2Factory, address _baseL2Adapter) =
       l1Factory.deploy(address(BASE_L1_MESSENGER), _owner, l2Deployments);
     bytes32 _baseSalt = bytes32(l1Factory.deploymentsSaltCounter());
 
+    // Check the L1 adapter was deployed
+    assertGt(_baseL1Adapter.code.length, 0);
+
     // Relay the L2 deployments on OP
     vm.selectFork(optimism);
-    console.log(1);
     _relayL2Deployments(OP_ALIASED_L1_MESSENGER, _opSalt, _opL1Adapter, usdcInitializeData, l2Deployments);
-    console.log(2);
+
+    // Assert the contract were deployed to the expected addresses
+    IUSDC _opL2Usdc = IUSDC(IOpUSDCBridgeAdapter(_opL2Adapter).USDC());
+    assertGt(_opL2Factory.code.length, 0);
+    assertGt(address(_opL2Usdc).code.length, 0);
+    assertGt(_opL2Usdc.implementation().code.length, 0);
+    assertGt(_opL2Adapter.code.length, 0);
 
     // Relay the L2 deployments on BASE
     vm.selectFork(base);
-    console.log(3);
     _relayL2Deployments(BASE_ALIASED_L1_MESSENGER, _baseSalt, _baseL1Adapter, usdcInitializeData, l2Deployments);
-    console.log(4);
 
-    // Check the deployed addresses always differ
+    // Assert the contract were deployed to the expected addresses
+    IUSDC _baseL2Usdc = IUSDC(IOpUSDCBridgeAdapter(_baseL2Adapter).USDC());
+    assertGt(_baseL2Factory.code.length, 0);
+    assertGt(address(_baseL2Usdc).code.length, 0);
+    assertGt(_baseL2Usdc.implementation().code.length, 0);
+    assertGt(_baseL2Adapter.code.length, 0);
+
+    // Check the deployed addresses always differ (L1 adapters not checked since in case of being the same, it would
+    // revert due to a colission)
+    assertTrue(_opL1Adapter != _baseL1Adapter);
+    assertTrue(_opL2Factory != _baseL2Factory);
+    assertTrue(_opL2Adapter != _baseL2Adapter);
   }
 }
