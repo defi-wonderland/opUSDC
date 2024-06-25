@@ -8,8 +8,6 @@ import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementation
 import {USDCInitTxs} from 'src/contracts/utils/USDCInitTxs.sol';
 
 contract DeployOptimism is Script {
-  using USDCInitTxs for bytes;
-
   address public constant L1_MESSENGER = 0x58Cc85b8D04EA49cC6DBd3CbFFd00B4B8D6cb3ef;
   uint32 public constant MIN_GAS_LIMIT_DEPLOY = 8_000_000;
   IL1OpUSDCFactory public immutable L1_FACTORY = IL1OpUSDCFactory(vm.envAddress('L1_FACTORY_SEPOLIA'));
