@@ -10,9 +10,10 @@ import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
 import {StdStorage, stdStorage} from 'forge-std/StdStorage.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
+
+import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementationCreationCode.sol';
 import {AddressAliasHelper} from 'test/utils/AddressAliasHelper.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
-import {USDC_IMPLEMENTATION_CREATION_CODE} from 'test/utils/USDCImplementationCreationCode.sol';
 import {IMockCrossDomainMessenger} from 'test/utils/interfaces/IMockCrossDomainMessenger.sol';
 
 contract IntegrationBase is Helpers {
@@ -55,36 +56,39 @@ contract IntegrationBase is Helpers {
 
   // OpUSDC Protocol
   L1OpUSDCBridgeAdapter public l1Adapter;
-  L1OpUSDCFactory public factory;
+  L1OpUSDCFactory public l1Factory;
+  L2OpUSDCFactory public l2Factory;
   L2OpUSDCBridgeAdapter public l2Adapter;
   IUSDC public bridgedUSDC;
   IL2OpUSDCFactory.USDCInitializeData public usdcInitializeData;
+  IL1OpUSDCFactory.L2Deployments public l2Deployments;
 
   function setUp() public virtual {
     mainnet = vm.createFork(vm.rpcUrl('mainnet'), _MAINNET_FORK_BLOCK);
     optimism = vm.createFork(vm.rpcUrl('optimism'), _OPTIMISM_FORK_BLOCK);
 
-    factory = new L1OpUSDCFactory(address(MAINNET_USDC));
+    l1Factory = new L1OpUSDCFactory(address(MAINNET_USDC));
 
     // Define the initialization transactions
     usdcInitTxns[0] = USDCInitTxs.INITIALIZEV2;
     usdcInitTxns[1] = USDCInitTxs.INITIALIZEV2_1;
     usdcInitTxns[2] = USDCInitTxs.INITIALIZEV2_2;
     // Define the L2 deployments data
-    IL1OpUSDCFactory.L2Deployments memory _l2Deployments =
+    l2Deployments =
       IL1OpUSDCFactory.L2Deployments(_owner, USDC_IMPLEMENTATION_CREATION_CODE, usdcInitTxns, MIN_GAS_LIMIT_DEPLOY);
 
     vm.selectFork(mainnet);
 
     vm.prank(_owner);
-    (address _l1Adapter,, address _l2Adapter) = factory.deploy(address(OPTIMISM_L1_MESSENGER), _owner, _l2Deployments);
+    (address _l1Adapter, address _l2Factory, address _l2Adapter) =
+      l1Factory.deploy(address(OPTIMISM_L1_MESSENGER), _owner, l2Deployments);
 
     l1Adapter = L1OpUSDCBridgeAdapter(_l1Adapter);
 
     // Get salt and initialize data for l2 deployments
-    bytes32 _salt = bytes32(factory.deploymentsSaltCounter());
+    bytes32 _salt = bytes32(l1Factory.deploymentsSaltCounter());
     usdcInitializeData = IL2OpUSDCFactory.USDCInitializeData(
-      factory.USDC_NAME(), factory.USDC_SYMBOL(), MAINNET_USDC.currency(), MAINNET_USDC.decimals()
+      l1Factory.USDC_NAME(), l1Factory.USDC_SYMBOL(), MAINNET_USDC.currency(), MAINNET_USDC.decimals()
     );
 
     // Give max minting power to the master minter
@@ -93,16 +97,18 @@ contract IntegrationBase is Helpers {
     MAINNET_USDC.configureMinter(_masterMinter, type(uint256).max);
 
     vm.selectFork(optimism);
-    _relayL2Deployments(_salt, _l1Adapter, usdcInitializeData, _l2Deployments);
+    _relayL2Deployments(_salt, _l1Adapter, usdcInitializeData, l2Deployments);
 
     l2Adapter = L2OpUSDCBridgeAdapter(_l2Adapter);
     bridgedUSDC = IUSDC(l2Adapter.USDC());
+    l2Factory = L2OpUSDCFactory(_l2Factory);
 
-    // Make foundry know these four addresses exist on both forks
-    vm.makePersistent(_l1Adapter);
+    // Make foundry know these two address exist on both forks
+    vm.makePersistent(address(l1Adapter));
     vm.makePersistent(address(l2Adapter));
     vm.makePersistent(address(bridgedUSDC));
     vm.makePersistent(address(l2Adapter.FALLBACK_PROXY_ADMIN()));
+    vm.makePersistent(address(l2Factory));
   }
 
   function _relayL2Deployments(
@@ -121,7 +127,7 @@ contract IntegrationBase is Helpers {
     bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
 
     _relayL1ToL2Message(
-      address(factory),
+      address(l1Factory),
       L2_CREATE2_DEPLOYER,
       _ZERO_VALUE,
       _l2Deployments.minGasLimitDeploy,
