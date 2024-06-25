@@ -3,7 +3,6 @@ pragma solidity 0.8.25;
 
 import {IntegrationBase} from './IntegrationBase.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
-import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {IL2OpUSDCBridgeAdapter} from 'interfaces/IL2OpUSDCBridgeAdapter.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';

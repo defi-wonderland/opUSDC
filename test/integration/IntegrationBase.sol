@@ -44,6 +44,7 @@ contract IntegrationBase is Helpers {
   ///         non-zero to reduce the gas cost of message passing transactions.
   address internal constant _DEFAULT_L2_SENDER = 0x000000000000000000000000000000000000dEaD;
 
+  // solhint-disable-next-line max-line-length
   address public immutable OP_ALIASED_L1_MESSENGER = AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER));
   address public immutable BASE_ALIASED_L1_MESSENGER = AddressAliasHelper.applyL1ToL2Alias(address(BASE_L1_MESSENGER));
 
