@@ -14,7 +14,7 @@ import {IUSDC} from 'interfaces/external/IUSDC.sol';
 import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementationCreationCode.sol';
 import {AddressAliasHelper} from 'test/utils/AddressAliasHelper.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
-import {IMockCrossDomainMessenger} from 'test/utils/interfaces/IMockCrossDomainMessenger.sol';
+import {ITestCrossDomainMessenger} from 'test/utils/interfaces/ITestCrossDomainMessenger.sol';
 
 contract IntegrationBase is Helpers {
   using stdStorage for StdStorage;
@@ -28,12 +28,12 @@ contract IntegrationBase is Helpers {
   address public constant MAINNET_USDC_IMPLEMENTATION = 0x43506849D7C04F9138D1A2050bbF3A0c054402dd;
   address public constant L2_CREATE2_DEPLOYER = 0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2;
   address public constant OPTIMISM_PORTAL = 0xbEb5Fc579115071764c7423A4f12eDde41f106Ed;
-  IMockCrossDomainMessenger public constant L2_MESSENGER =
-    IMockCrossDomainMessenger(0x4200000000000000000000000000000000000007);
-  IMockCrossDomainMessenger public constant OPTIMISM_L1_MESSENGER =
-    IMockCrossDomainMessenger(0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1);
-  IMockCrossDomainMessenger public constant BASE_L1_MESSENGER =
-    IMockCrossDomainMessenger(0x866E82a600A1414e583f7F13623F1aC5d58b0Afa);
+  ITestCrossDomainMessenger public constant L2_MESSENGER =
+    ITestCrossDomainMessenger(0x4200000000000000000000000000000000000007);
+  ITestCrossDomainMessenger public constant OPTIMISM_L1_MESSENGER =
+    ITestCrossDomainMessenger(0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1);
+  ITestCrossDomainMessenger public constant BASE_L1_MESSENGER =
+    ITestCrossDomainMessenger(0x866E82a600A1414e583f7F13623F1aC5d58b0Afa);
   uint32 public constant MIN_GAS_LIMIT_DEPLOY = 8_000_000;
   uint32 internal constant _ZERO_VALUE = 0;
   uint256 internal constant _amount = 1e18;
