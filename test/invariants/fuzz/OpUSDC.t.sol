@@ -12,6 +12,9 @@ import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
 import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
+
+import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
+import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 import {IMockCrossDomainMessenger} from 'test/utils/interfaces/IMockCrossDomainMessenger.sol';
@@ -31,8 +34,8 @@ contract OpUsdcTest is EchidnaTest {
 
   constructor() {
     IL1OpUSDCFactory.L2Deployments memory _l2Deployments = _mainnetSetup();
-    bytes32 _salt = bytes32(factory.deploymentsSaltCounter());
     _l2Setup(_l2Deployments);
+    _setupMockBridge();
   }
 
   // debug: echidna debug setup
@@ -46,9 +49,43 @@ contract OpUsdcTest is EchidnaTest {
     assert(l1Adapter.USDC() == address(usdcMainnet));
   }
 
+  // todo: craft valid signature for the overloaded send mnessage
+  //New messages should not be sent if the state is not active | Unit test |
+  function fuzz_noMessageIfNotActiveL1(address _to, uint256 _amount, uint32 _minGasLimit) public AgentOrDeployer {
+    // Action
+    try l1Adapter.sendMessage(_to, _amount, _minGasLimit) {
+      // Postcondition
+      assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
+    } catch {}
+  }
+
+  // todo: insure we can switch it to inactive...
+  // todo: craft valid signature for the overloaded send mnessage
+  //New messages should not be sent if the state is not active | Unit test |
+  function fuzz_noMessageIfNotActiveL2(address _to, uint256 _amount, uint32 _minGasLimit) public AgentOrDeployer {
+    // Action
+    try l2Adapter.sendMessage(_to, _amount, _minGasLimit) {
+      // Postcondition
+      assert(!l2Adapter.isMessagingDisabled());
+    } catch {}
+  }
+
+  /////////////////////////////////////////////////////////////////////
+  //                     Echidna context fuzzer                      //
+  /////////////////////////////////////////////////////////////////////
+
+  // Change the address returned by messenger.xDomainMessageSender()
+  function changeXDomSender() public {
+    mockMessenger.xDomSenderSwitch();
+  }
+
   /////////////////////////////////////////////////////////////////////
   //                          Initial setup                          //
   /////////////////////////////////////////////////////////////////////
+
+  function _setupMockBridge() internal {
+    mockMessenger.initialize(address(l1Adapter));
+  }
 
   // Deploy: USDC L1, factory L1, L1 adapter
   function _mainnetSetup() internal returns (IL1OpUSDCFactory.L2Deployments memory _l2Deployments) {
@@ -113,6 +150,63 @@ contract OpUsdcTest is EchidnaTest {
 
     usdcBridged = IUSDC(l2Adapter.USDC());
   }
+
+  /////////////////////////////////////////////////////////////////////
+  //                Expose target contract selectors                 //
+  /////////////////////////////////////////////////////////////////////
+
+  // Expose all selectors for both factories and adapters
+  function generateCallAdapter(
+    uint256 _selectorIndex,
+    uint256 _chain,
+    address _addressA,
+    address _addressB,
+    uint256 _uintA,
+    uint256 _uintB,
+    bytes calldata _bytesA,
+    uint32 _uint32A,
+    uint32 _uint32B
+  ) public AgentOrDeployer {
+    _selectorIndex = _selectorIndex % 8;
+    _chain = _chain % 2;
+
+    if (_chain == 0) {
+      // L1
+      if (_selectorIndex == 0) {
+        l1Adapter.sendMessage(_addressA, _uintA, _uint32A);
+      } else if (_selectorIndex == 1) {
+        l1Adapter.sendMessage(_addressA, _addressB, _uintA, _bytesA, _uintB, _uint32A);
+      } else if (_selectorIndex == 2) {
+        l1Adapter.receiveMessage(_addressA, _uintA);
+      } else if (_selectorIndex == 3) {
+        l1Adapter.migrateToNative(_addressA, _uint32A, _uint32B);
+      } else if (_selectorIndex == 4) {
+        l1Adapter.setBurnAmount(_uintA);
+      } else if (_selectorIndex == 5) {
+        l1Adapter.burnLockedUSDC();
+      } else if (_selectorIndex == 6) {
+        l1Adapter.stopMessaging(_uint32A);
+      } else {
+        l1Adapter.resumeMessaging(_uint32A);
+      }
+    } else {
+      if (_selectorIndex == 0) {
+        l2Adapter.sendMessage(_addressA, _uintA, _uint32A);
+      } else if (_selectorIndex == 1) {
+        l2Adapter.sendMessage(_addressA, _addressB, _uintA, _bytesA, _uintB, _uint32A);
+      } else if (_selectorIndex == 2) {
+        l2Adapter.receiveMessage(_addressA, _uintA);
+      } else if (_selectorIndex == 3) {
+        l2Adapter.receiveMigrateToNative(_addressA, _uint32A);
+      } else if (_selectorIndex == 4) {
+        l2Adapter.receiveStopMessaging();
+      } else if (_selectorIndex == 5) {
+        l2Adapter.receiveResumeMessaging();
+      } else {
+        l2Adapter.callUsdcTransaction(_bytesA);
+      }
+    }
+  }
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -122,16 +216,24 @@ contract OpUsdcTest is EchidnaTest {
 // Relay any message
 contract MockBridge is IMockCrossDomainMessenger {
   uint256 public messageNonce;
-  address public l1factory;
+  address public l1Adapter;
 
-  constructor() {}
+  bool correctXDomSender;
+
+  function initialize(address _l1Adapter) public {
+    l1Adapter = _l1Adapter;
+  }
+
+  function xDomSenderSwitch() public {
+    correctXDomSender = !correctXDomSender;
+  }
 
   function OTHER_MESSENGER() external view returns (address) {
     return address(0);
   }
 
   function xDomainMessageSender() external view returns (address _sender) {
-    return l1factory;
+    _sender = correctXDomSender ? l1Adapter : address(123);
   }
 
   function sendMessage(address _target, bytes calldata _message, uint32 _minGasLimit) external {
@@ -157,7 +259,7 @@ contract MockBridge is IMockCrossDomainMessenger {
 }
 
 // Identical to the OZ implementation used
-contract Create2Deployer is EchidnaTest {
+contract Create2Deployer {
   // solhint-disable custom-errors
   function deploy(uint256 _value, bytes32 _salt, bytes memory _initCode) public returns (address) {
     address addr;
