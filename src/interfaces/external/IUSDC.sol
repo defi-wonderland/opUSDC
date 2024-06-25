@@ -68,7 +68,7 @@ interface IUSDC is IERC20 {
    */
   function updateMasterMinter(address _newMasterMinter) external;
 
-  /*
+  /**
    * @notice Function to upgrade the usdc proxy to a new implementation
    * @param _newImplementation Address of the new implementation
    */

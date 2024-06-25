@@ -4,7 +4,13 @@ import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
 import {ICreate2Deployer} from 'interfaces/external/ICreate2Deployer.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 
+/**
+ * @title CrossChainDeployments
+ * @notice Library containing logic needed on the L1 Factory to properly deploy contracts on the L2.
+ * @dev Logic splitted here to reduce code size on the L1 Factory contract.
+ */
 library CrossChainDeployments {
+  /// @notice RLP encoding deployer length prefix for calculating the address of a contract deployed through `CREATE`
   bytes1 internal constant _LEN = bytes1(0x94);
 
   /**
