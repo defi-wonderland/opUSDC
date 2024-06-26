@@ -180,7 +180,10 @@ contract IntegrationBase is Helpers {
   ) internal {
     uint256 _messageNonce = L2_MESSENGER.messageNonce();
     vm.startPrank(_aliasedL1Messenger);
-    L2_MESSENGER.relayMessage(_messageNonce + 1, _sender, _target, _value, _minGasLimit, _data);
+    // OP adds some extra gas for the relayMessage logic
+    L2_MESSENGER.relayMessage{gas: _minGasLimit + 500_000}(
+      _messageNonce + 1, _sender, _target, _value, _minGasLimit, _data
+    );
     vm.stopPrank();
   }
 
@@ -196,7 +199,10 @@ contract IntegrationBase is Helpers {
     // For simplicity we do this as this slot is not exposed until prove and finalize is done
     stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(address(L2_MESSENGER));
     vm.startPrank(OPTIMISM_PORTAL);
-    OPTIMISM_L1_MESSENGER.relayMessage(_messageNonce + 1, _sender, _target, _value, _minGasLimit, _data);
+    // OP adds some extra gas for the relayMessage logic
+    OPTIMISM_L1_MESSENGER.relayMessage{gas: _minGasLimit + 500_000}(
+      _messageNonce + 1, _sender, _target, _value, _minGasLimit, _data
+    );
     vm.stopPrank();
     // Needs to be reset to mimic production
     stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(_DEFAULT_L2_SENDER);
