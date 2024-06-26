@@ -37,7 +37,7 @@ contract IntegrationBase is Helpers {
   uint32 public constant MIN_GAS_LIMIT_DEPLOY = 8_000_000;
   uint32 internal constant _ZERO_VALUE = 0;
   uint256 internal constant _amount = 1e18;
-  uint32 internal constant _minGasLimit = 1_000_000;
+  uint32 internal constant _minGasLimit = 1000;
 
   /// @notice Value used for the L2 sender storage slot in both the OptimismPortal and the
   ///         CrossDomainMessenger contracts before an actual sender is set. This value is
