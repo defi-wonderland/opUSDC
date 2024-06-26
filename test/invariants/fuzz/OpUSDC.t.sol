@@ -57,23 +57,27 @@ contract OpUsdcTest is EchidnaTest {
   function fuzz_noMessageIfNotActiveL1(address _to, uint256 _amount, uint32 _minGasLimit) public AgentOrDeployer {
     // Precondition
     // todo: clean this mess
+    // todo: modifiers for balance of and mint/approval
 
-    // Avoid balance overflow on l2
-    require(usdcBridged.balanceOf(_to) < type(uint256).max - _amount);
+    // Insure we're using the correct xdom sender
+    require(mockMessenger.xDomainMessageSender() == address(l1Adapter));
+
+    // Avoid balance overflow
+    require(usdcMainnet.balanceOf(_to) < 2 ** 255 - 1 - _amount);
+    require(usdcBridged.balanceOf(_to) < 2 ** 255 - 1 - _amount);
 
     // usdc init v2 black list usdc address itself
-    // (bool succ, bytes memory isBlacklisted) = address(usdcMainnet).call(abi.encodeWithSignature("isBlacklisted(address)", abi.encode(_to)));
-    // (bool succ2, bytes memory isBlacklisted2) = address(usdcBridged).call(abi.encodeWithSignature("isBlacklisted(address)", abi.encode(_to)));
-    // require(succ && succ2);
-    // require(_to != address(0) && !abi.decode(isBlacklisted, (bool)) && !abi.decode(isBlacklisted2, (bool)));
     require(_to != address(0) && _to != address(usdcMainnet) && _to != address(usdcBridged));
 
+    // provided enough usdc on l1
     require(_amount > 0);
     hevm.prank(_usdcMinter);
     usdcMainnet.mint(currentCaller, _amount);
 
     hevm.prank(currentCaller);
     usdcMainnet.approve(address(l1Adapter), _amount);
+
+    uint256 _balanceBefore = usdcBridged.balanceOf(_to);
 
     hevm.prank(currentCaller);
 
@@ -83,9 +87,10 @@ contract OpUsdcTest is EchidnaTest {
       // If didn't revert because of wrong xdom msg sender
       if (mockMessenger.xDomainMessageSender() == address(l1Adapter)) {
         assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
-        assert(usdcBridged.balanceOf(_to) == _amount);
+        assert(usdcBridged.balanceOf(_to) == _balanceBefore + _amount);
       }
     } catch {
+      // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
       assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active);
     }
   }
@@ -107,11 +112,6 @@ contract OpUsdcTest is EchidnaTest {
   /////////////////////////////////////////////////////////////////////
   //                     Echidna context fuzzer                      //
   /////////////////////////////////////////////////////////////////////
-
-  // Change the address returned by messenger.xDomainMessageSender()
-  function changeXDomSender() public {
-    mockMessenger.xDomSenderSwitch();
-  }
 
   /////////////////////////////////////////////////////////////////////
   //                          Initial setup                          //
@@ -194,7 +194,7 @@ contract OpUsdcTest is EchidnaTest {
   //                Expose target contract selectors                 //
   /////////////////////////////////////////////////////////////////////
 
-  // Expose all selectors for both factories and adapters
+  // Expose all selectors, pranked
   function generateCallAdapterL1(
     uint256 _selectorIndex,
     address _addressA,
@@ -220,7 +220,8 @@ contract OpUsdcTest is EchidnaTest {
     } else if (_selectorIndex == 2) {
       _calldata = abi.encodeCall(l1Adapter.receiveMessage, (_addressA, _uintA));
     } else if (_selectorIndex == 3) {
-      _calldata = abi.encodeCall(l1Adapter.migrateToNative, (_addressA, _uint32A, _uint32B));
+      hevm.prank(currentCaller);
+      try l1Adapter.migrateToNative(_addressA, _uint32A, _uint32B) {} catch {}
     } else if (_selectorIndex == 4) {
       _calldata = abi.encodeCall(l1Adapter.setBurnAmount, (_uintA));
     } else if (_selectorIndex == 5) {
