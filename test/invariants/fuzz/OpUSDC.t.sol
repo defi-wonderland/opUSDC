@@ -77,7 +77,8 @@ contract OpUsdcTest is EchidnaTest {
     hevm.prank(currentCaller);
     usdcMainnet.approve(address(l1Adapter), _amount);
 
-    uint256 _balanceBefore = usdcBridged.balanceOf(_to);
+    uint256 _toBalanceBefore = usdcBridged.balanceOf(_to);
+    uint256 _fromBalanceBefore = usdcMainnet.balanceOf(currentCaller);
 
     hevm.prank(currentCaller);
 
@@ -87,11 +88,14 @@ contract OpUsdcTest is EchidnaTest {
       // If didn't revert because of wrong xdom msg sender
       if (mockMessenger.xDomainMessageSender() == address(l1Adapter)) {
         assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
-        assert(usdcBridged.balanceOf(_to) == _balanceBefore + _amount);
+        assert(usdcBridged.balanceOf(_to) == _toBalanceBefore + _amount);
+        assert(usdcMainnet.balanceOf(currentCaller) == _fromBalanceBefore - _amount);
       }
     } catch {
       // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
       assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active);
+      assert(usdcBridged.balanceOf(_to) == _toBalanceBefore);
+      assert(usdcMainnet.balanceOf(currentCaller) == _fromBalanceBefore);
     }
   }
 
@@ -99,14 +103,44 @@ contract OpUsdcTest is EchidnaTest {
   // todo: craft valid signature for the overloaded send mnessage
   //New messages should not be sent if the state is not active | Unit test |
   function fuzz_noMessageIfNotActiveL2(address _to, uint256 _amount, uint32 _minGasLimit) public AgentOrDeployer {
-    // Precondition
+    // Insure we're using the correct xdom sender
+    require(mockMessenger.xDomainMessageSender() == address(l2Adapter));
+
+    // Avoid balance overflow
+    require(usdcMainnet.balanceOf(_to) < 2 ** 255 - 1 - _amount);
+    require(usdcBridged.balanceOf(_to) < 2 ** 255 - 1 - _amount);
+
+    // usdc init v2 black list usdc address itself
+    require(!(_to == address(0) || _to == address(usdcBridged)));
+
+    // provided enough usdc on l1
+    require(_amount > 0);
+
+    //This is not ideal, I would be better to add a precondition to send token from L1 to CurrentCaller on L2.
+    {
+      hevm.prank(_usdcMinter);
+      usdcBridged.mint(currentCaller, _amount);
+    }
+
+    hevm.prank(currentCaller);
+    usdcBridged.approve(address(l2Adapter), _amount);
+
+    uint256 _fromBalanceBefore = usdcBridged.balanceOf(currentCaller);
+    uint256 _toBalanceBefore = usdcMainnet.balanceOf(_to);
+
     hevm.prank(currentCaller);
 
     // Action
     try l2Adapter.sendMessage(_to, _amount, _minGasLimit) {
       // Postcondition
+      assert(!l2Adapter.isMessagingDisabled());
+      assert(usdcBridged.balanceOf(currentCaller) == _fromBalanceBefore - _amount);
+      assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
+    } catch {
       assert(l2Adapter.isMessagingDisabled());
-    } catch {}
+      assert(usdcBridged.balanceOf(currentCaller) == _fromBalanceBefore);
+      assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
+    }
   }
 
   /////////////////////////////////////////////////////////////////////
@@ -124,6 +158,9 @@ contract OpUsdcTest is EchidnaTest {
   function _setupUsdc() internal {
     hevm.prank(usdcMainnet.masterMinter());
     usdcMainnet.configureMinter(address(_usdcMinter), type(uint256).max);
+
+    hevm.prank(usdcBridged.masterMinter());
+    usdcBridged.configureMinter(address(_usdcMinter), type(uint256).max);
   }
 
   // Deploy: USDC L1, factory L1, L1 adapter
