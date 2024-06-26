@@ -19,7 +19,7 @@ contract Integration_Bridging is IntegrationBase {
   function setUp() public override {
     super.setUp();
 
-    _mintSupplyOnL2(_amount);
+    _mintSupplyOnL2(optimism, OP_ALIASED_L1_MESSENGER, _amount);
   }
 
   /**

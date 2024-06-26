@@ -9,6 +9,7 @@ concurrency:
 env:
   MAINNET_RPC: ${{ secrets.MAINNET_RPC }}
   OPTIMISM_RPC: ${{ secrets.OPTIMISM_RPC }}
+  BASE_RPC: ${{ secrets.BASE_RPC }}
   SEPOLIA_RPC: ${{ secrets.SEPOLIA_RPC }}
 
 jobs:
@@ -27,7 +28,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20.x
-          cache: 'yarn'
+          cache: "yarn"
 
       - name: Install dependencies
         run: yarn --frozen-lockfile --network-concurrency 1
@@ -54,7 +55,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20.x
-          cache: 'yarn'
+          cache: "yarn"
 
       - name: Install dependencies
         run: yarn --frozen-lockfile --network-concurrency 1
@@ -85,7 +86,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20.x
-          cache: 'yarn'
+          cache: "yarn"
 
       - name: Install dependencies
         run: yarn --frozen-lockfile --network-concurrency 1

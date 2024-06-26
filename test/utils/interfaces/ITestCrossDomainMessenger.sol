@@ -2,7 +2,10 @@ pragma solidity 0.8.25;
 
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 
-interface IMockCrossDomainMessenger is ICrossDomainMessenger {
+/**
+ * @notice CrossDomainMessenger interface with defined methods only used for testing.
+ */
+interface ITestCrossDomainMessenger is ICrossDomainMessenger {
   /// @notice Relays a message that was sent by the other CrossDomainMessenger contract. Can only
   ///         be executed via cross-chain call from the other messenger OR if the message was
   ///         already received once and is currently being replayed.
@@ -21,7 +24,13 @@ interface IMockCrossDomainMessenger is ICrossDomainMessenger {
     bytes calldata _message
   ) external payable;
 
-  function messageNonce() external view returns (uint256);
+  /**
+   * @return _messageNonce The nonce of the last message sent by the other messenger.
+   */
+  function messageNonce() external view returns (uint256 _messageNonce);
 
-  function OTHER_MESSENGER() external view returns (address);
+  /**
+   * @return _otherMessenger The address of the messenger contract on the other network
+   */
+  function OTHER_MESSENGER() external view returns (address _otherMessenger);
 }
