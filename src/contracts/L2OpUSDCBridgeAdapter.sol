@@ -200,18 +200,16 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @dev can't execute the following list of transactions:
    *  • transferOwnership (0xf2fde38b)
    *  • changeAdmin (0x8f283970)
+   * @dev UpgradeTo and UpgradeToAndCall go through the fallback admin
    * @param _data The calldata to execute on the USDC contract
    */
   function callUsdcTransaction(bytes calldata _data) external onlyOwner {
-    //Check forbidden transactions
     bytes4 _selector = bytes4(_data);
-    if (_selector == _TRANSFER_OWNERSHIP_SELECTOR || _selector == _CHANGE_ADMIN_SELECTOR) {
-      revert IOpUSDCBridgeAdapter_ForbiddenTransaction();
-    }
     bool _success;
 
-    if (_selector == _UPGRADE_TO_SELECTOR || _selector == _UPGRADE_TO_AND_CALL_SELECTOR) {
-      // If it is an upgrade transaction we need to go through the fallback admin
+    if (_selector == _TRANSFER_OWNERSHIP_SELECTOR || _selector == _CHANGE_ADMIN_SELECTOR) {
+      revert IOpUSDCBridgeAdapter_ForbiddenTransaction();
+    } else if (_selector == _UPGRADE_TO_SELECTOR || _selector == _UPGRADE_TO_AND_CALL_SELECTOR) {
       (_success,) = address(FALLBACK_PROXY_ADMIN).call(_data);
     } else {
       (_success,) = USDC.call(_data);
