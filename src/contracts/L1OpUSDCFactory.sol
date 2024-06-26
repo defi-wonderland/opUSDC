@@ -15,6 +15,7 @@ import {CrossChainDeployments} from 'libraries/CrossChainDeployments.sol';
  * @dev The salt is always different for each deployed instance of this contract on the L1 Factory, and the L2 contracts
  * are deployed with `CREATE` to guarantee that the addresses are unique among all the L2s, so we avoid a scenario where
  * L2 contracts have the same address on different L2s when triggered by different owners.
+ * @dev
  */
 contract L1OpUSDCFactory is IL1OpUSDCFactory {
   /// @inheritdoc IL1OpUSDCFactory
