@@ -28,6 +28,7 @@ mainnet = "${MAINNET_RPC}"
 optimism = "${OPTIMISM_RPC}"
 base = "${BASE_RPC}"
 sepolia = "${SEPOLIA_RPC}"
+op-sepolia = "${OP_SEPOLIA_RPC}"
 
 [etherscan]
 mainnet = { key = "${ETHERSCAN_API_KEY}", chain = "mainnet" }
