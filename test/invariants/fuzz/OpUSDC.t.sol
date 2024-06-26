@@ -85,12 +85,9 @@ contract OpUsdcTest is EchidnaTest {
     // Action
     try l1Adapter.sendMessage(_to, _amount, _minGasLimit) {
       // Postcondition
-      // If didn't revert because of wrong xdom msg sender
-      if (mockMessenger.xDomainMessageSender() == address(l1Adapter)) {
-        assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
-        assert(usdcBridged.balanceOf(_to) == _toBalanceBefore + _amount);
-        assert(usdcMainnet.balanceOf(currentCaller) == _fromBalanceBefore - _amount);
-      }
+      assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
+      assert(usdcBridged.balanceOf(_to) == _toBalanceBefore + _amount);
+      assert(usdcMainnet.balanceOf(currentCaller) == _fromBalanceBefore - _amount);
     } catch {
       // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
       assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active);
@@ -244,34 +241,25 @@ contract OpUsdcTest is EchidnaTest {
   ) public AgentOrDeployer {
     _selectorIndex = _selectorIndex % 8;
 
-    bytes memory _calldata;
+    hevm.prank(currentCaller);
 
     if (_selectorIndex == 0) {
-      _calldata =
-        abi.encodeWithSignature('sendMessage(address,uint256,uint32)', abi.encode(_addressA, _uintA, _uint32A));
+      try l1Adapter.sendMessage(_addressA, _uintA, _uint32A) {} catch {}
     } else if (_selectorIndex == 1) {
-      _calldata = abi.encodeWithSignature(
-        'sendMessage(address,address,uint256,bytes,uint256,uint32)',
-        abi.encode(_addressA, _addressB, _uintA, _bytesA, _uintB, _uint32A)
-      );
+      try l1Adapter.sendMessage(_addressA, _addressB, _uintA, _bytesA, _uintB, _uint32A) {} catch {}
     } else if (_selectorIndex == 2) {
-      _calldata = abi.encodeCall(l1Adapter.receiveMessage, (_addressA, _uintA));
+      try l1Adapter.receiveMessage(_addressA, _uintA) {} catch {}
     } else if (_selectorIndex == 3) {
-      hevm.prank(currentCaller);
       try l1Adapter.migrateToNative(_addressA, _uint32A, _uint32B) {} catch {}
     } else if (_selectorIndex == 4) {
-      _calldata = abi.encodeCall(l1Adapter.setBurnAmount, (_uintA));
+      try l1Adapter.setBurnAmount(_uintA) {} catch {}
     } else if (_selectorIndex == 5) {
-      _calldata = abi.encodeCall(l1Adapter.burnLockedUSDC, ());
+      try l1Adapter.burnLockedUSDC() {} catch {}
     } else if (_selectorIndex == 6) {
-      _calldata = abi.encodeCall(l1Adapter.stopMessaging, (_uint32A));
+      try l1Adapter.stopMessaging(_uint32A) {} catch {}
     } else {
-      _calldata = abi.encodeCall(l1Adapter.resumeMessaging, (_uint32A));
+      try l1Adapter.resumeMessaging(_uint32A) {} catch {}
     }
-
-    hevm.prank(currentCaller);
-    (bool _success,) = address(l1Adapter).call(_calldata);
-    require(_success);
   }
 
   function generateCallAdapterL2(
@@ -285,31 +273,23 @@ contract OpUsdcTest is EchidnaTest {
   ) public AgentOrDeployer {
     _selectorIndex = _selectorIndex % 7;
 
-    bytes memory _calldata;
+    hevm.prank(currentCaller);
 
     if (_selectorIndex == 0) {
-      _calldata =
-        abi.encodeWithSignature('sendMessage(address,uint256,uint32)', abi.encode(_addressA, _uintA, _uint32A));
+      try l1Adapter.sendMessage(_addressA, _uintA, _uint32A) {} catch {}
     } else if (_selectorIndex == 1) {
-      _calldata = abi.encodeWithSignature(
-        'sendMessage(address,address,uint256,bytes,uint256,uint32)',
-        abi.encode(_addressA, _addressB, _uintA, _bytesA, _uintB, _uint32A)
-      );
+      try l1Adapter.sendMessage(_addressA, _addressB, _uintA, _bytesA, _uintB, _uint32A) {} catch {}
     } else if (_selectorIndex == 2) {
-      _calldata = abi.encodeCall(l1Adapter.receiveMessage, (_addressA, _uintA));
+      try l2Adapter.receiveMessage(_addressA, _uintA) {} catch {}
     } else if (_selectorIndex == 3) {
-      _calldata = abi.encodeCall(l2Adapter.receiveMigrateToNative, (_addressA, _uint32A));
+      try l2Adapter.receiveMigrateToNative(_addressA, _uint32A) {} catch {}
     } else if (_selectorIndex == 4) {
-      _calldata = abi.encodeCall(l2Adapter.receiveStopMessaging, ());
+      try l2Adapter.receiveStopMessaging() {} catch {}
     } else if (_selectorIndex == 5) {
-      _calldata = abi.encodeCall(l2Adapter.receiveResumeMessaging, ());
+      try l2Adapter.receiveResumeMessaging() {} catch {}
     } else {
-      _calldata = abi.encodeCall(l2Adapter.callUsdcTransaction, (_bytesA));
+      try l2Adapter.callUsdcTransaction(_bytesA) {} catch {}
     }
-
-    hevm.prank(currentCaller);
-    (bool _success,) = address(l2Adapter).call(_calldata);
-    require(_success);
   }
 
   function generateCallFactory() public AgentOrDeployer {}
@@ -372,7 +352,6 @@ contract Create2Deployer {
     require(address(this).balance >= _value, 'Create2: insufficient balance');
     require(_initCode.length != 0, 'Create2: bytecode length is zero');
 
-    // hevm.prank(0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2); //L1OpUSDCFactory.L2_CREATE2_DEPLOYER)
     assembly {
       addr := create2(_value, add(_initCode, 0x20), mload(_initCode), _salt)
     }
