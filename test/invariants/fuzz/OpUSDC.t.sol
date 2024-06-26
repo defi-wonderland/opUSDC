@@ -2,21 +2,17 @@
 pragma solidity 0.8.25;
 
 import {EchidnaTest} from '../AdvancedTestsUtils.sol';
-
 // https://github.com/crytic/building-secure-contracts/blob/master/program-analysis/echidna/advanced/testing-bytecode.mdq
-import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementationCreationCode.sol';
-
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCFactory, L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
 import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
-import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
-
 import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
+import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
-
+import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementationCreationCode.sol';
 import {ITestCrossDomainMessenger} from 'test/utils/interfaces/ITestCrossDomainMessenger.sol';
 
 //solhint-disable custom-errors
@@ -112,12 +108,7 @@ contract OpUsdcTest is EchidnaTest {
 
     // provided enough usdc on l1
     require(_amount > 0);
-
-    //This is not ideal, I would be better to add a precondition to send token from L1 to CurrentCaller on L2.
-    {
-      hevm.prank(_usdcMinter);
-      usdcBridged.mint(currentCaller, _amount);
-    }
+    require(usdcBridged.balanceOf(currentCaller) >= _amount);
 
     hevm.prank(currentCaller);
     usdcBridged.approve(address(l2Adapter), _amount);
@@ -155,9 +146,6 @@ contract OpUsdcTest is EchidnaTest {
   function _setupUsdc() internal {
     hevm.prank(usdcMainnet.masterMinter());
     usdcMainnet.configureMinter(address(_usdcMinter), type(uint256).max);
-
-    hevm.prank(usdcBridged.masterMinter());
-    usdcBridged.configureMinter(address(_usdcMinter), type(uint256).max);
   }
 
   // Deploy: USDC L1, factory L1, L1 adapter
