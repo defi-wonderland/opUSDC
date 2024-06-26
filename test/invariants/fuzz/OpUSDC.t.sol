@@ -4,7 +4,7 @@ pragma solidity 0.8.25;
 import {EchidnaTest} from '../AdvancedTestsUtils.sol';
 
 // https://github.com/crytic/building-secure-contracts/blob/master/program-analysis/echidna/advanced/testing-bytecode.mdq
-import {USDC_IMPLEMENTATION_CREATION_CODE} from 'test/utils/USDCImplementationCreationCode.sol';
+import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementationCreationCode.sol';
 
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCFactory, L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
@@ -17,7 +17,7 @@ import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
-import {IMockCrossDomainMessenger} from 'test/utils/interfaces/IMockCrossDomainMessenger.sol';
+import {ITestCrossDomainMessenger} from 'test/utils/interfaces/ITestCrossDomainMessenger.sol';
 
 //solhint-disable custom-errors
 contract OpUsdcTest is EchidnaTest {
@@ -300,7 +300,7 @@ contract OpUsdcTest is EchidnaTest {
 /////////////////////////////////////////////////////////////////////
 
 // Relay any message
-contract MockBridge is IMockCrossDomainMessenger {
+contract MockBridge is ITestCrossDomainMessenger {
   uint256 public messageNonce;
   address public l1Adapter;
 
