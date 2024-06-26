@@ -11,6 +11,7 @@ env:
   OPTIMISM_RPC: ${{ secrets.OPTIMISM_RPC }}
   BASE_RPC: ${{ secrets.BASE_RPC }}
   SEPOLIA_RPC: ${{ secrets.SEPOLIA_RPC }}
+  OP_SEPOLIA_RPC: ${{ secrets.OP_SEPOLIA_RPC }}
 
 jobs:
   unit-tests:

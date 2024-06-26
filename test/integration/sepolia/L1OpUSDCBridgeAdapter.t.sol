@@ -212,7 +212,7 @@ contract Sepolia_Integration_Migration is IntegrationBase {
   }
 }
 
-contract Integration_Integration_PermissionedFlows is IntegrationBase {
+contract Sepolia_Integration_PermissionedFlows is IntegrationBase {
   /**
    * @notice Test that the messaging is stopped and resumed correctly from L1 on
    * both layers
