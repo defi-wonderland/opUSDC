@@ -19,6 +19,7 @@ import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 import {IMockCrossDomainMessenger} from 'test/utils/interfaces/IMockCrossDomainMessenger.sol';
 
+//solhint-disable custom-errors
 contract OpUsdcTest is EchidnaTest {
   IUSDC usdcMainnet;
   IUSDC usdcBridged;
@@ -31,11 +32,13 @@ contract OpUsdcTest is EchidnaTest {
 
   MockBridge public mockMessenger;
   Create2Deployer public create2Deployer;
+  address internal _usdcMinter = address(bytes20(uint160(uint256(keccak256('usdc.minter')))));
 
   constructor() {
     IL1OpUSDCFactory.L2Deployments memory _l2Deployments = _mainnetSetup();
     _l2Setup(_l2Deployments);
     _setupMockBridge();
+    _setupUsdc();
   }
 
   // debug: echidna debug setup
@@ -52,21 +55,52 @@ contract OpUsdcTest is EchidnaTest {
   // todo: craft valid signature for the overloaded send mnessage
   //New messages should not be sent if the state is not active | Unit test |
   function fuzz_noMessageIfNotActiveL1(address _to, uint256 _amount, uint32 _minGasLimit) public AgentOrDeployer {
+    // Precondition
+    // todo: clean this mess
+
+    // Avoid balance overflow on l2
+    require(usdcBridged.balanceOf(_to) < type(uint256).max - _amount);
+
+    // usdc init v2 black list usdc address itself
+    // (bool succ, bytes memory isBlacklisted) = address(usdcMainnet).call(abi.encodeWithSignature("isBlacklisted(address)", abi.encode(_to)));
+    // (bool succ2, bytes memory isBlacklisted2) = address(usdcBridged).call(abi.encodeWithSignature("isBlacklisted(address)", abi.encode(_to)));
+    // require(succ && succ2);
+    // require(_to != address(0) && !abi.decode(isBlacklisted, (bool)) && !abi.decode(isBlacklisted2, (bool)));
+    require(_to != address(0) && _to != address(usdcMainnet) && _to != address(usdcBridged));
+
+    require(_amount > 0);
+    hevm.prank(_usdcMinter);
+    usdcMainnet.mint(currentCaller, _amount);
+
+    hevm.prank(currentCaller);
+    usdcMainnet.approve(address(l1Adapter), _amount);
+
+    hevm.prank(currentCaller);
+
     // Action
     try l1Adapter.sendMessage(_to, _amount, _minGasLimit) {
       // Postcondition
-      assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
-    } catch {}
+      // If didn't revert because of wrong xdom msg sender
+      if (mockMessenger.xDomainMessageSender() == address(l1Adapter)) {
+        assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
+        assert(usdcBridged.balanceOf(_to) == _amount);
+      }
+    } catch {
+      assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active);
+    }
   }
 
   // todo: insure we can switch it to inactive...
   // todo: craft valid signature for the overloaded send mnessage
   //New messages should not be sent if the state is not active | Unit test |
   function fuzz_noMessageIfNotActiveL2(address _to, uint256 _amount, uint32 _minGasLimit) public AgentOrDeployer {
+    // Precondition
+    hevm.prank(currentCaller);
+
     // Action
     try l2Adapter.sendMessage(_to, _amount, _minGasLimit) {
       // Postcondition
-      assert(!l2Adapter.isMessagingDisabled());
+      assert(l2Adapter.isMessagingDisabled());
     } catch {}
   }
 
@@ -85,6 +119,11 @@ contract OpUsdcTest is EchidnaTest {
 
   function _setupMockBridge() internal {
     mockMessenger.initialize(address(l1Adapter));
+  }
+
+  function _setupUsdc() internal {
+    hevm.prank(usdcMainnet.masterMinter());
+    usdcMainnet.configureMinter(address(_usdcMinter), type(uint256).max);
   }
 
   // Deploy: USDC L1, factory L1, L1 adapter
@@ -156,9 +195,8 @@ contract OpUsdcTest is EchidnaTest {
   /////////////////////////////////////////////////////////////////////
 
   // Expose all selectors for both factories and adapters
-  function generateCallAdapter(
+  function generateCallAdapterL1(
     uint256 _selectorIndex,
-    uint256 _chain,
     address _addressA,
     address _addressB,
     uint256 _uintA,
@@ -168,45 +206,75 @@ contract OpUsdcTest is EchidnaTest {
     uint32 _uint32B
   ) public AgentOrDeployer {
     _selectorIndex = _selectorIndex % 8;
-    _chain = _chain % 2;
 
-    if (_chain == 0) {
-      // L1
-      if (_selectorIndex == 0) {
-        l1Adapter.sendMessage(_addressA, _uintA, _uint32A);
-      } else if (_selectorIndex == 1) {
-        l1Adapter.sendMessage(_addressA, _addressB, _uintA, _bytesA, _uintB, _uint32A);
-      } else if (_selectorIndex == 2) {
-        l1Adapter.receiveMessage(_addressA, _uintA);
-      } else if (_selectorIndex == 3) {
-        l1Adapter.migrateToNative(_addressA, _uint32A, _uint32B);
-      } else if (_selectorIndex == 4) {
-        l1Adapter.setBurnAmount(_uintA);
-      } else if (_selectorIndex == 5) {
-        l1Adapter.burnLockedUSDC();
-      } else if (_selectorIndex == 6) {
-        l1Adapter.stopMessaging(_uint32A);
-      } else {
-        l1Adapter.resumeMessaging(_uint32A);
-      }
+    bytes memory _calldata;
+
+    if (_selectorIndex == 0) {
+      _calldata =
+        abi.encodeWithSignature('sendMessage(address,uint256,uint32)', abi.encode(_addressA, _uintA, _uint32A));
+    } else if (_selectorIndex == 1) {
+      _calldata = abi.encodeWithSignature(
+        'sendMessage(address,address,uint256,bytes,uint256,uint32)',
+        abi.encode(_addressA, _addressB, _uintA, _bytesA, _uintB, _uint32A)
+      );
+    } else if (_selectorIndex == 2) {
+      _calldata = abi.encodeCall(l1Adapter.receiveMessage, (_addressA, _uintA));
+    } else if (_selectorIndex == 3) {
+      _calldata = abi.encodeCall(l1Adapter.migrateToNative, (_addressA, _uint32A, _uint32B));
+    } else if (_selectorIndex == 4) {
+      _calldata = abi.encodeCall(l1Adapter.setBurnAmount, (_uintA));
+    } else if (_selectorIndex == 5) {
+      _calldata = abi.encodeCall(l1Adapter.burnLockedUSDC, ());
+    } else if (_selectorIndex == 6) {
+      _calldata = abi.encodeCall(l1Adapter.stopMessaging, (_uint32A));
     } else {
-      if (_selectorIndex == 0) {
-        l2Adapter.sendMessage(_addressA, _uintA, _uint32A);
-      } else if (_selectorIndex == 1) {
-        l2Adapter.sendMessage(_addressA, _addressB, _uintA, _bytesA, _uintB, _uint32A);
-      } else if (_selectorIndex == 2) {
-        l2Adapter.receiveMessage(_addressA, _uintA);
-      } else if (_selectorIndex == 3) {
-        l2Adapter.receiveMigrateToNative(_addressA, _uint32A);
-      } else if (_selectorIndex == 4) {
-        l2Adapter.receiveStopMessaging();
-      } else if (_selectorIndex == 5) {
-        l2Adapter.receiveResumeMessaging();
-      } else {
-        l2Adapter.callUsdcTransaction(_bytesA);
-      }
+      _calldata = abi.encodeCall(l1Adapter.resumeMessaging, (_uint32A));
     }
+
+    hevm.prank(currentCaller);
+    (bool _success,) = address(l1Adapter).call(_calldata);
+    require(_success);
   }
+
+  function generateCallAdapterL2(
+    uint256 _selectorIndex,
+    address _addressA,
+    address _addressB,
+    uint256 _uintA,
+    uint256 _uintB,
+    bytes calldata _bytesA,
+    uint32 _uint32A
+  ) public AgentOrDeployer {
+    _selectorIndex = _selectorIndex % 7;
+
+    bytes memory _calldata;
+
+    if (_selectorIndex == 0) {
+      _calldata =
+        abi.encodeWithSignature('sendMessage(address,uint256,uint32)', abi.encode(_addressA, _uintA, _uint32A));
+    } else if (_selectorIndex == 1) {
+      _calldata = abi.encodeWithSignature(
+        'sendMessage(address,address,uint256,bytes,uint256,uint32)',
+        abi.encode(_addressA, _addressB, _uintA, _bytesA, _uintB, _uint32A)
+      );
+    } else if (_selectorIndex == 2) {
+      _calldata = abi.encodeCall(l1Adapter.receiveMessage, (_addressA, _uintA));
+    } else if (_selectorIndex == 3) {
+      _calldata = abi.encodeCall(l2Adapter.receiveMigrateToNative, (_addressA, _uint32A));
+    } else if (_selectorIndex == 4) {
+      _calldata = abi.encodeCall(l2Adapter.receiveStopMessaging, ());
+    } else if (_selectorIndex == 5) {
+      _calldata = abi.encodeCall(l2Adapter.receiveResumeMessaging, ());
+    } else {
+      _calldata = abi.encodeCall(l2Adapter.callUsdcTransaction, (_bytesA));
+    }
+
+    hevm.prank(currentCaller);
+    (bool _success,) = address(l2Adapter).call(_calldata);
+    require(_success);
+  }
+
+  function generateCallFactory() public AgentOrDeployer {}
 }
 
 /////////////////////////////////////////////////////////////////////
