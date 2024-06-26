@@ -33,7 +33,7 @@ contract Sepolia_Integration_Bridging is IntegrationBase {
 
     vm.startPrank(_user);
     bridgedUSDC.approve(address(l2Adapter), _amount);
-    l2Adapter.sendMessage(_user, _amount, _minGasLimit);
+    l2Adapter.sendMessage(_user, _amount, _MIN_GAS_LIMIT);
     vm.stopPrank();
 
     assertEq(bridgedUSDC.balanceOf(_user), 0);
@@ -45,7 +45,7 @@ contract Sepolia_Integration_Bridging is IntegrationBase {
       address(l2Adapter),
       address(l1Adapter),
       0,
-      _minGasLimit,
+      _MIN_GAS_LIMIT,
       abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _amount)
     );
 
@@ -67,7 +67,7 @@ contract Sepolia_Integration_Bridging is IntegrationBase {
 
     vm.startPrank(_user);
     bridgedUSDC.approve(address(l2Adapter), _amount);
-    l2Adapter.sendMessage(_l1Target, _amount, _minGasLimit);
+    l2Adapter.sendMessage(_l1Target, _amount, _MIN_GAS_LIMIT);
     vm.stopPrank();
 
     assertEq(bridgedUSDC.balanceOf(_user), _amount);
@@ -80,7 +80,7 @@ contract Sepolia_Integration_Bridging is IntegrationBase {
       address(l2Adapter),
       address(l1Adapter),
       0,
-      _minGasLimit,
+      _MIN_GAS_LIMIT,
       abi.encodeWithSignature('receiveMessage(address,uint256)', _l1Target, _amount)
     );
 
@@ -108,7 +108,7 @@ contract Sepolia_Integration_Bridging is IntegrationBase {
 
     // Different address can execute the message
     vm.prank(_user);
-    l2Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _minGasLimit);
+    l2Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _MIN_GAS_LIMIT);
 
     assertEq(bridgedUSDC.balanceOf(_signerAd), 0);
     assertEq(bridgedUSDC.balanceOf(_user), _amount);
@@ -121,7 +121,7 @@ contract Sepolia_Integration_Bridging is IntegrationBase {
       address(l2Adapter),
       address(l1Adapter),
       0,
-      _minGasLimit,
+      _MIN_GAS_LIMIT,
       abi.encodeWithSignature('receiveMessage(address,uint256)', _signerAd, _amount)
     );
 
@@ -154,7 +154,7 @@ contract Sepolia_Integration_Bridging is IntegrationBase {
     // Different address can execute the message
     vm.startPrank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSignature.selector);
-    l2Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _minGasLimit);
+    l2Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _MIN_GAS_LIMIT);
     vm.stopPrank();
   }
 }

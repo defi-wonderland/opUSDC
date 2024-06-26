@@ -37,7 +37,7 @@ contract IntegrationBase is Helpers {
   uint32 public constant MIN_GAS_LIMIT_DEPLOY = 8_000_000;
   uint32 internal constant _ZERO_VALUE = 0;
   uint256 internal constant _amount = 1e18;
-  uint32 internal constant _minGasLimit = 1000;
+  uint32 internal constant _MIN_GAS_LIMIT = 18_000_000;
 
   /// @notice Value used for the L2 sender storage slot in both the OptimismPortal and the
   ///         CrossDomainMessenger contracts before an actual sender is set. This value is
@@ -83,7 +83,7 @@ contract IntegrationBase is Helpers {
     usdcInitTxns[2] = USDCInitTxs.INITIALIZEV2_2;
     // Define the L2 deployments data
     l2Deployments =
-      IL1OpUSDCFactory.L2Deployments(_owner, USDC_IMPLEMENTATION_CREATION_CODE, usdcInitTxns, MIN_GAS_LIMIT_DEPLOY);
+      IL1OpUSDCFactory.L2Deployments(_owner, USDC_IMPLEMENTATION_CREATION_CODE, usdcInitTxns, _MIN_GAS_LIMIT);
 
     vm.selectFork(mainnet);
 
@@ -156,7 +156,7 @@ contract IntegrationBase is Helpers {
 
     vm.startPrank(_user);
     MAINNET_USDC.approve(address(l1Adapter), _supply);
-    l1Adapter.sendMessage(_user, _supply, _minGasLimit);
+    l1Adapter.sendMessage(_user, _supply, _MIN_GAS_LIMIT);
     vm.stopPrank();
 
     vm.selectFork(_network);
@@ -165,7 +165,7 @@ contract IntegrationBase is Helpers {
       address(l1Adapter),
       address(l2Adapter),
       0,
-      1_000_000,
+      _MIN_GAS_LIMIT,
       abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _supply)
     );
   }
@@ -180,7 +180,8 @@ contract IntegrationBase is Helpers {
   ) internal {
     uint256 _messageNonce = L2_MESSENGER.messageNonce();
     vm.startPrank(_aliasedL1Messenger);
-    L2_MESSENGER.relayMessage(_messageNonce + 1, _sender, _target, _value, _minGasLimit, _data);
+    L2_MESSENGER.relayMessage{gas: _minGasLimit}(_messageNonce + 1, _sender, _target, _value, _minGasLimit, _data);
+    // L2_MESSENGER.relayMessage(_messageNonce + 1, _sender, _target, _value, _minGasLimit, _data);
     vm.stopPrank();
   }
 

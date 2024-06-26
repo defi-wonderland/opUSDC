@@ -18,7 +18,7 @@ contract Sepolia_Integration_Bridging is IntegrationBase {
 
     vm.startPrank(_user);
     MAINNET_USDC.approve(address(l1Adapter), _amount);
-    l1Adapter.sendMessage(_user, _amount, _minGasLimit);
+    l1Adapter.sendMessage(_user, _amount, _MIN_GAS_LIMIT);
     vm.stopPrank();
 
     assertEq(MAINNET_USDC.balanceOf(_user), 0);
@@ -53,7 +53,7 @@ contract Sepolia_Integration_Bridging is IntegrationBase {
 
     vm.startPrank(_user);
     MAINNET_USDC.approve(address(l1Adapter), _amount);
-    l1Adapter.sendMessage(_l2Target, _amount, _minGasLimit);
+    l1Adapter.sendMessage(_l2Target, _amount, _MIN_GAS_LIMIT);
     vm.stopPrank();
 
     assertEq(MAINNET_USDC.balanceOf(_user), 0);
@@ -98,7 +98,7 @@ contract Sepolia_Integration_Bridging is IntegrationBase {
 
     // Different address can execute the message
     vm.prank(_user);
-    l1Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _minGasLimit);
+    l1Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _MIN_GAS_LIMIT);
 
     assertEq(MAINNET_USDC.balanceOf(_signerAd), 0);
     assertEq(MAINNET_USDC.balanceOf(_user), _amount);
@@ -142,7 +142,7 @@ contract Sepolia_Integration_Bridging is IntegrationBase {
     // Different address can execute the message
     vm.startPrank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSignature.selector);
-    l1Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _minGasLimit);
+    l1Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _MIN_GAS_LIMIT);
     vm.stopPrank();
   }
 }
@@ -223,7 +223,7 @@ contract Sepolia_Integration_PermissionedFlows is IntegrationBase {
     assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Active));
 
     vm.prank(_owner);
-    l1Adapter.stopMessaging(_minGasLimit);
+    l1Adapter.stopMessaging(_MIN_GAS_LIMIT);
 
     assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Paused));
 
@@ -233,7 +233,7 @@ contract Sepolia_Integration_PermissionedFlows is IntegrationBase {
       address(l1Adapter),
       address(l2Adapter),
       0,
-      _minGasLimit,
+      _MIN_GAS_LIMIT,
       abi.encodeWithSignature('receiveStopMessaging()')
     );
 
@@ -242,7 +242,7 @@ contract Sepolia_Integration_PermissionedFlows is IntegrationBase {
     vm.selectFork(mainnet);
 
     vm.prank(_owner);
-    l1Adapter.resumeMessaging(_minGasLimit);
+    l1Adapter.resumeMessaging(_MIN_GAS_LIMIT);
 
     assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Active));
 
@@ -253,7 +253,7 @@ contract Sepolia_Integration_PermissionedFlows is IntegrationBase {
       address(l1Adapter),
       address(l2Adapter),
       0,
-      _minGasLimit,
+      _MIN_GAS_LIMIT,
       abi.encodeWithSignature('receiveResumeMessaging()')
     );
 

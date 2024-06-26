@@ -65,7 +65,7 @@ contract Integration_Factories is IntegrationBase {
   /**
    * @notice Check the L1 and L2 contracts are deployed on different addresses on different triggered deployments
    */
-  function test_deployOnDifferentAddresses() public {
+  function test_deployOnDifferentAddresses_l1() public {
     vm.selectFork(mainnet);
 
     // Trigger another deployment
