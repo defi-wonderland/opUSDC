@@ -19,7 +19,7 @@ contract Integration_Bridging is IntegrationBase {
   function setUp() public override {
     super.setUp();
 
-    _mintSupplyOnL2(_amount);
+    _mintSupplyOnL2(optimism, OP_ALIASED_L1_MESSENGER, _amount);
   }
 
   /**
@@ -41,23 +41,13 @@ contract Integration_Bridging is IntegrationBase {
 
     vm.selectFork(mainnet);
     uint256 _userBalanceBefore = MAINNET_USDC.balanceOf(_user);
-
-    uint256 _messageNonce = OPTIMISM_L1_MESSENGER.messageNonce();
-
-    // For simplicity we do this as this slot is not exposed until prove and finalize is done
-    stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(address(L2_MESSENGER));
-
-    vm.prank(OPTIMISM_PORTAL);
-    OPTIMISM_L1_MESSENGER.relayMessage(
-      _messageNonce + 1,
+    _relayL2ToL1Message(
       address(l2Adapter),
       address(l1Adapter),
       0,
-      1_000_000,
+      _minGasLimit,
       abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _amount)
     );
-
-    stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(_DEFAULT_L2_SENDER);
 
     assertEq(MAINNET_USDC.balanceOf(_user), _userBalanceBefore + _amount);
     assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), 0);
@@ -86,22 +76,13 @@ contract Integration_Bridging is IntegrationBase {
     vm.selectFork(mainnet);
     uint256 _userBalanceBefore = MAINNET_USDC.balanceOf(_user);
 
-    uint256 _messageNonce = OPTIMISM_L1_MESSENGER.messageNonce();
-
-    // For simplicity we do this as this slot is not exposed until prove and finalize is done
-    stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(address(L2_MESSENGER));
-
-    vm.prank(OPTIMISM_PORTAL);
-    OPTIMISM_L1_MESSENGER.relayMessage(
-      _messageNonce + 1,
+    _relayL2ToL1Message(
       address(l2Adapter),
       address(l1Adapter),
       0,
-      1_000_000,
+      _minGasLimit,
       abi.encodeWithSignature('receiveMessage(address,uint256)', _l1Target, _amount)
     );
-
-    stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(_DEFAULT_L2_SENDER);
 
     assertEq(MAINNET_USDC.balanceOf(_l1Target), _userBalanceBefore + _amount);
     assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), 0);
@@ -136,22 +117,13 @@ contract Integration_Bridging is IntegrationBase {
     vm.selectFork(mainnet);
     uint256 _userBalanceBefore = MAINNET_USDC.balanceOf(_user);
 
-    uint256 _messageNonce = OPTIMISM_L1_MESSENGER.messageNonce();
-
-    // For simplicity we do this as this slot is not exposed until prove and finalize is done
-    stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(address(L2_MESSENGER));
-
-    vm.prank(OPTIMISM_PORTAL);
-    OPTIMISM_L1_MESSENGER.relayMessage(
-      _messageNonce + 1,
+    _relayL2ToL1Message(
       address(l2Adapter),
       address(l1Adapter),
       0,
-      1_000_000,
+      _minGasLimit,
       abi.encodeWithSignature('receiveMessage(address,uint256)', _signerAd, _amount)
     );
-
-    stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(_DEFAULT_L2_SENDER);
 
     assertEq(MAINNET_USDC.balanceOf(_signerAd), _userBalanceBefore + _amount);
     assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), 0);

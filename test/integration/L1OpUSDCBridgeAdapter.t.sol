@@ -2,10 +2,8 @@
 pragma solidity 0.8.25;
 
 import {IntegrationBase} from './IntegrationBase.sol';
-import {StdStorage, stdStorage} from 'forge-std/StdStorage.sol';
 import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
-import {AddressAliasHelper} from 'test/utils/AddressAliasHelper.sol';
 
 contract Integration_Bridging is IntegrationBase {
   /**
@@ -29,20 +27,16 @@ contract Integration_Bridging is IntegrationBase {
     vm.selectFork(optimism);
     uint256 _userBalanceBefore = bridgedUSDC.balanceOf(_user);
 
-    uint256 _messageNonce = L2_MESSENGER.messageNonce();
-
-    vm.startPrank(AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER)));
-    L2_MESSENGER.relayMessage(
-      _messageNonce + 1,
+    _relayL1ToL2Message(
+      OP_ALIASED_L1_MESSENGER,
       address(l1Adapter),
       address(l2Adapter),
       0,
       1_000_000,
       abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _amount)
     );
-    vm.stopPrank();
 
-    assertEq(bridgedUSDC.balanceOf(address(_user)), _userBalanceBefore + _amount);
+    assertEq(bridgedUSDC.balanceOf(_user), _userBalanceBefore + _amount);
   }
 
   /**
@@ -67,22 +61,17 @@ contract Integration_Bridging is IntegrationBase {
 
     vm.selectFork(optimism);
     uint256 _userBalanceBefore = bridgedUSDC.balanceOf(_user);
-
-    uint256 _messageNonce = L2_MESSENGER.messageNonce();
-
-    vm.startPrank(AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER)));
-    L2_MESSENGER.relayMessage(
-      _messageNonce + 1,
+    _relayL1ToL2Message(
+      OP_ALIASED_L1_MESSENGER,
       address(l1Adapter),
       address(l2Adapter),
       0,
       1_000_000,
       abi.encodeWithSignature('receiveMessage(address,uint256)', _l2Target, _amount)
     );
-    vm.stopPrank();
 
-    assertEq(bridgedUSDC.balanceOf(address(_l2Target)), _userBalanceBefore + _amount);
-    assertEq(bridgedUSDC.balanceOf(address(_user)), 0);
+    assertEq(bridgedUSDC.balanceOf(_l2Target), _userBalanceBefore + _amount);
+    assertEq(bridgedUSDC.balanceOf(_user), 0);
   }
 
   /**
@@ -117,12 +106,8 @@ contract Integration_Bridging is IntegrationBase {
 
     vm.selectFork(optimism);
     uint256 _userBalanceBefore = bridgedUSDC.balanceOf(_user);
-
-    uint256 _messageNonce = L2_MESSENGER.messageNonce();
-
-    vm.prank(AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER)));
-    L2_MESSENGER.relayMessage(
-      _messageNonce + 1,
+    _relayL1ToL2Message(
+      OP_ALIASED_L1_MESSENGER,
       address(l1Adapter),
       address(l2Adapter),
       0,
@@ -130,8 +115,8 @@ contract Integration_Bridging is IntegrationBase {
       abi.encodeWithSignature('receiveMessage(address,uint256)', _signerAd, _amount)
     );
 
-    assertEq(bridgedUSDC.balanceOf(address(_signerAd)), _userBalanceBefore + _amount);
-    assertEq(bridgedUSDC.balanceOf(address(_user)), 0);
+    assertEq(bridgedUSDC.balanceOf(_signerAd), _userBalanceBefore + _amount);
+    assertEq(bridgedUSDC.balanceOf(_user), 0);
   }
 
   /**
@@ -163,8 +148,6 @@ contract Integration_Bridging is IntegrationBase {
 }
 
 contract Integration_Migration is IntegrationBase {
-  using stdStorage for StdStorage;
-
   address internal _circle = makeAddr('circle');
   uint32 internal _minGasLimitReceiveOnL2 = 1_000_000;
   uint32 internal _minGasLimitSetBurnAmount = 1_000_000;
@@ -172,7 +155,7 @@ contract Integration_Migration is IntegrationBase {
   function setUp() public override {
     super.setUp();
 
-    _mintSupplyOnL2(_amount);
+    _mintSupplyOnL2(optimism, OP_ALIASED_L1_MESSENGER, _amount);
 
     vm.selectFork(mainnet);
     // Adapter needs to be minter to burn
@@ -193,11 +176,8 @@ contract Integration_Migration is IntegrationBase {
     assertEq(l1Adapter.newOwner(), _circle);
 
     vm.selectFork(optimism);
-
-    uint256 _messageNonce = L2_MESSENGER.messageNonce();
-    vm.prank(AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER)));
-    L2_MESSENGER.relayMessage(
-      _messageNonce + 1,
+    _relayL1ToL2Message(
+      OP_ALIASED_L1_MESSENGER,
       address(l1Adapter),
       address(l2Adapter),
       0,
@@ -211,22 +191,13 @@ contract Integration_Migration is IntegrationBase {
     assertEq(bridgedUSDC.owner(), _circle);
 
     vm.selectFork(mainnet);
-    _messageNonce = OPTIMISM_L1_MESSENGER.messageNonce();
-
-    // For simplicity we do this as this slot is not exposed until prove and finalize is done
-    stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(address(L2_MESSENGER));
-
-    vm.prank(OPTIMISM_PORTAL);
-    OPTIMISM_L1_MESSENGER.relayMessage(
-      _messageNonce + 1,
+    _relayL2ToL1Message(
       address(l2Adapter),
       address(l1Adapter),
       0,
       _minGasLimitSetBurnAmount,
       abi.encodeWithSignature('setBurnAmount(uint256)', _burnAmount)
     );
-
-    stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(_DEFAULT_L2_SENDER);
 
     assertEq(l1Adapter.burnAmount(), _burnAmount);
     assertEq(l1Adapter.USDC(), address(MAINNET_USDC));
@@ -257,11 +228,8 @@ contract Integration_Integration_PermissionedFlows is IntegrationBase {
     assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Paused));
 
     vm.selectFork(optimism);
-    uint256 _messageNonce = L2_MESSENGER.messageNonce();
-
-    vm.prank(AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER)));
-    L2_MESSENGER.relayMessage(
-      _messageNonce + 1,
+    _relayL1ToL2Message(
+      OP_ALIASED_L1_MESSENGER,
       address(l1Adapter),
       address(l2Adapter),
       0,
@@ -280,9 +248,8 @@ contract Integration_Integration_PermissionedFlows is IntegrationBase {
 
     vm.selectFork(optimism);
 
-    vm.prank(AddressAliasHelper.applyL1ToL2Alias(address(OPTIMISM_L1_MESSENGER)));
-    L2_MESSENGER.relayMessage(
-      _messageNonce + 2,
+    _relayL1ToL2Message(
+      OP_ALIASED_L1_MESSENGER,
       address(l1Adapter),
       address(l2Adapter),
       0,

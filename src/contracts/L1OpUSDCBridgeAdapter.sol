@@ -7,6 +7,12 @@ import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
+/**
+ * @title L1OpUSDCBridgeAdapter
+ * @notice L1OpUSDCBridgeAdapter is a contract that bridges Bridged USDC from L1 to L2 and and receives it from L2.
+ * It is also in charge of pausing and resuming messaging between the L1 and L2 adapters, and properly initiating the
+ * migration process to the for bridged USDC to native.
+ */
 contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   using SafeERC20 for IUSDC;
 

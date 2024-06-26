@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
+import {FallbackProxyAdmin} from 'contracts/utils/FallbackProxyAdmin.sol';
+
 interface IL2OpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
                             EVENTS
@@ -8,6 +10,7 @@ interface IL2OpUSDCBridgeAdapter {
 
   /**
    * @notice Emitted when the owner message is sent
+   * @param _functionSignature The signature of the function sent
    */
   event UsdcFunctionSent(bytes4 _functionSignature);
 
@@ -49,4 +52,14 @@ interface IL2OpUSDCBridgeAdapter {
    * @return _isMessagingDisabled Whether messaging is disabled
    */
   function isMessagingDisabled() external view returns (bool _isMessagingDisabled);
+
+  /**
+   * @return _fallbackProxyAdmin The address of the fallback proxy admin
+   * @dev The admin can't call the fallback function of the USDC proxy, meaning it can't interact with the functions
+   * such as mint and burn between others. Because of this, the FallbackProxyAdmin contract is used as a middleware,
+   * being controlled by the L2OpUSDCBridgeAdapter contract and allowing to call the admin functions through it while
+   * also being able to call the fallback function of the USDC proxy.
+   */
+  // solhint-disable-next-line func-name-mixedcase
+  function FALLBACK_PROXY_ADMIN() external view returns (FallbackProxyAdmin _fallbackProxyAdmin);
 }

@@ -4,6 +4,14 @@ pragma solidity 0.8.25;
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
+/**
+ * @title FallbackProxyAdmin
+ * @notice Middleware contract for the L2 Adapter to interact with the USDC proxy.
+ * @dev The admin can't call the fallback function of the USDC proxy, meaning it can't interact with the functions
+ * such as mint and burn between others. Because of this, the FallbackProxyAdmin contract is used as a middleware,
+ * being controlled by the L2OpUSDCBridgeAdapter contract and allowing to call the admin functions through it while
+ * also being able to call the fallback function of the USDC proxy.
+ */
 contract FallbackProxyAdmin is Ownable {
   /// @notice USDC address
   address public immutable USDC;

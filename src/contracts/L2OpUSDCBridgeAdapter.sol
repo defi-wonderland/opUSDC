@@ -8,17 +8,26 @@ import {IL2OpUSDCBridgeAdapter} from 'interfaces/IL2OpUSDCBridgeAdapter.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
+/**
+ * @title L2OpUSDCBridgeAdapter
+ * @notice L2OpUSDCBridgeAdapter is a contract that bridges Bridged USDC from L2 to L1 and and receives the it from L1.
+ * It finalizes the migration process of bridged USDC to native USDC on L2 after being triggered by the L1 adapter, and
+ * sends the amount to be burned back to the L1 adapter to finish the migration process.
+ * @dev The owner of this contract is capable of calling any USDC function, except the ownership or admin ones.
+ */
 contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   using SafeERC20 for IUSDC;
 
-  /**
-   * @notice USDC function signatures
-   */
+  ///@notice `transferOwnership(address)` USDC function selector
   bytes4 internal constant _TRANSFER_OWNERSHIP_SELECTOR = 0xf2fde38b;
+  ///@notice `changeAdmin(address)` USDC function selector
   bytes4 internal constant _CHANGE_ADMIN_SELECTOR = 0x8f283970;
+  ///@notice `upgradeTo(address)` USDC function selector
   bytes4 internal constant _UPGRADE_TO_SELECTOR = 0x3659cfe6;
+  ///@notice `upgradeToAndCall(address,bytes)` USDC function selector
   bytes4 internal constant _UPGRADE_TO_AND_CALL_SELECTOR = 0x4f1ef286;
 
+  /// @inheritdoc IL2OpUSDCBridgeAdapter
   FallbackProxyAdmin public immutable FALLBACK_PROXY_ADMIN;
 
   /// @inheritdoc IL2OpUSDCBridgeAdapter
@@ -191,18 +200,16 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @dev can't execute the following list of transactions:
    *  • transferOwnership (0xf2fde38b)
    *  • changeAdmin (0x8f283970)
+   * @dev UpgradeTo and UpgradeToAndCall go through the fallback admin
    * @param _data The calldata to execute on the USDC contract
    */
   function callUsdcTransaction(bytes calldata _data) external onlyOwner {
-    //Check forbidden transactions
     bytes4 _selector = bytes4(_data);
-    if (_selector == _TRANSFER_OWNERSHIP_SELECTOR || _selector == _CHANGE_ADMIN_SELECTOR) {
-      revert IOpUSDCBridgeAdapter_ForbiddenTransaction();
-    }
     bool _success;
 
-    if (_selector == _UPGRADE_TO_SELECTOR || _selector == _UPGRADE_TO_AND_CALL_SELECTOR) {
-      // If it is an upgrade transaction we need to go through the fallback admin
+    if (_selector == _TRANSFER_OWNERSHIP_SELECTOR || _selector == _CHANGE_ADMIN_SELECTOR) {
+      revert IOpUSDCBridgeAdapter_ForbiddenTransaction();
+    } else if (_selector == _UPGRADE_TO_SELECTOR || _selector == _UPGRADE_TO_AND_CALL_SELECTOR) {
       (_success,) = address(FALLBACK_PROXY_ADMIN).call(_data);
     } else {
       (_success,) = USDC.call(_data);

@@ -68,7 +68,7 @@ interface IUSDC is IERC20 {
    */
   function updateMasterMinter(address _newMasterMinter) external;
 
-  /*
+  /**
    * @notice Function to upgrade the usdc proxy to a new implementation
    * @param _newImplementation Address of the new implementation
    */
@@ -108,4 +108,46 @@ interface IUSDC is IERC20 {
    * @return _decimals The decimals of the token
    */
   function decimals() external view returns (uint8 _decimals);
+
+  /**
+   * @return _name The name of the token
+   */
+  function name() external view returns (string memory _name);
+
+  /**
+   * @return _symbol The symbol of the token
+   */
+  function symbol() external view returns (string memory _symbol);
+
+  /**
+   * @notice Checks if an account is a minter.
+   * @param _account The address to check.
+   * @return _isMinter True if the account is a minter, false if the account is not a minter.
+   */
+  function isMinter(address _account) external view returns (bool _isMinter);
+
+  /**
+   * @notice Returns the allowance of a minter
+   * @param _minter The address of the minter
+   * @return _allowance The minting amount allowed for the minter
+   */
+  function minterAllowance(address _minter) external view returns (uint256 _allowance);
+
+  /**
+   * @notice Returns the address of the current pauser
+   * @return _pauser Address of the current pauser
+   */
+  function pauser() external view returns (address _pauser);
+
+  /**
+   * @notice Returns the address of the current blacklister
+   * @return _blacklister Address of the current blacklister
+   */
+  function blacklister() external view returns (address _blacklister);
+
+  /**
+   * @notice Returns the address of the current admin
+   * @return _admin Address of the current admin
+   */
+  function admin() external view returns (address _admin);
 }
