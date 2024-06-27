@@ -164,9 +164,6 @@ contract OpUsdcTest is SetupOpUSDC {
 
   // Status pause should be able to be set only by the owner and through the correct function
   function fuzz_PauseMessaging(uint32 _minGasLimit) public {
-    // Insure we're using the correct xdom sender
-    require(mockMessenger.xDomainMessageSender() == address(l1Adapter));
-
     hevm.prank(l1Adapter.owner());
 
     IL1OpUSDCBridgeAdapter.Status _previousL1Status = l1Adapter.messengerStatus();
@@ -185,9 +182,6 @@ contract OpUsdcTest is SetupOpUSDC {
 
   // Resume should be able to be set only by the owner and through the correct function
   function fuzz_ResumeMessaging(uint32 _minGasLimit) public {
-    // Insure we're using the correct xdom sender
-    require(mockMessenger.xDomainMessageSender() == address(l1Adapter));
-
     hevm.prank(l1Adapter.owner());
 
     IL1OpUSDCBridgeAdapter.Status _previousL1Status = l1Adapter.messengerStatus();
