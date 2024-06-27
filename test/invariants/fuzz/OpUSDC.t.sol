@@ -156,6 +156,7 @@ contract OpUsdcTest is SetupOpUSDC {
     // 6
     try l1Adapter.burnLockedUSDC() {
       assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated);
+      assert(usdcMainnet.balanceOf(address(l1Adapter)) == 0);
     } catch {
       assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Deprecated);
     }
