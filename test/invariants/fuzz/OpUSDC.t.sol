@@ -173,6 +173,20 @@ contract OpUsdcTest is EchidnaTest {
     }
   }
 
+  // Locked USDC on L1adapter should be able to be burned only if L1 adapter is deprecated
+  function fuzz_BurnLockedUSDC() public {
+    // Enable l1 adapter to burn locked usdc
+    hevm.prank(usdcMainnet.masterMinter());
+    usdcMainnet.configureMinter(address(l1Adapter), type(uint256).max);
+
+    hevm.prank(l1Adapter.newOwner());
+    try l1Adapter.burnLockedUSDC() {
+      assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated);
+    } catch {
+      assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Deprecated);
+    }
+  }
+
   /////////////////////////////////////////////////////////////////////
   //                     Echidna context fuzzer                      //
   /////////////////////////////////////////////////////////////////////
