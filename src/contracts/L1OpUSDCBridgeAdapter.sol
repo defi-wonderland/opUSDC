@@ -111,10 +111,13 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     if (messengerStatus != Status.Deprecated) revert IOpUSDCBridgeAdapter_BurnAmountNotSet();
 
     // Burn the USDC tokens
-    if (burnAmount != 0) IUSDC(USDC).burn(burnAmount);
+    if (burnAmount != 0) {
+      IUSDC(USDC).burn(burnAmount);
 
-    // Set the burn amount to 0
-    burnAmount = 0;
+      // Set the burn amount to 0
+      burnAmount = 0;
+    }
+
     newOwner = address(0);
 
     emit MigrationComplete();
