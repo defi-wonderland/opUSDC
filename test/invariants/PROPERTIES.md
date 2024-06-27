@@ -16,7 +16,7 @@
 | Deprecated state should be irreversible                                                                     | State transition    |     | [ ]  | [ ]  |
 | Upgrading state only via migrate to native, should be callable multiple times (msg fails)                   | State transition    |     | [ ]  | [ ]  |
 | set burn only if migrating state                                                                            | Unit test           |     | [ ]  | [ ]  |
-| burn locked only if deprecated                                                                              | Unit test           |     | [ ]  | [ ]  |
+| burn locked only if deprecated                                                                              | Unit test           | 6   | [X]  | [ ]  |
 | paused only via stop messaging                                                                              | State transition    |     | [ ]  | [ ]  |
 | resumed only via resume messaging                                                                           | State transition    |     | [ ]  | [ ]  |
 | user nonce should be monotonically increasing                                                               | Variable transition | 5   | [X]  | [ ]  |

@@ -153,6 +153,7 @@ contract OpUsdcTest is SetupOpUSDC {
     usdcMainnet.configureMinter(address(l1Adapter), type(uint256).max);
 
     hevm.prank(l1Adapter.newOwner());
+    // 6
     try l1Adapter.burnLockedUSDC() {
       assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated);
     } catch {
