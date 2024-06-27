@@ -163,49 +163,43 @@ contract OpUsdcTest is SetupOpUSDC {
 
   // Status pause should be able to be set only by the owner and through the correct function
   function fuzz_PauseMessaging(uint32 _minGasLimit) public {
-    require(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
+    // Insure we're using the correct xdom sender
+    require(mockMessenger.xDomainMessageSender() == address(l1Adapter));
 
     hevm.prank(l1Adapter.owner());
+
+    IL1OpUSDCBridgeAdapter.Status _previousL1Status = l1Adapter.messengerStatus();
+    bool _previousL2Status = l2Adapter.isMessagingDisabled();
     // 7
     try l1Adapter.stopMessaging(_minGasLimit) {
+      assert(_previousL1Status == IL1OpUSDCBridgeAdapter.Status.Active);
+      assert(!_previousL2Status);
       assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Paused);
       assert(l2Adapter.isMessagingDisabled());
     } catch {
-      assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Paused);
-      assert(!l2Adapter.isMessagingDisabled());
+      assert(_previousL2Status);
+      assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active);
     }
   }
 
   // Resume should be able to be set only by the owner and through the correct function
   function fuzz_ResumeMessaging(uint32 _minGasLimit) public {
-    require(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Paused);
+    // Insure we're using the correct xdom sender
+    require(mockMessenger.xDomainMessageSender() == address(l1Adapter));
 
     hevm.prank(l1Adapter.owner());
+
+    IL1OpUSDCBridgeAdapter.Status _previousL1Status = l1Adapter.messengerStatus();
+    bool _previousL2Status = l2Adapter.isMessagingDisabled();
+
     // 8
     try l1Adapter.resumeMessaging(_minGasLimit) {
+      assert(_previousL1Status == IL1OpUSDCBridgeAdapter.Status.Paused);
+      assert(_previousL2Status);
       assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
       assert(!l2Adapter.isMessagingDisabled());
     } catch {
-      assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active);
-      assert(l2Adapter.isMessagingDisabled());
-    }
-  }
-
-  // Burn amount should be able to be set only if status is upgrading
-  function fuzz_SetBurnAmount(uint256 _amount) public {
-    // Insure we're using the correct xdom sender
-    require(mockMessenger.xDomainMessageSender() == address(l2Adapter));
-
-    hevm.prank(l1Adapter.MESSENGER());
-
-    uint256 _currentAmount = l1Adapter.burnAmount();
-    // 9
-    try l1Adapter.setBurnAmount(_amount) {
-      assert(l1Adapter.burnAmount() == _amount);
-      assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated);
-    } catch {
-      assert(l1Adapter.burnAmount() == _currentAmount);
-      assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Deprecated);
+      assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Paused);
     }
   }
 

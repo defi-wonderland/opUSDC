@@ -11,3 +11,4 @@ deployContracts: [
   ["0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2", "Create2Deployer"]
 ]
 cryticArgs: ["--compile-libraries=(USDCInitTxs,0x1f),(CrossChainDeployments,0x20)"] 
+workers: 2
