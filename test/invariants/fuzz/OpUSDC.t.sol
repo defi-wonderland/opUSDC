@@ -91,8 +91,6 @@ contract OpUsdcTest is SetupOpUSDC {
 
     // provided enough usdc on l1
     require(_amount > 0);
-
-    // and enough has been bridged
     require(usdcBridged.balanceOf(currentCaller) >= _amount);
 
     hevm.prank(currentCaller);
