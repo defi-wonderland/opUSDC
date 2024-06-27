@@ -34,10 +34,17 @@ contract OpUsdcTest is EchidnaTest {
   Create2Deployer public create2Deployer;
   address internal _usdcMinter = address(bytes20(uint160(uint256(keccak256('usdc.minter')))));
 
+  /////////////////////////////////////////////////////////////////////
+  //                         Ghost variables                         //
+  /////////////////////////////////////////////////////////////////////
+
+  uint256 internal _L1PreviousUserNonce;
+  uint256 internal _L1CurrentUserNonce;
+  address internal _xdomSenderDuringCall; // Who called a previous function (amongst the agents)
+
   constructor() {
     IL1OpUSDCFactory.L2Deployments memory _l2Deployments = _mainnetSetup();
     _l2Setup(_l2Deployments);
-    _setupMockBridge();
     _setupUsdc();
   }
 
@@ -149,6 +156,29 @@ contract OpUsdcTest is EchidnaTest {
     }
   }
 
+  // Both adapters state should match 4
+  function fuzz_assertAdapterStateCongruency() public {
+    // Precondition
+    // Should be the correct cross dom message sender (the L1 Adapter) when L1 send a new state to L2
+
+    // Postcondition
+    // 4
+    assert(
+      l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active
+        ? l2Adapter.isMessagingDisabled()
+        : !l2Adapter.isMessagingDisabled()
+    );
+  }
+
+  // user nonce should be monotonically increasing  5
+  function fuzz_L1NonceIncremental() public {
+    if (_L1CurrentUserNonce == 0) {
+      assert(l1Adapter.userNonce(currentCaller) == 0);
+    } else {
+      assert(_L1PreviousUserNonce == _L1CurrentUserNonce - 1);
+    }
+  }
+
   /////////////////////////////////////////////////////////////////////
   //                     Echidna context fuzzer                      //
   /////////////////////////////////////////////////////////////////////
@@ -156,10 +186,6 @@ contract OpUsdcTest is EchidnaTest {
   /////////////////////////////////////////////////////////////////////
   //                          Initial setup                          //
   /////////////////////////////////////////////////////////////////////
-
-  function _setupMockBridge() internal {
-    mockMessenger.initialize(address(l1Adapter));
-  }
 
   function _setupUsdc() internal {
     hevm.prank(usdcMainnet.masterMinter());
@@ -234,7 +260,8 @@ contract OpUsdcTest is EchidnaTest {
   //                Expose target contract selectors                 //
   /////////////////////////////////////////////////////////////////////
 
-  // Expose all selectors, pranked
+  // Expose all selectors from the adapter, pranked and with ghost variables if needed
+  // Caller is one of the agents (incl the deployer/initial owner)
   function generateCallAdapterL1(
     uint256 _selectorIndex,
     address _addressA,
@@ -250,7 +277,14 @@ contract OpUsdcTest is EchidnaTest {
     hevm.prank(currentCaller);
 
     if (_selectorIndex == 0) {
-      try l1Adapter.sendMessage(_addressA, _uintA, _uint32A) {} catch {}
+      // Do not make assumption on nonce logic here, just collect them
+      uint256 _initialNonce = l1Adapter.userNonce(currentCaller);
+
+      hevm.prank(currentCaller);
+      try l1Adapter.sendMessage(_addressA, _uintA, _uint32A) {
+        _L1PreviousUserNonce = _initialNonce;
+        _L1CurrentUserNonce = l1Adapter.userNonce(currentCaller);
+      } catch {}
     } else if (_selectorIndex == 1) {
       try l1Adapter.sendMessage(_addressA, _addressB, _uintA, _bytesA, _uintB, _uint32A) {} catch {}
     } else if (_selectorIndex == 2) {
@@ -282,9 +316,9 @@ contract OpUsdcTest is EchidnaTest {
     hevm.prank(currentCaller);
 
     if (_selectorIndex == 0) {
-      try l1Adapter.sendMessage(_addressA, _uintA, _uint32A) {} catch {}
+      try l2Adapter.sendMessage(_addressA, _uintA, _uint32A) {} catch {}
     } else if (_selectorIndex == 1) {
-      try l1Adapter.sendMessage(_addressA, _addressB, _uintA, _bytesA, _uintB, _uint32A) {} catch {}
+      try l2Adapter.sendMessage(_addressA, _addressB, _uintA, _bytesA, _uintB, _uint32A) {} catch {}
     } else if (_selectorIndex == 2) {
       try l2Adapter.receiveMessage(_addressA, _uintA) {} catch {}
     } else if (_selectorIndex == 3) {
@@ -296,6 +330,80 @@ contract OpUsdcTest is EchidnaTest {
     } else {
       try l2Adapter.callUsdcTransaction(_bytesA) {} catch {}
     }
+  }
+
+  // Send a call to the L1 or L2 adapter (simulating a direct interaction with the bridge, from an invalid xdom sender)
+  function generateMessageToL1(
+    uint256 _selectorIndex,
+    address _addressA,
+    address _addressB,
+    uint256 _uintA,
+    uint256 _uintB,
+    bytes calldata _bytesA,
+    uint32 _uint32A,
+    uint32 _uint32B
+  ) public AgentOrDeployer {
+    _selectorIndex = _selectorIndex % 8;
+    bytes memory _payload;
+
+    if (_selectorIndex == 0) {
+      _payload = abi.encodeWithSignature('sendMessage(address,uint256,uint32)', abi.encode(_addressA, _uintA, _uint32A));
+    } else if (_selectorIndex == 1) {
+      _payload = abi.encodeWithSignature(
+        'sendMessage(address,address,uint256,bytes,uint256,uint32)',
+        abi.encode(_addressA, _addressB, _uintA, _bytesA, _uintB, _uint32A)
+      );
+    } else if (_selectorIndex == 2) {
+      _payload = abi.encodeCall(l1Adapter.receiveMessage, (_addressA, _uintA));
+    } else if (_selectorIndex == 3) {
+      _payload = abi.encodeCall(l1Adapter.migrateToNative, (_addressA, _uint32A, _uint32B));
+    } else if (_selectorIndex == 4) {
+      _payload = abi.encodeCall(l1Adapter.setBurnAmount, (_uintA));
+    } else if (_selectorIndex == 5) {
+      _payload = abi.encodeCall(l1Adapter.burnLockedUSDC, ());
+    } else if (_selectorIndex == 6) {
+      _payload = abi.encodeCall(l1Adapter.stopMessaging, (_uint32A));
+    } else {
+      _payload = abi.encodeCall(l1Adapter.resumeMessaging, (_uint32A));
+    }
+
+    hevm.prank(currentCaller);
+    mockMessenger.sendMessage(currentCaller, _payload, _uint32A);
+  }
+
+  function generateMessageToL2(
+    uint256 _selectorIndex,
+    address _addressA,
+    address _addressB,
+    uint256 _uintA,
+    uint256 _uintB,
+    bytes calldata _bytesA,
+    uint32 _uint32A
+  ) public AgentOrDeployer {
+    _selectorIndex = _selectorIndex % 7;
+    bytes memory _payload;
+
+    if (_selectorIndex == 0) {
+      _payload = abi.encodeWithSignature('sendMessage(address,uint256,uint32)', abi.encode(_addressA, _uintA, _uint32A));
+    } else if (_selectorIndex == 1) {
+      _payload = abi.encodeWithSignature(
+        'sendMessage(address,address,uint256,bytes,uint256,uint32)',
+        abi.encode(_addressA, _addressB, _uintA, _bytesA, _uintB, _uint32A)
+      );
+    } else if (_selectorIndex == 2) {
+      _payload = abi.encodeWithSelector(l1Adapter.receiveMessage.selector, abi.encode(_addressA, _uintA));
+    } else if (_selectorIndex == 3) {
+      _payload = abi.encodeCall(l2Adapter.receiveMigrateToNative, (_addressA, _uint32A));
+    } else if (_selectorIndex == 4) {
+      _payload = abi.encodeCall(l2Adapter.receiveStopMessaging, ());
+    } else if (_selectorIndex == 5) {
+      _payload = abi.encodeCall(l2Adapter.receiveResumeMessaging, ());
+    } else {
+      _payload = abi.encodeCall(l2Adapter.callUsdcTransaction, (_bytesA));
+    }
+
+    hevm.prank(currentCaller);
+    mockMessenger.sendMessage(currentCaller, _payload, _uint32A);
   }
 
   function generateCallFactory() public AgentOrDeployer {}
@@ -310,25 +418,18 @@ contract MockBridge is ITestCrossDomainMessenger {
   uint256 public messageNonce;
   address public l1Adapter;
 
-  bool correctXDomSender;
-
-  function initialize(address _l1Adapter) public {
-    l1Adapter = _l1Adapter;
-  }
-
-  function xDomSenderSwitch() public {
-    correctXDomSender = !correctXDomSender;
-  }
+  address internal _currentXDomSender;
 
   function OTHER_MESSENGER() external view returns (address) {
     return address(0);
   }
 
-  function xDomainMessageSender() external view returns (address _sender) {
-    _sender = correctXDomSender ? l1Adapter : address(123);
+  function xDomainMessageSender() external view returns (address) {
+    return _currentXDomSender;
   }
 
   function sendMessage(address _target, bytes calldata _message, uint32 _minGasLimit) external {
+    _currentXDomSender = msg.sender;
     messageNonce++;
     _target.call(_message);
   }
@@ -341,6 +442,7 @@ contract MockBridge is ITestCrossDomainMessenger {
     uint256 _minGasLimit,
     bytes calldata _message
   ) external payable {
+    _currentXDomSender = msg.sender;
     messageNonce++;
     (bool succ, bytes memory ret) = _target.call{value: _value}(_message);
 
