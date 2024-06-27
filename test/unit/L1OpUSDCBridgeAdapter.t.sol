@@ -344,6 +344,19 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
   }
 
   /**
+   * @notice Check that the burn function is not called if the amount is zero
+   */
+  function test_burnNotCalledIfAmountIsZero(address _circle) external {
+    adapter.forTest_setNewOwner(_circle);
+    adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Deprecated);
+
+    // This should pass without needing to mock because its set to zero by default
+    // Execute
+    vm.prank(_circle);
+    adapter.burnLockedUSDC();
+  }
+
+  /**
    * @notice Check that the burn function is called as expected
    */
   function test_expectedCall(uint256 _burnAmount, address _circle) external {
