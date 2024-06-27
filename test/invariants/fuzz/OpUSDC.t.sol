@@ -162,18 +162,50 @@ contract OpUsdcTest is SetupOpUSDC {
   }
 
   // Status pause should be able to be set only by the owner and through the correct function
-  function fuzz_PauseMessaging() public {
+  function fuzz_PauseMessaging(uint32 _minGasLimit) public {
+    require(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
+
     hevm.prank(l1Adapter.owner());
-
-    require(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Paused);
-
     // 7
-    try l1Adapter.stopMessaging(0) {
+    try l1Adapter.stopMessaging(_minGasLimit) {
       assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Paused);
       assert(l2Adapter.isMessagingDisabled());
     } catch {
-      assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Paused);
+      assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Paused);
       assert(!l2Adapter.isMessagingDisabled());
+    }
+  }
+
+  // Resume should be able to be set only by the owner and through the correct function
+  function fuzz_ResumeMessaging(uint32 _minGasLimit) public {
+    require(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Paused);
+
+    hevm.prank(l1Adapter.owner());
+    // 8
+    try l1Adapter.resumeMessaging(_minGasLimit) {
+      assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
+      assert(!l2Adapter.isMessagingDisabled());
+    } catch {
+      assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active);
+      assert(l2Adapter.isMessagingDisabled());
+    }
+  }
+
+  // Burn amount should be able to be set only if status is upgrading
+  function fuzz_SetBurnAmount(uint256 _amount) public {
+    // Insure we're using the correct xdom sender
+    require(mockMessenger.xDomainMessageSender() == address(l2Adapter));
+
+    hevm.prank(l1Adapter.MESSENGER());
+
+    uint256 _currentAmount = l1Adapter.burnAmount();
+    // 9
+    try l1Adapter.setBurnAmount(_amount) {
+      assert(l1Adapter.burnAmount() == _amount);
+      assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated);
+    } catch {
+      assert(l1Adapter.burnAmount() == _currentAmount);
+      assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Deprecated);
     }
   }
 

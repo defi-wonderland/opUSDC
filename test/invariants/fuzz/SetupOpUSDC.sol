@@ -35,6 +35,12 @@ contract SetupOpUSDC is EchidnaTest {
   //                          Initial setup                          //
   /////////////////////////////////////////////////////////////////////
 
+  constructor() {
+    IL1OpUSDCFactory.L2Deployments memory _l2Deployments = _mainnetSetup();
+    _l2Setup(_l2Deployments);
+    _setupUsdc();
+  }
+
   function _setupUsdc() internal {
     hevm.prank(usdcMainnet.masterMinter());
     usdcMainnet.configureMinter(address(_usdcMinter), type(uint256).max);
