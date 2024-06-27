@@ -37,7 +37,9 @@ contract IntegrationBase is Helpers {
   uint32 public constant MIN_GAS_LIMIT_DEPLOY = 8_000_000;
   uint32 internal constant _ZERO_VALUE = 0;
   uint256 internal constant _amount = 1e18;
-  uint32 internal constant _minGasLimit = 1_000_000;
+  uint32 internal constant _MIN_GAS_LIMIT = 1_000_000;
+  // The extra gas buffer added to the minimum gas limit for the relayMessage function
+  uint64 internal constant _SEQUENCER_GAS_OVERHEAD = 500_000;
 
   /// @notice Value used for the L2 sender storage slot in both the OptimismPortal and the
   ///         CrossDomainMessenger contracts before an actual sender is set. This value is
@@ -156,16 +158,17 @@ contract IntegrationBase is Helpers {
 
     vm.startPrank(_user);
     MAINNET_USDC.approve(address(l1Adapter), _supply);
-    l1Adapter.sendMessage(_user, _supply, _minGasLimit);
+    l1Adapter.sendMessage(_user, _supply, _MIN_GAS_LIMIT);
     vm.stopPrank();
 
     vm.selectFork(_network);
+    uint64 _minGasLimitMint = 1_000_000;
     _relayL1ToL2Message(
       _aliasedL1Messenger,
       address(l1Adapter),
       address(l2Adapter),
-      0,
-      1_000_000,
+      _ZERO_VALUE,
+      _minGasLimitMint,
       abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _supply)
     );
   }
@@ -179,12 +182,11 @@ contract IntegrationBase is Helpers {
     bytes memory _data
   ) internal {
     uint256 _messageNonce = L2_MESSENGER.messageNonce();
-    vm.startPrank(_aliasedL1Messenger);
+    vm.prank(_aliasedL1Messenger);
     // OP adds some extra gas for the relayMessage logic
-    L2_MESSENGER.relayMessage{gas: _minGasLimit + 500_000}(
+    L2_MESSENGER.relayMessage{gas: _minGasLimit + _SEQUENCER_GAS_OVERHEAD}(
       _messageNonce + 1, _sender, _target, _value, _minGasLimit, _data
     );
-    vm.stopPrank();
   }
 
   function _relayL2ToL1Message(
@@ -198,12 +200,11 @@ contract IntegrationBase is Helpers {
 
     // For simplicity we do this as this slot is not exposed until prove and finalize is done
     stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(address(L2_MESSENGER));
-    vm.startPrank(OPTIMISM_PORTAL);
+    vm.prank(OPTIMISM_PORTAL);
     // OP adds some extra gas for the relayMessage logic
-    OPTIMISM_L1_MESSENGER.relayMessage{gas: _minGasLimit + 500_000}(
+    OPTIMISM_L1_MESSENGER.relayMessage{gas: _minGasLimit + _SEQUENCER_GAS_OVERHEAD}(
       _messageNonce + 1, _sender, _target, _value, _minGasLimit, _data
     );
-    vm.stopPrank();
     // Needs to be reset to mimic production
     stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(_DEFAULT_L2_SENDER);
   }

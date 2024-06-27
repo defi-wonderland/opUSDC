@@ -109,6 +109,7 @@ contract Integration_Factories is IntegrationBase {
     (address _baseL1Adapter, address _baseL2Factory, address _baseL2Adapter) =
       l1Factory.deploy(address(BASE_L1_MESSENGER), _owner, l2Deployments);
     bytes32 _baseSalt = bytes32(l1Factory.deploymentsSaltCounter());
+    vm.stopPrank();
 
     // Check the L1 adapter was deployed
     assertGt(_baseL1Adapter.code.length, 0);

@@ -18,7 +18,7 @@ contract Integration_Bridging is IntegrationBase {
 
     vm.startPrank(_user);
     MAINNET_USDC.approve(address(l1Adapter), _amount);
-    l1Adapter.sendMessage(_user, _amount, _minGasLimit);
+    l1Adapter.sendMessage(_user, _amount, _MIN_GAS_LIMIT);
     vm.stopPrank();
 
     assertEq(MAINNET_USDC.balanceOf(_user), 0);
@@ -31,7 +31,7 @@ contract Integration_Bridging is IntegrationBase {
       OP_ALIASED_L1_MESSENGER,
       address(l1Adapter),
       address(l2Adapter),
-      0,
+      _ZERO_VALUE,
       1_000_000,
       abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _amount)
     );
@@ -53,7 +53,7 @@ contract Integration_Bridging is IntegrationBase {
 
     vm.startPrank(_user);
     MAINNET_USDC.approve(address(l1Adapter), _amount);
-    l1Adapter.sendMessage(_l2Target, _amount, _minGasLimit);
+    l1Adapter.sendMessage(_l2Target, _amount, _MIN_GAS_LIMIT);
     vm.stopPrank();
 
     assertEq(MAINNET_USDC.balanceOf(_user), 0);
@@ -65,7 +65,7 @@ contract Integration_Bridging is IntegrationBase {
       OP_ALIASED_L1_MESSENGER,
       address(l1Adapter),
       address(l2Adapter),
-      0,
+      _ZERO_VALUE,
       1_000_000,
       abi.encodeWithSignature('receiveMessage(address,uint256)', _l2Target, _amount)
     );
@@ -98,7 +98,7 @@ contract Integration_Bridging is IntegrationBase {
 
     // Different address can execute the message
     vm.prank(_user);
-    l1Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _minGasLimit);
+    l1Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _MIN_GAS_LIMIT);
 
     assertEq(MAINNET_USDC.balanceOf(_signerAd), 0);
     assertEq(MAINNET_USDC.balanceOf(_user), _amount);
@@ -110,7 +110,7 @@ contract Integration_Bridging is IntegrationBase {
       OP_ALIASED_L1_MESSENGER,
       address(l1Adapter),
       address(l2Adapter),
-      0,
+      _ZERO_VALUE,
       1_000_000,
       abi.encodeWithSignature('receiveMessage(address,uint256)', _signerAd, _amount)
     );
@@ -142,7 +142,7 @@ contract Integration_Bridging is IntegrationBase {
     // Different address can execute the message
     vm.startPrank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSignature.selector);
-    l1Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _minGasLimit);
+    l1Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _MIN_GAS_LIMIT);
     vm.stopPrank();
   }
 }
@@ -180,7 +180,7 @@ contract Integration_Migration is IntegrationBase {
       OP_ALIASED_L1_MESSENGER,
       address(l1Adapter),
       address(l2Adapter),
-      0,
+      _ZERO_VALUE,
       _minGasLimitReceiveOnL2,
       abi.encodeWithSignature('receiveMigrateToNative(address,uint32)', _circle, _minGasLimitSetBurnAmount)
     );
@@ -194,7 +194,7 @@ contract Integration_Migration is IntegrationBase {
     _relayL2ToL1Message(
       address(l2Adapter),
       address(l1Adapter),
-      0,
+      _ZERO_VALUE,
       _minGasLimitSetBurnAmount,
       abi.encodeWithSignature('setBurnAmount(uint256)', _burnAmount)
     );
@@ -223,7 +223,7 @@ contract Integration_Integration_PermissionedFlows is IntegrationBase {
     assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Active));
 
     vm.prank(_owner);
-    l1Adapter.stopMessaging(_minGasLimit);
+    l1Adapter.stopMessaging(_MIN_GAS_LIMIT);
 
     assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Paused));
 
@@ -232,8 +232,8 @@ contract Integration_Integration_PermissionedFlows is IntegrationBase {
       OP_ALIASED_L1_MESSENGER,
       address(l1Adapter),
       address(l2Adapter),
-      0,
-      _minGasLimit,
+      _ZERO_VALUE,
+      _MIN_GAS_LIMIT,
       abi.encodeWithSignature('receiveStopMessaging()')
     );
 
@@ -242,7 +242,7 @@ contract Integration_Integration_PermissionedFlows is IntegrationBase {
     vm.selectFork(mainnet);
 
     vm.prank(_owner);
-    l1Adapter.resumeMessaging(_minGasLimit);
+    l1Adapter.resumeMessaging(_MIN_GAS_LIMIT);
 
     assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Active));
 
@@ -252,8 +252,8 @@ contract Integration_Integration_PermissionedFlows is IntegrationBase {
       OP_ALIASED_L1_MESSENGER,
       address(l1Adapter),
       address(l2Adapter),
-      0,
-      _minGasLimit,
+      _ZERO_VALUE,
+      _MIN_GAS_LIMIT,
       abi.encodeWithSignature('receiveResumeMessaging()')
     );
 
