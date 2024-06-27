@@ -161,6 +161,22 @@ contract OpUsdcTest is SetupOpUSDC {
     }
   }
 
+  // Status pause should be able to be set only by the owner and through the correct function
+  function fuzz_PauseMessaging() public {
+    hevm.prank(l1Adapter.owner());
+
+    require(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Paused);
+
+    // 7
+    try l1Adapter.stopMessaging(0) {
+      assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Paused);
+      assert(l2Adapter.isMessagingDisabled());
+    } catch {
+      assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Paused);
+      assert(!l2Adapter.isMessagingDisabled());
+    }
+  }
+
   /////////////////////////////////////////////////////////////////////
   //                Expose target contract selectors                 //
   /////////////////////////////////////////////////////////////////////
