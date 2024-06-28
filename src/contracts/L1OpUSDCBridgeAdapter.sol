@@ -152,7 +152,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /**
    * @notice Resume messaging on the messenger
    * @dev Only callable by the owner
-   * @dev Cant resume paused messengers
+   * @dev Cant resume deprecated or upgrading messengers
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function resumeMessaging(uint32 _minGasLimit) external onlyOwner {
