@@ -223,6 +223,29 @@ contract OpUsdcTest is SetupOpUSDC {
     }
   }
 
+  function fuzz_setBurnAmount(uint256 _amount) public {
+    // Precondition
+    uint256 _previousBurnAmount = l1Adapter.burnAmount();
+    IL1OpUSDCBridgeAdapter.Status _previousState = l1Adapter.messengerStatus();
+
+    // Need this to pass the checkSender modifier
+    mockMessenger.setDomaninMessageSender(l1Adapter.LINKED_ADAPTER());
+
+    hevm.prank(l1Adapter.MESSENGER());
+
+    // Action
+    // 9
+    try l1Adapter.setBurnAmount(_amount) {
+      //Precontion
+      assert(_previousState == IL1OpUSDCBridgeAdapter.Status.Upgrading);
+      // Postcondition
+      assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated);
+      assert(l1Adapter.burnAmount() == _amount);
+    } catch {
+      assert(l1Adapter.burnAmount() == _previousBurnAmount);
+    }
+  }
+
   /////////////////////////////////////////////////////////////////////
   //                         Bridge mocking                          //
   /////////////////////////////////////////////////////////////////////
