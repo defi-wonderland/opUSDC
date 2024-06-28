@@ -333,7 +333,7 @@ contract OpUsdcTest is SetupOpUSDC {
         abi.encode(_addressA, _addressB, _uintA, _bytesA, _uintB, _uint32A)
       );
     } else if (_selectorIndex == 2) {
-      _payload = abi.encodeWithSelector(l1Adapter.receiveMessage.selector, abi.encode(_addressA, _uintA));
+      _payload = abi.encodeCall(l2Adapter.receiveMessage, (_addressA, _uintA));
     } else if (_selectorIndex == 3) {
       _payload = abi.encodeCall(l2Adapter.receiveMigrateToNative, (_addressA, _uint32A));
     } else if (_selectorIndex == 4) {
