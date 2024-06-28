@@ -34,12 +34,12 @@ contract IntegrationBase is Helpers {
     ITestCrossDomainMessenger(0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1);
   ITestCrossDomainMessenger public constant BASE_L1_MESSENGER =
     ITestCrossDomainMessenger(0x866E82a600A1414e583f7F13623F1aC5d58b0Afa);
-  uint32 public constant MIN_GAS_LIMIT_DEPLOY = 8_000_000;
+  uint32 public constant MIN_GAS_LIMIT_DEPLOY = 15_000_000;
   uint32 internal constant _ZERO_VALUE = 0;
   uint256 internal constant _amount = 1e18;
   uint32 internal constant _MIN_GAS_LIMIT = 1_000_000;
   // The extra gas buffer added to the minimum gas limit for the relayMessage function
-  uint64 internal constant _SEQUENCER_GAS_OVERHEAD = 500_000;
+  uint64 internal constant _SEQUENCER_GAS_OVERHEAD = 700_000;
 
   /// @notice Value used for the L2 sender storage slot in both the OptimismPortal and the
   ///         CrossDomainMessenger contracts before an actual sender is set. This value is
@@ -185,7 +185,7 @@ contract IntegrationBase is Helpers {
     vm.prank(_aliasedL1Messenger);
     // OP adds some extra gas for the relayMessage logic
     L2_MESSENGER.relayMessage{gas: _minGasLimit + _SEQUENCER_GAS_OVERHEAD}(
-      _messageNonce + 1, _sender, _target, _value, _minGasLimit, _data
+      _messageNonce, _sender, _target, _value, _minGasLimit, _data
     );
   }
 
@@ -203,7 +203,7 @@ contract IntegrationBase is Helpers {
     vm.prank(OPTIMISM_PORTAL);
     // OP adds some extra gas for the relayMessage logic
     OPTIMISM_L1_MESSENGER.relayMessage{gas: _minGasLimit + _SEQUENCER_GAS_OVERHEAD}(
-      _messageNonce + 1, _sender, _target, _value, _minGasLimit, _data
+      _messageNonce, _sender, _target, _value, _minGasLimit, _data
     );
     // Needs to be reset to mimic production
     stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(_DEFAULT_L2_SENDER);

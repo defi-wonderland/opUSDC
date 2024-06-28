@@ -17,8 +17,8 @@ contract ForTestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
     burnAmount = _amount;
   }
 
-  function forTest_setNewOwner(address _newOwner) external {
-    newOwner = _newOwner;
+  function forTest_setBurnCaller(address _burnCaller) external {
+    burnCaller = _burnCaller;
   }
 
   function forTest_setMessengerStatus(Status _status) external {
@@ -75,7 +75,8 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
    */
   function test_onlyOwner(
     address _executor,
-    address _newOwner,
+    address _roleCaller,
+    address _burnCaller,
     uint32 _minGasLimitReceiveOnL2,
     uint32 _minGasLimitSetBurnAmount
   ) external {
@@ -83,51 +84,75 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
     // Execute
     vm.prank(_executor);
     vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _executor));
-    adapter.migrateToNative(_newOwner, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
+    adapter.migrateToNative(_roleCaller, _burnCaller, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
   }
 
   /**
-   * @notice Check that the function reverts if `_circle` is the zero address
+   * @notice Check that the function reverts if roleCaller is the zero address
    */
-  function test_revertOnAddressZero(uint32 _minGasLimitReceiveOnL2, uint32 _minGasLimitSetBurnAmount) external {
+  function test_roleCallerRevertOnAddressZero(
+    uint32 _minGasLimitReceiveOnL2,
+    uint32 _minGasLimitSetBurnAmount,
+    address _burnCaller
+  ) external {
+    vm.assume(_burnCaller != address(0));
     // Execute
     vm.prank(_owner);
     vm.expectRevert(abi.encodeWithSelector(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidAddress.selector));
-    adapter.migrateToNative(address(0), _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
+    adapter.migrateToNative(address(0), _burnCaller, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
+  }
+
+  /**
+   * @notice Check that the function reverts if burnCaller is the zero address
+   */
+  function test_burnCallerRevertOnAddressZero(
+    uint32 _minGasLimitReceiveOnL2,
+    uint32 _minGasLimitSetBurnAmount,
+    address _roleCaller
+  ) external {
+    vm.assume(_roleCaller != address(0));
+    // Execute
+    vm.prank(_owner);
+    vm.expectRevert(abi.encodeWithSelector(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidAddress.selector));
+    adapter.migrateToNative(_roleCaller, address(0), _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
   }
 
   /**
    * @notice Check that the function reverts if a messenger is not active or upgrading
    */
   function test_revertIfMessengerNotActive(
-    address _newOwner,
+    address _roleCaller,
+    address _burnCaller,
     uint32 _minGasLimitReceiveOnL2,
     uint32 _minGasLimitSetBurnAmount
   ) external {
-    vm.assume(_newOwner != address(0));
+    vm.assume(_roleCaller != address(0));
+    vm.assume(_burnCaller != address(0));
     adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Paused);
 
     // Execute
     vm.prank(_owner);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
-    adapter.migrateToNative(_newOwner, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
+    adapter.migrateToNative(_roleCaller, _burnCaller, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
   }
 
   /**
    * @notice Check that the function updates the state as expected
    */
   function test_StateOfMigration(
-    address _newOwner,
+    address _roleCaller,
+    address _burnCaller,
     uint32 _minGasLimitReceiveOnL2,
     uint32 _minGasLimitSetBurnAmount
   ) external {
-    vm.assume(_newOwner != address(0));
+    vm.assume(_roleCaller != address(0));
+    vm.assume(_burnCaller != address(0));
     vm.mockCall(
       _messenger,
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
-        abi.encodeWithSignature('receiveMigrateToNative(address,uint32)', _newOwner, _minGasLimitSetBurnAmount),
+        abi.encodeWithSignature('receiveMigrateToNative(address,uint32)', _roleCaller, _minGasLimitSetBurnAmount),
         _minGasLimitReceiveOnL2
       ),
       abi.encode()
@@ -135,8 +160,8 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
 
     // Execute
     vm.prank(_owner);
-    adapter.migrateToNative(_newOwner, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
-    assertEq(adapter.newOwner(), _newOwner, 'Circle should be set to the new owner');
+    adapter.migrateToNative(_roleCaller, _burnCaller, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
+    assertEq(adapter.burnCaller(), _burnCaller, 'Circle should be set to the new owner');
     assertEq(
       uint256(adapter.messengerStatus()),
       uint256(IL1OpUSDCBridgeAdapter.Status.Upgrading),
@@ -148,17 +173,19 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
    * @notice Check that the function calls the expected functions
    */
   function test_expectCall(
-    address _newOwner,
+    address _roleCaller,
+    address _burnCaller,
     uint32 _minGasLimitReceiveOnL2,
     uint32 _minGasLimitSetBurnAmount
   ) external {
-    vm.assume(_newOwner != address(0));
+    vm.assume(_roleCaller != address(0));
+    vm.assume(_burnCaller != address(0));
     _mockAndExpect(
       _messenger,
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
-        abi.encodeWithSignature('receiveMigrateToNative(address,uint32)', _newOwner, _minGasLimitSetBurnAmount),
+        abi.encodeWithSignature('receiveMigrateToNative(address,uint32)', _roleCaller, _minGasLimitSetBurnAmount),
         _minGasLimitReceiveOnL2
       ),
       abi.encode()
@@ -166,19 +193,21 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
 
     // Execute
     vm.prank(_owner);
-    adapter.migrateToNative(_newOwner, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
+    adapter.migrateToNative(_roleCaller, _burnCaller, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
   }
 
   /**
    * @notice Check that we can recall the function if its upgrading
    */
   function test_recallWhenUpgrading(
-    address _newOwner,
+    address _roleCaller,
+    address _burnCaller,
     uint32 _minGasLimitReceiveOnL2,
     uint32 _minGasLimitSetBurnAmount
   ) external {
-    vm.assume(_newOwner != address(0));
-    adapter.forTest_setNewOwner(_newOwner);
+    vm.assume(_roleCaller != address(0));
+    vm.assume(_burnCaller != address(0));
+    adapter.forTest_setBurnCaller(_roleCaller);
     adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Upgrading);
 
     _mockAndExpect(
@@ -186,7 +215,7 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
-        abi.encodeWithSignature('receiveMigrateToNative(address,uint32)', _newOwner, _minGasLimitSetBurnAmount),
+        abi.encodeWithSignature('receiveMigrateToNative(address,uint32)', _roleCaller, _minGasLimitSetBurnAmount),
         _minGasLimitReceiveOnL2
       ),
       abi.encode()
@@ -194,25 +223,27 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
 
     // Execute
     vm.prank(_owner);
-    adapter.migrateToNative(_newOwner, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
+    adapter.migrateToNative(_roleCaller, _burnCaller, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
   }
 
   /**
    * @notice Check that the event is emitted as expected
    */
   function test_emitEventMigrating(
-    address _newOwner,
+    address _roleCaller,
+    address _burnCaller,
     uint32 _minGasLimitReceiveOnL2,
     uint32 _minGasLimitSetBurnAmount
   ) external {
-    vm.assume(_newOwner != address(0));
+    vm.assume(_roleCaller != address(0));
+    vm.assume(_burnCaller != address(0));
     // Mock calls
     vm.mockCall(
       _messenger,
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
-        abi.encodeWithSignature('receiveMigrateToNative(address,uint32)', _newOwner, _minGasLimitSetBurnAmount),
+        abi.encodeWithSignature('receiveMigrateToNative(address,uint32)', _roleCaller, _minGasLimitSetBurnAmount),
         _minGasLimitReceiveOnL2
       ),
       abi.encode()
@@ -220,11 +251,11 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
 
     // Expect events
     vm.expectEmit(true, true, true, true);
-    emit MigratingToNative(_messenger, _newOwner);
+    emit MigratingToNative(_messenger, _burnCaller);
 
     // Execute
     vm.prank(_owner);
-    adapter.migrateToNative(_newOwner, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
+    adapter.migrateToNative(_roleCaller, _burnCaller, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
   }
 }
 
@@ -335,7 +366,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
   }
 
   function test_burnAmountNotSet(address _circle) external {
-    adapter.forTest_setNewOwner(_circle);
+    adapter.forTest_setBurnCaller(_circle);
 
     // Execute
     vm.prank(_circle);
@@ -347,7 +378,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
    * @notice Check that the burn function is not called if the amount is zero
    */
   function test_burnNotCalledIfAmountIsZero(address _circle) external {
-    adapter.forTest_setNewOwner(_circle);
+    adapter.forTest_setBurnCaller(_circle);
     adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Deprecated);
 
     // This should pass without needing to mock because its set to zero by default
@@ -360,7 +391,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
    * @notice Check that the burn function is called as expected
    */
   function test_expectedCall(uint256 _burnAmount, address _circle) external {
-    adapter.forTest_setNewOwner(_circle);
+    adapter.forTest_setBurnCaller(_circle);
     adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Deprecated);
 
     vm.assume(_burnAmount > 0);
@@ -379,7 +410,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
    */
   function test_resetStorageValues(uint256 _burnAmount, address _circle) external {
     vm.assume(_burnAmount > 0);
-    adapter.forTest_setNewOwner(_circle);
+    adapter.forTest_setBurnCaller(_circle);
     adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Deprecated);
 
     vm.mockCall(
@@ -393,7 +424,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
     adapter.burnLockedUSDC();
 
     assertEq(adapter.burnAmount(), 0, 'Burn amount should be set to 0');
-    assertEq(adapter.newOwner(), address(0), 'Circle should be set to 0');
+    assertEq(adapter.burnCaller(), address(0), 'Circle should be set to 0');
   }
 
   /**
@@ -401,7 +432,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
    */
   function test_emitEvent(uint256 _burnAmount, address _circle) external {
     vm.assume(_burnAmount > 0);
-    adapter.forTest_setNewOwner(_circle);
+    adapter.forTest_setBurnCaller(_circle);
     adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Deprecated);
 
     vm.mockCall(_usdc, abi.encodeWithSignature('burn(address)', address(adapter)), abi.encode(true));

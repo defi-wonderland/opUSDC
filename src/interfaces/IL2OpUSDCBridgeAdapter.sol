@@ -20,10 +20,17 @@ interface IL2OpUSDCBridgeAdapter {
   /**
    * @notice Initiates the process to migrate the bridged USDC to native USDC
    * @dev Full migration cant finish until L1 receives the message for setting the burn amount
-   * @param _newOwner The address to transfer ownerships to
+   * @param _roleCaller The address that will be allowed to transfer the USDC roles
    * @param _setBurnAmountMinGasLimit Minimum gas limit that the setBurnAmount message can be executed on L1
    */
-  function receiveMigrateToNative(address _newOwner, uint32 _setBurnAmountMinGasLimit) external;
+  function receiveMigrateToNative(address _roleCaller, uint32 _setBurnAmountMinGasLimit) external;
+
+  /**
+   * @notice Transfer the USDC roles to the new owner
+   * @param _owner The address to transfer ownerships to
+   * @dev Cam only be called by the role caller set in the migration process
+   */
+  function transferUSDCRoles(address _owner) external;
 
   /**
    * @notice Receive the stop messaging message from the linked adapter and stop outgoing messages
@@ -52,6 +59,12 @@ interface IL2OpUSDCBridgeAdapter {
    * @return _isMessagingDisabled Whether messaging is disabled
    */
   function isMessagingDisabled() external view returns (bool _isMessagingDisabled);
+
+  /**
+   * @notice Fetches the address of the role caller
+   * @return _roleCaller The address of the role caller
+   */
+  function roleCaller() external view returns (address _roleCaller);
 
   /**
    * @return _fallbackProxyAdmin The address of the fallback proxy admin

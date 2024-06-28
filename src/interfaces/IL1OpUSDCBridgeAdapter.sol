@@ -41,11 +41,17 @@ interface IL1OpUSDCBridgeAdapter {
 
   /**
    * @notice Initiates the process to migrate the bridged USDC to native USDC
-   * @param _circle The address to transfer ownerships to
+   * @param _roleCaller The address that will be allowed to transfer the usdc roles
+   * @param _burnCaller The address that will be allowed to call this contract to burn the USDC tokens
    * @param _minGasLimitReceiveOnL2 Minimum gas limit that the message can be executed with on L2
    * @param _minGasLimitSetBurnAmount Minimum gas limit that the message can be executed with to set the burn amount
    */
-  function migrateToNative(address _circle, uint32 _minGasLimitReceiveOnL2, uint32 _minGasLimitSetBurnAmount) external;
+  function migrateToNative(
+    address _roleCaller,
+    address _burnCaller,
+    uint32 _minGasLimitReceiveOnL2,
+    uint32 _minGasLimitSetBurnAmount
+  ) external;
 
   /**
    * @notice Sets the amount of USDC tokens that will be burned when the burnLockedUSDC function is called
@@ -87,10 +93,10 @@ interface IL1OpUSDCBridgeAdapter {
   function burnAmount() external view returns (uint256 _burnAmount);
 
   /**
-   * @notice Fetches the address of the new owner for the USDC tokens
-   * @return _newOwner The address of the new owner for the USDC tokens
+   * @notice Fetches the address of the burn caller
+   * @return burnCaller The address opf the burn caller
    */
-  function newOwner() external view returns (address _newOwner);
+  function burnCaller() external view returns (address burnCaller);
 
   /**
    * @notice Fetches the status of the messenger

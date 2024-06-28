@@ -19,6 +19,10 @@ contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
   function forTest_setIsMessagingDisabled() external {
     isMessagingDisabled = true;
   }
+
+  function forTest_setRoleCaller(address _roleCaller) external {
+    roleCaller = _roleCaller;
+  }
 }
 
 abstract contract Base is Helpers {
@@ -35,7 +39,7 @@ abstract contract Base is Helpers {
   address internal _messenger = makeAddr('messenger');
   address internal _linkedAdapter = makeAddr('linkedAdapter');
 
-  event MigratingToNative(address _messenger, address _newOwner);
+  event MigratingToNative(address _messenger, address _roleCaller);
   event MessageSent(address _user, address _to, uint256 _amount, address _messenger, uint32 _minGasLimit);
   event MessageReceived(address _user, uint256 _amount, address _messenger);
   event UsdcFunctionSent(bytes4 _functionSignature);
@@ -65,35 +69,33 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
   /**
    * @notice Check that the upgradeToAndCall function reverts if the sender is not MESSENGER
    */
-  function test_revertIfNotMessenger(address _newOwner, uint32 _setBurnAmountMinGasLimit) external {
+  function test_revertIfNotMessenger(address _roleCaller, uint32 _setBurnAmountMinGasLimit) external {
     // Execute
     vm.prank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
-    adapter.receiveMigrateToNative(_newOwner, _setBurnAmountMinGasLimit);
+    adapter.receiveMigrateToNative(_roleCaller, _setBurnAmountMinGasLimit);
   }
 
   /**
    * @notice Check that the upgradeToAndCall function reverts if the sender is not Linked Adapter
    */
-  function test_revertIfNotLinkedAdapter(address _newOwner, uint32 _setBurnAmountMinGasLimit) external {
+  function test_revertIfNotLinkedAdapter(address _roleCaller, uint32 _setBurnAmountMinGasLimit) external {
     // Mock calls
     vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_user));
 
     // Execute
     vm.prank(_messenger);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
-    adapter.receiveMigrateToNative(_newOwner, _setBurnAmountMinGasLimit);
+    adapter.receiveMigrateToNative(_roleCaller, _setBurnAmountMinGasLimit);
   }
 
   /**
    * @notice Check that the upgrade is called as expected
    */
-  function test_expectCall(address _newOwner, uint32 _setBurnAmountMinGasLimit, uint256 _burnAmount) external {
+  function test_expectCall(address _roleCaller, uint32 _setBurnAmountMinGasLimit, uint256 _burnAmount) external {
     // Mock calls
     vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
-    _mockAndExpect(_usdc, abi.encodeWithSignature('transferOwnership(address)', _newOwner), abi.encode());
-    _mockAndExpect(_usdc, abi.encodeWithSignature('changeAdmin(address)', _newOwner), abi.encode());
     _mockAndExpect(_usdc, abi.encodeWithSignature('totalSupply()'), abi.encode(_burnAmount));
     _mockAndExpect(
       _messenger,
@@ -108,15 +110,13 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
 
     // Execute
     vm.prank(_messenger);
-    adapter.receiveMigrateToNative(_newOwner, _setBurnAmountMinGasLimit);
+    adapter.receiveMigrateToNative(_roleCaller, _setBurnAmountMinGasLimit);
   }
 
-  function test_stateChange(address _newOwner, uint32 _setBurnAmountMinGasLimit) external {
+  function test_stateChange(address _roleCaller, uint32 _setBurnAmountMinGasLimit) external {
     // Mock calls
     vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
-    _mockAndExpect(_usdc, abi.encodeWithSignature('transferOwnership(address)', _newOwner), abi.encode());
-    _mockAndExpect(_usdc, abi.encodeWithSignature('changeAdmin(address)', _newOwner), abi.encode());
     _mockAndExpect(_usdc, abi.encodeWithSignature('totalSupply()'), abi.encode(100));
     _mockAndExpect(
       _messenger,
@@ -131,18 +131,19 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
 
     // Execute
     vm.prank(_messenger);
-    adapter.receiveMigrateToNative(_newOwner, _setBurnAmountMinGasLimit);
+    adapter.receiveMigrateToNative(_roleCaller, _setBurnAmountMinGasLimit);
     assertEq(adapter.isMessagingDisabled(), true, 'Messaging should be disabled');
+    assertEq(adapter.roleCaller(), _roleCaller, 'Role caller should be set to the new owner');
   }
 
   /**
    * @notice Check that the event is emitted as expected
    */
-  function test_emitEvent(address _newOwner, uint32 _setBurnAmountMinGasLimit, uint256 _burnAmount) external {
+  function test_emitEvent(address _roleCaller, uint32 _setBurnAmountMinGasLimit, uint256 _burnAmount) external {
     // Mock calls
     vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
-    vm.mockCall(_usdc, abi.encodeWithSignature('transferOwnership(address)', _newOwner), abi.encode());
-    vm.mockCall(_usdc, abi.encodeWithSignature('changeAdmin(address)', _newOwner), abi.encode());
+    vm.mockCall(_usdc, abi.encodeWithSignature('transferOwnership(address)', _roleCaller), abi.encode());
+    vm.mockCall(_usdc, abi.encodeWithSignature('changeAdmin(address)', _roleCaller), abi.encode());
     vm.mockCall(_usdc, abi.encodeWithSignature('totalSupply()'), abi.encode(_burnAmount));
     vm.mockCall(
       _messenger,
@@ -157,11 +158,40 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
 
     // Expect events
     vm.expectEmit(true, true, true, true);
-    emit MigratingToNative(_messenger, _newOwner);
+    emit MigratingToNative(_messenger, _roleCaller);
 
     // Execute
     vm.prank(_messenger);
-    adapter.receiveMigrateToNative(_newOwner, _setBurnAmountMinGasLimit);
+    adapter.receiveMigrateToNative(_roleCaller, _setBurnAmountMinGasLimit);
+  }
+}
+
+contract L2OpUSDCBridgeAdapter_Unit_TransferUSDCRoles is Base {
+  /**
+   * @notice Check that the function reverts if the sender is not the roleCaller
+   */
+  function test_revertIfNotRoleCaller(address _notRoleCaller) external {
+    vm.assume(_notRoleCaller != adapter.roleCaller());
+
+    // Execute
+    vm.prank(_notRoleCaller);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidCaller.selector);
+    adapter.transferUSDCRoles(_owner);
+  }
+
+  /**
+   * @notice Check that the function transfers the roles
+   */
+  function test_expectedCall(address _roleCaller) external {
+    adapter.forTest_setRoleCaller(_roleCaller);
+
+    // Mock calls
+    _mockAndExpect(_usdc, abi.encodeWithSignature('transferOwnership(address)', _roleCaller), abi.encode());
+    _mockAndExpect(_usdc, abi.encodeWithSignature('changeAdmin(address)', _roleCaller), abi.encode());
+
+    // Execute
+    vm.prank(_roleCaller);
+    adapter.transferUSDCRoles(_roleCaller);
   }
 }
 

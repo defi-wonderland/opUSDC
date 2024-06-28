@@ -33,6 +33,9 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /// @inheritdoc IL2OpUSDCBridgeAdapter
   bool public isMessagingDisabled;
 
+  /// @inheritdoc IL2OpUSDCBridgeAdapter
+  address public roleCaller;
+
   /**
    * @notice Modifier to check if the sender is the linked adapter through the messenger
    */
@@ -68,16 +71,12 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /**
    * @notice Initiates the process to migrate the bridged USDC to native USDC
    * @dev Full migration cant finish until L1 receives the message for setting the burn amount
-   * @param _newOwner The address to transfer ownerships to
+   * @param _roleCaller The address that will be allowed to transfer the USDC roles
    * @param _setBurnAmountMinGasLimit Minimum gas limit that the setBurnAmount message can be executed on L1
    */
-  function receiveMigrateToNative(address _newOwner, uint32 _setBurnAmountMinGasLimit) external checkSender {
+  function receiveMigrateToNative(address _roleCaller, uint32 _setBurnAmountMinGasLimit) external checkSender {
     isMessagingDisabled = true;
-    // Transfer ownership of the USDC contract to circle
-    IUSDC(USDC).transferOwnership(_newOwner);
-
-    //Transfer proxy admin ownership to circle
-    FALLBACK_PROXY_ADMIN.changeAdmin(_newOwner);
+    roleCaller = _roleCaller;
 
     uint256 _burnAmount = IUSDC(USDC).totalSupply();
 
@@ -85,7 +84,22 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
       LINKED_ADAPTER, abi.encodeWithSignature('setBurnAmount(uint256)', _burnAmount), _setBurnAmountMinGasLimit
     );
 
-    emit MigratingToNative(MESSENGER, _newOwner);
+    emit MigratingToNative(MESSENGER, _roleCaller);
+  }
+
+  /**
+   * @notice Transfer the USDC roles to the new owner
+   * @param _owner The address to transfer ownerships to
+   * @dev Cam only be called by the role caller set in the migration process
+   */
+  function transferUSDCRoles(address _owner) external {
+    if (msg.sender != roleCaller) revert IOpUSDCBridgeAdapter_InvalidCaller();
+
+    // Transfer ownership of the USDC contract to circle
+    IUSDC(USDC).transferOwnership(_owner);
+
+    // Transfer proxy admin ownership to the caller
+    FALLBACK_PROXY_ADMIN.changeAdmin(msg.sender);
   }
 
   /*///////////////////////////////////////////////////////////////

@@ -39,9 +39,9 @@ interface IOpUSDCBridgeAdapter {
   /**
    * @notice Emitted when the adapter is migrating usdc to native
    * @param _messenger The address of the messenger contract that is doing the migration
-   * @param _newOwner The address of the new owner of bridged usdc
+   * @param _roleCaller The address that will be allowed to transfer the USDC roles
    */
-  event MigratingToNative(address _messenger, address _newOwner);
+  event MigratingToNative(address _messenger, address _roleCaller);
 
   /*///////////////////////////////////////////////////////////////
                             ERRORS
@@ -50,6 +50,11 @@ interface IOpUSDCBridgeAdapter {
    * @notice Error when burnLockedUSDC is called before a burn amount is set
    */
   error IOpUSDCBridgeAdapter_BurnAmountNotSet();
+
+  /**
+   * @notice Error when the caller is not the roleCaller
+   */
+  error IOpUSDCBridgeAdapter_InvalidCaller();
 
   /**
    * @notice Error when address is not valid
