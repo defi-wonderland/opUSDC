@@ -17,7 +17,7 @@ contract MockBridge is ITestCrossDomainMessenger {
   address internal _currentXDomSender;
   QueuedMessage[] internal _queuedMessages;
 
-  function OTHER_MESSENGER() external view returns (address) {
+  function OTHER_MESSENGER() external pure returns (address) {
     return address(0);
   }
 
@@ -51,7 +51,9 @@ contract MockBridge is ITestCrossDomainMessenger {
     QueuedMessage memory nextMessage = _queuedMessages[0];
 
     _currentXDomSender = nextMessage.xdomainSender;
-    nextMessage.target.call(nextMessage.message);
+
+    (bool success,) = nextMessage.target.call(nextMessage.message);
+    success;
 
     // Reorg the queue
     for (uint256 i = 1; i < _queuedMessages.length; i++) {
@@ -61,11 +63,11 @@ contract MockBridge is ITestCrossDomainMessenger {
   }
 
   function relayMessage(
-    uint256 _nonce,
-    address _sender,
+    uint256,
+    address,
     address _target,
     uint256 _value,
-    uint256 _minGasLimit,
+    uint256,
     bytes calldata _message
   ) external payable {
     _currentXDomSender = msg.sender;

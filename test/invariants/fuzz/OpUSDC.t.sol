@@ -12,14 +12,14 @@ contract OpUsdcTest is SetupOpUSDC {
 
   uint256 internal _L1PreviousUserNonce;
   uint256 internal _L1CurrentUserNonce;
-  address internal _xdomSenderDuringCall; // Who called a previous function (amongst the agents)
+  address internal _xdomSenderDuringCall; // Who called a previous function (amongst the _agents)
 
   /////////////////////////////////////////////////////////////////////
   //                           Properties                            //
   /////////////////////////////////////////////////////////////////////
 
   // debug: echidna debug setup
-  function fuzz_testDeployments() public {
+  function fuzz_testDeployments() public view {
     assert(l2Adapter.LINKED_ADAPTER() == address(l1Adapter));
     assert(l2Adapter.MESSENGER() == address(mockMessenger));
     assert(l2Adapter.USDC() == address(usdcBridged));
@@ -31,7 +31,7 @@ contract OpUsdcTest is SetupOpUSDC {
 
   // todo: craft valid signature for the overloaded send mnessage
   // New messages should not be sent if the state is not active 1
-  function fuzz_noMessageIfNotActiveL1(address _to, uint256 _amount, uint32 _minGasLimit) public AgentOrDeployer {
+  function fuzz_noMessageIfNotActiveL1(address _to, uint256 _amount, uint32 _minGasLimit) public agentOrDeployer {
     // Precondition
     // todo: clean this mess
     // todo: modifiers for balance of and mint/approval
@@ -50,32 +50,31 @@ contract OpUsdcTest is SetupOpUSDC {
     // provided enough usdc on l1
     require(_amount > 0);
     hevm.prank(_usdcMinter);
-    usdcMainnet.mint(currentCaller, _amount);
+    usdcMainnet.mint(_currentCaller, _amount);
 
-    hevm.prank(currentCaller);
+    hevm.prank(_currentCaller);
     usdcMainnet.approve(address(l1Adapter), _amount);
 
-    uint256 _toBalanceBefore = usdcBridged.balanceOf(_to);
-    uint256 _fromBalanceBefore = usdcMainnet.balanceOf(currentCaller);
+    uint256 _fromBalanceBefore = usdcMainnet.balanceOf(_currentCaller);
 
-    hevm.prank(currentCaller);
+    hevm.prank(_currentCaller);
 
     // Action
     try l1Adapter.sendMessage(_to, _amount, _minGasLimit) {
       // Postcondition
       assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
       // assert(usdcBridged.balanceOf(_to) == _toBalanceBefore + _amount);
-      assert(usdcMainnet.balanceOf(currentCaller) == _fromBalanceBefore - _amount);
+      assert(usdcMainnet.balanceOf(_currentCaller) == _fromBalanceBefore - _amount);
     } catch {
       // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
       assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active);
       // assert(usdcBridged.balanceOf(_to) == _toBalanceBefore);
-      assert(usdcMainnet.balanceOf(currentCaller) == _fromBalanceBefore);
+      assert(usdcMainnet.balanceOf(_currentCaller) == _fromBalanceBefore);
     }
   }
 
   // User who bridges tokens should receive them on the destination chain      2
-  function fuzz_receiveL2Token() {
+  function fuzz_receiveL2Token(bytes calldata message) public view {
     // Precondition
     // There is a pending message to be executed
     require(mockMessenger.isInQueue(address(l2Adapter), message, address(l1Adapter)));
@@ -85,7 +84,7 @@ contract OpUsdcTest is SetupOpUSDC {
   // New messages should not be sent if the state is not active 1
   // User who bridges tokens should receive them on the destination chain 2
   // Amount locked on L1 == amount minted on L2 3
-  function fuzz_noMessageIfNotActiveL2(address _to, uint256 _amount, uint32 _minGasLimit) public AgentOrDeployer {
+  function fuzz_noMessageIfNotActiveL2(address _to, uint256 _amount, uint32 _minGasLimit) public agentOrDeployer {
     // Insure we're using the correct xdom sender (for the receiving end/linked l1)
     // require(mockMessenger.xDomainMessageSender() == address(l2Adapter));
 
@@ -98,15 +97,15 @@ contract OpUsdcTest is SetupOpUSDC {
 
     // provided enough usdc on l1
     require(_amount > 0);
-    require(usdcBridged.balanceOf(currentCaller) >= _amount);
+    require(usdcBridged.balanceOf(_currentCaller) >= _amount);
 
-    hevm.prank(currentCaller);
+    hevm.prank(_currentCaller);
     usdcBridged.approve(address(l2Adapter), _amount);
 
-    uint256 _fromBalanceBefore = usdcBridged.balanceOf(currentCaller);
+    uint256 _fromBalanceBefore = usdcBridged.balanceOf(_currentCaller);
     uint256 _toBalanceBefore = usdcMainnet.balanceOf(_to);
 
-    hevm.prank(currentCaller);
+    hevm.prank(_currentCaller);
 
     // Action
     try l2Adapter.sendMessage(_to, _amount, _minGasLimit) {
@@ -119,7 +118,7 @@ contract OpUsdcTest is SetupOpUSDC {
       assert(!l2Adapter.isMessagingDisabled());
 
       // 2
-      assert(usdcBridged.balanceOf(currentCaller) == _fromBalanceBefore - _amount);
+      assert(usdcBridged.balanceOf(_currentCaller) == _fromBalanceBefore - _amount);
       assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
 
       // 3
@@ -129,13 +128,13 @@ contract OpUsdcTest is SetupOpUSDC {
       assert(l2Adapter.isMessagingDisabled());
 
       // 2
-      assert(usdcBridged.balanceOf(currentCaller) == _fromBalanceBefore);
+      assert(usdcBridged.balanceOf(_currentCaller) == _fromBalanceBefore);
       assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
     }
   }
 
   // Both adapters state should match 4
-  function fuzz_assertAdapterStateCongruency() public {
+  function fuzz_assertAdapterStateCongruency() public view {
     // Precondition
 
     // TODO: L2 can be still active if L1 is upgragding or paused (bridged msg reverting)
@@ -151,9 +150,9 @@ contract OpUsdcTest is SetupOpUSDC {
   }
 
   // user nonce should be monotonically increasing  5
-  function fuzz_L1NonceIncremental() public {
+  function fuzz_L1NonceIncremental() public view {
     if (_L1CurrentUserNonce == 0) {
-      assert(l1Adapter.userNonce(currentCaller) == 0);
+      assert(l1Adapter.userNonce(_currentCaller) == 0);
     } else {
       assert(_L1PreviousUserNonce == _L1CurrentUserNonce - 1);
     }
@@ -176,45 +175,45 @@ contract OpUsdcTest is SetupOpUSDC {
   }
 
   // Status pause should be able to be set only by the owner and through the correct function
-  function fuzz_PauseMessaging(uint32 _minGasLimit) public AgentOrDeployer {
+  function fuzz_PauseMessaging(uint32 _minGasLimit) public agentOrDeployer {
     // Precondition
     IL1OpUSDCBridgeAdapter.Status _previousL1Status = l1Adapter.messengerStatus();
     bool _previousL2Status = l2Adapter.isMessagingDisabled();
 
-    hevm.prank(currentCaller);
+    hevm.prank(_currentCaller);
     // Action
     // 7
     try l1Adapter.stopMessaging(_minGasLimit) {
       // Post condition
-      assert(currentCaller == l1Adapter.owner());
+      assert(_currentCaller == l1Adapter.owner());
       assert(_previousL1Status == IL1OpUSDCBridgeAdapter.Status.Active);
       assert(!_previousL2Status);
       assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Paused);
       assert(l2Adapter.isMessagingDisabled());
     } catch {
       assert(
-        l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active || currentCaller != l1Adapter.owner()
+        l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active || _currentCaller != l1Adapter.owner()
           || _previousL2Status
       );
     }
   }
 
   // Resume should be able to be set only by the owner and through the correct function
-  function fuzz_ResumeMessaging(uint32 _minGasLimit) public AgentOrDeployer {
+  function fuzz_ResumeMessaging(uint32 _minGasLimit) public agentOrDeployer {
     IL1OpUSDCBridgeAdapter.Status _previousL1Status = l1Adapter.messengerStatus();
     bool _previousL2Status = l2Adapter.isMessagingDisabled();
 
-    hevm.prank(currentCaller);
+    hevm.prank(_currentCaller);
     // 8
     try l1Adapter.resumeMessaging(_minGasLimit) {
-      assert(currentCaller == l1Adapter.owner());
+      assert(_currentCaller == l1Adapter.owner());
       assert(_previousL1Status == IL1OpUSDCBridgeAdapter.Status.Paused);
       assert(_previousL2Status);
       assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
       assert(!l2Adapter.isMessagingDisabled());
     } catch {
       assert(
-        l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Paused || currentCaller != l1Adapter.owner()
+        l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Paused || _currentCaller != l1Adapter.owner()
           || !_previousL2Status
       );
     }
@@ -233,7 +232,7 @@ contract OpUsdcTest is SetupOpUSDC {
   /////////////////////////////////////////////////////////////////////
 
   // Expose all selectors from the adapter, pranked and with ghost variables if needed
-  // Caller is one of the agents (incl the deployer/initial owner)
+  // Caller is one of the _agents (incl the deployer/initial owner)
   function generateCallAdapterL1(
     uint256 _selectorIndex,
     address _addressA,
@@ -243,28 +242,28 @@ contract OpUsdcTest is SetupOpUSDC {
     bytes calldata _bytesA,
     uint32 _uint32A,
     uint32 _uint32B
-  ) public AgentOrDeployer {
+  ) public agentOrDeployer {
     _selectorIndex = _selectorIndex % 8;
 
-    hevm.prank(currentCaller);
+    hevm.prank(_currentCaller);
 
     if (_selectorIndex == 0) {
       // Do not revert on the transferFrom call
       require(_uintA > 0);
-      require(usdcMainnet.balanceOf(currentCaller) < 2 ** 255 - 1 - _uintA);
+      require(usdcMainnet.balanceOf(_currentCaller) < 2 ** 255 - 1 - _uintA);
       hevm.prank(_usdcMinter);
-      usdcMainnet.mint(currentCaller, _uintA);
+      usdcMainnet.mint(_currentCaller, _uintA);
 
-      hevm.prank(currentCaller);
+      hevm.prank(_currentCaller);
       usdcMainnet.approve(address(l1Adapter), _uintA);
 
       // Do not make assumption on nonce logic here, just collect them
-      uint256 _initialNonce = l1Adapter.userNonce(currentCaller);
+      uint256 _initialNonce = l1Adapter.userNonce(_currentCaller);
 
-      hevm.prank(currentCaller);
+      hevm.prank(_currentCaller);
       try l1Adapter.sendMessage(_addressA, _uintA, _uint32A) {
         _L1PreviousUserNonce = _initialNonce;
-        _L1CurrentUserNonce = l1Adapter.userNonce(currentCaller);
+        _L1CurrentUserNonce = l1Adapter.userNonce(_currentCaller);
       } catch {}
     } else if (_selectorIndex == 1) {
       try l1Adapter.sendMessage(_addressA, _addressB, _uintA, _bytesA, _uintB, _uint32A) {} catch {}
@@ -291,10 +290,10 @@ contract OpUsdcTest is SetupOpUSDC {
     uint256 _uintB,
     bytes calldata _bytesA,
     uint32 _uint32A
-  ) public AgentOrDeployer {
+  ) public agentOrDeployer {
     _selectorIndex = _selectorIndex % 7;
 
-    hevm.prank(currentCaller);
+    hevm.prank(_currentCaller);
 
     if (_selectorIndex == 0) {
       try l2Adapter.sendMessage(_addressA, _uintA, _uint32A) {} catch {}
@@ -323,7 +322,7 @@ contract OpUsdcTest is SetupOpUSDC {
     bytes calldata _bytesA,
     uint32 _uint32A,
     uint32 _uint32B
-  ) public AgentOrDeployer {
+  ) public agentOrDeployer {
     _selectorIndex = _selectorIndex % 8;
     bytes memory _payload;
 
@@ -348,8 +347,8 @@ contract OpUsdcTest is SetupOpUSDC {
       _payload = abi.encodeCall(l1Adapter.resumeMessaging, (_uint32A));
     }
 
-    hevm.prank(currentCaller);
-    mockMessenger.sendMessage(currentCaller, _payload, _uint32A);
+    hevm.prank(_currentCaller);
+    mockMessenger.sendMessage(_currentCaller, _payload, _uint32A);
   }
 
   function generateMessageToL2(
@@ -360,7 +359,7 @@ contract OpUsdcTest is SetupOpUSDC {
     uint256 _uintB,
     bytes calldata _bytesA,
     uint32 _uint32A
-  ) public AgentOrDeployer {
+  ) public agentOrDeployer {
     _selectorIndex = _selectorIndex % 7;
     bytes memory _payload;
 
@@ -383,17 +382,17 @@ contract OpUsdcTest is SetupOpUSDC {
       _payload = abi.encodeCall(l2Adapter.callUsdcTransaction, (_bytesA));
     }
 
-    hevm.prank(currentCaller);
-    mockMessenger.sendMessage(currentCaller, _payload, _uint32A);
+    hevm.prank(_currentCaller);
+    mockMessenger.sendMessage(_currentCaller, _payload, _uint32A);
   }
 
-  function generateCallFactory() public AgentOrDeployer {}
+  function generateCallFactory() public agentOrDeployer {}
 
-  function generateCallUSDCL1() public AgentOrDeployer {}
+  function generateCallUSDCL1() public agentOrDeployer {}
 
-  function generateCallUSDCL2() public AgentOrDeployer {}
+  function generateCallUSDCL2() public agentOrDeployer {}
 
-  function generateMessageUSDCL1() public AgentOrDeployer {}
+  function generateMessageUSDCL1() public agentOrDeployer {}
 
-  function generateMessageUSDCL2() public AgentOrDeployer {}
+  function generateMessageUSDCL2() public agentOrDeployer {}
 }

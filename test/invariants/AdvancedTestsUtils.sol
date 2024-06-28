@@ -60,29 +60,29 @@ contract FuzzERC20 is MockERC20 {
 }
 
 contract AgentsHandler {
-  uint256 internal agentsIndex;
-  address[] internal agents;
+  uint256 internal _agentsIndex;
+  address[] internal _agents;
 
-  address internal currentCaller;
+  address internal _currentCaller;
 
-  modifier AgentOrDeployer() {
-    uint256 _currentAgentIndex = agentsIndex;
-    currentCaller = _currentAgentIndex == 0 ? address(this) : agents[agentsIndex];
+  modifier agentOrDeployer() {
+    uint256 _currentAgentIndex = _agentsIndex;
+    _currentCaller = _currentAgentIndex == 0 ? address(this) : _agents[_agentsIndex];
     _;
   }
 
   constructor(uint256 _numAgents) {
     for (uint256 i = 0; i < _numAgents; i++) {
-      agents.push(address(bytes20(keccak256(abi.encodePacked(i)))));
+      _agents.push(address(bytes20(keccak256(abi.encodePacked(i)))));
     }
   }
 
   function nextAgent() public {
-    agentsIndex = (agentsIndex + 1) % agents.length;
+    _agentsIndex = (_agentsIndex + 1) % _agents.length;
   }
 
   function getCurrentAgent() public view returns (address) {
-    return agents[agentsIndex];
+    return _agents[_agentsIndex];
   }
 }
 

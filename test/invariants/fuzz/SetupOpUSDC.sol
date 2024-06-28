@@ -2,10 +2,7 @@
 pragma solidity 0.8.25;
 
 import {EchidnaTest} from '../AdvancedTestsUtils.sol';
-
-// https://github.com/crytic/building-secure-contracts/blob/master/program-analysis/echidna/advanced/testing-bytecode.mdq
-import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementationCreationCode.sol';
-
+// https://github.com/crytic/building-secure-contracts/blob/master/program-analysis/echidna/advanced/testing-bytecode.md
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCFactory, L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
@@ -13,7 +10,7 @@ import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
 import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
-
+import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementationCreationCode.sol';
 import {Create2Deployer} from 'test/invariants/fuzz/Create2Deployer.sol';
 import {MockBridge} from 'test/invariants/fuzz/MockBridge.sol';
 
@@ -67,7 +64,7 @@ contract SetupOpUSDC is EchidnaTest {
 
     mockMessenger = MockBridge(0x4200000000000000000000000000000000000007);
 
-    // owner is this contract, as managed in the agents handler
+    // owner is this contract, as managed in the _agents handler
     _l2Deployments =
       IL1OpUSDCFactory.L2Deployments(address(this), USDC_IMPLEMENTATION_CREATION_CODE, usdcInitTxns, 3_000_000);
 
