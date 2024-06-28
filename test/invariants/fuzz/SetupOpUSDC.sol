@@ -26,7 +26,7 @@ contract SetupOpUSDC is EchidnaTest {
 
   MockBridge internal mockMessenger;
   Create2Deployer internal create2Deployer;
-  address internal _usdcMinter = address(bytes20(uint160(uint256(keccak256('usdc.minter')))));
+  address internal _usdcMinter = address(uint160(uint256(keccak256('usdc.minter'))));
 
   /////////////////////////////////////////////////////////////////////
   //                          Initial setup                          //
@@ -96,7 +96,7 @@ contract SetupOpUSDC is EchidnaTest {
     mockMessenger.relayMessage(
       mockMessenger.messageNonce() + 1,
       address(factory),
-      address(0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2),
+      factory.L2_CREATE2_DEPLOYER(),
       0,
       3_000_000,
       abi.encodeWithSignature(
