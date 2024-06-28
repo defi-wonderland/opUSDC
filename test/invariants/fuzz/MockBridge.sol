@@ -26,14 +26,12 @@ contract MockBridge is ITestCrossDomainMessenger {
   }
 
   function isInQueue(address _target, bytes calldata _message, address _xdomainSender) external view returns (bool) {
-    for (uint256 i = 0; i < _queuedMessages.length; i++) {
+    for (uint256 i; i < _queuedMessages.length; i++) {
       QueuedMessage memory message = _queuedMessages[i];
       if (
         message.target == _target && keccak256(message.message) == keccak256(_message)
           && message.xdomainSender == _xdomainSender
-      ) {
-        return true;
-      }
+      ) return true;
     }
     return false;
   }
@@ -74,8 +72,6 @@ contract MockBridge is ITestCrossDomainMessenger {
     messageNonce++;
     (bool succ, bytes memory ret) = _target.call{value: _value}(_message);
 
-    if (!succ) {
-      revert(string(ret));
-    }
+    if (!succ) revert(string(ret));
   }
 }
