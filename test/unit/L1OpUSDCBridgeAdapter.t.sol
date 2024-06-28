@@ -436,10 +436,10 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
   }
 
   /**
-   * @notice Check that the function reverts if messaging is already disabled
+   * @notice Check that the function reverts if messaging is in an unexpected state
    */
-  function test_revertIfMessagingIsAlreadyPaused(uint32 _minGasLimit) public {
-    adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Paused);
+  function test_revertIfMessagingIsWrongState(uint32 _minGasLimit) public {
+    adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Deprecated);
     // Execute
     vm.prank(_owner);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
@@ -450,6 +450,27 @@ contract L1OpUSDCBridgeAdapter_Unit_StopMessaging is Base {
    * @notice Check that messenger status gets set to paused
    */
   function test_setMessengerStatusToPaused(uint32 _minGasLimit) public {
+    bytes memory _messageData = abi.encodeWithSignature('receiveStopMessaging()');
+
+    _mockAndExpect(
+      _messenger,
+      abi.encodeWithSignature('sendMessage(address,bytes,uint32)', _linkedAdapter, _messageData, _minGasLimit),
+      abi.encode('')
+    );
+
+    // Execute
+    vm.prank(_owner);
+    adapter.stopMessaging(_minGasLimit);
+    assertEq(
+      uint256(adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Paused), 'Messenger should be paused'
+    );
+  }
+
+  /**
+   * @notice Check that messenger status gets set to paused
+   */
+  function test_setMessengerStatusCanBeCalledIfPaused(uint32 _minGasLimit) public {
+    adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Paused);
     bytes memory _messageData = abi.encodeWithSignature('receiveStopMessaging()');
 
     _mockAndExpect(
@@ -504,9 +525,11 @@ contract L1OpUSDCBridgeAdapter_Unit_ResumeMessaging is Base {
   }
 
   /**
-   * @notice Check that it reverts if bridging is not paused
+   * @notice Check that it reverts if bridging is not paused or active
    */
-  function test_RevertIfBridgingIsNotPaused(uint32 _minGasLimit) external {
+  function test_RevertIfBridgingIsNotPausedOrActive(uint32 _minGasLimit) external {
+    adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Deprecated);
+
     // Execute
     vm.prank(_owner);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingEnabled.selector);
@@ -532,6 +555,35 @@ contract L1OpUSDCBridgeAdapter_Unit_ResumeMessaging is Base {
     // Execute
     vm.prank(_owner);
     adapter.resumeMessaging(_minGasLimit);
+
+    assertEq(
+      uint256(adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Active), 'Messenger should be active'
+    );
+  }
+
+  /**
+   * @notice Check that resume can still be called when in an active state
+   */
+  function test_resumeCanBeCalledIfActive(uint32 _minGasLimit) external {
+    adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Active);
+    _mockAndExpect(
+      _messenger,
+      abi.encodeWithSignature(
+        'sendMessage(address,bytes,uint32)',
+        _linkedAdapter,
+        abi.encodeWithSignature('receiveResumeMessaging()'),
+        _minGasLimit
+      ),
+      abi.encode('')
+    );
+
+    // Execute
+    vm.prank(_owner);
+    adapter.resumeMessaging(_minGasLimit);
+
+    assertEq(
+      uint256(adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Active), 'Messenger should be active'
+    );
   }
 
   /**

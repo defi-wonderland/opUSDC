@@ -135,7 +135,10 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    */
   function stopMessaging(uint32 _minGasLimit) external onlyOwner {
     // Ensure messaging is enabled
-    if (messengerStatus != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
+    // If its paused we still leave this function open to be called incase the message fails on L2
+    if (messengerStatus != Status.Active && messengerStatus != Status.Paused) {
+      revert IOpUSDCBridgeAdapter_MessagingDisabled();
+    }
 
     messengerStatus = Status.Paused;
 
@@ -149,12 +152,15 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /**
    * @notice Resume messaging on the messenger
    * @dev Only callable by the owner
-   * @dev Cant resume deprecated messengers
+   * @dev Cant resume paused messengers
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function resumeMessaging(uint32 _minGasLimit) external onlyOwner {
     // Ensure messaging is disabled
-    if (messengerStatus != Status.Paused) revert IOpUSDCBridgeAdapter_MessagingEnabled();
+    // If its active we still leave this function open to be called incase the message fails on L2
+    if (messengerStatus != Status.Paused && messengerStatus != Status.Active) {
+      revert IOpUSDCBridgeAdapter_MessagingEnabled();
+    }
 
     messengerStatus = Status.Active;
 
