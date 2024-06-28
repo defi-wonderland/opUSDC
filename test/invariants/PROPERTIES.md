@@ -10,7 +10,7 @@
 | Assuming the adapter is the only minter the amount locked in L1 should always equal the amount minted on L2 | High level          | 3   | [X]  | [ ]  |
 | USDC proxy admin and token ownership rights can only be transferred during the migration to native flow     | High level          |     | [ ]  | [ ]  |
 | Different L2 deployed contracts addresses can never match on different L2s                                  | High level          |     | [ ]  | [ ]  |
-| Both messenger's state of if they can send messages should match                                            | Valid state         | 4   | [X]  | [ ]  |
+| Both messenger's state or if they can send messages should match                                            | Valid state         | 4   | [X]  | [ ]  |
 | New messages should not be sent if the state is not active                                                  | Unit test           | 1   | [X]  | [ ]  |
 | Status should either be active, paused, upgrading or deprecated                                             | Valid state         |     | [ ]  | [ ]  |
 | Deprecated state should be irreversible                                                                     | State transition    |     | [ ]  | [ ]  |

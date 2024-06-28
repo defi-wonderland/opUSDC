@@ -21,6 +21,8 @@ contract MockBridge is ITestCrossDomainMessenger {
   function sendMessage(address _target, bytes calldata _message, uint32 _minGasLimit) external {
     _currentXDomSender = msg.sender;
     messageNonce++;
+
+    // Do not revert on failure, mimic async/optimistic message bridging
     _target.call(_message);
   }
 

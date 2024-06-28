@@ -36,7 +36,7 @@ contract OpUsdcTest is SetupOpUSDC {
     // todo: clean this mess
     // todo: modifiers for balance of and mint/approval
 
-    // Insure we're using the correct xdom sender
+    // Insure we're using the correct xdom sender (for the receiving end/linked l2)
     require(mockMessenger.xDomainMessageSender() == address(l1Adapter));
 
     // Avoid balance overflow
@@ -79,8 +79,8 @@ contract OpUsdcTest is SetupOpUSDC {
   // User who bridges tokens should receive them on the destination chain 2
   // Amount locked on L1 == amount minted on L2 3
   function fuzz_noMessageIfNotActiveL2(address _to, uint256 _amount, uint32 _minGasLimit) public AgentOrDeployer {
-    // Insure we're using the correct xdom sender
-    require(mockMessenger.xDomainMessageSender() == address(l2Adapter));
+    // Insure we're using the correct xdom sender (for the receiving end/linked l1)
+    // require(mockMessenger.xDomainMessageSender() == address(l2Adapter));
 
     // Avoid balance overflow
     require(usdcMainnet.balanceOf(_to) < 2 ** 255 - 1 - _amount);
@@ -104,6 +104,10 @@ contract OpUsdcTest is SetupOpUSDC {
     // Action
     try l2Adapter.sendMessage(_to, _amount, _minGasLimit) {
       // Postcondition
+
+      // Correct xdomain sender?
+      assert(mockMessenger.xDomainMessageSender() == address(l2Adapter));
+
       // 1
       assert(!l2Adapter.isMessagingDisabled());
 
@@ -126,7 +130,9 @@ contract OpUsdcTest is SetupOpUSDC {
   // Both adapters state should match 4
   function fuzz_assertAdapterStateCongruency() public {
     // Precondition
-    // Should be the correct cross dom message sender (the L1 Adapter) when L1 send a new state to L2
+
+    // TODO: L2 can be still active if L1 is upgragding or paused (bridged msg reverting)
+    // TODO: fix to rather check with potential pending msg + include a way to mock bridge sometimes failing on message transfer
 
     // Postcondition
     // 4
@@ -163,38 +169,47 @@ contract OpUsdcTest is SetupOpUSDC {
   }
 
   // Status pause should be able to be set only by the owner and through the correct function
-  function fuzz_PauseMessaging(uint32 _minGasLimit) public {
-    hevm.prank(l1Adapter.owner());
-
+  function fuzz_PauseMessaging(uint32 _minGasLimit) public AgentOrDeployer {
+    // Precondition
     IL1OpUSDCBridgeAdapter.Status _previousL1Status = l1Adapter.messengerStatus();
     bool _previousL2Status = l2Adapter.isMessagingDisabled();
+
+    hevm.prank(currentCaller);
+    // Action
     // 7
     try l1Adapter.stopMessaging(_minGasLimit) {
+      // Post condition
+      assert(currentCaller == l1Adapter.owner());
       assert(_previousL1Status == IL1OpUSDCBridgeAdapter.Status.Active);
       assert(!_previousL2Status);
       assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Paused);
       assert(l2Adapter.isMessagingDisabled());
     } catch {
-      assert(_previousL2Status);
-      assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active);
+      assert(
+        l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active || currentCaller != l1Adapter.owner()
+          || _previousL2Status
+      );
     }
   }
 
   // Resume should be able to be set only by the owner and through the correct function
-  function fuzz_ResumeMessaging(uint32 _minGasLimit) public {
-    hevm.prank(l1Adapter.owner());
-
+  function fuzz_ResumeMessaging(uint32 _minGasLimit) public AgentOrDeployer {
     IL1OpUSDCBridgeAdapter.Status _previousL1Status = l1Adapter.messengerStatus();
     bool _previousL2Status = l2Adapter.isMessagingDisabled();
 
+    hevm.prank(currentCaller);
     // 8
     try l1Adapter.resumeMessaging(_minGasLimit) {
+      assert(currentCaller == l1Adapter.owner());
       assert(_previousL1Status == IL1OpUSDCBridgeAdapter.Status.Paused);
       assert(_previousL2Status);
       assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
       assert(!l2Adapter.isMessagingDisabled());
     } catch {
-      assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Paused);
+      assert(
+        l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Paused || currentCaller != l1Adapter.owner()
+          || !_previousL2Status
+      );
     }
   }
 
@@ -219,6 +234,15 @@ contract OpUsdcTest is SetupOpUSDC {
     hevm.prank(currentCaller);
 
     if (_selectorIndex == 0) {
+      // Do not revert on the transferFrom call
+      require(_uintA > 0);
+      require(usdcMainnet.balanceOf(currentCaller) < 2 ** 255 - 1 - _uintA);
+      hevm.prank(_usdcMinter);
+      usdcMainnet.mint(currentCaller, _uintA);
+
+      hevm.prank(currentCaller);
+      usdcMainnet.approve(address(l1Adapter), _uintA);
+
       // Do not make assumption on nonce logic here, just collect them
       uint256 _initialNonce = l1Adapter.userNonce(currentCaller);
 
