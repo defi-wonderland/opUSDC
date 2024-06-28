@@ -14,6 +14,8 @@ contract Integration_Factories is IntegrationBase {
   function test_deployAllContracts() public {
     vm.selectFork(mainnet);
 
+    // Advance one block so the max resource consumption is not reached for a block on that L1 Messenger
+    vm.roll(block.number + 1);
     // Deploy the contracts
     vm.prank(_user);
     (address _l1Adapter, address _l2Factory, address _l2Adapter) =
@@ -68,6 +70,8 @@ contract Integration_Factories is IntegrationBase {
   function test_deployOnDifferentAddresses() public {
     vm.selectFork(mainnet);
 
+    // Advance one block so the max resource consumption is not reached for a block on that L1 Messenger
+    vm.roll(block.number + 1);
     // Trigger another deployment
     (address _secondL1Adapter, address _secondL2Factory, address _secondL2Adapter) =
       l1Factory.deploy(address(OPTIMISM_L1_MESSENGER), _owner, l2Deployments);
@@ -96,6 +100,9 @@ contract Integration_Factories is IntegrationBase {
   function test_deployOnMultipleL2s() public {
     // Deploy L1 Adapter and trigger the contracts deployments on OP
     vm.selectFork(mainnet);
+
+    // Advance one block so the max resource consumption is not reached for a block on that L1 Messenger
+    vm.roll(block.number + 1);
 
     vm.startPrank(_owner);
     (address _opL1Adapter, address _opL2Factory, address _opL2Adapter) =
