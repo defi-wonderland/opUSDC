@@ -21,14 +21,14 @@ contract SetupOpUSDC is EchidnaTest {
   IUSDC usdcMainnet;
   IUSDC usdcBridged;
 
-  L1OpUSDCBridgeAdapter public l1Adapter;
-  L1OpUSDCFactory public factory;
+  L1OpUSDCBridgeAdapter internal l1Adapter;
+  L1OpUSDCFactory internal factory;
 
-  L2OpUSDCBridgeAdapter public l2Adapter;
-  L2OpUSDCFactory public l2Factory;
+  L2OpUSDCBridgeAdapter internal l2Adapter;
+  L2OpUSDCFactory internal l2Factory;
 
-  MockBridge public mockMessenger;
-  Create2Deployer public create2Deployer;
+  MockBridge internal mockMessenger;
+  Create2Deployer internal create2Deployer;
   address internal _usdcMinter = address(bytes20(uint160(uint256(keccak256('usdc.minter')))));
 
   /////////////////////////////////////////////////////////////////////
@@ -106,6 +106,8 @@ contract SetupOpUSDC is EchidnaTest {
         'deploy(uint256,bytes32,bytes)', 0, factory.deploymentsSaltCounter() + 1, _l2FactoryInitCode
       )
     );
+
+    mockMessenger.executeMessage();
 
     usdcBridged = IUSDC(l2Adapter.USDC());
   }

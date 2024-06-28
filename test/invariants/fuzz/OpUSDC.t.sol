@@ -37,7 +37,7 @@ contract OpUsdcTest is SetupOpUSDC {
     // todo: modifiers for balance of and mint/approval
 
     // Insure we're using the correct xdom sender (for the receiving end/linked l2)
-    require(mockMessenger.xDomainMessageSender() == address(l1Adapter));
+    // require(mockMessenger.xDomainMessageSender() == address(l1Adapter));
 
     // Avoid balance overflow
     require(usdcMainnet.balanceOf(_to) < 2 ** 255 - 1 - _amount);
@@ -64,14 +64,21 @@ contract OpUsdcTest is SetupOpUSDC {
     try l1Adapter.sendMessage(_to, _amount, _minGasLimit) {
       // Postcondition
       assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
-      assert(usdcBridged.balanceOf(_to) == _toBalanceBefore + _amount);
+      // assert(usdcBridged.balanceOf(_to) == _toBalanceBefore + _amount);
       assert(usdcMainnet.balanceOf(currentCaller) == _fromBalanceBefore - _amount);
     } catch {
       // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
       assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active);
-      assert(usdcBridged.balanceOf(_to) == _toBalanceBefore);
+      // assert(usdcBridged.balanceOf(_to) == _toBalanceBefore);
       assert(usdcMainnet.balanceOf(currentCaller) == _fromBalanceBefore);
     }
+  }
+
+  // User who bridges tokens should receive them on the destination chain      2
+  function fuzz_receiveL2Token() {
+    // Precondition
+    // There is a pending message to be executed
+    require(mockMessenger.isInQueue(address(l2Adapter), message, address(l1Adapter)));
   }
 
   // todo: craft valid signature for the overloaded send mnessage
@@ -211,6 +218,14 @@ contract OpUsdcTest is SetupOpUSDC {
           || !_previousL2Status
       );
     }
+  }
+
+  /////////////////////////////////////////////////////////////////////
+  //                         Bridge mocking                          //
+  /////////////////////////////////////////////////////////////////////
+
+  function executeMessage() public {
+    mockMessenger.executeMessage();
   }
 
   /////////////////////////////////////////////////////////////////////
@@ -373,4 +388,12 @@ contract OpUsdcTest is SetupOpUSDC {
   }
 
   function generateCallFactory() public AgentOrDeployer {}
+
+  function generateCallUSDCL1() public AgentOrDeployer {}
+
+  function generateCallUSDCL2() public AgentOrDeployer {}
+
+  function generateMessageUSDCL1() public AgentOrDeployer {}
+
+  function generateMessageUSDCL2() public AgentOrDeployer {}
 }
