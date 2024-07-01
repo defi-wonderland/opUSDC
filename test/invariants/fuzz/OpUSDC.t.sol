@@ -2,7 +2,7 @@
 pragma solidity 0.8.25;
 
 import {SetupOpUSDC} from './SetupOpUSDC.sol';
-
+import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
 import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
 import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
@@ -10,6 +10,7 @@ import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementation
 
 //solhint-disable custom-errors
 contract OpUsdcTest is SetupOpUSDC {
+  using MessageHashUtils for bytes32;
   /////////////////////////////////////////////////////////////////////
   //                         Ghost variables                         //
   /////////////////////////////////////////////////////////////////////
@@ -35,7 +36,7 @@ contract OpUsdcTest is SetupOpUSDC {
   //   assert(l1Adapter.USDC() == address(usdcMainnet));
   // }
 
-  // todo: craft valid signature for the overloaded send mnessage
+  // todo: craft valid signature for the overloaded send message
   // New messages should not be sent if the state is not active 1
   function fuzz_noMessageIfNotActiveL1(address _to, uint256 _amount, uint32 _minGasLimit) public agentOrDeployer {
     // Precondition
@@ -75,6 +76,46 @@ contract OpUsdcTest is SetupOpUSDC {
       assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active);
       // assert(usdcBridged.balanceOf(_to) == _toBalanceBefore);
       assert(usdcMainnet.balanceOf(_currentCaller) == _fromBalanceBefore);
+    }
+  }
+
+  function fuzz_noSignedMessageIfNotActiveL1(uint256 _signerPrivate, uint256 _amount, uint32 _minGasLimit) public {
+    address _signerAd = hevm.addr(_signerPrivate);
+
+    require(usdcMainnet.balanceOf(_signerAd) < 2 ** 255 - 1 - _amount);
+    require(usdcBridged.balanceOf(_signerAd) < 2 ** 255 - 1 - _amount);
+    require(usdcMainnet.balanceOf(address(l1Adapter)) < 2 ** 255 - 1 - _amount);
+
+    // usdc init v2 black list usdc address itself
+    require(_signerAd != address(0) && _signerAd != address(usdcMainnet) && _signerAd != address(usdcBridged));
+
+    // provided enough usdc on l1
+    require(_amount > 0);
+    hevm.prank(_usdcMinter);
+    usdcMainnet.mint(_signerAd, _amount);
+
+    hevm.prank(_signerAd);
+    usdcMainnet.approve(address(l1Adapter), _amount);
+
+    uint256 _fromBalanceBefore = usdcMainnet.balanceOf(_signerAd);
+
+    hevm.prank(_currentCaller);
+
+    uint256 _nonce = l1Adapter.userNonce(_signerAd);
+    bytes memory _signature =
+      _generateSignature(_signerAd, _amount, _nonce, _signerAd, _signerPrivate, address(l1Adapter));
+    uint256 _deadline = block.timestamp + 1 days;
+
+    try l1Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _minGasLimit) {
+      // Postcondition
+      assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
+      // assert(usdcBridged.balanceOf(_to) == _toBalanceBefore + _amount);
+      assert(usdcMainnet.balanceOf(_signerAd) == _fromBalanceBefore - _amount);
+    } catch {
+      // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
+      assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active);
+      // assert(usdcBridged.balanceOf(_to) == _toBalanceBefore);
+      assert(usdcMainnet.balanceOf(_signerAd) == _fromBalanceBefore);
     }
   }
 
@@ -542,6 +583,20 @@ contract OpUsdcTest is SetupOpUSDC {
 
     hevm.prank(_currentCaller);
     mockMessenger.sendMessage(_currentCaller, _payload, _uint32A);
+  }
+
+  function _generateSignature(
+    address _to,
+    uint256 _amount,
+    uint256 _nonce,
+    address _signerAd,
+    uint256 _signerPk,
+    address _adapter
+  ) internal returns (bytes memory _signature) {
+    hevm.prank(_signerAd);
+    bytes32 _digest = keccak256(abi.encode(_adapter, block.chainid, _to, _amount, _nonce)).toEthSignedMessageHash();
+    (uint8 v, bytes32 r, bytes32 s) = hevm.sign(_signerPk, _digest);
+    _signature = abi.encodePacked(r, s, v);
   }
 
   function generateCallFactory() public agentOrDeployer {}
