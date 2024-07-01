@@ -29,9 +29,9 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   /// @inheritdoc IL1OpUSDCFactory
   string public constant USDC_SYMBOL = 'USDC.e';
 
-  /// @notice The selector of the `initialize()` function.
+  /// @notice The selector of the `initialize(string,string,string,uint8,address,address,address,address)` function.
   /// @dev Used to check the first init tx doesn't match it since it is already defined in the L2 factory contract
-  bytes4 internal constant _INITIALIZE_SELECTOR = 0x07fbc6b5;
+  bytes4 internal constant _INITIALIZE_SELECTOR = 0x3357162b;
 
   /// @notice The L2 Adapter is the third contract to be deployed on the L2 factory so its nonce is 3
   uint256 internal constant _L2_ADAPTER_DEPLOYMENT_NONCE = 3;

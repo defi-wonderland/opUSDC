@@ -145,4 +145,10 @@ contract Integration_Factories is IntegrationBase {
     assertTrue(_opL2Factory != _baseL2Factory);
     assertTrue(_opL2Adapter != _baseL2Adapter);
   }
+
+  function test_cantDeployWithInitTransaction() public {
+    bytes memory _initialize = abi.encodeWithSignature(
+      'initialize(string,string,string,uint8,address,address,address,address)', 'Test', 'Test', 'Test'
+    );
+  }
 }

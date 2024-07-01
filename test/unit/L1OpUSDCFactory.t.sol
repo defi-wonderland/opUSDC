@@ -116,8 +116,8 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
   function test_revertOnInitializeTx() public {
     vm.expectRevert(IL1OpUSDCFactory.IL1OpUSDCFactory_NoInitializeTx.selector);
 
-    // Set the `initialize()` tx as the first init tx
-    bytes memory _initializeSelector = abi.encode(keccak256(abi.encodeWithSelector(IUSDC.initialize.selector)));
+    // Set the `initialize(string,string,string,uint8,address,address,address,address)` tx as the first init tx
+    bytes memory _initializeSelector = abi.encodePacked(IUSDC.initialize.selector);
     _usdcInitTxs[0] = _initializeSelector;
     _l2Deployments.usdcInitTxs = _usdcInitTxs;
 
