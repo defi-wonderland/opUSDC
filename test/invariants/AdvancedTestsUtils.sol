@@ -84,6 +84,10 @@ contract AgentsHandler {
   function getCurrentAgent() public view returns (address) {
     return _agents[_agentsIndex];
   }
+
+  function _addToAgents(address _newAgent) internal {
+    _agents.push(_newAgent);
+  }
 }
 
 contract EchidnaTest is AgentsHandler {
