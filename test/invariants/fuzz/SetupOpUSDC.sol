@@ -42,8 +42,8 @@ contract SetupOpUSDC is EchidnaTest {
     hevm.prank(usdcMainnet.masterMinter());
     usdcMainnet.configureMinter(address(_usdcMinter), type(uint256).max);
 
-    // hevm.prank(usdcBridged.masterMinter());
-    // usdcBridged.configureMinter(address(_usdcMinter), type(uint256).max);
+    hevm.prank(usdcBridged.masterMinter());
+    usdcBridged.configureMinter(address(_usdcMinter), type(uint256).max);
   }
 
   // Deploy: USDC L1, factory L1, L1 adapter

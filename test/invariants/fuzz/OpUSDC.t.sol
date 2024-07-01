@@ -80,6 +80,7 @@ contract OpUsdcTest is SetupOpUSDC {
   }
 
   function fuzz_noSignedMessageIfNotActiveL1(uint256 _signerPrivate, uint256 _amount, uint32 _minGasLimit) public {
+    require(_signerPrivate != 0);
     address _signerAd = hevm.addr(_signerPrivate);
 
     require(usdcMainnet.balanceOf(_signerAd) < 2 ** 255 - 1 - _amount);
@@ -177,52 +178,53 @@ contract OpUsdcTest is SetupOpUSDC {
   }
 
   function fuzz_noSignedMessageIfNotActiveL2(uint256 _signerPrivate, uint256 _amount, uint32 _minGasLimit) public {
-    // address _signerAd = hevm.addr(_signerPrivate);
+    require(_signerPrivate != 0);
+    address _signerAd = hevm.addr(_signerPrivate);
 
-    // require(usdcMainnet.balanceOf(_signerAd) < 2 ** 255 - 1 - _amount);
-    // require(usdcBridged.balanceOf(_signerAd) < 2 ** 255 - 1 - _amount);
+    require(usdcMainnet.balanceOf(_signerAd) < 2 ** 255 - 1 - _amount);
+    require(usdcBridged.balanceOf(_signerAd) < 2 ** 255 - 1 - _amount);
 
-    // require(!(_signerAd == address(0) || _signerAd == address(usdcBridged)));
+    require(!(_signerAd == address(0) || _signerAd == address(usdcBridged)));
 
-    // // provided enough usdc on l1
-    // require(_amount > 0);
+    // provided enough usdc on l1
+    require(_amount > 0);
 
-    // hevm.prank(_usdcMinter);
-    // usdcBridged.mint(_signerAd, _amount);
+    hevm.prank(_usdcMinter);
+    usdcBridged.mint(_signerAd, _amount);
 
-    // hevm.prank(_signerAd);
-    // usdcBridged.approve(address(l2Adapter), _amount);
+    hevm.prank(_signerAd);
+    usdcBridged.approve(address(l2Adapter), _amount);
 
-    // uint256 _fromBalanceBefore = usdcBridged.balanceOf(_signerAd);
+    uint256 _fromBalanceBefore = usdcBridged.balanceOf(_signerAd);
 
-    // hevm.prank(_currentCaller);
+    hevm.prank(_currentCaller);
 
-    // uint256 _nonce = l2Adapter.userNonce(_signerAd);
-    // bytes memory _signature =
-    //   _generateSignature(_signerAd, _amount, _nonce, _signerAd, _signerPrivate, address(l2Adapter));
-    // uint256 _deadline = block.timestamp + 1 days;
+    uint256 _nonce = l2Adapter.userNonce(_signerAd);
+    bytes memory _signature =
+      _generateSignature(_signerAd, _amount, _nonce, _signerAd, _signerPrivate, address(l2Adapter));
+    uint256 _deadline = block.timestamp + 1 days;
 
-    // try l2Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _minGasLimit) {
-    //   // Postcondition
+    try l2Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _minGasLimit) {
+      // Postcondition
 
-    //   // Correct xdomain sender?
-    //   assert(mockMessenger.xDomainMessageSender() == address(l1Adapter));
+      // Correct xdomain sender?
+      assert(mockMessenger.xDomainMessageSender() == address(l1Adapter));
 
-    //   // 1
-    //   assert(!l2Adapter.isMessagingDisabled());
+      // 1
+      assert(!l2Adapter.isMessagingDisabled());
 
-    //   // 2
-    //   assert(usdcBridged.balanceOf(_signerAd) == _fromBalanceBefore - _amount);
+      // 2
+      assert(usdcBridged.balanceOf(_signerAd) == _fromBalanceBefore - _amount);
 
-    //   // 3
-    //   assert(usdcMainnet.balanceOf(address(l1Adapter)) == usdcBridged.totalSupply());
-    // } catch {
-    //   // 1
-    //   assert(l2Adapter.isMessagingDisabled());
+      // 3
+      assert(usdcMainnet.balanceOf(address(l1Adapter)) == usdcBridged.totalSupply());
+    } catch {
+      // 1
+      assert(l2Adapter.isMessagingDisabled());
 
-    //   // 2
-    //   assert(usdcBridged.balanceOf(_signerAd) == _fromBalanceBefore);
-    // }
+      // 2
+      assert(usdcBridged.balanceOf(_signerAd) == _fromBalanceBefore);
+    }
   }
 
   // Both adapters state should match 4
@@ -444,11 +446,25 @@ contract OpUsdcTest is SetupOpUSDC {
     } catch {}
   }
 
-  // USDC proxy admin and token ownership rights can only be transferred during the migration to native flow  17
-  function fuzz_onlyMigrateToNativeForOwnershipTransfer() public {
+  // USDC proxy admin and token ownership rights on l2 can only be transferred after the migration to native flow  17
+  function fuzz_onlyMigrateToNativeForOwnershipTransfer(address _newOwner) public {
     // Precondition
+    require(l2Adapter.isMessagingDisabled());
+    require(l2Adapter.roleCaller() != address(0));
+    require(_newOwner != address(0));
+
+    hevm.prank(l2Adapter.roleCaller());
     // Action
-    // Postcondition
+    try l2Adapter.transferUSDCRoles(_newOwner) {
+      // 17
+      // Postcondition
+      assert(usdcBridged.owner() == _newOwner);
+      assert(usdcBridged.admin() == _currentCaller);
+    } catch {
+      // Postcondition
+      assert(usdcBridged.owner() == address(l2Adapter));
+      assert(usdcBridged.admin() == address(l2Adapter));
+    }
     // 17
   }
 
