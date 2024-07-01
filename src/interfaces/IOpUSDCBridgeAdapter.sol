@@ -39,9 +39,11 @@ interface IOpUSDCBridgeAdapter {
   /**
    * @notice Emitted when the adapter is migrating usdc to native
    * @param _messenger The address of the messenger contract that is doing the migration
-   * @param _roleCaller The address that will be allowed to transfer the USDC roles
+   * @param _caller The address that will be allowed to call the permissioned function on the given chain
+   * @dev On L1 _caller can call burnLockedUSDC
+   * @dev On L2 _caller can call transferUSDCRoles
    */
-  event MigratingToNative(address _messenger, address _roleCaller);
+  event MigratingToNative(address _messenger, address _caller);
 
   /*///////////////////////////////////////////////////////////////
                             ERRORS

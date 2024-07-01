@@ -107,7 +107,6 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @dev The amount is determined by the burnAmount variable, which is set in the setBurnAmount function
    */
   function burnLockedUSDC() external {
-    // NOTE: Does this need to be the roleCaller? Or the new owner?
     if (msg.sender != burnCaller) revert IOpUSDCBridgeAdapter_InvalidSender();
 
     // If the adapter is not deprecated the burn amount has not been set
