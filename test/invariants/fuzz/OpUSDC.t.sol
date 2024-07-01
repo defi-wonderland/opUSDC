@@ -10,24 +10,24 @@ contract OpUsdcTest is SetupOpUSDC {
   //                         Ghost variables                         //
   /////////////////////////////////////////////////////////////////////
 
-  uint256 internal _L1PreviousUserNonce;
-  uint256 internal _L1CurrentUserNonce;
-  address internal _xdomSenderDuringCall; // Who called a previous function (amongst the _agents)
+  uint256 internal _ghost_L1PreviousUserNonce;
+  uint256 internal _ghost_L1CurrentUserNonce;
+  bool internal _ghost_hasBeenDeprecatedBefore; // Track if setBurnAmount has been called once before
 
   /////////////////////////////////////////////////////////////////////
   //                           Properties                            //
   /////////////////////////////////////////////////////////////////////
 
-  // debug: echidna debug setup
-  function fuzz_testDeployments() public view {
-    assert(l2Adapter.LINKED_ADAPTER() == address(l1Adapter));
-    assert(l2Adapter.MESSENGER() == address(mockMessenger));
-    assert(l2Adapter.USDC() == address(usdcBridged));
+  // // debug: echidna debug setup
+  // function fuzz_testDeployments() public view {
+  //   assert(l2Adapter.LINKED_ADAPTER() == address(l1Adapter));
+  //   assert(l2Adapter.MESSENGER() == address(mockMessenger));
+  //   assert(l2Adapter.USDC() == address(usdcBridged));
 
-    assert(l1Adapter.LINKED_ADAPTER() == address(l2Adapter));
-    assert(l1Adapter.MESSENGER() == address(mockMessenger));
-    assert(l1Adapter.USDC() == address(usdcMainnet));
-  }
+  //   assert(l1Adapter.LINKED_ADAPTER() == address(l2Adapter));
+  //   assert(l1Adapter.MESSENGER() == address(mockMessenger));
+  //   assert(l1Adapter.USDC() == address(usdcMainnet));
+  // }
 
   // todo: craft valid signature for the overloaded send mnessage
   // New messages should not be sent if the state is not active 1
@@ -58,7 +58,6 @@ contract OpUsdcTest is SetupOpUSDC {
     uint256 _fromBalanceBefore = usdcMainnet.balanceOf(_currentCaller);
 
     hevm.prank(_currentCaller);
-
     // Action
     try l1Adapter.sendMessage(_to, _amount, _minGasLimit) {
       // Postcondition
@@ -85,9 +84,6 @@ contract OpUsdcTest is SetupOpUSDC {
   // User who bridges tokens should receive them on the destination chain 2
   // Amount locked on L1 == amount minted on L2 3
   function fuzz_noMessageIfNotActiveL2(address _to, uint256 _amount, uint32 _minGasLimit) public agentOrDeployer {
-    // Insure we're using the correct xdom sender (for the receiving end/linked l1)
-    // require(mockMessenger.xDomainMessageSender() == address(l2Adapter));
-
     // Avoid balance overflow
     require(usdcMainnet.balanceOf(_to) < 2 ** 255 - 1 - _amount);
     require(usdcBridged.balanceOf(_to) < 2 ** 255 - 1 - _amount);
@@ -151,10 +147,10 @@ contract OpUsdcTest is SetupOpUSDC {
 
   // user nonce should be monotonically increasing  5
   function fuzz_L1NonceIncremental() public view {
-    if (_L1CurrentUserNonce == 0) {
+    if (_ghost_L1CurrentUserNonce == 0) {
       assert(l1Adapter.userNonce(_currentCaller) == 0);
     } else {
-      assert(_L1PreviousUserNonce == _L1CurrentUserNonce - 1);
+      assert(_ghost_L1PreviousUserNonce == _ghost_L1CurrentUserNonce - 1);
     }
   }
 
@@ -223,28 +219,106 @@ contract OpUsdcTest is SetupOpUSDC {
     }
   }
 
-  function fuzz_setBurnAmount(uint256 _amount) public {
+  // todo: fix (try never succeed?) - first try again with more runs (needs to msg l2, then msg back l1)
+  // Set burn only if migrating  9
+  function fuzz_setBurnAmount() public {
     // Precondition
     uint256 _previousBurnAmount = l1Adapter.burnAmount();
+    uint256 _l2totalSupply = usdcBridged.totalSupply();
     IL1OpUSDCBridgeAdapter.Status _previousState = l1Adapter.messengerStatus();
 
-    // Need this to pass the checkSender modifier
-    mockMessenger.setDomaninMessageSender(l1Adapter.LINKED_ADAPTER());
+    // Ensure the message is in the queue, to the l1adapter, from the l2 adapter
+    require(
+      mockMessenger.isInQueue(
+        address(l1Adapter), abi.encodeWithSignature('setBurnAmount(uint256)', _l2totalSupply), address(l2Adapter)
+      )
+    );
 
     hevm.prank(l1Adapter.MESSENGER());
-
     // Action
     // 9
-    try l1Adapter.setBurnAmount(_amount) {
+    try l1Adapter.setBurnAmount(_l2totalSupply) {
       //Precontion
       assert(_previousState == IL1OpUSDCBridgeAdapter.Status.Upgrading);
       // Postcondition
       assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated);
-      assert(l1Adapter.burnAmount() == _amount);
+      assert(l1Adapter.burnAmount() == _l2totalSupply);
+      _ghost_hasBeenDeprecatedBefore = true;
     } catch {
       assert(l1Adapter.burnAmount() == _previousBurnAmount);
     }
   }
+
+  ///Deprecated state should be irreversible  10
+  function fuzz_deprecatedIrreversible() public {
+    // If the l1 adapter has been deprecated once before, it cannot have any other status ever again
+    if (_ghost_hasBeenDeprecatedBefore) assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated);
+  }
+
+  // Upgrading state only via migrate to native, should be callable multiple times (msg fails)
+  function fuzz_migrateToNativeMultipleCall() public {
+    // Precondition
+    // Insure we haven't started the migration or we only initiated/is pending in the bridge
+    require(
+      l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active
+        || l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading
+    );
+
+    // Action
+    // 11
+    try l1Adapter.migrateToNative(_currentCaller, 0, 0) {
+      assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading);
+    } catch {}
+
+    // try calling a second time
+    try l1Adapter.migrateToNative(_currentCaller, 0, 0) {}
+    catch {
+      assert(false);
+    }
+
+    // Postcondition
+    assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading);
+  }
+
+  // All in flight transactions should successfully settle after a migration to native usdc 12
+  // we leverage the mock bridge queue (fifo)
+  function fuzz_noDropPendingTxWhenMigration() public {
+    // preconditions
+
+    // action
+
+    // add to bridge queue
+    // send msg to l1 [USDC to l1]
+    // send msg to l2  [USDC to l1, USDC to l2]
+    // migration [USDC to l1, USDC to l2, receiveMigrateToNative]
+
+    // execute: [USDC to l1, USDC to l2, receiveMigrateToNative] then [USDC to l2, receiveMigrateToNative] then [receiveMigrateToNative] then [setBurnAmount]
+
+    // add to queue
+    // send msg to l1 [setBurnAmount, USDC to l1]
+    // send msg to l2 [setBurnAmount, USDC to l1, USDC to l2]
+
+    // execute [setBurnAmount, USDC to l1, USDC to l2] then [USDC to l1, USDC to l2] then [USDC to l2]
+
+    // postconditions
+    // balance are correct
+    // sending msg is now paused
+  }
+
+  // todo: add adapters to agents? Force calling from
+  // Bridged USDC Proxy should only be upgradeable through the L2 Adapter  13
+  function proxyUpgradeOnlyThroughL2() public agentOrDeployer {
+    // Precondition
+
+    // Action
+    // 13
+  }
+
+  // Any chain should be able to have as many protocols deployed without the factory blocking deployments
+  // Protocols deployed on one L2 should never have a matching address with a protocol on a different L2
+  // USDC proxy admin and token ownership rights can only be transferred during the migration to native flow
+  // Different L2 deployed contracts addresses can never match on different L2s
+  // Status should either be active, paused, upgrading or deprecated
 
   /////////////////////////////////////////////////////////////////////
   //                         Bridge mocking                          //
@@ -289,8 +363,8 @@ contract OpUsdcTest is SetupOpUSDC {
 
       hevm.prank(_currentCaller);
       try l1Adapter.sendMessage(_addressA, _uintA, _uint32A) {
-        _L1PreviousUserNonce = _initialNonce;
-        _L1CurrentUserNonce = l1Adapter.userNonce(_currentCaller);
+        _ghost_L1PreviousUserNonce = _initialNonce;
+        _ghost_L1CurrentUserNonce = l1Adapter.userNonce(_currentCaller);
       } catch {}
     } else if (_selectorIndex == 1) {
       try l1Adapter.sendMessage(_addressA, _addressB, _uintA, _bytesA, _uintB, _uint32A) {} catch {}
@@ -299,7 +373,10 @@ contract OpUsdcTest is SetupOpUSDC {
     } else if (_selectorIndex == 3) {
       try l1Adapter.migrateToNative(_addressA, _uint32A, _uint32B) {} catch {}
     } else if (_selectorIndex == 4) {
-      try l1Adapter.setBurnAmount(_uintA) {} catch {}
+      try l1Adapter.setBurnAmount(_uintA) {
+        // This will deprecate the adapter
+        _ghost_hasBeenDeprecatedBefore = true;
+      } catch {}
     } else if (_selectorIndex == 5) {
       try l1Adapter.burnLockedUSDC() {} catch {}
     } else if (_selectorIndex == 6) {
