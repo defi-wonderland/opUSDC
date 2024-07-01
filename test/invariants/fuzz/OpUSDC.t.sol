@@ -176,6 +176,55 @@ contract OpUsdcTest is SetupOpUSDC {
     }
   }
 
+  function fuzz_noSignedMessageIfNotActiveL2(uint256 _signerPrivate, uint256 _amount, uint32 _minGasLimit) public {
+    // address _signerAd = hevm.addr(_signerPrivate);
+
+    // require(usdcMainnet.balanceOf(_signerAd) < 2 ** 255 - 1 - _amount);
+    // require(usdcBridged.balanceOf(_signerAd) < 2 ** 255 - 1 - _amount);
+
+    // require(!(_signerAd == address(0) || _signerAd == address(usdcBridged)));
+
+    // // provided enough usdc on l1
+    // require(_amount > 0);
+
+    // hevm.prank(_usdcMinter);
+    // usdcBridged.mint(_signerAd, _amount);
+
+    // hevm.prank(_signerAd);
+    // usdcBridged.approve(address(l2Adapter), _amount);
+
+    // uint256 _fromBalanceBefore = usdcBridged.balanceOf(_signerAd);
+
+    // hevm.prank(_currentCaller);
+
+    // uint256 _nonce = l2Adapter.userNonce(_signerAd);
+    // bytes memory _signature =
+    //   _generateSignature(_signerAd, _amount, _nonce, _signerAd, _signerPrivate, address(l2Adapter));
+    // uint256 _deadline = block.timestamp + 1 days;
+
+    // try l2Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _minGasLimit) {
+    //   // Postcondition
+
+    //   // Correct xdomain sender?
+    //   assert(mockMessenger.xDomainMessageSender() == address(l1Adapter));
+
+    //   // 1
+    //   assert(!l2Adapter.isMessagingDisabled());
+
+    //   // 2
+    //   assert(usdcBridged.balanceOf(_signerAd) == _fromBalanceBefore - _amount);
+
+    //   // 3
+    //   assert(usdcMainnet.balanceOf(address(l1Adapter)) == usdcBridged.totalSupply());
+    // } catch {
+    //   // 1
+    //   assert(l2Adapter.isMessagingDisabled());
+
+    //   // 2
+    //   assert(usdcBridged.balanceOf(_signerAd) == _fromBalanceBefore);
+    // }
+  }
+
   // Both adapters state should match 4
   function fuzz_assertAdapterStateCongruency() public view {
     // Precondition
