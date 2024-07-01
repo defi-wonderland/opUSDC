@@ -34,7 +34,7 @@ contract IntegrationBase is Helpers {
     ITestCrossDomainMessenger(0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1);
   ITestCrossDomainMessenger public constant BASE_L1_MESSENGER =
     ITestCrossDomainMessenger(0x866E82a600A1414e583f7F13623F1aC5d58b0Afa);
-  uint32 public constant MIN_GAS_LIMIT_DEPLOY = 15_000_000;
+  uint32 public constant MIN_GAS_LIMIT_DEPLOY = 9_000_000;
   uint32 internal constant _ZERO_VALUE = 0;
   uint256 internal constant _amount = 1e18;
   uint32 internal constant _MIN_GAS_LIMIT = 1_000_000;

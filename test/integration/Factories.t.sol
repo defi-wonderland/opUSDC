@@ -13,6 +13,7 @@ contract Integration_Factories is IntegrationBase {
    */
   function test_deployAllContracts() public {
     vm.selectFork(mainnet);
+    vm.roll(block.number + 1);
 
     // Deploy the contracts
     vm.prank(_user);
@@ -67,6 +68,7 @@ contract Integration_Factories is IntegrationBase {
    */
   function test_deployOnDifferentAddresses() public {
     vm.selectFork(mainnet);
+    vm.roll(block.number + 1);
 
     // Trigger another deployment
     (address _secondL1Adapter, address _secondL2Factory, address _secondL2Adapter) =
@@ -96,6 +98,7 @@ contract Integration_Factories is IntegrationBase {
   function test_deployOnMultipleL2s() public {
     // Deploy L1 Adapter and trigger the contracts deployments on OP
     vm.selectFork(mainnet);
+    vm.roll(block.number + 1);
 
     vm.startPrank(_owner);
     (address _opL1Adapter, address _opL2Factory, address _opL2Adapter) =
