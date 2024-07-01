@@ -264,7 +264,7 @@ contract OpUsdcTest is SetupOpUSDC {
   }
 
   // Upgrading state only via migrate to native, should be callable multiple times (msg fails)
-  function fuzz_migrateToNativeMultipleCall() public {
+  function fuzz_migrateToNativeMultipleCall(address _newOwner) public {
     // Precondition
     // Insure we haven't started the migration or we only initiated/is pending in the bridge
     require(
@@ -272,14 +272,15 @@ contract OpUsdcTest is SetupOpUSDC {
         || l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading
     );
 
+    require(_newOwner != address(0));
     // Action
     // 11
-    try l1Adapter.migrateToNative(_currentCaller, 0, 0) {
+    try l1Adapter.migrateToNative(_newOwner, 0, 0) {
       assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading);
     } catch {}
 
     // try calling a second time
-    try l1Adapter.migrateToNative(_currentCaller, 0, 0) {}
+    try l1Adapter.migrateToNative(_newOwner, 0, 0) {}
     catch {
       assert(false);
     }

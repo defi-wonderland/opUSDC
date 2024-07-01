@@ -9,7 +9,7 @@
 | paused only via stop messaging                                                                              | State transition    | 7   | [X]  | [ ]  |
 | resumed only via resume messaging                                                                           | State transition    | 8   | [X]  | [ ]  |
 | set burn only if migrating state                                                                            | State transition    | 9   | [X]  | [ ]  |
-| Deprecated state should be irreversible                                                                     | State transition    | 10  | [ ]  | [ ]  |
+| Deprecated state should be irreversible                                                                     | State transition    | 10  | [X]  | [ ]  |
 | Upgrading state only via migrate to native, should be callable multiple times (msg fails)                   | State transition    | 11  | [ ]  | [ ]  |
 | All in flight transactions should successfully settle after a migration to native usdc                      | High level          | 12  | [ ]  | [ ]  |
 | Bridged USDC Proxy should only be upgradeable through the L2 Adapter                                        | High level          | 13  | [ ]  | [ ]  |
