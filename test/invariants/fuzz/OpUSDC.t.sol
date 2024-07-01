@@ -168,7 +168,7 @@ contract OpUsdcTest is SetupOpUSDC {
 
     require(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading);
 
-    hevm.prank(l1Adapter.newOwner());
+    hevm.prank(l1Adapter.burnCaller());
     // 6
     try l1Adapter.burnLockedUSDC() {
       assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated);
@@ -264,7 +264,7 @@ contract OpUsdcTest is SetupOpUSDC {
   }
 
   // Upgrading state only via migrate to native, should be callable multiple times (msg fails)
-  function fuzz_migrateToNativeMultipleCall(address _newOwner) public {
+  function fuzz_migrateToNativeMultipleCall(address _burnCaller, address _roleCaller) public {
     // Precondition
     // Insure we haven't started the migration or we only initiated/is pending in the bridge
     require(
@@ -272,15 +272,15 @@ contract OpUsdcTest is SetupOpUSDC {
         || l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading
     );
 
-    require(_newOwner != address(0));
+    require(_burnCaller != address(0) && _roleCaller != address(0));
     // Action
     // 11
-    try l1Adapter.migrateToNative(_newOwner, 0, 0) {
+    try l1Adapter.migrateToNative(_burnCaller, _roleCaller, 0, 0) {
       assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading);
     } catch {}
 
     // try calling a second time
-    try l1Adapter.migrateToNative(_newOwner, 0, 0) {}
+    try l1Adapter.migrateToNative(_burnCaller, _roleCaller, 0, 0) {}
     catch {
       assert(false);
     }
@@ -423,7 +423,7 @@ contract OpUsdcTest is SetupOpUSDC {
     } else if (_selectorIndex == 2) {
       try l1Adapter.receiveMessage(_addressA, _uintA) {} catch {}
     } else if (_selectorIndex == 3) {
-      try l1Adapter.migrateToNative(_addressA, _uint32A, _uint32B) {} catch {}
+      try l1Adapter.migrateToNative(_addressA, _addressB, _uint32A, _uint32B) {} catch {}
     } else if (_selectorIndex == 4) {
       try l1Adapter.setBurnAmount(_uintA) {
         // This will deprecate the adapter
@@ -463,8 +463,10 @@ contract OpUsdcTest is SetupOpUSDC {
       try l2Adapter.receiveStopMessaging() {} catch {}
     } else if (_selectorIndex == 5) {
       try l2Adapter.receiveResumeMessaging() {} catch {}
-    } else {
+    } else if (_selectorIndex == 6) {
       try l2Adapter.callUsdcTransaction(_bytesA) {} catch {}
+    } else {
+      try l2Adapter.transferUSDCRoles(_addressA) {} catch {}
     }
   }
 
@@ -492,7 +494,7 @@ contract OpUsdcTest is SetupOpUSDC {
     } else if (_selectorIndex == 2) {
       _payload = abi.encodeCall(l1Adapter.receiveMessage, (_addressA, _uintA));
     } else if (_selectorIndex == 3) {
-      _payload = abi.encodeCall(l1Adapter.migrateToNative, (_addressA, _uint32A, _uint32B));
+      _payload = abi.encodeCall(l1Adapter.migrateToNative, (_addressA, _addressB, _uint32A, _uint32B));
     } else if (_selectorIndex == 4) {
       _payload = abi.encodeCall(l1Adapter.setBurnAmount, (_uintA));
     } else if (_selectorIndex == 5) {
