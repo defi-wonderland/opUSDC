@@ -94,9 +94,9 @@ interface IL1OpUSDCBridgeAdapter {
 
   /**
    * @notice Fetches the address of the burn caller
-   * @return burnCaller The address opf the burn caller
+   * @return _burnCaller The address of the burn caller
    */
-  function burnCaller() external view returns (address burnCaller);
+  function burnCaller() external view returns (address _burnCaller);
 
   /**
    * @notice Fetches the status of the messenger

@@ -88,9 +88,9 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   }
 
   /**
-   * @notice Transfer the USDC roles to the new owner
-   * @param _owner The address to transfer ownerships to
-   * @dev Cam only be called by the role caller set in the migration process
+   * @notice Transfers the USDC roles to the new owner
+   * @param _owner The address to transfer ownership to
+   * @dev Can only be called by the role caller set in the migration process
    */
   function transferUSDCRoles(address _owner) external {
     if (msg.sender != roleCaller) revert IOpUSDCBridgeAdapter_InvalidCaller();
