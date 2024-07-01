@@ -164,6 +164,8 @@ contract OpUsdcTest is SetupOpUSDC {
     hevm.prank(usdcMainnet.masterMinter());
     usdcMainnet.configureMinter(address(l1Adapter), type(uint256).max);
 
+    require(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading);
+
     hevm.prank(l1Adapter.newOwner());
     // 6
     try l1Adapter.burnLockedUSDC() {

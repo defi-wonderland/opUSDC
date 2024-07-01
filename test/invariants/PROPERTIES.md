@@ -15,7 +15,7 @@
 | Status should either be active, paused, upgrading or deprecated                                             | Valid state         |     | [ ]  | [ ]  |
 | Deprecated state should be irreversible                                                                     | State transition    |     | [ ]  | [ ]  |
 | Upgrading state only via migrate to native, should be callable multiple times (msg fails)                   | State transition    |     | [ ]  | [ ]  |
-| set burn only if migrating state                                                                            | Unit test           |     | [ ]  | [ ]  |
+| set burn only if migrating state                                                                            | Unit test           | 9   | [X]  | [ ]  |
 | burn locked only if deprecated                                                                              | Unit test           | 6   | [X]  | [ ]  |
 | paused only via stop messaging                                                                              | State transition    | 7   | [X]  | [ ]  |
 | resumed only via resume messaging                                                                           | State transition    | 8   | [X]  | [ ]  |
