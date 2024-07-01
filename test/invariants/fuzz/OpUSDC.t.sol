@@ -2,7 +2,11 @@
 pragma solidity 0.8.25;
 
 import {SetupOpUSDC} from './SetupOpUSDC.sol';
+
+import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
 import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
+import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
+import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementationCreationCode.sol';
 
 //solhint-disable custom-errors
 contract OpUsdcTest is SetupOpUSDC {
@@ -13,6 +17,8 @@ contract OpUsdcTest is SetupOpUSDC {
   uint256 internal _ghost_L1PreviousUserNonce;
   uint256 internal _ghost_L1CurrentUserNonce;
   bool internal _ghost_hasBeenDeprecatedBefore; // Track if setBurnAmount has been called once before
+  mapping(address => bool) internal _ghost_l2AdapterDeployed;
+  mapping(address => bool) internal _ghost_l2FactoryDeployed;
 
   /////////////////////////////////////////////////////////////////////
   //                           Properties                            //
@@ -305,20 +311,63 @@ contract OpUsdcTest is SetupOpUSDC {
     // sending msg is now paused
   }
 
-  // todo: add adapters to agents? Force calling from
+  // todo: add adapters to agents? Force calling from the adapter?
   // Bridged USDC Proxy should only be upgradeable through the L2 Adapter  13
-  function proxyUpgradeOnlyThroughL2() public agentOrDeployer {
+  function fuzz_proxyUpgradeOnlyThroughL2() public agentOrDeployer {
     // Precondition
 
     // Action
     // 13
   }
 
-  // Any chain should be able to have as many protocols deployed without the factory blocking deployments
-  // Protocols deployed on one L2 should never have a matching address with a protocol on a different L2
-  // USDC proxy admin and token ownership rights can only be transferred during the migration to native flow
-  // Different L2 deployed contracts addresses can never match on different L2s
+  // | Incoming successful messages should only come from the linked adapter's                                     | High level          | 14    | [ ]  | [ ]  |
+
+  // Any chain should be able to have as many protocols deployed without the factory blocking deployments 15
+  // Protocols deployed on one L2 should never have a matching address with a protocol on a different L2 16
+  function fuzz_factoryNeverFailsToDeploy() public agentOrDeployer {
+    bytes[] memory usdcInitTxns = new bytes[](3);
+    usdcInitTxns[0] = USDCInitTxs.INITIALIZEV2;
+    usdcInitTxns[1] = USDCInitTxs.INITIALIZEV2_1;
+    usdcInitTxns[2] = USDCInitTxs.INITIALIZEV2_2;
+
+    IL1OpUSDCFactory.L2Deployments memory _l2Deployments =
+      IL1OpUSDCFactory.L2Deployments(address(this), USDC_IMPLEMENTATION_CREATION_CODE, usdcInitTxns, 3_000_000);
+
+    try factory.deploy(address(mockMessenger), _currentCaller, _l2Deployments) returns (
+      address, address _l2Factory, address _l2Adapter
+    ) {
+      // Postcondition
+      // 15
+      // Deployment msg is in the bridge queue
+
+      // l1 adapter deployed
+
+      // 16 - no matching address on different L2
+      assert(!_ghost_l2AdapterDeployed[_l2Adapter]);
+      assert(!_ghost_l2FactoryDeployed[_l2Factory]);
+
+      _ghost_l2AdapterDeployed[_l2Adapter] = true;
+      _ghost_l2FactoryDeployed[_l2Factory] = true;
+    } catch {}
+  }
+
+  // USDC proxy admin and token ownership rights can only be transferred during the migration to native flow  17
+  function fuzz_onlyMigrateToNativeForOwnershipTransfer() public {
+    // Precondition
+    // Action
+    // Postcondition
+    // 17
+  }
+
   // Status should either be active, paused, upgrading or deprecated
+  function fuzz_correctStatus() public {
+    assert(
+      l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active
+        || l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Paused
+        || l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading
+        || l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated
+    );
+  }
 
   /////////////////////////////////////////////////////////////////////
   //                         Bridge mocking                          //

@@ -12,11 +12,10 @@
 | Deprecated state should be irreversible                                                                     | State transition    | 10  | [ ]  | [ ]  |
 | Upgrading state only via migrate to native, should be callable multiple times (msg fails)                   | State transition    | 11  | [ ]  | [ ]  |
 | All in flight transactions should successfully settle after a migration to native usdc                      | High level          | 12  | [ ]  | [ ]  |
-| Bridged USDC Proxy should only be upgradeable through the L2 Adapter                                        | High level          |     | [ ]  | [ ]  |
-| Incoming successful messages should only come from the linked adapter's                                     | High level          |     | [ ]  | [ ]  |
-| Any chain should be able to have as many protocols deployed without the factory blocking deployments        | High level          |     | [ ]  | [ ]  |
-| Protocols deployed on one L2 should never have a matching address with a protocol on a different L2         | High level          |     | [ ]  | [ ]  |
-| USDC proxy admin and token ownership rights can only be transferred during the migration to native flow     | High level          |     | [ ]  | [ ]  |
-| Different L2 deployed contracts addresses can never match on different L2s                                  | High level          |     | [ ]  | [ ]  |
-| Status should either be active, paused, upgrading or deprecated                                             | Valid state         |     | [ ]  | [ ]  |
+| Bridged USDC Proxy should only be upgradeable through the L2 Adapter                                        | High level          | 13  | [ ]  | [ ]  |
+| Incoming successful messages should only come from the linked adapter's                                     | High level          | 14  | [ ]  | [ ]  |
+| Any chain should be able to have as many protocols deployed without the factory blocking deployments        | High level          | 15  | [ ]  | [ ]  |
+| Protocols deployed on one L2 should never have a matching address with a protocol on a different L2         | High level          | 16  | [ ]  | [ ]  |
+| USDC proxy admin and token ownership rights can only be transferred during the migration to native flow     | High level          | 17  | [ ]  | [ ]  |
+| Status should either be active, paused, upgrading or deprecated                                             | Valid state         | 18  | [ ]  | [ ]  |
 | All addresses precomputed in the factory match the deployed addresses / L1 nonce == L2 factory nonce        | Variable transition |     | depr | [ ]  |
