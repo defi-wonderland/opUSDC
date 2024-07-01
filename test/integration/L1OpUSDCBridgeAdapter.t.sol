@@ -170,10 +170,10 @@ contract Integration_Migration is IntegrationBase {
     vm.selectFork(mainnet);
 
     vm.prank(_owner);
-    l1Adapter.migrateToNative(_circle, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
+    l1Adapter.migrateToNative(_circle, _circle, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
 
     assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Upgrading));
-    assertEq(l1Adapter.newOwner(), _circle);
+    assertEq(l1Adapter.burnCaller(), _circle);
 
     vm.selectFork(optimism);
     _relayL1ToL2Message(
@@ -188,6 +188,11 @@ contract Integration_Migration is IntegrationBase {
     uint256 _burnAmount = bridgedUSDC.totalSupply();
 
     assertEq(l2Adapter.isMessagingDisabled(), true);
+    assertEq(l2Adapter.roleCaller(), _circle);
+
+    vm.prank(_circle);
+    l2Adapter.transferUSDCRoles(_circle);
+
     assertEq(bridgedUSDC.owner(), _circle);
 
     vm.selectFork(mainnet);
@@ -208,7 +213,7 @@ contract Integration_Migration is IntegrationBase {
 
     assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), 0);
     assertEq(l1Adapter.burnAmount(), 0);
-    assertEq(l1Adapter.newOwner(), address(0));
+    assertEq(l1Adapter.burnCaller(), address(0));
   }
 }
 
