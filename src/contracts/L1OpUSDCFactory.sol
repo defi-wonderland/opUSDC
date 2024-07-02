@@ -86,7 +86,8 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     // Use the nonce as salt to ensure always a different salt since the nonce is always increasing
     bytes32 _salt = bytes32(_currentNonce);
     // Get the L2 factory init code and precalculate its address
-    bytes memory _l2FactoryCArgs = abi.encode(
+    bytes memory _deployTx = abi.encodeWithSelector(
+      IL2OpUSDCFactory.deploy.selector,
       _l1Adapter,
       _l2Deployments.l2AdapterOwner,
       _l2Deployments.usdcImplementationInitCode,
@@ -96,13 +97,19 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
 
     // Send the L2 factory deployment tx
     _l2Factory = CrossChainDeployments.deployL2Factory(
-      _l2FactoryCArgs, _salt, _l1Messenger, L2_CREATE2_DEPLOYER, _l2Deployments.minGasLimitDeploy
+      abi.encode(address(this)),
+      _deployTx,
+      _salt,
+      _l1Messenger,
+      L2_CREATE2_DEPLOYER,
+      _l2Deployments.minGasLimitFactory,
+      _l2Deployments.minGasLimitDeploy
     );
 
     // Precalculate the L2 adapter address
     _l2Adapter = CrossChainDeployments.precalculateCreateAddress(_l2Factory, _L2_ADAPTER_DEPLOYMENT_NONCE);
     // Deploy the L1 adapter
-    address(new L1OpUSDCBridgeAdapter(address(USDC), _l1Messenger, _l2Adapter, _l1AdapterOwner));
+    new L1OpUSDCBridgeAdapter(address(USDC), _l1Messenger, _l2Adapter, _l1AdapterOwner);
 
     emit L1AdapterDeployed(_l1Adapter);
   }

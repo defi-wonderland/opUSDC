@@ -3,7 +3,9 @@ pragma solidity 0.8.25;
 
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
+
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
+import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 /**
@@ -15,6 +17,14 @@ import {IUSDC} from 'interfaces/external/IUSDC.sol';
  * L2 contracts have the same address on different L2s when triggered by different owners.
  */
 contract L2OpUSDCFactory is IL2OpUSDCFactory {
+  ICrossDomainMessenger public constant L2_MESSENGER = ICrossDomainMessenger(0x4200000000000000000000000000000000000007);
+
+  address public immutable L1_FACTORY;
+
+  constructor(address _l1Factory) {
+    L1_FACTORY = _l1Factory;
+  }
+
   /**
    * @notice Deploys the USDC implementation, proxy, and L2 adapter contracts all at once, and then initializes the USDC
    * @param _l1Adapter The address of the L1 adapter contract
@@ -25,13 +35,18 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
    * @dev The USDC proxy owner needs to be set on the first init tx, and will be set to the L2 adapter address
    * @dev Using `CREATE` to guarantee that the addresses are unique among all the L2s
    */
-  constructor(
+  function deploy(
     address _l1Adapter,
     address _l2AdapterOwner,
     bytes memory _usdcImplementationInitCode,
     USDCInitializeData memory _usdcInitializeData,
     bytes[] memory _usdcInitTxs
-  ) {
+  ) external {
+    // TODO: it doesn't allow replayability
+    if (msg.sender != address(L2_MESSENGER) || L2_MESSENGER.xDomainMessageSender() != L1_FACTORY) {
+      revert('TODO');
+    }
+
     // Deploy USDC implementation
     (address _usdcImplementation) = _deployCreate(_usdcImplementationInitCode);
     emit USDCImplementationDeployed(_usdcImplementation);

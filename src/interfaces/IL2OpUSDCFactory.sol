@@ -56,4 +56,12 @@ interface IL2OpUSDCFactory {
    * @param _txIndex The index of the failed initialization tx
    */
   error IL2OpUSDCFactory_InitializationFailed(uint256 _txIndex);
+
+  function deploy(
+    address _l1Adapter,
+    address _l2AdapterOwner,
+    bytes memory _usdcImplementationInitCode,
+    USDCInitializeData memory _usdcInitializeData,
+    bytes[] memory _usdcInitTxs
+  ) external;
 }

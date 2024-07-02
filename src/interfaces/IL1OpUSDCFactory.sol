@@ -18,6 +18,7 @@ interface IL1OpUSDCFactory {
     address l2AdapterOwner;
     bytes usdcImplementationInitCode;
     bytes[] usdcInitTxs;
+    uint32 minGasLimitFactory;
     uint32 minGasLimitDeploy;
   }
 
