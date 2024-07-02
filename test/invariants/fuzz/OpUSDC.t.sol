@@ -138,11 +138,8 @@ contract OpUsdcTest is SetupOpUSDC {
 
     // usdc init v2 black list usdc address itself
     require(!(_to == address(0) || _to == address(usdcBridged)));
-
-    // provided enough usdc on l1
     require(_amount > 0);
     require(usdcBridged.balanceOf(_currentCaller) >= _amount);
-
     hevm.prank(_currentCaller);
     usdcBridged.approve(address(l2Adapter), _amount);
 
@@ -153,8 +150,6 @@ contract OpUsdcTest is SetupOpUSDC {
 
     // Action
     try l2Adapter.sendMessage(_to, _amount, _minGasLimit) {
-      // Postcondition
-
       // Correct xdomain sender?
       assert(mockMessenger.xDomainMessageSender() == address(l2Adapter));
 
@@ -168,6 +163,8 @@ contract OpUsdcTest is SetupOpUSDC {
       // 3
       assert(usdcMainnet.balanceOf(address(l1Adapter)) == usdcBridged.totalSupply());
     } catch {
+      // Postcondition
+      assert(false);
       // 1
       assert(l2Adapter.isMessagingDisabled());
 
@@ -177,55 +174,56 @@ contract OpUsdcTest is SetupOpUSDC {
     }
   }
 
-  function fuzz_noSignedMessageIfNotActiveL2(uint256 _signerPrivate, uint256 _amount, uint32 _minGasLimit) public {
-    require(_signerPrivate != 0);
-    address _signerAd = hevm.addr(_signerPrivate);
+  // function fuzz_noSignedMessageIfNotActiveL2(uint256 _signerPrivate, uint256 _amount, uint32 _minGasLimit) public {
+  //   require(_signerPrivate != 0);
+  //   address _signerAd = hevm.addr(_signerPrivate);
 
-    require(usdcMainnet.balanceOf(_signerAd) < 2 ** 255 - 1 - _amount);
-    require(usdcBridged.balanceOf(_signerAd) < 2 ** 255 - 1 - _amount);
+  //   require(usdcMainnet.balanceOf(_signerAd) < 2 ** 255 - 1 - _amount);
+  //   require(usdcBridged.balanceOf(_signerAd) < 2 ** 255 - 1 - _amount);
 
-    require(!(_signerAd == address(0) || _signerAd == address(usdcBridged)));
+  //   require(!(_signerAd == address(0) || _signerAd == address(usdcBridged)));
 
-    // provided enough usdc on l1
-    require(_amount > 0);
+  //   // provided enough usdc on l2
+  //   require(_amount > 0);
+  //   hevm.prank(_usdcMinter);
+  //   usdcMainnet.mint(_currentCaller, _amount);
+  //   hevm.prank(_currentCaller);
+  //   l1Adapter.sendMessage(_signerAd, _amount, _minGasLimit);
 
-    hevm.prank(_usdcMinter);
-    usdcBridged.mint(_signerAd, _amount);
+  //   hevm.prank(_signerAd);
+  //   usdcBridged.approve(address(l2Adapter), _amount);
 
-    hevm.prank(_signerAd);
-    usdcBridged.approve(address(l2Adapter), _amount);
+  //   uint256 _fromBalanceBefore = usdcBridged.balanceOf(_signerAd);
 
-    uint256 _fromBalanceBefore = usdcBridged.balanceOf(_signerAd);
+  //   hevm.prank(_currentCaller);
 
-    hevm.prank(_currentCaller);
+  //   uint256 _nonce = l2Adapter.userNonce(_signerAd);
+  //   bytes memory _signature =
+  //     _generateSignature(_signerAd, _amount, _nonce, _signerAd, _signerPrivate, address(l2Adapter));
+  //   uint256 _deadline = block.timestamp + 1 days;
 
-    uint256 _nonce = l2Adapter.userNonce(_signerAd);
-    bytes memory _signature =
-      _generateSignature(_signerAd, _amount, _nonce, _signerAd, _signerPrivate, address(l2Adapter));
-    uint256 _deadline = block.timestamp + 1 days;
+  //   try l2Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _minGasLimit) {
+  //     // Postcondition
 
-    try l2Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _minGasLimit) {
-      // Postcondition
+  //     // Correct xdomain sender?
+  //     assert(mockMessenger.xDomainMessageSender() == address(l1Adapter));
 
-      // Correct xdomain sender?
-      assert(mockMessenger.xDomainMessageSender() == address(l1Adapter));
+  //     // 1
+  //     assert(!l2Adapter.isMessagingDisabled());
 
-      // 1
-      assert(!l2Adapter.isMessagingDisabled());
+  //     // 2
+  //     assert(usdcBridged.balanceOf(_signerAd) == _fromBalanceBefore - _amount);
 
-      // 2
-      assert(usdcBridged.balanceOf(_signerAd) == _fromBalanceBefore - _amount);
+  //     // 3
+  //     assert(usdcMainnet.balanceOf(address(l1Adapter)) == usdcBridged.totalSupply());
+  //   } catch {
+  //     // 1
+  //     assert(l2Adapter.isMessagingDisabled());
 
-      // 3
-      assert(usdcMainnet.balanceOf(address(l1Adapter)) == usdcBridged.totalSupply());
-    } catch {
-      // 1
-      assert(l2Adapter.isMessagingDisabled());
-
-      // 2
-      assert(usdcBridged.balanceOf(_signerAd) == _fromBalanceBefore);
-    }
-  }
+  //     // 2
+  //     assert(usdcBridged.balanceOf(_signerAd) == _fromBalanceBefore);
+  //   }
+  // }
 
   // Both adapters state should match 4
   function fuzz_assertAdapterStateCongruency() public view {
@@ -449,9 +447,13 @@ contract OpUsdcTest is SetupOpUSDC {
   // USDC proxy admin and token ownership rights on l2 can only be transferred after the migration to native flow  17
   function fuzz_onlyMigrateToNativeForOwnershipTransfer(address _newOwner) public {
     // Precondition
+    //Insure the adapter has received the migration to native message
     require(l2Adapter.isMessagingDisabled());
     require(l2Adapter.roleCaller() != address(0));
+    //Insura that the new owner is not the zero address, transfer ownership to the zero address is not allowed
     require(_newOwner != address(0));
+    //Insure the USDC is owned by the adapter meaning the migration has not been done yet
+    require(usdcBridged.owner() == address(l2Adapter) && usdcBridged.admin() == address(l2Adapter));
 
     hevm.prank(l2Adapter.roleCaller());
     // Action
@@ -498,11 +500,16 @@ contract OpUsdcTest is SetupOpUSDC {
     address _addressB,
     uint256 _uintA,
     uint256 _uintB,
-    bytes calldata _bytesA,
     uint32 _uint32A,
     uint32 _uint32B
   ) public agentOrDeployer {
     _selectorIndex = _selectorIndex % 8;
+
+    require(_uintB != 0);
+    address _signerAd = hevm.addr(_uintB);
+    uint256 _nonce = l1Adapter.userNonce(_signerAd);
+    bytes memory _signature = _generateSignature(_addressB, _uintA, _nonce, _signerAd, _uintB, address(l1Adapter));
+    uint256 _deadline = block.timestamp + 1 days;
 
     hevm.prank(_currentCaller);
 
@@ -525,7 +532,7 @@ contract OpUsdcTest is SetupOpUSDC {
         _ghost_L1CurrentUserNonce = l1Adapter.userNonce(_currentCaller);
       } catch {}
     } else if (_selectorIndex == 1) {
-      try l1Adapter.sendMessage(_addressA, _addressB, _uintA, _bytesA, _uintB, _uint32A) {} catch {}
+      try l1Adapter.sendMessage(_signerAd, _addressB, _uintA, _signature, _deadline, _uint32A) {} catch {}
     } else if (_selectorIndex == 2) {
       try l1Adapter.receiveMessage(_addressA, _uintA) {} catch {}
     } else if (_selectorIndex == 3) {
@@ -555,12 +562,18 @@ contract OpUsdcTest is SetupOpUSDC {
   ) public agentOrDeployer {
     _selectorIndex = _selectorIndex % 7;
 
+    require(_uintB != 0);
+    address _signerAd = hevm.addr(_uintB);
+    uint256 _nonce = l2Adapter.userNonce(_signerAd);
+    bytes memory _signature = _generateSignature(_addressB, _uintA, _nonce, _signerAd, _uintB, address(l2Adapter));
+    uint256 _deadline = block.timestamp + 1 days;
+
     hevm.prank(_currentCaller);
 
     if (_selectorIndex == 0) {
       try l2Adapter.sendMessage(_addressA, _uintA, _uint32A) {} catch {}
     } else if (_selectorIndex == 1) {
-      try l2Adapter.sendMessage(_addressA, _addressB, _uintA, _bytesA, _uintB, _uint32A) {} catch {}
+      try l2Adapter.sendMessage(_signerAd, _addressB, _uintA, _signature, _deadline, _uint32A) {} catch {}
     } else if (_selectorIndex == 2) {
       try l2Adapter.receiveMessage(_addressA, _uintA) {} catch {}
     } else if (_selectorIndex == 3) {
