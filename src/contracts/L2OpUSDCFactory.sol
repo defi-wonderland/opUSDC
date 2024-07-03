@@ -37,16 +37,16 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     emit USDCImplementationDeployed(_usdcImplementation);
 
     // Deploy USDC proxy
-    bytes memory _cachedBytes = abi.encode(_usdcImplementation);
-    _cachedBytes = bytes.concat(USDC_PROXY_CREATION_CODE, _cachedBytes);
-    (address _usdcProxy) = _deployCreate(_cachedBytes);
+    bytes memory _usdcProxyCArgs = abi.encode(_usdcImplementation);
+    bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);
+    (address _usdcProxy) = _deployCreate(_usdcProxyInitCode);
     emit USDCProxyDeployed(_usdcProxy);
 
     // Deploy L2 Adapter
     address _l2Messenger = 0x4200000000000000000000000000000000000007;
-    _cachedBytes = abi.encode(_usdcProxy, _l2Messenger, _l1Adapter, _l2AdapterOwner);
-    _cachedBytes = bytes.concat(type(L2OpUSDCBridgeAdapter).creationCode, _cachedBytes);
-    (address _l2Adapter) = _deployCreate(_cachedBytes);
+    bytes memory _l2AdapterCArgs = abi.encode(_usdcProxy, _l2Messenger, _l1Adapter, _l2AdapterOwner);
+    bytes memory _l2AdapterInitCode = bytes.concat(type(L2OpUSDCBridgeAdapter).creationCode, _l2AdapterCArgs);
+    (address _l2Adapter) = _deployCreate(_l2AdapterInitCode);
     emit L2AdapterDeployed(_l2Adapter);
 
     // Deploy the FallbackProxyAdmin internally in the L2 Adapter to keep it unique

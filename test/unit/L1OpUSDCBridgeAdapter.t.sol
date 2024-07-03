@@ -438,6 +438,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
     adapter.forTest_setBurnCaller(_circle);
     adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Deprecated);
 
+    // solhint-disable-next-line max-line-length
     vm.mockCall(_usdc, abi.encodeWithSignature('burn(address,uint256)', address(adapter), _balanceOf), abi.encode(true));
     vm.mockCall(_usdc, abi.encodeWithSignature('balanceOf(address)', address(adapter)), abi.encode(_balanceOf));
 
