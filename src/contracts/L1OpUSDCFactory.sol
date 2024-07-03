@@ -88,7 +88,6 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     // Get the L2 factory init code and precalculate its address
     bytes memory _deployTx = abi.encodeWithSelector(
       IL2OpUSDCFactory.deploy.selector,
-      _l1Adapter,
       _l2Deployments.l2AdapterOwner,
       _l2Deployments.usdcImplementationInitCode,
       _usdcInitializeData,
@@ -97,9 +96,9 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
 
     // Send the L2 factory deployment tx
     _l2Factory = CrossChainDeployments.deployL2Factory(
-      abi.encode(address(this)),
       _deployTx,
       _salt,
+      _l1Adapter,
       _l1Messenger,
       L2_CREATE2_DEPLOYER,
       _l2Deployments.minGasLimitFactory,

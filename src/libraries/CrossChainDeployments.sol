@@ -15,9 +15,9 @@ library CrossChainDeployments {
 
   /**
    * @notice Deploys the L2 factory contract through the L1 messenger
-   * @param _args The initialization arguments for the L2 factory
    * @param _deployTx The deployment transaction to be executed on the L2 factory
    * @param _salt The salt to be used to deploy the L2 factory
+   * @param _l1Adapter The address of the L1 adapter
    * @param _messenger The address of the L1 messenger
    * @param _create2Deployer The address of the L2 create2 deployer
    * @param _minGasLimitFactory The minimum gas limit for the L2 factory deployment
@@ -25,24 +25,23 @@ library CrossChainDeployments {
    * @return _l2Factory The address of the L2 factory
    */
   function deployL2Factory(
-    bytes memory _args,
     bytes memory _deployTx,
     bytes32 _salt,
+    address _l1Adapter,
     address _messenger,
     address _create2Deployer,
     uint32 _minGasLimitFactory,
     uint32 _minGasLimitDeploy
   ) external returns (address _l2Factory) {
-    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _args);
+    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, abi.encode(_l1Adapter));
     _l2Factory = precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), _create2Deployer);
-    // _l2Factory = precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), _create2Deployer);
 
+    // Send L2 Factory deployment tx msg
     bytes memory _l2FactoryDeploymentTx =
       abi.encodeWithSelector(ICreate2Deployer.deploy.selector, 0, _salt, _l2FactoryInitCode);
-    // abi.encodeWithSelector(ICreate2Deployer.deploy.selector, 0, _salt, _l2FactoryInitCode);
     ICrossDomainMessenger(_messenger).sendMessage(_create2Deployer, _l2FactoryDeploymentTx, _minGasLimitFactory);
 
-    // Send deploy msg
+    // Send `deploy()` funciton call msg
     ICrossDomainMessenger(_messenger).sendMessage(_l2Factory, _deployTx, _minGasLimitDeploy);
   }
 

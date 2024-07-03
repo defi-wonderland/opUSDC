@@ -58,7 +58,6 @@ interface IL2OpUSDCFactory {
   error IL2OpUSDCFactory_InitializationFailed(uint256 _txIndex);
 
   function deploy(
-    address _l1Adapter,
     address _l2AdapterOwner,
     bytes memory _usdcImplementationInitCode,
     USDCInitializeData memory _usdcInitializeData,

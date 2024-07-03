@@ -17,17 +17,16 @@ import {IUSDC} from 'interfaces/external/IUSDC.sol';
  * L2 contracts have the same address on different L2s when triggered by different owners.
  */
 contract L2OpUSDCFactory is IL2OpUSDCFactory {
-  ICrossDomainMessenger public constant L2_MESSENGER = ICrossDomainMessenger(0x4200000000000000000000000000000000000007);
+  // The adapter is set as immutable to make sure it is only deployed by the l1 factory and allow replayability in case
+  // it fails
+  address public immutable L1_ADAPTER;
 
-  address public immutable L1_FACTORY;
-
-  constructor(address _l1Factory) {
-    L1_FACTORY = _l1Factory;
+  constructor(address _l1Adapter) {
+    L1_ADAPTER = _l1Adapter;
   }
 
   /**
    * @notice Deploys the USDC implementation, proxy, and L2 adapter contracts all at once, and then initializes the USDC
-   * @param _l1Adapter The address of the L1 adapter contract
    * @param _l2AdapterOwner The address of the L2 adapter owner
    * @param _usdcImplementationInitCode The creation code with the constructor arguments for the USDC implementation
    * @param _usdcInitializeData The USDC name, symbol, currency, and decimals used on the first `initialize()` call
@@ -36,17 +35,11 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
    * @dev Using `CREATE` to guarantee that the addresses are unique among all the L2s
    */
   function deploy(
-    address _l1Adapter,
     address _l2AdapterOwner,
     bytes memory _usdcImplementationInitCode,
-    USDCInitializeData memory _usdcInitializeData,
-    bytes[] memory _usdcInitTxs
+    USDCInitializeData calldata _usdcInitializeData,
+    bytes[] calldata _usdcInitTxs
   ) external {
-    // TODO: it doesn't allow replayability
-    if (msg.sender != address(L2_MESSENGER) || L2_MESSENGER.xDomainMessageSender() != L1_FACTORY) {
-      revert('TODO');
-    }
-
     // Deploy USDC implementation
     (address _usdcImplementation) = _deployCreate(_usdcImplementationInitCode);
     emit USDCImplementationDeployed(_usdcImplementation);
@@ -59,7 +52,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
 
     // Deploy L2 Adapter
     address _l2Messenger = 0x4200000000000000000000000000000000000007;
-    bytes memory _l2AdapterCArgs = abi.encode(_usdcProxy, _l2Messenger, _l1Adapter, _l2AdapterOwner);
+    bytes memory _l2AdapterCArgs = abi.encode(_usdcProxy, _l2Messenger, L1_ADAPTER, _l2AdapterOwner);
     bytes memory _l2AdapterInitCode = bytes.concat(type(L2OpUSDCBridgeAdapter).creationCode, _l2AdapterCArgs);
     (address _l2Adapter) = _deployCreate(_l2AdapterInitCode);
     emit L2AdapterDeployed(_l2Adapter);
@@ -86,9 +79,9 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
    */
   function _executeInitTxs(
     address _usdc,
-    USDCInitializeData memory _usdcInitializeData,
+    USDCInitializeData calldata _usdcInitializeData,
     address _l2Adapter,
-    bytes[] memory _initTxs
+    bytes[] calldata _initTxs
   ) internal {
     // Initialize the USDC contract
     IUSDC(_usdc).initialize(
