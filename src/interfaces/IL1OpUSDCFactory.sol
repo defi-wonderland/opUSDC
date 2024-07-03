@@ -58,7 +58,7 @@ interface IL1OpUSDCFactory {
   function deploy(
     address _l1Messenger,
     address _l1AdapterOwner,
-    L2Deployments memory _l2Deployments
+    L2Deployments calldata _l2Deployments
   ) external returns (address _l1Adapter, address _l2Factory, address _l2Adapter);
 
   /*///////////////////////////////////////////////////////////////
