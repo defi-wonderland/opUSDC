@@ -195,13 +195,12 @@ contract OpUsdcTest is SetupOpUSDC {
     hevm.prank(_currentCaller);
     // Action
     try l2Adapter.sendMessage(_to, _amount, _minGasLimit) {
-      //TODO: check why is not working
-      assert(false);
       // Postcondition
       assert(!l2Adapter.isMessagingDisabled());
       assert(usdcBridged.balanceOf(_currentCaller) == _fromBalanceBefore - _amount);
       //Property Id(2)
-      assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
+      if (_to == address(l1Adapter)) assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
+      else assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
     } catch {
       // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
       assert(l2Adapter.isMessagingDisabled());
