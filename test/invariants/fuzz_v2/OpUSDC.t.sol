@@ -63,13 +63,15 @@ contract OpUsdcTest is SetupOpUSDC {
     try l1Adapter.sendMessage(_to, _amount, _minGasLimit) {
       // Postcondition
       assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
-      assert(usdcBridged.balanceOf(_to) == _toBalanceBefore + _amount);
       assert(usdcMainnet.balanceOf(_currentCaller) == _fromBalanceBefore - _amount);
+      //Property Id(2)
+      assert(usdcBridged.balanceOf(_to) == _toBalanceBefore + _amount);
     } catch {
       // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
       assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active);
-      assert(usdcBridged.balanceOf(_to) == _toBalanceBefore);
       assert(usdcMainnet.balanceOf(_currentCaller) == _fromBalanceBefore);
+      //Property Id(2)
+      assert(usdcBridged.balanceOf(_to) == _toBalanceBefore);
     }
   }
 
@@ -110,22 +112,43 @@ contract OpUsdcTest is SetupOpUSDC {
     try l1Adapter.sendMessage(_signerAd, _to, _amount, _signature, _deadline, _minGasLimit) {
       // Postcondition
       assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
-      assert(usdcBridged.balanceOf(_to) == _toBalanceBefore + _amount);
       assert(usdcMainnet.balanceOf(_signerAd) == _fromBalanceBefore - _amount);
+      //Property Id(2)
+      assert(usdcBridged.balanceOf(_to) == _toBalanceBefore + _amount);
     } catch {
       // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
       assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active);
-      assert(usdcBridged.balanceOf(_to) == _toBalanceBefore);
       assert(usdcMainnet.balanceOf(_signerAd) == _fromBalanceBefore);
+      //Property Id(2)
+      assert(usdcBridged.balanceOf(_to) == _toBalanceBefore);
     }
   }
 
-  // // User who bridges tokens should receive them on the destination chain      2
-  // function fuzz_receiveL2Token(bytes calldata message) public view {
-  //   // Precondition
-  //   // There is a pending message to be executed
-  //   require(mockMessenger.isInQueue(address(l2Adapter), message, address(l1Adapter)));
-  // }
+  // Property Id(2): Can receive USDC even if the state is not active
+  function fuzz_receiveMessageIfNotActiveL1(address _to, uint256 _amount) public agentOrDeployer {
+    // Precondition
+    require(_amount > 0);
+    require(_to != address(0) && _to != address(usdcMainnet) && _to != address(usdcBridged));
+
+    // Set L1 Adapter as sender
+    mockMessenger.setDomaninMessageSender(address(l2Adapter));
+
+    // cache balances
+    uint256 _toBalanceBefore = usdcMainnet.balanceOf(_to);
+
+    //TODO: increase adapter USDC balance.
+
+    hevm.prank(l1Adapter.MESSENGER());
+    // Action
+    try l1Adapter.receiveMessage(_to, _amount) {
+      // Postcondition
+      //Property Id(2)
+      assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
+    } catch {
+      //Property Id(2)
+      assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
+    }
+  }
 
   // // todo: craft valid signature for the overloaded send mnessage
   // // New messages should not be sent if the state is not active 1
