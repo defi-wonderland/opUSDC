@@ -43,7 +43,7 @@ contract OpUsdcTest is SetupOpUSDC {
     require(_amount > 0);
 
     // Avoid balance overflow
-    _preventBalanceOverflow(_to, address(l1Adapter), _amount);
+    _preventBalanceOverflow(_to, _amount);
 
     // Set L1 Adapter as sender
     mockMessenger.setDomaninMessageSender(address(l1Adapter));
@@ -78,47 +78,47 @@ contract OpUsdcTest is SetupOpUSDC {
   // Property Id(1): New messages should not be sent if the state is not active
   function fuzz_noSignedMessageIfNotActiveL1(
     address _to,
-    uint256 _signerPrivate,
+    uint256 _privateKey,
     uint256 _amount,
     uint32 _minGasLimit
   ) public {
     // Precondition
     require(_amount > 0);
-    require(_signerPrivate != 0);
+    require(_privateKey != 0);
     require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
 
     // Get address from signer private key
-    address _signerAd = hevm.addr(_signerPrivate);
+    address _signer = hevm.addr(_privateKey);
     // forge signature
-    uint256 _nonce = l1Adapter.userNonce(_signerAd);
+    uint256 _nonce = l1Adapter.userNonce(_signer);
     uint256 _deadline = block.timestamp + 1 days;
-    bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPrivate, address(l1Adapter));
+    bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signer, _privateKey, address(l1Adapter));
 
     // Avoid balance overflow
-    _preventBalanceOverflow(_to, address(l1Adapter), _amount);
+    _preventBalanceOverflow(_to, _amount);
 
     // Set L1 Adapter as sender
     mockMessenger.setDomaninMessageSender(address(l1Adapter));
 
     // provided enough usdc on l1
-    _dealAndApproveUSDC(_signerAd, address(l1Adapter), _amount);
+    _dealAndApproveUSDC(_signer, address(l1Adapter), _amount);
 
     // cache balances
-    uint256 _fromBalanceBefore = usdcMainnet.balanceOf(_signerAd);
+    uint256 _fromBalanceBefore = usdcMainnet.balanceOf(_signer);
     uint256 _toBalanceBefore = usdcBridged.balanceOf(_to);
 
     hevm.prank(_currentCaller);
 
-    try l1Adapter.sendMessage(_signerAd, _to, _amount, _signature, _deadline, _minGasLimit) {
+    try l1Adapter.sendMessage(_signer, _to, _amount, _signature, _deadline, _minGasLimit) {
       // Postcondition
       assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
-      assert(usdcMainnet.balanceOf(_signerAd) == _fromBalanceBefore - _amount);
+      assert(usdcMainnet.balanceOf(_signer) == _fromBalanceBefore - _amount);
       //Property Id(2)
       assert(usdcBridged.balanceOf(_to) == _toBalanceBefore + _amount);
     } catch {
       // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
       assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active);
-      assert(usdcMainnet.balanceOf(_signerAd) == _fromBalanceBefore);
+      assert(usdcMainnet.balanceOf(_signer) == _fromBalanceBefore);
       //Property Id(2)
       assert(usdcBridged.balanceOf(_to) == _toBalanceBefore);
     }
@@ -129,14 +129,17 @@ contract OpUsdcTest is SetupOpUSDC {
     // Precondition
     require(_amount > 0);
     require(_to != address(0) && _to != address(usdcMainnet) && _to != address(usdcBridged));
+    require(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active);
+
+    // provided enough usdc on l1
+    hevm.prank(_usdcMinter);
+    usdcMainnet.mint(address(l1Adapter), _amount);
 
     // Set L1 Adapter as sender
     mockMessenger.setDomaninMessageSender(address(l2Adapter));
 
     // cache balances
     uint256 _toBalanceBefore = usdcMainnet.balanceOf(_to);
-
-    //TODO: increase adapter USDC balance.
 
     hevm.prank(l1Adapter.MESSENGER());
     // Action
@@ -150,52 +153,55 @@ contract OpUsdcTest is SetupOpUSDC {
     }
   }
 
-  // // todo: craft valid signature for the overloaded send mnessage
-  // // New messages should not be sent if the state is not active 1
-  // // User who bridges tokens should receive them on the destination chain 2
-  // // Amount locked on L1 == amount minted on L2 3
-  // function fuzz_noMessageIfNotActiveL2(address _to, uint256 _amount, uint32 _minGasLimit) public agentOrDeployer {
-  //   // Avoid balance overflow
-  //   require(usdcMainnet.balanceOf(_to) < 2 ** 255 - 1 - _amount);
-  //   require(usdcBridged.balanceOf(_to) < 2 ** 255 - 1 - _amount);
+  // Property Id(1): New messages should not be sent if the state is not active
+  function fuzz_noMessageIfNotActiveL2(address _to, uint256 _amount, uint32 _minGasLimit) public agentOrDeployer {
+    // Precondition
+    require(_amount > 0);
 
-  //   // usdc init v2 black list usdc address itself
-  //   require(!(_to == address(0) || _to == address(usdcBridged)));
-  //   require(_amount > 0);
-  //   require(usdcBridged.balanceOf(_currentCaller) >= _amount);
-  //   hevm.prank(_currentCaller);
-  //   usdcBridged.approve(address(l2Adapter), _amount);
+    // Avoid balance overflow
+    _preventBalanceOverflow(_to, _amount);
 
-  //   uint256 _fromBalanceBefore = usdcBridged.balanceOf(_currentCaller);
-  //   uint256 _toBalanceBefore = usdcMainnet.balanceOf(_to);
+    // Set L1 Adapter as sender
+    mockMessenger.setDomaninMessageSender(address(l2Adapter));
 
-  //   hevm.prank(_currentCaller);
+    // usdc init v2 black list usdc address itself
+    require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
 
-  //   // Action
-  //   try l2Adapter.sendMessage(_to, _amount, _minGasLimit) {
-  //     // Correct xdomain sender?
-  //     assert(mockMessenger.xDomainMessageSender() == address(l2Adapter));
+    // provided enough usdc on l1
+    hevm.prank(_usdcMinter);
+    usdcMainnet.mint(_currentCaller, _amount);
 
-  //     // 1
-  //     assert(!l2Adapter.isMessagingDisabled());
+    hevm.prank(_currentCaller);
+    usdcMainnet.approve(address(l2Adapter), _amount);
 
-  //     // 2
-  //     assert(usdcBridged.balanceOf(_currentCaller) == _fromBalanceBefore - _amount);
-  //     assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
+    hevm.prank(_currentCaller);
+    l1Adapter.sendMessage(_currentCaller, _amount, _minGasLimit);
 
-  //     // 3
-  //     assert(usdcMainnet.balanceOf(address(l1Adapter)) == usdcBridged.totalSupply());
-  //   } catch {
-  //     // Postcondition
-  //     assert(false);
-  //     // 1
-  //     assert(l2Adapter.isMessagingDisabled());
+    hevm.prank(_currentCaller);
+    usdcBridged.approve(address(l2Adapter), _amount);
 
-  //     // 2
-  //     assert(usdcBridged.balanceOf(_currentCaller) == _fromBalanceBefore);
-  //     assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
-  //   }
-  // }
+    // cache balances
+    uint256 _fromBalanceBefore = usdcBridged.balanceOf(_currentCaller);
+    uint256 _toBalanceBefore = usdcMainnet.balanceOf(_to);
+
+    hevm.prank(_currentCaller);
+    // Action
+    try l2Adapter.sendMessage(_to, _amount, _minGasLimit) {
+      //TODO: check why is not working
+      assert(false);
+      // Postcondition
+      assert(!l2Adapter.isMessagingDisabled());
+      assert(usdcBridged.balanceOf(_currentCaller) == _fromBalanceBefore - _amount);
+      //Property Id(2)
+      assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
+    } catch {
+      // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
+      assert(l2Adapter.isMessagingDisabled());
+      assert(usdcBridged.balanceOf(_currentCaller) == _fromBalanceBefore);
+      //Property Id(2)
+      assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
+    }
+  }
 
   // function fuzz_noSignedMessageIfNotActiveL2(uint256 _signerPrivate, uint256 _amount, uint32 _minGasLimit) public {
   //   require(_signerPrivate != 0);
@@ -690,10 +696,12 @@ contract OpUsdcTest is SetupOpUSDC {
 
   function generateMessageUSDCL2() public agentOrDeployer {}
 
-  function _preventBalanceOverflow(address _to, address _adapter, uint256 _amount) internal view {
+  // TODO: review this and use different approach if the message is trigger by l1Adapter or l2Adapter
+  function _preventBalanceOverflow(address _to, uint256 _amount) internal view {
     require(usdcMainnet.balanceOf(_to) < 2 ** 255 - 1 - _amount);
     require(usdcBridged.balanceOf(_to) < 2 ** 255 - 1 - _amount);
-    require(usdcMainnet.balanceOf(_adapter) < 2 ** 255 - 1 - _amount);
+    require(usdcMainnet.balanceOf(address(l1Adapter)) < 2 ** 255 - 1 - _amount);
+    require(usdcBridged.balanceOf(address(l2Adapter)) < 2 ** 255 - 1 - _amount);
   }
 
   function _dealAndApproveUSDC(address _from, address _to, uint256 _amount) internal {
