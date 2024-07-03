@@ -9,8 +9,8 @@ import {USDCInitTxs} from 'src/contracts/utils/USDCInitTxs.sol';
 
 contract DeployOptimism is Script {
   address public constant L1_MESSENGER = 0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1;
-  uint32 public constant MIN_GAS_LIMIT_FACTORY = 2_000_000;
-  uint32 public constant MIN_GAS_LIMIT_DEPLOY = 4_000_000;
+  uint32 public constant MIN_GAS_LIMIT_FACTORY = 3_000_000;
+  uint32 public constant MIN_GAS_LIMIT_DEPLOY = 8_000_000;
   IL1OpUSDCFactory public immutable L1_FACTORY = IL1OpUSDCFactory(vm.envAddress('L1_FACTORY_MAINNET'));
   address public deployer = vm.rememberKey(vm.envUint('MAINNET_DEPLOYER_PK'));
 
