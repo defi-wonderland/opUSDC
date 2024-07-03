@@ -6,11 +6,10 @@ import {IL1OpUSDCFactory, L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
 import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
-
 import {StdStorage, stdStorage} from 'forge-std/StdStorage.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
-
+import {CrossChainDeployments} from 'libraries/CrossChainDeployments.sol';
 import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementationCreationCode.sol';
 import {AddressAliasHelper} from 'test/utils/AddressAliasHelper.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
@@ -35,7 +34,7 @@ contract IntegrationBase is Helpers {
   ITestCrossDomainMessenger public constant BASE_L1_MESSENGER =
     ITestCrossDomainMessenger(0x866E82a600A1414e583f7F13623F1aC5d58b0Afa);
   uint32 public constant MIN_GAS_LIMIT_FACTORY = 3_000_000;
-  uint32 public constant MIN_GAS_LIMIT_DEPLOY = 5_000_000;
+  uint32 public constant MIN_GAS_LIMIT_DEPLOY = 8_000_000;
   uint32 internal constant _ZERO_VALUE = 0;
   uint256 internal constant _amount = 1e18;
   uint32 internal constant _MIN_GAS_LIMIT = 1_000_000;
@@ -63,6 +62,7 @@ contract IntegrationBase is Helpers {
   // Helper variables
   bytes[] public usdcInitTxns = new bytes[](3);
   bytes public initialize;
+  uint256 public l2MessageNonce;
 
   // OpUSDC Protocol
   L1OpUSDCBridgeAdapter public l1Adapter;
@@ -130,22 +130,40 @@ contract IntegrationBase is Helpers {
     IL2OpUSDCFactory.USDCInitializeData memory _usdcInitializeData,
     IL1OpUSDCFactory.L2Deployments memory _l2Deployments
   ) internal {
-    bytes memory _l2FactoryCArgs = abi.encode(
-      _l1Adapter,
+    l2MessageNonce = L2_MESSENGER.messageNonce();
+
+    bytes memory _l2FactoryCArgs = abi.encode(_l1Adapter);
+    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
+
+    bytes memory _factoryDeploymentTx =
+      abi.encodeWithSignature('deploy(uint256,bytes32,bytes)', _ZERO_VALUE, _salt, _l2FactoryInitCode);
+    _relayL1ToL2Message(
+      l2MessageNonce,
+      _aliasedL1Messenger,
+      address(l1Factory),
+      L2_CREATE2_DEPLOYER,
+      _ZERO_VALUE,
+      _l2Deployments.minGasLimitFactory,
+      _factoryDeploymentTx
+    );
+
+    bytes memory _deployTx = abi.encodeWithSelector(
+      IL2OpUSDCFactory.deploy.selector,
       _l2Deployments.l2AdapterOwner,
       _l2Deployments.usdcImplementationInitCode,
       _usdcInitializeData,
       _l2Deployments.usdcInitTxs
     );
-    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
-
+    address _l2Factory =
+      CrossChainDeployments.precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), L2_CREATE2_DEPLOYER);
     _relayL1ToL2Message(
+      ++l2MessageNonce,
       _aliasedL1Messenger,
       address(l1Factory),
-      L2_CREATE2_DEPLOYER,
+      _l2Factory,
       _ZERO_VALUE,
       _l2Deployments.minGasLimitDeploy,
-      abi.encodeWithSignature('deploy(uint256,bytes32,bytes)', _ZERO_VALUE, _salt, _l2FactoryInitCode)
+      _deployTx
     );
   }
 
@@ -166,6 +184,7 @@ contract IntegrationBase is Helpers {
     vm.selectFork(_network);
     uint64 _minGasLimitMint = 1_000_000;
     _relayL1ToL2Message(
+      ++l2MessageNonce,
       _aliasedL1Messenger,
       address(l1Adapter),
       address(l2Adapter),
@@ -176,6 +195,7 @@ contract IntegrationBase is Helpers {
   }
 
   function _relayL1ToL2Message(
+    uint256 _messageNonce,
     address _aliasedL1Messenger,
     address _sender,
     address _target,
@@ -183,7 +203,6 @@ contract IntegrationBase is Helpers {
     uint256 _minGasLimit,
     bytes memory _data
   ) internal {
-    uint256 _messageNonce = L2_MESSENGER.messageNonce();
     vm.prank(_aliasedL1Messenger);
     // OP adds some extra gas for the relayMessage logic
     L2_MESSENGER.relayMessage{gas: _minGasLimit + _SEQUENCER_GAS_OVERHEAD}(
@@ -198,14 +217,14 @@ contract IntegrationBase is Helpers {
     uint256 _minGasLimit,
     bytes memory _data
   ) internal {
-    uint256 _messageNonce = OPTIMISM_L1_MESSENGER.messageNonce();
+    uint256 _l1MessageNonce = OPTIMISM_L1_MESSENGER.messageNonce();
 
     // For simplicity we do this as this slot is not exposed until prove and finalize is done
     stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(address(L2_MESSENGER));
     vm.prank(OPTIMISM_PORTAL);
     // OP adds some extra gas for the relayMessage logic
     OPTIMISM_L1_MESSENGER.relayMessage{gas: _minGasLimit + _SEQUENCER_GAS_OVERHEAD}(
-      _messageNonce, _sender, _target, _value, _minGasLimit, _data
+      _l1MessageNonce, _sender, _target, _value, _minGasLimit, _data
     );
     // Needs to be reset to mimic production
     stdstore.target(OPTIMISM_PORTAL).sig('l2Sender()').checked_write(_DEFAULT_L2_SENDER);

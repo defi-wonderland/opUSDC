@@ -28,6 +28,7 @@ contract Integration_Bridging is IntegrationBase {
     uint256 _userBalanceBefore = bridgedUSDC.balanceOf(_user);
 
     _relayL1ToL2Message(
+      ++l2MessageNonce,
       OP_ALIASED_L1_MESSENGER,
       address(l1Adapter),
       address(l2Adapter),
@@ -62,6 +63,7 @@ contract Integration_Bridging is IntegrationBase {
     vm.selectFork(optimism);
     uint256 _userBalanceBefore = bridgedUSDC.balanceOf(_user);
     _relayL1ToL2Message(
+      ++l2MessageNonce,
       OP_ALIASED_L1_MESSENGER,
       address(l1Adapter),
       address(l2Adapter),
@@ -107,6 +109,7 @@ contract Integration_Bridging is IntegrationBase {
     vm.selectFork(optimism);
     uint256 _userBalanceBefore = bridgedUSDC.balanceOf(_user);
     _relayL1ToL2Message(
+      ++l2MessageNonce,
       OP_ALIASED_L1_MESSENGER,
       address(l1Adapter),
       address(l2Adapter),
@@ -177,6 +180,7 @@ contract Integration_Migration is IntegrationBase {
 
     vm.selectFork(optimism);
     _relayL1ToL2Message(
+      ++l2MessageNonce,
       OP_ALIASED_L1_MESSENGER,
       address(l1Adapter),
       address(l2Adapter),
@@ -234,6 +238,7 @@ contract Integration_Integration_PermissionedFlows is IntegrationBase {
 
     vm.selectFork(optimism);
     _relayL1ToL2Message(
+      ++l2MessageNonce,
       OP_ALIASED_L1_MESSENGER,
       address(l1Adapter),
       address(l2Adapter),
@@ -254,6 +259,7 @@ contract Integration_Integration_PermissionedFlows is IntegrationBase {
     vm.selectFork(optimism);
 
     _relayL1ToL2Message(
+      ++l2MessageNonce,
       OP_ALIASED_L1_MESSENGER,
       address(l1Adapter),
       address(l2Adapter),
