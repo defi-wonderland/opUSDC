@@ -65,10 +65,10 @@ contract Base is Test, Helpers {
 
     // Set the initialize data
     _usdcInitializeData = IL2OpUSDCFactory.USDCInitializeData({
-      _tokenName: 'USD Coin',
-      _tokenSymbol: 'USDC',
-      _tokenCurrency: 'USD',
-      _tokenDecimals: 6
+      tokenName: 'USD Coin',
+      tokenSymbol: 'USDC',
+      tokenCurrency: 'USD',
+      tokenDecimals: 6
     });
 
     // Set the init txs for the USDC implementation contract (DummyContract)
@@ -247,10 +247,10 @@ contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
       address(factory),
       abi.encodeWithSelector(
         IUSDC.initialize.selector,
-        _usdcInitializeData._tokenName,
-        _usdcInitializeData._tokenSymbol,
-        _usdcInitializeData._tokenCurrency,
-        _usdcInitializeData._tokenDecimals,
+        _usdcInitializeData.tokenName,
+        _usdcInitializeData.tokenSymbol,
+        _usdcInitializeData.tokenCurrency,
+        _usdcInitializeData.tokenDecimals,
         address(factory),
         _l2Adapter,
         _l2Adapter,
