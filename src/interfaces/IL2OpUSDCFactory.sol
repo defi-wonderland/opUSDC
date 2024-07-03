@@ -88,5 +88,6 @@ interface IL2OpUSDCFactory {
    * @dev There are no permissioned checks to allow the message replayability in case it fails. But it doesn't harm
    * since even though other L2 contracts can be deployed, the L1 counterpart is not deployed nor setup
    */
+  // solhint-disable-next-line func-name-mixedcase
   function L1_ADAPTER() external view returns (address _l1Adapter);
 }
