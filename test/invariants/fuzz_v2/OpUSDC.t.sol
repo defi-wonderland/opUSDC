@@ -52,7 +52,7 @@ contract OpUsdcTest is SetupOpUSDC {
     require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
 
     // provided enough usdc on l1
-    _dealAndApproveUSDC(_currentCaller, address(l1Adapter), _amount);
+    _dealAndApproveUSDC(_currentCaller, _amount);
 
     // cache balances
     uint256 _fromBalanceBefore = usdcMainnet.balanceOf(_currentCaller);
@@ -101,7 +101,7 @@ contract OpUsdcTest is SetupOpUSDC {
     mockMessenger.setDomaninMessageSender(address(l1Adapter));
 
     // provided enough usdc on l1
-    _dealAndApproveUSDC(_signer, address(l1Adapter), _amount);
+    _dealAndApproveUSDC(_signer, _amount);
 
     // cache balances
     uint256 _fromBalanceBefore = usdcMainnet.balanceOf(_signer);
@@ -165,25 +165,7 @@ contract OpUsdcTest is SetupOpUSDC {
     // usdc init v2 black list usdc address itself
     require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
 
-    //TODO: move this to an internal function.
-    {
-      // provided enough usdc on l1
-      hevm.prank(_usdcMinter);
-      usdcMainnet.mint(_currentCaller, _amount);
-
-      hevm.prank(_currentCaller);
-      usdcMainnet.approve(address(l1Adapter), _amount);
-
-      // Set L1 Adapter as sender to send the message to l2
-      mockMessenger.setDomaninMessageSender(address(l1Adapter));
-
-      hevm.prank(_currentCaller);
-      l1Adapter.sendMessage(_currentCaller, _amount, _minGasLimit);
-    }
-
-    // Approve the L2 adapter to spend the bridgedUSDC
-    hevm.prank(_currentCaller);
-    usdcBridged.approve(address(l2Adapter), _amount);
+    _dealAndApproveBridgedUSDC(_currentCaller, _amount, _minGasLimit);
 
     // Set L2 Adapter as sender to send the message to l1
     mockMessenger.setDomaninMessageSender(address(l2Adapter));
@@ -711,14 +693,33 @@ contract OpUsdcTest is SetupOpUSDC {
     require(usdcBridged.balanceOf(address(l2Adapter)) < 2 ** 255 - 1 - _amount);
   }
 
-  function _dealAndApproveUSDC(address _from, address _to, uint256 _amount) internal {
+  function _dealAndApproveUSDC(address _from, uint256 _amount) internal {
     // provided enough usdc on l1
     hevm.prank(_usdcMinter);
     usdcMainnet.mint(_from, _amount);
 
     // approve the adapter to spend the usdc
     hevm.prank(_from);
-    usdcMainnet.approve(_to, _amount);
+    usdcMainnet.approve(address(l1Adapter), _amount);
+  }
+
+  function _dealAndApproveBridgedUSDC(address _from, uint256 _amount, uint32 _minGasLimit) internal {
+    // provided enough usdc on l1
+    hevm.prank(_usdcMinter);
+    usdcMainnet.mint(_from, _amount);
+
+    hevm.prank(_from);
+    usdcMainnet.approve(address(l1Adapter), _amount);
+
+    // Set L1 Adapter as sender to send the message to l2
+    mockMessenger.setDomaninMessageSender(address(l1Adapter));
+
+    hevm.prank(_from);
+    l1Adapter.sendMessage(_currentCaller, _amount, _minGasLimit);
+
+    // Approve the L2 adapter to spend the bridgedUSDC
+    hevm.prank(_from);
+    usdcBridged.approve(address(l2Adapter), _amount);
   }
 
   function _generateSignature(
