@@ -146,7 +146,8 @@ contract OpUsdcTest is SetupOpUSDC {
     try l1Adapter.receiveMessage(_to, _amount) {
       // Postcondition
       //Property Id(2)
-      assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
+      if (_to == l1Adapter.MESSENGER()) assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
+      else assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
     } catch {
       //Property Id(2)
       assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
@@ -161,24 +162,31 @@ contract OpUsdcTest is SetupOpUSDC {
     // Avoid balance overflow
     _preventBalanceOverflow(_to, _amount);
 
-    // Set L1 Adapter as sender
-    mockMessenger.setDomaninMessageSender(address(l2Adapter));
-
     // usdc init v2 black list usdc address itself
     require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
 
-    // provided enough usdc on l1
-    hevm.prank(_usdcMinter);
-    usdcMainnet.mint(_currentCaller, _amount);
+    //TODO: move this to an internal function.
+    {
+      // provided enough usdc on l1
+      hevm.prank(_usdcMinter);
+      usdcMainnet.mint(_currentCaller, _amount);
 
-    hevm.prank(_currentCaller);
-    usdcMainnet.approve(address(l2Adapter), _amount);
+      hevm.prank(_currentCaller);
+      usdcMainnet.approve(address(l1Adapter), _amount);
 
-    hevm.prank(_currentCaller);
-    l1Adapter.sendMessage(_currentCaller, _amount, _minGasLimit);
+      // Set L1 Adapter as sender to send the message to l2
+      mockMessenger.setDomaninMessageSender(address(l1Adapter));
 
+      hevm.prank(_currentCaller);
+      l1Adapter.sendMessage(_currentCaller, _amount, _minGasLimit);
+    }
+
+    // Approve the L2 adapter to spend the bridgedUSDC
     hevm.prank(_currentCaller);
     usdcBridged.approve(address(l2Adapter), _amount);
+
+    // Set L2 Adapter as sender to send the message to l1
+    mockMessenger.setDomaninMessageSender(address(l2Adapter));
 
     // cache balances
     uint256 _fromBalanceBefore = usdcBridged.balanceOf(_currentCaller);
