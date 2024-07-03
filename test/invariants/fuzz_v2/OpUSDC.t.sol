@@ -156,14 +156,12 @@ contract OpUsdcTest is SetupOpUSDC {
 
   // Property Id(1): New messages should not be sent if the state is not active
   function fuzz_noMessageIfNotActiveL2(address _to, uint256 _amount, uint32 _minGasLimit) public agentOrDeployer {
-    // Precondition
+    // Preconditions
     require(_amount > 0);
+    require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
 
     // Avoid balance overflow
     _preventBalanceOverflow(_to, _amount);
-
-    // usdc init v2 black list usdc address itself
-    require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
 
     _dealAndApproveBridgedUSDC(_currentCaller, _amount, _minGasLimit);
 
@@ -703,7 +701,11 @@ contract OpUsdcTest is SetupOpUSDC {
     usdcMainnet.approve(address(l1Adapter), _amount);
   }
 
+  /**
+   * @dev Provides bridged USDC through the L1 adapter to not bypass the logic.
+   */
   function _dealAndApproveBridgedUSDC(address _from, uint256 _amount, uint32 _minGasLimit) internal {
+    address _currentXDomainSender = mockMessenger.xDomainMessageSender();
     // provided enough usdc on l1
     hevm.prank(_usdcMinter);
     usdcMainnet.mint(_from, _amount);
@@ -720,6 +722,9 @@ contract OpUsdcTest is SetupOpUSDC {
     // Approve the L2 adapter to spend the bridgedUSDC
     hevm.prank(_from);
     usdcBridged.approve(address(l2Adapter), _amount);
+
+    // Reset the xDomain sender
+    mockMessenger.setDomaninMessageSender(_currentXDomainSender);
   }
 
   function _generateSignature(
