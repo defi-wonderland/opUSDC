@@ -397,6 +397,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
     vm.assume(_burnAmount > 0);
 
     _mockAndExpect(_usdc, abi.encodeWithSignature('burn(uint256)', _burnAmount), abi.encode(true));
+    _mockAndExpect(_usdc, abi.encodeWithSignature('balanceOf(address)', address(adapter)), abi.encode(_burnAmount));
 
     adapter.forTest_setBurnAmount(_burnAmount);
 
@@ -416,6 +417,29 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
     vm.mockCall(
       _usdc, abi.encodeWithSignature('burn(address,uint256)', address(adapter), _burnAmount), abi.encode(true)
     );
+    vm.mockCall(_usdc, abi.encodeWithSignature('balanceOf(address)', address(adapter)), abi.encode(_burnAmount));
+
+    adapter.forTest_setBurnAmount(_burnAmount);
+
+    // Execute
+    vm.prank(_circle);
+    adapter.burnLockedUSDC();
+
+    assertEq(adapter.burnAmount(), 0, 'Burn amount should be set to 0');
+    assertEq(adapter.burnCaller(), address(0), 'Circle should be set to 0');
+  }
+
+  /**
+   * @notice Check that balance of gets used if burn amount is greater then the balance
+   */
+  function test_balanceOfUsedIfBurnAmountGt(uint256 _burnAmount, uint256 _balanceOf, address _circle) external {
+    vm.assume(_burnAmount > 0);
+    vm.assume(_burnAmount > _balanceOf);
+    adapter.forTest_setBurnCaller(_circle);
+    adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Deprecated);
+
+    vm.mockCall(_usdc, abi.encodeWithSignature('burn(address,uint256)', address(adapter), _balanceOf), abi.encode(true));
+    vm.mockCall(_usdc, abi.encodeWithSignature('balanceOf(address)', address(adapter)), abi.encode(_balanceOf));
 
     adapter.forTest_setBurnAmount(_burnAmount);
 
@@ -436,6 +460,7 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
     adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Deprecated);
 
     vm.mockCall(_usdc, abi.encodeWithSignature('burn(address)', address(adapter)), abi.encode(true));
+    vm.mockCall(_usdc, abi.encodeWithSignature('balanceOf(address)', address(adapter)), abi.encode(_burnAmount));
 
     adapter.forTest_setBurnAmount(_burnAmount);
 
