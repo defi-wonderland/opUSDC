@@ -151,17 +151,10 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
     bytes32 _salt = bytes32(factory.deploymentsSaltCounter() + 1);
 
     // Calculate the L1 Adapter address
-    uint256 _factoryNonce = vm.getNonce(address(factory));
-    address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce);
+    address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), vm.getNonce(address(factory)));
 
     // Calculate the l2 factory address
-    bytes memory _l2FactoryCArgs = abi.encode(
-      _l1Adapter,
-      _l2Deployments.l2AdapterOwner,
-      _l2Deployments.usdcImplementationInitCode,
-      _usdcInitializeData,
-      _l2Deployments.usdcInitTxs
-    );
+    bytes memory _l2FactoryCArgs = abi.encode(_l1Adapter);
     bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
     address _l2Factory =
       factory.forTest_precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), factory.L2_CREATE2_DEPLOYER());
@@ -230,13 +223,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
     address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce);
 
     // Get the L2 factory deployment tx
-    bytes memory _l2FactoryCArgs = abi.encode(
-      _l1Adapter,
-      _l2Deployments.l2AdapterOwner,
-      _l2Deployments.usdcImplementationInitCode,
-      _usdcInitializeData,
-      _l2Deployments.usdcInitTxs
-    );
+    bytes memory _l2FactoryCArgs = abi.encode(_l1Adapter);
     bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
     bytes memory _l2FactoryCreate2Tx =
       abi.encodeWithSelector(ICreate2Deployer.deploy.selector, _zeroValue, _salt, _l2FactoryInitCode);
@@ -248,7 +235,46 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
         ICrossDomainMessenger.sendMessage.selector,
         factory.L2_CREATE2_DEPLOYER(),
         _l2FactoryCreate2Tx,
-        _l2Deployments.minGasLimitDeploy
+        _l2Deployments.minGasLimitFactory
+      )
+    );
+
+    // Execute
+    vm.prank(_user);
+    factory.deploy(_l1Messenger, _l1AdapterOwner, _l2Deployments);
+  }
+
+  /**
+   * @notice Check the `deploy` call over the L2 Factory is correctly sent through the messenger
+   */
+  function test_sendDeployMessage() public {
+    bytes32 _salt = bytes32(factory.deploymentsSaltCounter() + 1);
+
+    // Mock all the `deploy` function calls
+    _mockDeployCalls();
+
+    // Precalculate the l1 adapter address
+    address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), vm.getNonce(address(factory)));
+
+    // Get the L2 factory init code
+    bytes memory _l2FactoryCArgs = abi.encode(_l1Adapter);
+    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
+    bytes memory _l2FactoryDeployTx = abi.encodeWithSelector(
+      IL2OpUSDCFactory.deploy.selector,
+      _l2Deployments.l2AdapterOwner,
+      _l2Deployments.usdcImplementationInitCode,
+      _usdcInitializeData,
+      _l2Deployments.usdcInitTxs
+    );
+    // Precalculate its address
+    address _l2Factory =
+      factory.forTest_precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), factory.L2_CREATE2_DEPLOYER());
+
+    // Expect the `sendMessage` to be properly called
+    vm.expectCall(
+      _l1Messenger,
+      abi.encodeWithSelector(
+        ICrossDomainMessenger.sendMessage.selector, _l2Factory, _l2FactoryDeployTx, _l2Deployments.minGasLimitDeploy
       )
     );
 
@@ -284,17 +310,11 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
     bytes32 _salt = bytes32(factory.deploymentsSaltCounter() + 1);
 
     // Calculate the L1 Adapter address
-    uint256 _factoryNonce = vm.getNonce(address(factory));
-    address _expectedL1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce);
+    address _expectedL1Adapter =
+      factory.forTest_precalculateCreateAddress(address(factory), vm.getNonce(address(factory)));
 
     // Calculate the l2 factory address
-    bytes memory _l2FactoryCArgs = abi.encode(
-      _expectedL1Adapter,
-      _l2Deployments.l2AdapterOwner,
-      _l2Deployments.usdcImplementationInitCode,
-      _usdcInitializeData,
-      _l2Deployments.usdcInitTxs
-    );
+    bytes memory _l2FactoryCArgs = abi.encode(_expectedL1Adapter);
     bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
     address _expectedL2Factory =
       factory.forTest_precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), factory.L2_CREATE2_DEPLOYER());
