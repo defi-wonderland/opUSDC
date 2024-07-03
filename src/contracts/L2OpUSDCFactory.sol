@@ -3,7 +3,6 @@ pragma solidity 0.8.25;
 
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
-
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
@@ -17,8 +16,7 @@ import {IUSDC} from 'interfaces/external/IUSDC.sol';
  * L2 contracts have the same address on different L2s when triggered by different owners.
  */
 contract L2OpUSDCFactory is IL2OpUSDCFactory {
-  // The adapter is set as immutable to make sure it is only deployed by the l1 factory and allow replayability in case
-  // it fails
+  /// @inheritdoc IL2OpUSDCFactory
   address public immutable L1_ADAPTER;
 
   /**

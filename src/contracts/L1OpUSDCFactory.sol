@@ -4,7 +4,6 @@ pragma solidity 0.8.25;
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
-
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 import {CrossChainDeployments} from 'libraries/CrossChainDeployments.sol';
 
@@ -94,7 +93,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
       _l2Deployments.usdcInitTxs
     );
 
-    // Send the L2 factory deployment tx
+    // Send the L2 factory deployment and `deploy()` call txs messages through the L1 messenger
     _l2Factory = CrossChainDeployments.deployL2Factory(
       _deployTx,
       _salt,
@@ -109,7 +108,6 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     _l2Adapter = CrossChainDeployments.precalculateCreateAddress(_l2Factory, _L2_ADAPTER_DEPLOYMENT_NONCE);
     // Deploy the L1 adapter
     new L1OpUSDCBridgeAdapter(address(USDC), _l1Messenger, _l2Adapter, _l1AdapterOwner);
-
     emit L1AdapterDeployed(_l1Adapter);
   }
 }
