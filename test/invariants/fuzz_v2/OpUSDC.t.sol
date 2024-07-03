@@ -190,56 +190,54 @@ contract OpUsdcTest is SetupOpUSDC {
     }
   }
 
-  // function fuzz_noSignedMessageIfNotActiveL2(uint256 _signerPrivate, uint256 _amount, uint32 _minGasLimit) public {
-  //   require(_signerPrivate != 0);
-  //   address _signerAd = hevm.addr(_signerPrivate);
+  function fuzz_noSignedMessageIfNotActiveL2(
+    address _to,
+    uint256 _privateKey,
+    uint256 _amount,
+    uint32 _minGasLimit
+  ) public {
+    // Preconditions
+    require(_amount > 0);
+    require(_privateKey != 0);
+    require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
 
-  //   require(usdcMainnet.balanceOf(_signerAd) < 2 ** 255 - 1 - _amount);
-  //   require(usdcBridged.balanceOf(_signerAd) < 2 ** 255 - 1 - _amount);
+    // Get address from signer private key
+    address _signer = hevm.addr(_privateKey);
 
-  //   require(!(_signerAd == address(0) || _signerAd == address(usdcBridged)));
+    // Avoid balance overflow
+    _preventBalanceOverflow(_to, _amount);
 
-  //   // provided enough usdc on l2
-  //   require(_amount > 0);
-  //   hevm.prank(_usdcMinter);
-  //   usdcMainnet.mint(_currentCaller, _amount);
-  //   hevm.prank(_currentCaller);
-  //   l1Adapter.sendMessage(_signerAd, _amount, _minGasLimit);
+    _dealAndApproveBridgedUSDC(_signer, _amount, _minGasLimit);
 
-  //   hevm.prank(_signerAd);
-  //   usdcBridged.approve(address(l2Adapter), _amount);
+    // Set L2 Adapter as sender to send the message to l1
+    mockMessenger.setDomaninMessageSender(address(l2Adapter));
 
-  //   uint256 _fromBalanceBefore = usdcBridged.balanceOf(_signerAd);
+    // cache balances
+    uint256 _fromBalanceBefore = usdcBridged.balanceOf(_signer);
+    uint256 _toBalanceBefore = usdcMainnet.balanceOf(_to);
 
-  //   hevm.prank(_currentCaller);
+    //Forge signature
+    uint256 _nonce = l2Adapter.userNonce(_signer);
+    bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signer, _privateKey, address(l2Adapter));
+    uint256 _deadline = block.timestamp + 1 days;
 
-  //   uint256 _nonce = l2Adapter.userNonce(_signerAd);
-  //   bytes memory _signature =
-  //     _generateSignature(_signerAd, _amount, _nonce, _signerAd, _signerPrivate, address(l2Adapter));
-  //   uint256 _deadline = block.timestamp + 1 days;
-
-  //   try l2Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _minGasLimit) {
-  //     // Postcondition
-
-  //     // Correct xdomain sender?
-  //     assert(mockMessenger.xDomainMessageSender() == address(l1Adapter));
-
-  //     // 1
-  //     assert(!l2Adapter.isMessagingDisabled());
-
-  //     // 2
-  //     assert(usdcBridged.balanceOf(_signerAd) == _fromBalanceBefore - _amount);
-
-  //     // 3
-  //     assert(usdcMainnet.balanceOf(address(l1Adapter)) == usdcBridged.totalSupply());
-  //   } catch {
-  //     // 1
-  //     assert(l2Adapter.isMessagingDisabled());
-
-  //     // 2
-  //     assert(usdcBridged.balanceOf(_signerAd) == _fromBalanceBefore);
-  //   }
-  // }
+    hevm.prank(_currentCaller);
+    // Action
+    try l2Adapter.sendMessage(_signer, _to, _amount, _signature, _deadline, _minGasLimit) {
+      // Postcondition
+      assert(!l2Adapter.isMessagingDisabled());
+      assert(usdcBridged.balanceOf(_signer) == _fromBalanceBefore - _amount);
+      //Property Id(2)
+      if (_to == address(l1Adapter)) assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
+      else assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
+    } catch {
+      // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
+      assert(l2Adapter.isMessagingDisabled());
+      assert(usdcBridged.balanceOf(_signer) == _fromBalanceBefore);
+      //Property Id(2)
+      assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
+    }
+  }
 
   // // Both adapters state should match 4
   // function fuzz_assertAdapterStateCongruency() public view {
@@ -717,7 +715,7 @@ contract OpUsdcTest is SetupOpUSDC {
     mockMessenger.setDomaninMessageSender(address(l1Adapter));
 
     hevm.prank(_from);
-    l1Adapter.sendMessage(_currentCaller, _amount, _minGasLimit);
+    l1Adapter.sendMessage(_from, _amount, _minGasLimit);
 
     // Approve the L2 adapter to spend the bridgedUSDC
     hevm.prank(_from);
