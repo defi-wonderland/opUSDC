@@ -21,6 +21,10 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
   // it fails
   address public immutable L1_ADAPTER;
 
+  /**
+   * @notice Construct the L2 Factory contract
+   * @param _l1Adapter The address of the L1 adapter
+   */
   constructor(address _l1Adapter) {
     L1_ADAPTER = _l1Adapter;
   }
@@ -33,6 +37,8 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
    * @param _usdcInitTxs The initialization transactions for the USDC proxy and implementation contracts
    * @dev The USDC proxy owner needs to be set on the first init tx, and will be set to the L2 adapter address
    * @dev Using `CREATE` to guarantee that the addresses are unique among all the L2s
+   * @dev This function can be called after the first deployments are set, but is useless since the L1 setup and
+   * deployments are not settled
    */
   function deploy(
     address _l2AdapterOwner,
