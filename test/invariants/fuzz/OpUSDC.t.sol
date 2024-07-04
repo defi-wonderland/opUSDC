@@ -366,7 +366,53 @@ contract OpUsdcTest is SetupOpUSDC {
     }
   }
 
-  // // | Incoming successful messages should only come from the linked adapter's
+  // Property Id(14):  Incoming successful messages should only come from the linked adapter's
+  function fuzz_l1LinkedAdapterIncommingMessages(uint8 _selectorIndex, uint256 _amount, address _address) public {
+    _selectorIndex = _selectorIndex % 2;
+    hevm.prank(l1Adapter.MESSENGER());
+    if (_selectorIndex == 0) {
+      require(usdcMainnet.balanceOf(address(l1Adapter)) >= _amount);
+      try l1Adapter.receiveMessage(_address, _amount) {
+        // Mint tokens to L1 adapter to keep the balance consistent
+        hevm.prank(_usdcMinter);
+        usdcMainnet.mint(address(l1Adapter), _amount);
+        assert(mockMessenger.xDomainMessageSender() == address(l2Adapter));
+      } catch {}
+    } else {
+      try l1Adapter.setBurnAmount(usdcBridged.totalSupply()) {
+        // This will deprecate the adapter
+        _ghost_hasBeenDeprecatedBefore = true;
+        assert(mockMessenger.xDomainMessageSender() == address(l2Adapter));
+      } catch {}
+    }
+  }
+
+  // Property Id(14):  Incoming successful messages should only come from the linked adapter's
+  function fuzz_l2LinkedAdapterIncommingMessages(uint8 _selectorIndex, uint256 _amount, address _address) public {
+    _selectorIndex = _selectorIndex % 3;
+
+    hevm.prank(l2Adapter.MESSENGER());
+    if (_selectorIndex == 0) {
+      try l2Adapter.receiveMessage(_address, _amount) {
+        // Mint tokens to L1 adapter to keep the balance consistent
+        hevm.prank(_usdcMinter);
+        usdcMainnet.mint(address(l1Adapter), _amount);
+        assert(mockMessenger.xDomainMessageSender() == address(l1Adapter));
+      } catch {}
+    } else if (_selectorIndex == 1) {
+      try l2Adapter.receiveMigrateToNative(_address, 0) {
+        assert(mockMessenger.xDomainMessageSender() == address(l1Adapter));
+      } catch {}
+    } else if (_selectorIndex == 2) {
+      try l2Adapter.receiveStopMessaging() {
+        assert(mockMessenger.xDomainMessageSender() == address(l1Adapter));
+      } catch {}
+    } else {
+      try l2Adapter.receiveResumeMessaging() {
+        assert(mockMessenger.xDomainMessageSender() == address(l1Adapter));
+      } catch {}
+    }
+  }
 
   // // Any chain should be able to have as many protocols deployed without the factory blocking deployments 15
   // // Protocols deployed on one L2 should never have a matching address with a protocol on a different L2 16
