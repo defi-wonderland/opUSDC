@@ -14,7 +14,7 @@ library CrossChainDeployments {
   bytes1 internal constant _LEN = bytes1(0x94);
 
   /// @notice The address of the L2 messenger
-  address internal constant L2_MESSENGER = 0x4200000000000000000000000000000000000007;
+  address internal constant _L2_MESSENGER = 0x4200000000000000000000000000000000000007;
 
   /**
    * @notice Deploys the L2 factory contract through the L1 messenger
@@ -37,7 +37,7 @@ library CrossChainDeployments {
     uint32 _minGasLimitDeploy
   ) external returns (address _l2Factory) {
     // Get the L2 factory init code and precalculate its address
-    bytes memory _l2FactoryCArgs = abi.encode(address(this), L2_MESSENGER, _l1Adapter);
+    bytes memory _l2FactoryCArgs = abi.encode(address(this), _L2_MESSENGER, _l1Adapter);
     bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
     _l2Factory = precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), _create2Deployer);
 
