@@ -17,9 +17,6 @@ import {CrossChainDeployments} from 'libraries/CrossChainDeployments.sol';
  */
 contract L1OpUSDCFactory is IL1OpUSDCFactory {
   /// @inheritdoc IL1OpUSDCFactory
-  address public constant L2_MESSENGER = 0x4200000000000000000000000000000000000007;
-
-  /// @inheritdoc IL1OpUSDCFactory
   address public constant L2_CREATE2_DEPLOYER = 0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2;
 
   /// @inheritdoc IL1OpUSDCFactory

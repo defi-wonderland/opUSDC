@@ -13,6 +13,9 @@ library CrossChainDeployments {
   /// @notice RLP encoding deployer length prefix for calculating the address of a contract deployed through `CREATE`
   bytes1 internal constant _LEN = bytes1(0x94);
 
+  /// @notice The address of the L2 messenger
+  address internal constant L2_MESSENGER = 0x4200000000000000000000000000000000000007;
+
   /**
    * @notice Deploys the L2 factory contract through the L1 messenger
    * @param _deployTx The deployment transaction to be executed on the L2 factory
@@ -33,7 +36,9 @@ library CrossChainDeployments {
     uint32 _minGasLimitFactory,
     uint32 _minGasLimitDeploy
   ) external returns (address _l2Factory) {
-    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, abi.encode(_l1Adapter));
+    // Get the L2 factory init code and precalculate its address
+    bytes memory _l2FactoryCArgs = abi.encode(address(this), L2_MESSENGER, _l1Adapter);
+    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
     _l2Factory = precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), _create2Deployer);
 
     // Send L2 Factory deployment tx msg

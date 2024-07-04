@@ -47,6 +47,11 @@ interface IL2OpUSDCFactory {
   ///////////////////////////////////////////////////////////////*/
 
   /**
+   * @notice Thrown when the caller is not the L1 messenger or the x doman caller is not the L1 factory
+   */
+  error IL2OpUSDCFactory_InvalidSender();
+
+  /**
    * @notice Thrown when a contract deployment fails
    */
   error IL2OpUSDCFactory_DeploymentFailed();
@@ -82,6 +87,18 @@ interface IL2OpUSDCFactory {
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
   ///////////////////////////////////////////////////////////////*/
+
+  /**
+   * @return _l2Messenger The address of the L2 messenger
+   */
+  // solhint-disable-next-line func-name-mixedcase
+  function L2_MESSENGER() external view returns (address _l2Messenger);
+
+  /**
+   * @return _l1Factory The address of the L1 factory
+   */
+  // solhint-disable-next-line func-name-mixedcase
+  function L1_FACTORY() external view returns (address _l1Factory);
 
   /**
    * @return _l1Adapter The address of the L1 adapter

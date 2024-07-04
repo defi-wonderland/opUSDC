@@ -4,6 +4,7 @@ pragma solidity 0.8.25;
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
+import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 /**
@@ -16,13 +17,23 @@ import {IUSDC} from 'interfaces/external/IUSDC.sol';
  */
 contract L2OpUSDCFactory is IL2OpUSDCFactory {
   /// @inheritdoc IL2OpUSDCFactory
+  address public immutable L2_MESSENGER;
+
+  /// @inheritdoc IL2OpUSDCFactory
+  address public immutable L1_FACTORY;
+
+  /// @inheritdoc IL2OpUSDCFactory
   address public immutable L1_ADAPTER;
 
   /**
    * @notice Construct the L2 Factory contract
+   * @param _l1Factory The address of the L1 factory
+   * @param _l2Messenger The address of the L2 messenger
    * @param _l1Adapter The address of the L1 adapter
    */
-  constructor(address _l1Adapter) {
+  constructor(address _l1Factory, address _l2Messenger, address _l1Adapter) {
+    L2_MESSENGER = _l2Messenger;
+    L1_FACTORY = _l1Factory;
     L1_ADAPTER = _l1Adapter;
   }
 
@@ -43,6 +54,10 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     USDCInitializeData calldata _usdcInitializeData,
     bytes[] calldata _usdcInitTxs
   ) external {
+    if (msg.sender != L2_MESSENGER || ICrossDomainMessenger(L2_MESSENGER).xDomainMessageSender() != L1_FACTORY) {
+      revert IL2OpUSDCFactory_InvalidSender();
+    }
+
     // Deploy USDC implementation
     (address _usdcImplementation) = _deployCreate(_usdcImplementationInitCode);
     emit USDCImplementationDeployed(_usdcImplementation);

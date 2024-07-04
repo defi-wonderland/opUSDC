@@ -7,11 +7,16 @@ import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.so
 import {Test} from 'forge-std/Test.sol';
 import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
+import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
 contract L2OpUSDCFactoryForTest is L2OpUSDCFactory {
-  constructor(address _l1Adapter) L2OpUSDCFactory(_l1Adapter) {}
+  constructor(
+    address _l1Factory,
+    address _l2Messenger,
+    address _l1Adapter
+  ) L2OpUSDCFactory(_l1Factory, _l2Messenger, _l1Adapter) {}
 
   function forTest_deployCreate(bytes memory _initCode) public returns (address _newContract) {
     _newContract = _deployCreate(_initCode);
@@ -49,7 +54,12 @@ contract Base is Test, Helpers {
   bytes[] internal _badInitTxs;
 
   function setUp() public virtual {
-    factory = new L2OpUSDCFactoryForTest(_l1Adapter);
+    factory = new L2OpUSDCFactoryForTest(_l1Factory, _l2Messenger, _l1Adapter);
+
+    // Mock the call over the xDomainMessageSender function
+    vm.mockCall(
+      _l2Messenger, abi.encodeWithSelector(ICrossDomainMessenger.xDomainMessageSender.selector), abi.encode(_l1Factory)
+    );
 
     // Set the implementations bytecode and init code
     _usdcImplInitCode = type(ForTestDummyContract).creationCode;
@@ -81,7 +91,9 @@ contract Base is Test, Helpers {
 
 contract L2OpUSDCFactory_Unit_Constructor is Base {
   function test_setImmutable(address _l1Adapter) public {
-    L2OpUSDCFactory _newFactory = new L2OpUSDCFactory(_l1Adapter);
+    L2OpUSDCFactory _newFactory = new L2OpUSDCFactory(_l1Factory, _l2Messenger, _l1Adapter);
+    assertEq(_newFactory.L1_FACTORY(), _l1Factory, 'L1 factory was not set');
+    assertEq(_newFactory.L2_MESSENGER(), _l2Messenger, 'L2 messenger was not set');
     assertEq(_newFactory.L1_ADAPTER(), _l1Adapter, 'L1 adapter was not set');
   }
 }
@@ -90,6 +102,36 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
   event USDCImplementationDeployed(address _l2UsdcImplementation);
   event USDCProxyDeployed(address _l2UsdcProxy);
   event L2AdapterDeployed(address _l2Adapter);
+
+  function test_revertIfCallerNotMessenger(address _notMessenger) public {
+    vm.assume(_notMessenger != _messenger);
+
+    // Expect the tx to revert
+    vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InvalidSender.selector);
+
+    // Execute
+    vm.prank(_notMessenger);
+    factory.deploy(_l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
+  }
+
+  function test_revertIfXDomainCallerNotL1Factory(address _notL1Factory) public {
+    vm.assume(_notL1Factory != _l1Factory);
+    // vm.clearMockedCalls();
+
+    // Mock the call over the xDomainMessageSender function with the wrong address
+    vm.mockCall(
+      _l2Messenger,
+      abi.encodeWithSelector(ICrossDomainMessenger.xDomainMessageSender.selector),
+      abi.encode(_notL1Factory)
+    );
+
+    // Expect the tx to revert
+    vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_InvalidSender.selector);
+
+    // Execute
+    vm.prank(_l2Messenger);
+    factory.deploy(_l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
+  }
 
   /**
    * @notice Check the deployment of the USDC implementation and proxy is properly done by checking the emitted event
@@ -104,7 +146,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     emit USDCImplementationDeployed(_usdcImplementation);
 
     // Execute
-    vm.prank(_create2Deployer);
+    vm.prank(_l2Messenger);
     factory.deploy(_l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
 
     // Assert the USDC implementation was deployed
@@ -129,7 +171,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     emit USDCProxyDeployed(_usdcProxy);
 
     // Execute
-    vm.prank(_create2Deployer);
+    vm.prank(_l2Messenger);
     factory.deploy(_l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
 
     // Assert the USDC proxy was deployed
@@ -154,7 +196,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     emit L2AdapterDeployed(_l2Adapter);
 
     // Execute
-    vm.prank(_create2Deployer);
+    vm.prank(_l2Messenger);
     factory.deploy(_l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
 
     // Assert the adapter was deployed
@@ -184,7 +226,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     vm.expectCall(_usdcProxy, abi.encodeWithSelector(IUSDC.changeAdmin.selector, _fallbackProxyAdmin));
 
     // Execute
-    vm.prank(_create2Deployer);
+    vm.prank(_l2Messenger);
     factory.deploy(_l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
   }
 
@@ -200,7 +242,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     vm.expectCall(_usdcImplementation, _initTxsUsdc[1]);
 
     // Execute
-    vm.prank(_create2Deployer);
+    vm.prank(_l2Messenger);
     factory.deploy(_l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _initTxsUsdc);
   }
 
@@ -217,7 +259,7 @@ contract L2OpUSDCFactory_Unit_Deploy is Base {
     vm.expectCall(_usdcProxy, _initTxsUsdc[1]);
 
     // Execute
-    vm.prank(_create2Deployer);
+    vm.prank(_l2Messenger);
     factory.deploy(_l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _initTxsUsdc);
   }
 }
@@ -229,7 +271,7 @@ contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
   function setUp() public override {
     super.setUp();
 
-    vm.prank(_create2Deployer);
+    vm.prank(_l2Messenger);
     factory.deploy(_l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
   }
 
@@ -365,7 +407,7 @@ contract L2OpUSDCFactory_Unit_DeployCreate is Base {
   function setUp() public override {
     super.setUp();
 
-    vm.prank(_create2Deployer);
+    vm.prank(_l2Messenger);
     factory.deploy(_l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
   }
 
