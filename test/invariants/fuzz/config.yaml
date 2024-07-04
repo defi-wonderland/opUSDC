@@ -12,3 +12,4 @@ deployContracts: [
 ]
 cryticArgs: ["--compile-libraries=(USDCInitTxs,0x1f),(CrossChainDeployments,0x20)"] 
 workers: 2
+testLimit: 500000

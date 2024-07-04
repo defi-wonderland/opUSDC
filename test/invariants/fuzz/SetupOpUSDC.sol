@@ -18,6 +18,8 @@ contract SetupOpUSDC is EchidnaTest {
   IUSDC usdcMainnet;
   IUSDC usdcBridged;
 
+  address internal usdcBridgedImplementation;
+
   L1OpUSDCBridgeAdapter internal l1Adapter;
   L1OpUSDCFactory internal factory;
 
@@ -106,5 +108,8 @@ contract SetupOpUSDC is EchidnaTest {
     );
 
     usdcBridged = IUSDC(l2Adapter.USDC());
+
+    usdcBridgedImplementation =
+      address(uint160(uint256(hevm.load(address(usdcBridged), keccak256('org.zeppelinos.proxy.implementation')))));
   }
 }

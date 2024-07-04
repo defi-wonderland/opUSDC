@@ -19,6 +19,7 @@ contract OpUsdcTest is SetupOpUSDC {
   uint256 internal _ghost_L1CurrentUserNonce;
   bool internal _ghost_hasBeenDeprecatedBefore; // Track if setBurnAmount has been called once before
   bool internal _ghost_ownerAndAdminTransferred; // Track if the ownership has been transferred once before
+  bool internal _ghost_bridgedUSDCProxyUpgraded; // Track if the bridged USDC proxy has been upgraded once before
   mapping(address => bool) internal _ghost_l2AdapterDeployed;
   mapping(address => bool) internal _ghost_l2FactoryDeployed;
 
@@ -352,40 +353,20 @@ contract OpUsdcTest is SetupOpUSDC {
     }
   }
 
-  // Property Id(10): All in flight transactions should successfully settle after a migration to native usdc 12
-  function fuzz_noDropPendingTxWhenMigration() public {
-    // preconditions
-
-    // action
-
-    // add to bridge queue
-    // send msg to l1 [USDC to l1]
-    // send msg to l2  [USDC to l1, USDC to l2]
-    // migration [USDC to l1, USDC to l2, receiveMigrateToNative]
-
-    // execute: [USDC to l1, USDC to l2, receiveMigrateToNative] then [USDC to l2, receiveMigrateToNative] then [receiveMigrateToNative] then [setBurnAmount]
-
-    // add to queue
-    // send msg to l1 [setBurnAmount, USDC to l1]
-    // send msg to l2 [setBurnAmount, USDC to l1, USDC to l2]
-
-    // execute [setBurnAmount, USDC to l1, USDC to l2] then [USDC to l1, USDC to l2] then [USDC to l2]
-
-    // postconditions
-    // balance are correct
-    // sending msg is now paused
+  // Property Id(13): Bridged USDC Proxy should only be upgradeable through the L2 Adapter
+  function fuzz_proxyUpgradeOnlyThroughL2() public agentOrDeployer {
+    // Precondition
+    require(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Deprecated);
+    // Get the current implementation of the bridged USDC proxy
+    address _currentImplementation =
+      address(uint160(uint256(hevm.load(address(usdcBridged), keccak256('org.zeppelinos.proxy.implementation')))));
+    // Action
+    if (!_ghost_bridgedUSDCProxyUpgraded) {
+      assert(usdcBridgedImplementation == _currentImplementation);
+    }
   }
 
-  // // todo: add adapters to agents? Force calling from the adapter?
-  // // Bridged USDC Proxy should only be upgradeable through the L2 Adapter  13
-  // function fuzz_proxyUpgradeOnlyThroughL2() public agentOrDeployer {
-  //   // Precondition
-
-  //   // Action
-  //   // 13
-  // }
-
-  // // | Incoming successful messages should only come from the linked adapter's                                     | High level          | 14    | [ ]  | [ ]  |
+  // // | Incoming successful messages should only come from the linked adapter's
 
   // // Any chain should be able to have as many protocols deployed without the factory blocking deployments 15
   // // Protocols deployed on one L2 should never have a matching address with a protocol on a different L2 16
@@ -442,15 +423,15 @@ contract OpUsdcTest is SetupOpUSDC {
   //   // 17
   // }
 
-  // // Status should either be active, paused, upgrading or deprecated
-  // function fuzz_correctStatus() public {
-  //   assert(
-  //     l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active
-  //       || l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Paused
-  //       || l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading
-  //       || l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated
-  //   );
-  // }
+  // Property Id(18): Status should either be active, paused, upgrading or deprecated
+  function fuzz_correctStatus() public view {
+    assert(
+      l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active
+        || l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Paused
+        || l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading
+        || l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated
+    );
+  }
 
   /////////////////////////////////////////////////////////////////////
   //                Expose target contract selectors                 //
@@ -547,7 +528,13 @@ contract OpUsdcTest is SetupOpUSDC {
     } else if (_selectorIndex == 5) {
       try l2Adapter.receiveResumeMessaging() {} catch {}
     } else if (_selectorIndex == 6) {
-      try l2Adapter.callUsdcTransaction(_bytesA) {} catch {}
+      try l2Adapter.callUsdcTransaction(_bytesA) {
+        // If USDC implementation is upgraded, set the ghost variable
+        // UpgradeTo and UPCgradeToAndCall selectors
+        if (bytes4(_bytesA) == 0x3659cfe6 || bytes4(_bytesA) == 0x4f1ef286) {
+          _ghost_bridgedUSDCProxyUpgraded = true;
+        }
+      } catch {}
     } else {
       try l2Adapter.transferUSDCRoles(_addressA) {
         _ghost_ownerAndAdminTransferred = true;
