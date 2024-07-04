@@ -41,18 +41,16 @@ contract OpUsdcTest is SetupOpUSDC {
   function fuzz_noMessageIfNotActiveL1(address _to, uint256 _amount, uint32 _minGasLimit) public agentOrDeployer {
     // Precondition
     require(_amount > 0);
+    require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
 
     // Avoid balance overflow
     _preventBalanceOverflow(_to, _amount);
 
-    // Set L1 Adapter as sender
-    mockMessenger.setDomaninMessageSender(address(l1Adapter));
-
-    // usdc init v2 black list usdc address itself
-    require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
-
     // provided enough usdc on l1
     _dealAndApproveUSDC(_currentCaller, _amount);
+
+    // Set L1 Adapter as sender
+    mockMessenger.setDomaninMessageSender(address(l1Adapter));
 
     // cache balances
     uint256 _fromBalanceBefore = usdcMainnet.balanceOf(_currentCaller);
@@ -97,11 +95,11 @@ contract OpUsdcTest is SetupOpUSDC {
     // Avoid balance overflow
     _preventBalanceOverflow(_to, _amount);
 
-    // Set L1 Adapter as sender
-    mockMessenger.setDomaninMessageSender(address(l1Adapter));
-
     // provided enough usdc on l1
     _dealAndApproveUSDC(_signer, _amount);
+
+    // Set L1 Adapter as sender
+    mockMessenger.setDomaninMessageSender(address(l1Adapter));
 
     // cache balances
     uint256 _fromBalanceBefore = usdcMainnet.balanceOf(_signer);
@@ -163,6 +161,7 @@ contract OpUsdcTest is SetupOpUSDC {
     // Avoid balance overflow
     _preventBalanceOverflow(_to, _amount);
 
+    // provided enough usdc on l2
     _dealAndApproveBridgedUSDC(_currentCaller, _amount, _minGasLimit);
 
     // Set L2 Adapter as sender to send the message to l1
@@ -203,10 +202,15 @@ contract OpUsdcTest is SetupOpUSDC {
 
     // Get address from signer private key
     address _signer = hevm.addr(_privateKey);
+    //Forge signature
+    uint256 _nonce = l2Adapter.userNonce(_signer);
+    bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signer, _privateKey, address(l2Adapter));
+    uint256 _deadline = block.timestamp + 1 days;
 
     // Avoid balance overflow
     _preventBalanceOverflow(_to, _amount);
 
+    // provided enough usdc on l2
     _dealAndApproveBridgedUSDC(_signer, _amount, _minGasLimit);
 
     // Set L2 Adapter as sender to send the message to l1
@@ -215,11 +219,6 @@ contract OpUsdcTest is SetupOpUSDC {
     // cache balances
     uint256 _fromBalanceBefore = usdcBridged.balanceOf(_signer);
     uint256 _toBalanceBefore = usdcMainnet.balanceOf(_to);
-
-    //Forge signature
-    uint256 _nonce = l2Adapter.userNonce(_signer);
-    bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signer, _privateKey, address(l2Adapter));
-    uint256 _deadline = block.timestamp + 1 days;
 
     hevm.prank(_currentCaller);
     // Action
@@ -238,22 +237,6 @@ contract OpUsdcTest is SetupOpUSDC {
       assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
     }
   }
-
-  // // Both adapters state should match 4
-  // function fuzz_assertAdapterStateCongruency() public view {
-  //   // Precondition
-
-  //   // TODO: L2 can be still active if L1 is upgragding or paused (bridged msg reverting)
-  //   // TODO: fix to rather check with potential pending msg + include a way to mock bridge sometimes failing on message transfer
-
-  //   // Postcondition
-  //   // 4
-  //   assert(
-  //     l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active
-  //       ? l2Adapter.isMessagingDisabled()
-  //       : !l2Adapter.isMessagingDisabled()
-  //   );
-  // }
 
   // // user nonce should be monotonically increasing  5
   // function fuzz_L1NonceIncremental() public view {
