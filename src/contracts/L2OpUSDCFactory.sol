@@ -103,10 +103,10 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
   ) internal {
     // Initialize the USDC contract
     IUSDC(_usdc).initialize(
-      _usdcInitializeData._tokenName,
-      _usdcInitializeData._tokenSymbol,
-      _usdcInitializeData._tokenCurrency,
-      _usdcInitializeData._tokenDecimals,
+      _usdcInitializeData.tokenName,
+      _usdcInitializeData.tokenSymbol,
+      _usdcInitializeData.tokenCurrency,
+      _usdcInitializeData.tokenDecimals,
       address(this),
       _l2Adapter,
       _l2Adapter,

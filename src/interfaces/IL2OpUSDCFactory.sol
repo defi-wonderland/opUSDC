@@ -8,16 +8,16 @@ interface IL2OpUSDCFactory {
 
   /**
    * @notice The struct to hold the USDC data for the name, symbol, currency, and decimals when initializing
-   * @param _tokenName The name of the USDC token
-   * @param _tokenSymbol The symbol of the USDC token
-   * @param _tokenCurrency The currency that the USDC token represents
-   * @param _tokenDecimals The number of decimals that the USDC token uses
+   * @param tokenName The name of the USDC token
+   * @param tokenSymbol The symbol of the USDC token
+   * @param tokenCurrency The currency that the USDC token represents
+   * @param tokenDecimals The number of decimals that the USDC token uses
    */
   struct USDCInitializeData {
-    string _tokenName;
-    string _tokenSymbol;
-    string _tokenCurrency;
-    uint8 _tokenDecimals;
+    string tokenName;
+    string tokenSymbol;
+    string tokenCurrency;
+    uint8 tokenDecimals;
   }
 
   /*///////////////////////////////////////////////////////////////

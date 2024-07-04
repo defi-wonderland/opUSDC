@@ -76,10 +76,10 @@ abstract contract Base is Test, Helpers {
     });
 
     _usdcInitializeData = IL2OpUSDCFactory.USDCInitializeData({
-      _tokenName: _tokenName,
-      _tokenSymbol: _tokenSymbol,
-      _tokenCurrency: _tokenCurrency,
-      _tokenDecimals: _tokenDecimals
+      tokenName: _tokenName,
+      tokenSymbol: _tokenSymbol,
+      tokenCurrency: _tokenCurrency,
+      tokenDecimals: _tokenDecimals
     });
   }
 
