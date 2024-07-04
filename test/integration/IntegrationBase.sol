@@ -132,7 +132,7 @@ contract IntegrationBase is Helpers {
   ) internal {
     l2MessageNonce = L2_MESSENGER.messageNonce();
 
-    bytes memory _l2FactoryCArgs = abi.encode(_l1Adapter);
+    bytes memory _l2FactoryCArgs = abi.encode(l1Factory, L2_MESSENGER, _l1Adapter);
     bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
 
     bytes memory _factoryDeploymentTx =
