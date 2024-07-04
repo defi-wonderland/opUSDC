@@ -18,6 +18,7 @@ contract OpUsdcTest is SetupOpUSDC {
   uint256 internal _ghost_L1PreviousUserNonce;
   uint256 internal _ghost_L1CurrentUserNonce;
   bool internal _ghost_hasBeenDeprecatedBefore; // Track if setBurnAmount has been called once before
+  bool internal _ghost_ownerAndAdminTransferred; // Track if the ownership has been transferred once before
   mapping(address => bool) internal _ghost_l2AdapterDeployed;
   mapping(address => bool) internal _ghost_l2FactoryDeployed;
 
@@ -36,457 +37,462 @@ contract OpUsdcTest is SetupOpUSDC {
   //   assert(l1Adapter.USDC() == address(usdcMainnet));
   // }
 
-  // todo: craft valid signature for the overloaded send message
-  // New messages should not be sent if the state is not active 1
+  // Property Id(1): New messages should not be sent if the state is not active
   function fuzz_noMessageIfNotActiveL1(address _to, uint256 _amount, uint32 _minGasLimit) public agentOrDeployer {
     // Precondition
-    // todo: clean this mess
-    // todo: modifiers for balance of and mint/approval
-
-    // Insure we're using the correct xdom sender (for the receiving end/linked l2)
-    // require(mockMessenger.xDomainMessageSender() == address(l1Adapter));
+    require(_amount > 0);
 
     // Avoid balance overflow
-    require(usdcMainnet.balanceOf(_to) < 2 ** 255 - 1 - _amount);
-    require(usdcBridged.balanceOf(_to) < 2 ** 255 - 1 - _amount);
-    require(usdcMainnet.balanceOf(address(l1Adapter)) < 2 ** 255 - 1 - _amount);
+    _preventBalanceOverflow(_to, _amount);
+
+    // Set L1 Adapter as sender
+    mockMessenger.setDomaninMessageSender(address(l1Adapter));
 
     // usdc init v2 black list usdc address itself
-    require(_to != address(0) && _to != address(usdcMainnet) && _to != address(usdcBridged));
+    require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
 
     // provided enough usdc on l1
-    require(_amount > 0);
-    hevm.prank(_usdcMinter);
-    usdcMainnet.mint(_currentCaller, _amount);
+    _dealAndApproveUSDC(_currentCaller, _amount);
 
-    hevm.prank(_currentCaller);
-    usdcMainnet.approve(address(l1Adapter), _amount);
-
+    // cache balances
     uint256 _fromBalanceBefore = usdcMainnet.balanceOf(_currentCaller);
+    uint256 _toBalanceBefore = usdcBridged.balanceOf(_to);
 
     hevm.prank(_currentCaller);
     // Action
     try l1Adapter.sendMessage(_to, _amount, _minGasLimit) {
       // Postcondition
       assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
-      // assert(usdcBridged.balanceOf(_to) == _toBalanceBefore + _amount);
       assert(usdcMainnet.balanceOf(_currentCaller) == _fromBalanceBefore - _amount);
+      //Property Id(2)
+      assert(usdcBridged.balanceOf(_to) == _toBalanceBefore + _amount);
     } catch {
       // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
       assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active);
-      // assert(usdcBridged.balanceOf(_to) == _toBalanceBefore);
       assert(usdcMainnet.balanceOf(_currentCaller) == _fromBalanceBefore);
+      //Property Id(2)
+      assert(usdcBridged.balanceOf(_to) == _toBalanceBefore);
     }
   }
 
-  function fuzz_noSignedMessageIfNotActiveL1(uint256 _signerPrivate, uint256 _amount, uint32 _minGasLimit) public {
-    require(_signerPrivate != 0);
-    address _signerAd = hevm.addr(_signerPrivate);
+  // Property Id(1): New messages should not be sent if the state is not active
+  function fuzz_noSignedMessageIfNotActiveL1(
+    address _to,
+    uint256 _privateKey,
+    uint256 _amount,
+    uint32 _minGasLimit
+  ) public {
+    // Precondition
+    require(_amount > 0);
+    require(_privateKey != 0);
+    require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
 
-    require(usdcMainnet.balanceOf(_signerAd) < 2 ** 255 - 1 - _amount);
-    require(usdcBridged.balanceOf(_signerAd) < 2 ** 255 - 1 - _amount);
-    require(usdcMainnet.balanceOf(address(l1Adapter)) < 2 ** 255 - 1 - _amount);
+    // Get address from signer private key
+    address _signer = hevm.addr(_privateKey);
+    // forge signature
+    uint256 _nonce = l1Adapter.userNonce(_signer);
+    uint256 _deadline = block.timestamp + 1 days;
+    bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signer, _privateKey, address(l1Adapter));
 
-    // usdc init v2 black list usdc address itself
-    require(_signerAd != address(0) && _signerAd != address(usdcMainnet) && _signerAd != address(usdcBridged));
+    // Avoid balance overflow
+    _preventBalanceOverflow(_to, _amount);
+
+    // Set L1 Adapter as sender
+    mockMessenger.setDomaninMessageSender(address(l1Adapter));
 
     // provided enough usdc on l1
-    require(_amount > 0);
-    hevm.prank(_usdcMinter);
-    usdcMainnet.mint(_signerAd, _amount);
+    _dealAndApproveUSDC(_signer, _amount);
 
-    hevm.prank(_signerAd);
-    usdcMainnet.approve(address(l1Adapter), _amount);
-
-    uint256 _fromBalanceBefore = usdcMainnet.balanceOf(_signerAd);
+    // cache balances
+    uint256 _fromBalanceBefore = usdcMainnet.balanceOf(_signer);
+    uint256 _toBalanceBefore = usdcBridged.balanceOf(_to);
 
     hevm.prank(_currentCaller);
 
-    uint256 _nonce = l1Adapter.userNonce(_signerAd);
-    bytes memory _signature =
-      _generateSignature(_signerAd, _amount, _nonce, _signerAd, _signerPrivate, address(l1Adapter));
-    uint256 _deadline = block.timestamp + 1 days;
-
-    try l1Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _minGasLimit) {
+    try l1Adapter.sendMessage(_signer, _to, _amount, _signature, _deadline, _minGasLimit) {
       // Postcondition
       assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
-      // assert(usdcBridged.balanceOf(_to) == _toBalanceBefore + _amount);
-      assert(usdcMainnet.balanceOf(_signerAd) == _fromBalanceBefore - _amount);
+      assert(usdcMainnet.balanceOf(_signer) == _fromBalanceBefore - _amount);
+      //Property Id(2)
+      assert(usdcBridged.balanceOf(_to) == _toBalanceBefore + _amount);
     } catch {
       // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
       assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active);
-      // assert(usdcBridged.balanceOf(_to) == _toBalanceBefore);
-      assert(usdcMainnet.balanceOf(_signerAd) == _fromBalanceBefore);
+      assert(usdcMainnet.balanceOf(_signer) == _fromBalanceBefore);
+      //Property Id(2)
+      assert(usdcBridged.balanceOf(_to) == _toBalanceBefore);
     }
   }
 
-  // User who bridges tokens should receive them on the destination chain      2
-  function fuzz_receiveL2Token(bytes calldata message) public view {
+  // Property Id(2): Can receive USDC even if the state is not active
+  function fuzz_receiveMessageIfNotActiveL1(address _to, uint256 _amount) public agentOrDeployer {
     // Precondition
-    // There is a pending message to be executed
-    require(mockMessenger.isInQueue(address(l2Adapter), message, address(l1Adapter)));
-  }
-
-  // todo: craft valid signature for the overloaded send mnessage
-  // New messages should not be sent if the state is not active 1
-  // User who bridges tokens should receive them on the destination chain 2
-  // Amount locked on L1 == amount minted on L2 3
-  function fuzz_noMessageIfNotActiveL2(address _to, uint256 _amount, uint32 _minGasLimit) public agentOrDeployer {
-    // Avoid balance overflow
-    require(usdcMainnet.balanceOf(_to) < 2 ** 255 - 1 - _amount);
-    require(usdcBridged.balanceOf(_to) < 2 ** 255 - 1 - _amount);
-
-    // usdc init v2 black list usdc address itself
-    require(!(_to == address(0) || _to == address(usdcBridged)));
     require(_amount > 0);
-    require(usdcBridged.balanceOf(_currentCaller) >= _amount);
-    hevm.prank(_currentCaller);
-    usdcBridged.approve(address(l2Adapter), _amount);
+    require(_to != address(0) && _to != address(usdcMainnet) && _to != address(usdcBridged));
+    require(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active);
 
-    uint256 _fromBalanceBefore = usdcBridged.balanceOf(_currentCaller);
+    // provided enough usdc on l1
+    hevm.prank(_usdcMinter);
+    usdcMainnet.mint(address(l1Adapter), _amount);
+
+    // Set L1 Adapter as sender
+    mockMessenger.setDomaninMessageSender(address(l2Adapter));
+
+    // cache balances
     uint256 _toBalanceBefore = usdcMainnet.balanceOf(_to);
 
-    hevm.prank(_currentCaller);
-
+    hevm.prank(l1Adapter.MESSENGER());
     // Action
-    try l2Adapter.sendMessage(_to, _amount, _minGasLimit) {
-      // Correct xdomain sender?
-      assert(mockMessenger.xDomainMessageSender() == address(l2Adapter));
-
-      // 1
-      assert(!l2Adapter.isMessagingDisabled());
-
-      // 2
-      assert(usdcBridged.balanceOf(_currentCaller) == _fromBalanceBefore - _amount);
-      assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
-
-      // 3
-      assert(usdcMainnet.balanceOf(address(l1Adapter)) == usdcBridged.totalSupply());
-    } catch {
+    try l1Adapter.receiveMessage(_to, _amount) {
       // Postcondition
-      assert(false);
-      // 1
-      assert(l2Adapter.isMessagingDisabled());
-
-      // 2
-      assert(usdcBridged.balanceOf(_currentCaller) == _fromBalanceBefore);
+      //Property Id(2)
+      if (_to == l1Adapter.MESSENGER()) assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
+      else assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
+    } catch {
+      //Property Id(2)
       assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
     }
   }
 
-  // function fuzz_noSignedMessageIfNotActiveL2(uint256 _signerPrivate, uint256 _amount, uint32 _minGasLimit) public {
-  //   require(_signerPrivate != 0);
-  //   address _signerAd = hevm.addr(_signerPrivate);
+  // Property Id(1): New messages should not be sent if the state is not active
+  function fuzz_noMessageIfNotActiveL2(address _to, uint256 _amount, uint32 _minGasLimit) public agentOrDeployer {
+    // Preconditions
+    require(_amount > 0);
+    require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
 
-  //   require(usdcMainnet.balanceOf(_signerAd) < 2 ** 255 - 1 - _amount);
-  //   require(usdcBridged.balanceOf(_signerAd) < 2 ** 255 - 1 - _amount);
+    // Avoid balance overflow
+    _preventBalanceOverflow(_to, _amount);
 
-  //   require(!(_signerAd == address(0) || _signerAd == address(usdcBridged)));
+    _dealAndApproveBridgedUSDC(_currentCaller, _amount, _minGasLimit);
 
-  //   // provided enough usdc on l2
-  //   require(_amount > 0);
-  //   hevm.prank(_usdcMinter);
-  //   usdcMainnet.mint(_currentCaller, _amount);
-  //   hevm.prank(_currentCaller);
-  //   l1Adapter.sendMessage(_signerAd, _amount, _minGasLimit);
+    // Set L2 Adapter as sender to send the message to l1
+    mockMessenger.setDomaninMessageSender(address(l2Adapter));
 
-  //   hevm.prank(_signerAd);
-  //   usdcBridged.approve(address(l2Adapter), _amount);
+    // cache balances
+    uint256 _fromBalanceBefore = usdcBridged.balanceOf(_currentCaller);
+    uint256 _toBalanceBefore = usdcMainnet.balanceOf(_to);
 
-  //   uint256 _fromBalanceBefore = usdcBridged.balanceOf(_signerAd);
+    hevm.prank(_currentCaller);
+    // Action
+    try l2Adapter.sendMessage(_to, _amount, _minGasLimit) {
+      // Postcondition
+      assert(!l2Adapter.isMessagingDisabled());
+      assert(usdcBridged.balanceOf(_currentCaller) == _fromBalanceBefore - _amount);
+      //Property Id(2)
+      if (_to == address(l1Adapter)) assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
+      else assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
+    } catch {
+      // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
+      assert(l2Adapter.isMessagingDisabled());
+      assert(usdcBridged.balanceOf(_currentCaller) == _fromBalanceBefore);
+      //Property Id(2)
+      assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
+    }
+  }
 
-  //   hevm.prank(_currentCaller);
+  function fuzz_noSignedMessageIfNotActiveL2(
+    address _to,
+    uint256 _privateKey,
+    uint256 _amount,
+    uint32 _minGasLimit
+  ) public {
+    // Preconditions
+    require(_amount > 0);
+    require(_privateKey != 0);
+    require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
 
-  //   uint256 _nonce = l2Adapter.userNonce(_signerAd);
-  //   bytes memory _signature =
-  //     _generateSignature(_signerAd, _amount, _nonce, _signerAd, _signerPrivate, address(l2Adapter));
-  //   uint256 _deadline = block.timestamp + 1 days;
+    // Get address from signer private key
+    address _signer = hevm.addr(_privateKey);
 
-  //   try l2Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _minGasLimit) {
-  //     // Postcondition
+    // Avoid balance overflow
+    _preventBalanceOverflow(_to, _amount);
 
-  //     // Correct xdomain sender?
-  //     assert(mockMessenger.xDomainMessageSender() == address(l1Adapter));
+    _dealAndApproveBridgedUSDC(_signer, _amount, _minGasLimit);
 
-  //     // 1
-  //     assert(!l2Adapter.isMessagingDisabled());
+    // Set L2 Adapter as sender to send the message to l1
+    mockMessenger.setDomaninMessageSender(address(l2Adapter));
 
-  //     // 2
-  //     assert(usdcBridged.balanceOf(_signerAd) == _fromBalanceBefore - _amount);
+    // cache balances
+    uint256 _fromBalanceBefore = usdcBridged.balanceOf(_signer);
+    uint256 _toBalanceBefore = usdcMainnet.balanceOf(_to);
 
-  //     // 3
-  //     assert(usdcMainnet.balanceOf(address(l1Adapter)) == usdcBridged.totalSupply());
-  //   } catch {
-  //     // 1
-  //     assert(l2Adapter.isMessagingDisabled());
+    //Forge signature
+    uint256 _nonce = l2Adapter.userNonce(_signer);
+    bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signer, _privateKey, address(l2Adapter));
+    uint256 _deadline = block.timestamp + 1 days;
 
-  //     // 2
-  //     assert(usdcBridged.balanceOf(_signerAd) == _fromBalanceBefore);
+    hevm.prank(_currentCaller);
+    // Action
+    try l2Adapter.sendMessage(_signer, _to, _amount, _signature, _deadline, _minGasLimit) {
+      // Postcondition
+      assert(!l2Adapter.isMessagingDisabled());
+      assert(usdcBridged.balanceOf(_signer) == _fromBalanceBefore - _amount);
+      //Property Id(2)
+      if (_to == address(l1Adapter)) assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
+      else assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
+    } catch {
+      // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
+      assert(l2Adapter.isMessagingDisabled());
+      assert(usdcBridged.balanceOf(_signer) == _fromBalanceBefore);
+      //Property Id(2)
+      assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
+    }
+  }
+
+  // // Both adapters state should match 4
+  // function fuzz_assertAdapterStateCongruency() public view {
+  //   // Precondition
+
+  //   // TODO: L2 can be still active if L1 is upgragding or paused (bridged msg reverting)
+  //   // TODO: fix to rather check with potential pending msg + include a way to mock bridge sometimes failing on message transfer
+
+  //   // Postcondition
+  //   // 4
+  //   assert(
+  //     l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active
+  //       ? l2Adapter.isMessagingDisabled()
+  //       : !l2Adapter.isMessagingDisabled()
+  //   );
+  // }
+
+  // // user nonce should be monotonically increasing  5
+  // function fuzz_L1NonceIncremental() public view {
+  //   if (_ghost_L1CurrentUserNonce == 0) {
+  //     assert(l1Adapter.userNonce(_currentCaller) == 0);
+  //   } else {
+  //     assert(_ghost_L1PreviousUserNonce == _ghost_L1CurrentUserNonce - 1);
   //   }
   // }
 
-  // Both adapters state should match 4
-  function fuzz_assertAdapterStateCongruency() public view {
-    // Precondition
+  // // Locked USDC on L1adapter should be able to be burned only if L1 adapter is deprecated
+  // function fuzz_BurnLockedUSDC() public {
+  //   // Enable l1 adapter to burn locked usdc
+  //   hevm.prank(usdcMainnet.masterMinter());
+  //   usdcMainnet.configureMinter(address(l1Adapter), type(uint256).max);
 
-    // TODO: L2 can be still active if L1 is upgragding or paused (bridged msg reverting)
-    // TODO: fix to rather check with potential pending msg + include a way to mock bridge sometimes failing on message transfer
+  //   require(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading);
 
-    // Postcondition
-    // 4
-    assert(
-      l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active
-        ? l2Adapter.isMessagingDisabled()
-        : !l2Adapter.isMessagingDisabled()
-    );
-  }
+  //   hevm.prank(l1Adapter.burnCaller());
+  //   // 6
+  //   try l1Adapter.burnLockedUSDC() {
+  //     assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated);
+  //     assert(usdcMainnet.balanceOf(address(l1Adapter)) == 0);
+  //   } catch {
+  //     assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Deprecated);
+  //   }
+  // }
 
-  // user nonce should be monotonically increasing  5
-  function fuzz_L1NonceIncremental() public view {
-    if (_ghost_L1CurrentUserNonce == 0) {
-      assert(l1Adapter.userNonce(_currentCaller) == 0);
-    } else {
-      assert(_ghost_L1PreviousUserNonce == _ghost_L1CurrentUserNonce - 1);
-    }
-  }
+  // // Status pause should be able to be set only by the owner and through the correct function
+  // function fuzz_PauseMessaging(uint32 _minGasLimit) public agentOrDeployer {
+  //   // Precondition
+  //   IL1OpUSDCBridgeAdapter.Status _previousL1Status = l1Adapter.messengerStatus();
 
-  // Locked USDC on L1adapter should be able to be burned only if L1 adapter is deprecated
-  function fuzz_BurnLockedUSDC() public {
-    // Enable l1 adapter to burn locked usdc
-    hevm.prank(usdcMainnet.masterMinter());
-    usdcMainnet.configureMinter(address(l1Adapter), type(uint256).max);
+  //   hevm.prank(_currentCaller);
+  //   // Action
+  //   // 7
+  //   try l1Adapter.stopMessaging(_minGasLimit) {
+  //     // Post condition
+  //     assert(_currentCaller == l1Adapter.owner());
+  //     assert(
+  //       _previousL1Status == IL1OpUSDCBridgeAdapter.Status.Active
+  //         || _previousL1Status == IL1OpUSDCBridgeAdapter.Status.Paused
+  //     );
+  //     assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Paused);
+  //     // TODO: check the stop messaging on l2 was succesful too
+  //     //assert(l2Adapter.isMessagingDisabled());
+  //   } catch {
+  //     assert(
+  //       l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active
+  //         || l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Paused || _currentCaller != l1Adapter.owner()
+  //     );
+  //   }
+  // }
 
-    require(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading);
+  // // Resume should be able to be set only by the owner and through the correct function
+  // function fuzz_ResumeMessaging(uint32 _minGasLimit) public agentOrDeployer {
+  //   IL1OpUSDCBridgeAdapter.Status _previousL1Status = l1Adapter.messengerStatus();
 
-    hevm.prank(l1Adapter.burnCaller());
-    // 6
-    try l1Adapter.burnLockedUSDC() {
-      assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated);
-      assert(usdcMainnet.balanceOf(address(l1Adapter)) == 0);
-    } catch {
-      assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Deprecated);
-    }
-  }
+  //   hevm.prank(_currentCaller);
+  //   // 8
+  //   try l1Adapter.resumeMessaging(_minGasLimit) {
+  //     assert(_currentCaller == l1Adapter.owner());
+  //     assert(
+  //       _previousL1Status == IL1OpUSDCBridgeAdapter.Status.Active
+  //         || _previousL1Status == IL1OpUSDCBridgeAdapter.Status.Paused
+  //     );
+  //     assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
+  //     // TODO: check the stop messaging on l2 was succesful too
+  //     //assert(!l2Adapter.isMessagingDisabled());
+  //   } catch {
+  //     assert(
+  //       l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active
+  //         || l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Paused || _currentCaller != l1Adapter.owner()
+  //     );
+  //   }
+  // }
 
-  // Status pause should be able to be set only by the owner and through the correct function
-  function fuzz_PauseMessaging(uint32 _minGasLimit) public agentOrDeployer {
-    // Precondition
-    IL1OpUSDCBridgeAdapter.Status _previousL1Status = l1Adapter.messengerStatus();
+  // // todo: fix (try never succeed?) - first try again with more runs (needs to msg l2, then msg back l1)
+  // // Set burn only if migrating  9
+  // function fuzz_setBurnAmount() public {
+  //   // Precondition
+  //   uint256 _previousBurnAmount = l1Adapter.burnAmount();
+  //   uint256 _l2totalSupply = usdcBridged.totalSupply();
+  //   IL1OpUSDCBridgeAdapter.Status _previousState = l1Adapter.messengerStatus();
 
-    hevm.prank(_currentCaller);
-    // Action
-    // 7
-    try l1Adapter.stopMessaging(_minGasLimit) {
-      // Post condition
-      assert(_currentCaller == l1Adapter.owner());
-      assert(
-        _previousL1Status == IL1OpUSDCBridgeAdapter.Status.Active
-          || _previousL1Status == IL1OpUSDCBridgeAdapter.Status.Paused
-      );
-      assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Paused);
-      // TODO: check the stop messaging on l2 was succesful too
-      //assert(l2Adapter.isMessagingDisabled());
-    } catch {
-      assert(
-        l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active
-          || l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Paused || _currentCaller != l1Adapter.owner()
-      );
-    }
-  }
+  //   // Ensure the message is in the queue, to the l1adapter, from the l2 adapter
+  //   require(
+  //     mockMessenger.isInQueue(
+  //       address(l1Adapter), abi.encodeWithSignature('setBurnAmount(uint256)', _l2totalSupply), address(l2Adapter)
+  //     )
+  //   );
 
-  // Resume should be able to be set only by the owner and through the correct function
-  function fuzz_ResumeMessaging(uint32 _minGasLimit) public agentOrDeployer {
-    IL1OpUSDCBridgeAdapter.Status _previousL1Status = l1Adapter.messengerStatus();
+  //   hevm.prank(l1Adapter.MESSENGER());
+  //   // Action
+  //   // 9
+  //   try l1Adapter.setBurnAmount(_l2totalSupply) {
+  //     //Precontion
+  //     assert(_previousState == IL1OpUSDCBridgeAdapter.Status.Upgrading);
+  //     // Postcondition
+  //     assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated);
+  //     assert(l1Adapter.burnAmount() == _l2totalSupply);
+  //     _ghost_hasBeenDeprecatedBefore = true;
+  //   } catch {
+  //     assert(l1Adapter.burnAmount() == _previousBurnAmount);
+  //   }
+  // }
 
-    hevm.prank(_currentCaller);
-    // 8
-    try l1Adapter.resumeMessaging(_minGasLimit) {
-      assert(_currentCaller == l1Adapter.owner());
-      assert(
-        _previousL1Status == IL1OpUSDCBridgeAdapter.Status.Active
-          || _previousL1Status == IL1OpUSDCBridgeAdapter.Status.Paused
-      );
-      assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
-      // TODO: check the stop messaging on l2 was succesful too
-      //assert(!l2Adapter.isMessagingDisabled());
-    } catch {
-      assert(
-        l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active
-          || l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Paused || _currentCaller != l1Adapter.owner()
-      );
-    }
-  }
+  // ///Deprecated state should be irreversible  10
+  // function fuzz_deprecatedIrreversible() public {
+  //   // If the l1 adapter has been deprecated once before, it cannot have any other status ever again
+  //   if (_ghost_hasBeenDeprecatedBefore) assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated);
+  // }
 
-  // todo: fix (try never succeed?) - first try again with more runs (needs to msg l2, then msg back l1)
-  // Set burn only if migrating  9
-  function fuzz_setBurnAmount() public {
-    // Precondition
-    uint256 _previousBurnAmount = l1Adapter.burnAmount();
-    uint256 _l2totalSupply = usdcBridged.totalSupply();
-    IL1OpUSDCBridgeAdapter.Status _previousState = l1Adapter.messengerStatus();
+  // // Upgrading state only via migrate to native, should be callable multiple times (msg fails)
+  // function fuzz_migrateToNativeMultipleCall(address _burnCaller, address _roleCaller) public {
+  //   // Precondition
+  //   // Insure we haven't started the migration or we only initiated/is pending in the bridge
+  //   require(
+  //     l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active
+  //       || l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading
+  //   );
 
-    // Ensure the message is in the queue, to the l1adapter, from the l2 adapter
-    require(
-      mockMessenger.isInQueue(
-        address(l1Adapter), abi.encodeWithSignature('setBurnAmount(uint256)', _l2totalSupply), address(l2Adapter)
-      )
-    );
+  //   require(_burnCaller != address(0) && _roleCaller != address(0));
+  //   // Action
+  //   // 11
+  //   try l1Adapter.migrateToNative(_burnCaller, _roleCaller, 0, 0) {
+  //     assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading);
+  //   } catch {}
 
-    hevm.prank(l1Adapter.MESSENGER());
-    // Action
-    // 9
-    try l1Adapter.setBurnAmount(_l2totalSupply) {
-      //Precontion
-      assert(_previousState == IL1OpUSDCBridgeAdapter.Status.Upgrading);
-      // Postcondition
-      assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated);
-      assert(l1Adapter.burnAmount() == _l2totalSupply);
-      _ghost_hasBeenDeprecatedBefore = true;
-    } catch {
-      assert(l1Adapter.burnAmount() == _previousBurnAmount);
-    }
-  }
+  //   // try calling a second time
+  //   try l1Adapter.migrateToNative(_burnCaller, _roleCaller, 0, 0) {}
+  //   catch {
+  //     assert(false);
+  //   }
 
-  ///Deprecated state should be irreversible  10
-  function fuzz_deprecatedIrreversible() public {
-    // If the l1 adapter has been deprecated once before, it cannot have any other status ever again
-    if (_ghost_hasBeenDeprecatedBefore) assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated);
-  }
+  //   // Postcondition
+  //   assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading);
+  // }
 
-  // Upgrading state only via migrate to native, should be callable multiple times (msg fails)
-  function fuzz_migrateToNativeMultipleCall(address _burnCaller, address _roleCaller) public {
-    // Precondition
-    // Insure we haven't started the migration or we only initiated/is pending in the bridge
-    require(
-      l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active
-        || l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading
-    );
+  // // All in flight transactions should successfully settle after a migration to native usdc 12
+  // // we leverage the mock bridge queue (fifo)
+  // function fuzz_noDropPendingTxWhenMigration() public {
+  //   // preconditions
 
-    require(_burnCaller != address(0) && _roleCaller != address(0));
-    // Action
-    // 11
-    try l1Adapter.migrateToNative(_burnCaller, _roleCaller, 0, 0) {
-      assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading);
-    } catch {}
+  //   // action
 
-    // try calling a second time
-    try l1Adapter.migrateToNative(_burnCaller, _roleCaller, 0, 0) {}
-    catch {
-      assert(false);
-    }
+  //   // add to bridge queue
+  //   // send msg to l1 [USDC to l1]
+  //   // send msg to l2  [USDC to l1, USDC to l2]
+  //   // migration [USDC to l1, USDC to l2, receiveMigrateToNative]
 
-    // Postcondition
-    assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading);
-  }
+  //   // execute: [USDC to l1, USDC to l2, receiveMigrateToNative] then [USDC to l2, receiveMigrateToNative] then [receiveMigrateToNative] then [setBurnAmount]
 
-  // All in flight transactions should successfully settle after a migration to native usdc 12
-  // we leverage the mock bridge queue (fifo)
-  function fuzz_noDropPendingTxWhenMigration() public {
-    // preconditions
+  //   // add to queue
+  //   // send msg to l1 [setBurnAmount, USDC to l1]
+  //   // send msg to l2 [setBurnAmount, USDC to l1, USDC to l2]
 
-    // action
+  //   // execute [setBurnAmount, USDC to l1, USDC to l2] then [USDC to l1, USDC to l2] then [USDC to l2]
 
-    // add to bridge queue
-    // send msg to l1 [USDC to l1]
-    // send msg to l2  [USDC to l1, USDC to l2]
-    // migration [USDC to l1, USDC to l2, receiveMigrateToNative]
+  //   // postconditions
+  //   // balance are correct
+  //   // sending msg is now paused
+  // }
 
-    // execute: [USDC to l1, USDC to l2, receiveMigrateToNative] then [USDC to l2, receiveMigrateToNative] then [receiveMigrateToNative] then [setBurnAmount]
+  // // todo: add adapters to agents? Force calling from the adapter?
+  // // Bridged USDC Proxy should only be upgradeable through the L2 Adapter  13
+  // function fuzz_proxyUpgradeOnlyThroughL2() public agentOrDeployer {
+  //   // Precondition
 
-    // add to queue
-    // send msg to l1 [setBurnAmount, USDC to l1]
-    // send msg to l2 [setBurnAmount, USDC to l1, USDC to l2]
+  //   // Action
+  //   // 13
+  // }
 
-    // execute [setBurnAmount, USDC to l1, USDC to l2] then [USDC to l1, USDC to l2] then [USDC to l2]
+  // // | Incoming successful messages should only come from the linked adapter's                                     | High level          | 14    | [ ]  | [ ]  |
 
-    // postconditions
-    // balance are correct
-    // sending msg is now paused
-  }
+  // // Any chain should be able to have as many protocols deployed without the factory blocking deployments 15
+  // // Protocols deployed on one L2 should never have a matching address with a protocol on a different L2 16
+  // function fuzz_factoryNeverFailsToDeploy() public agentOrDeployer {
+  //   bytes[] memory usdcInitTxns = new bytes[](3);
+  //   usdcInitTxns[0] = USDCInitTxs.INITIALIZEV2;
+  //   usdcInitTxns[1] = USDCInitTxs.INITIALIZEV2_1;
+  //   usdcInitTxns[2] = USDCInitTxs.INITIALIZEV2_2;
 
-  // todo: add adapters to agents? Force calling from the adapter?
-  // Bridged USDC Proxy should only be upgradeable through the L2 Adapter  13
-  function fuzz_proxyUpgradeOnlyThroughL2() public agentOrDeployer {
-    // Precondition
+  //   IL1OpUSDCFactory.L2Deployments memory _l2Deployments =
+  //     IL1OpUSDCFactory.L2Deployments(address(this), USDC_IMPLEMENTATION_CREATION_CODE, usdcInitTxns, 3_000_000);
 
-    // Action
-    // 13
-  }
+  //   try factory.deploy(address(mockMessenger), _currentCaller, _l2Deployments) returns (
+  //     address, address _l2Factory, address _l2Adapter
+  //   ) {
+  //     // Postcondition
+  //     // 15
+  //     // Deployment msg is in the bridge queue
 
-  // | Incoming successful messages should only come from the linked adapter's                                     | High level          | 14    | [ ]  | [ ]  |
+  //     // l1 adapter deployed
 
-  // Any chain should be able to have as many protocols deployed without the factory blocking deployments 15
-  // Protocols deployed on one L2 should never have a matching address with a protocol on a different L2 16
-  function fuzz_factoryNeverFailsToDeploy() public agentOrDeployer {
-    bytes[] memory usdcInitTxns = new bytes[](3);
-    usdcInitTxns[0] = USDCInitTxs.INITIALIZEV2;
-    usdcInitTxns[1] = USDCInitTxs.INITIALIZEV2_1;
-    usdcInitTxns[2] = USDCInitTxs.INITIALIZEV2_2;
+  //     // 16 - no matching address on different L2
+  //     assert(!_ghost_l2AdapterDeployed[_l2Adapter]);
+  //     assert(!_ghost_l2FactoryDeployed[_l2Factory]);
 
-    IL1OpUSDCFactory.L2Deployments memory _l2Deployments =
-      IL1OpUSDCFactory.L2Deployments(address(this), USDC_IMPLEMENTATION_CREATION_CODE, usdcInitTxns, 3_000_000);
+  //     _ghost_l2AdapterDeployed[_l2Adapter] = true;
+  //     _ghost_l2FactoryDeployed[_l2Factory] = true;
+  //   } catch {}
+  // }
 
-    try factory.deploy(address(mockMessenger), _currentCaller, _l2Deployments) returns (
-      address, address _l2Factory, address _l2Adapter
-    ) {
-      // Postcondition
-      // 15
-      // Deployment msg is in the bridge queue
+  // // USDC proxy admin and token ownership rights on l2 can only be transferred after the migration to native flow  17
+  // function fuzz_onlyMigrateToNativeForOwnershipTransfer(address _newOwner) public {
+  //   // Precondition
+  //   //Insure the adapter has received the migration to native message
+  //   require(l2Adapter.isMessagingDisabled());
+  //   require(l2Adapter.roleCaller() != address(0));
+  //   //Insura that the new owner is not the zero address, transfer ownership to the zero address is not allowed
+  //   require(_newOwner != address(0));
+  //   //Insure the USDC is owned by the adapter meaning the migration has not been done yet
+  //   require(usdcBridged.owner() == address(l2Adapter) && usdcBridged.admin() == address(l2Adapter));
 
-      // l1 adapter deployed
+  //   hevm.prank(l2Adapter.roleCaller());
+  //   // Action
+  //   try l2Adapter.transferUSDCRoles(_newOwner) {
+  //     // 17
+  //     // Postcondition
+  //     assert(usdcBridged.owner() == _newOwner);
+  //     assert(usdcBridged.admin() == _currentCaller);
+  //   } catch {
+  //     // Postcondition
+  //     assert(usdcBridged.owner() == address(l2Adapter));
+  //     assert(usdcBridged.admin() == address(l2Adapter));
+  //   }
+  //   // 17
+  // }
 
-      // 16 - no matching address on different L2
-      assert(!_ghost_l2AdapterDeployed[_l2Adapter]);
-      assert(!_ghost_l2FactoryDeployed[_l2Factory]);
-
-      _ghost_l2AdapterDeployed[_l2Adapter] = true;
-      _ghost_l2FactoryDeployed[_l2Factory] = true;
-    } catch {}
-  }
-
-  // USDC proxy admin and token ownership rights on l2 can only be transferred after the migration to native flow  17
-  function fuzz_onlyMigrateToNativeForOwnershipTransfer(address _newOwner) public {
-    // Precondition
-    //Insure the adapter has received the migration to native message
-    require(l2Adapter.isMessagingDisabled());
-    require(l2Adapter.roleCaller() != address(0));
-    //Insura that the new owner is not the zero address, transfer ownership to the zero address is not allowed
-    require(_newOwner != address(0));
-    //Insure the USDC is owned by the adapter meaning the migration has not been done yet
-    require(usdcBridged.owner() == address(l2Adapter) && usdcBridged.admin() == address(l2Adapter));
-
-    hevm.prank(l2Adapter.roleCaller());
-    // Action
-    try l2Adapter.transferUSDCRoles(_newOwner) {
-      // 17
-      // Postcondition
-      assert(usdcBridged.owner() == _newOwner);
-      assert(usdcBridged.admin() == _currentCaller);
-    } catch {
-      // Postcondition
-      assert(usdcBridged.owner() == address(l2Adapter));
-      assert(usdcBridged.admin() == address(l2Adapter));
-    }
-    // 17
-  }
-
-  // Status should either be active, paused, upgrading or deprecated
-  function fuzz_correctStatus() public {
-    assert(
-      l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active
-        || l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Paused
-        || l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading
-        || l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated
-    );
-  }
-
-  /////////////////////////////////////////////////////////////////////
-  //                         Bridge mocking                          //
-  /////////////////////////////////////////////////////////////////////
-
-  function executeMessage() public {
-    mockMessenger.executeMessage();
-  }
+  // // Status should either be active, paused, upgrading or deprecated
+  // function fuzz_correctStatus() public {
+  //   assert(
+  //     l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active
+  //       || l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Paused
+  //       || l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading
+  //       || l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated
+  //   );
+  // }
 
   /////////////////////////////////////////////////////////////////////
   //                Expose target contract selectors                 //
@@ -585,7 +591,9 @@ contract OpUsdcTest is SetupOpUSDC {
     } else if (_selectorIndex == 6) {
       try l2Adapter.callUsdcTransaction(_bytesA) {} catch {}
     } else {
-      try l2Adapter.transferUSDCRoles(_addressA) {} catch {}
+      try l2Adapter.transferUSDCRoles(_addressA) {
+        _ghost_ownerAndAdminTransferred = true;
+      } catch {}
     }
   }
 
@@ -663,6 +671,60 @@ contract OpUsdcTest is SetupOpUSDC {
     mockMessenger.sendMessage(_currentCaller, _payload, _uint32A);
   }
 
+  function generateCallFactory() public agentOrDeployer {}
+
+  function generateCallUSDCL1() public agentOrDeployer {}
+
+  function generateCallUSDCL2() public agentOrDeployer {}
+
+  function generateMessageUSDCL1() public agentOrDeployer {}
+
+  function generateMessageUSDCL2() public agentOrDeployer {}
+
+  // TODO: review this and use different approach if the message is trigger by l1Adapter or l2Adapter
+  function _preventBalanceOverflow(address _to, uint256 _amount) internal view {
+    require(usdcMainnet.balanceOf(_to) < 2 ** 255 - 1 - _amount);
+    require(usdcBridged.balanceOf(_to) < 2 ** 255 - 1 - _amount);
+    require(usdcMainnet.balanceOf(address(l1Adapter)) < 2 ** 255 - 1 - _amount);
+    require(usdcBridged.balanceOf(address(l2Adapter)) < 2 ** 255 - 1 - _amount);
+  }
+
+  function _dealAndApproveUSDC(address _from, uint256 _amount) internal {
+    // provided enough usdc on l1
+    hevm.prank(_usdcMinter);
+    usdcMainnet.mint(_from, _amount);
+
+    // approve the adapter to spend the usdc
+    hevm.prank(_from);
+    usdcMainnet.approve(address(l1Adapter), _amount);
+  }
+
+  /**
+   * @dev Provides bridged USDC through the L1 adapter to not bypass the logic.
+   */
+  function _dealAndApproveBridgedUSDC(address _from, uint256 _amount, uint32 _minGasLimit) internal {
+    address _currentXDomainSender = mockMessenger.xDomainMessageSender();
+    // provided enough usdc on l1
+    hevm.prank(_usdcMinter);
+    usdcMainnet.mint(_from, _amount);
+
+    hevm.prank(_from);
+    usdcMainnet.approve(address(l1Adapter), _amount);
+
+    // Set L1 Adapter as sender to send the message to l2
+    mockMessenger.setDomaninMessageSender(address(l1Adapter));
+
+    hevm.prank(_from);
+    l1Adapter.sendMessage(_from, _amount, _minGasLimit);
+
+    // Approve the L2 adapter to spend the bridgedUSDC
+    hevm.prank(_from);
+    usdcBridged.approve(address(l2Adapter), _amount);
+
+    // Reset the xDomain sender
+    mockMessenger.setDomaninMessageSender(_currentXDomainSender);
+  }
+
   function _generateSignature(
     address _to,
     uint256 _amount,
@@ -676,14 +738,4 @@ contract OpUsdcTest is SetupOpUSDC {
     (uint8 v, bytes32 r, bytes32 s) = hevm.sign(_signerPk, _digest);
     _signature = abi.encodePacked(r, s, v);
   }
-
-  function generateCallFactory() public agentOrDeployer {}
-
-  function generateCallUSDCL1() public agentOrDeployer {}
-
-  function generateCallUSDCL2() public agentOrDeployer {}
-
-  function generateMessageUSDCL1() public agentOrDeployer {}
-
-  function generateMessageUSDCL2() public agentOrDeployer {}
 }
