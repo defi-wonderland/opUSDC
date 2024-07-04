@@ -110,7 +110,7 @@ contract OpUsdcTest_SymbTest is HalmosTest {
   }
 
   // debug: setup
-  function check_maybe() public {
+  function check_setup() public view {
     assert(l2Adapter.LINKED_ADAPTER() == address(l1Adapter));
     assert(l2Adapter.MESSENGER() == address(mockMessenger));
     assert(l2Adapter.USDC() == address(usdcBridged));
@@ -354,8 +354,11 @@ contract MockBridge is ITestCrossDomainMessenger {
     if (_bridgeStopped) return;
 
     messageNonce++;
+    bytes memory __message = _message;
     _currentXDomSender = msg.sender;
-    _target.call(_message);
+    assembly {
+      pop(call(gas(), _target, 0, add(__message, 0x20), mload(__message), 0, 0))
+    }
   }
 
   function relayMessage(

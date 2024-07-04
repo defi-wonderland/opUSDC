@@ -3,7 +3,7 @@
 | New messages should not be sent if the state is not active                                                  | Unit test           | 1   | [X]  | [x]  |
 | User who bridges tokens should receive them on the destination chain                                        | High level          | 2   | [X]  | [x]  |
 | Assuming the adapter is the only minter the amount locked in L1 should always equal the amount minted on L2 | High level          | 3   | [X]  | [x]  |
-| Both messenger's state or if they can send messages should match                                            | Valid state         | 4   | [X]  |   |
+| Both messenger's state or if they can send messages should match                                            | Valid state         | 4   | depr |      |
 | user nonce should be monotonically increasing                                                               | Variable transition | 5   | [X]  | [ ]  |
 | burn locked only if deprecated                                                                              | Unit test           | 6   | [X]  | [ ]  |
 | paused only via stop messaging                                                                              | State transition    | 7   | [X]  | [ ]  |

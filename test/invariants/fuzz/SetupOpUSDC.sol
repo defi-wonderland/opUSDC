@@ -26,6 +26,7 @@ contract SetupOpUSDC is EchidnaTest {
 
   MockBridge internal mockMessenger;
   Create2Deployer internal create2Deployer;
+
   address internal _usdcMinter = address(uint160(uint256(keccak256('usdc.minter'))));
 
   /////////////////////////////////////////////////////////////////////
@@ -41,9 +42,6 @@ contract SetupOpUSDC is EchidnaTest {
   function _setupUsdc() internal {
     hevm.prank(usdcMainnet.masterMinter());
     usdcMainnet.configureMinter(address(_usdcMinter), type(uint256).max);
-
-    hevm.prank(usdcBridged.masterMinter());
-    usdcBridged.configureMinter(address(_usdcMinter), type(uint256).max);
   }
 
   // Deploy: USDC L1, factory L1, L1 adapter
@@ -106,8 +104,6 @@ contract SetupOpUSDC is EchidnaTest {
         'deploy(uint256,bytes32,bytes)', 0, factory.deploymentsSaltCounter() + 1, _l2FactoryInitCode
       )
     );
-
-    mockMessenger.executeMessage();
 
     usdcBridged = IUSDC(l2Adapter.USDC());
   }
