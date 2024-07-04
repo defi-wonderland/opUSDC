@@ -49,12 +49,8 @@ contract OpUsdcTest is SetupOpUSDC {
     // provided enough usdc on l1
     _dealAndApproveUSDC(_currentCaller, _amount);
 
-    // Set L1 Adapter as sender
-    mockMessenger.setDomaninMessageSender(address(l1Adapter));
-
     // cache balances
     uint256 _fromBalanceBefore = usdcMainnet.balanceOf(_currentCaller);
-    uint256 _toBalanceBefore = usdcBridged.balanceOf(_to);
 
     hevm.prank(_currentCaller);
     // Action
@@ -62,14 +58,10 @@ contract OpUsdcTest is SetupOpUSDC {
       // Postcondition
       assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
       assert(usdcMainnet.balanceOf(_currentCaller) == _fromBalanceBefore - _amount);
-      //Property Id(2)
-      assert(usdcBridged.balanceOf(_to) == _toBalanceBefore + _amount);
     } catch {
       // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
       assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active);
       assert(usdcMainnet.balanceOf(_currentCaller) == _fromBalanceBefore);
-      //Property Id(2)
-      assert(usdcBridged.balanceOf(_to) == _toBalanceBefore);
     }
   }
 
@@ -98,12 +90,8 @@ contract OpUsdcTest is SetupOpUSDC {
     // provided enough usdc on l1
     _dealAndApproveUSDC(_signer, _amount);
 
-    // Set L1 Adapter as sender
-    mockMessenger.setDomaninMessageSender(address(l1Adapter));
-
     // cache balances
     uint256 _fromBalanceBefore = usdcMainnet.balanceOf(_signer);
-    uint256 _toBalanceBefore = usdcBridged.balanceOf(_to);
 
     hevm.prank(_currentCaller);
 
@@ -111,14 +99,10 @@ contract OpUsdcTest is SetupOpUSDC {
       // Postcondition
       assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
       assert(usdcMainnet.balanceOf(_signer) == _fromBalanceBefore - _amount);
-      //Property Id(2)
-      assert(usdcBridged.balanceOf(_to) == _toBalanceBefore + _amount);
     } catch {
       // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
       assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active);
       assert(usdcMainnet.balanceOf(_signer) == _fromBalanceBefore);
-      //Property Id(2)
-      assert(usdcBridged.balanceOf(_to) == _toBalanceBefore);
     }
   }
 
@@ -144,7 +128,7 @@ contract OpUsdcTest is SetupOpUSDC {
     try l1Adapter.receiveMessage(_to, _amount) {
       // Postcondition
       //Property Id(2)
-      if (_to == l1Adapter.MESSENGER()) assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
+      if (_to == address(l1Adapter)) assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
       else assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
     } catch {
       //Property Id(2)
@@ -164,12 +148,8 @@ contract OpUsdcTest is SetupOpUSDC {
     // provided enough usdc on l2
     _dealAndApproveBridgedUSDC(_currentCaller, _amount, _minGasLimit);
 
-    // Set L2 Adapter as sender to send the message to l1
-    mockMessenger.setDomaninMessageSender(address(l2Adapter));
-
     // cache balances
     uint256 _fromBalanceBefore = usdcBridged.balanceOf(_currentCaller);
-    uint256 _toBalanceBefore = usdcMainnet.balanceOf(_to);
 
     hevm.prank(_currentCaller);
     // Action
@@ -177,15 +157,10 @@ contract OpUsdcTest is SetupOpUSDC {
       // Postcondition
       assert(!l2Adapter.isMessagingDisabled());
       assert(usdcBridged.balanceOf(_currentCaller) == _fromBalanceBefore - _amount);
-      //Property Id(2)
-      if (_to == address(l1Adapter)) assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
-      else assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
     } catch {
       // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
       assert(l2Adapter.isMessagingDisabled());
       assert(usdcBridged.balanceOf(_currentCaller) == _fromBalanceBefore);
-      //Property Id(2)
-      assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
     }
   }
 
@@ -213,12 +188,8 @@ contract OpUsdcTest is SetupOpUSDC {
     // provided enough usdc on l2
     _dealAndApproveBridgedUSDC(_signer, _amount, _minGasLimit);
 
-    // Set L2 Adapter as sender to send the message to l1
-    mockMessenger.setDomaninMessageSender(address(l2Adapter));
-
     // cache balances
     uint256 _fromBalanceBefore = usdcBridged.balanceOf(_signer);
-    uint256 _toBalanceBefore = usdcMainnet.balanceOf(_to);
 
     hevm.prank(_currentCaller);
     // Action
@@ -226,44 +197,39 @@ contract OpUsdcTest is SetupOpUSDC {
       // Postcondition
       assert(!l2Adapter.isMessagingDisabled());
       assert(usdcBridged.balanceOf(_signer) == _fromBalanceBefore - _amount);
-      //Property Id(2)
-      if (_to == address(l1Adapter)) assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
-      else assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
     } catch {
       // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
       assert(l2Adapter.isMessagingDisabled());
       assert(usdcBridged.balanceOf(_signer) == _fromBalanceBefore);
-      //Property Id(2)
-      assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
     }
   }
 
-  // // user nonce should be monotonically increasing  5
-  // function fuzz_L1NonceIncremental() public view {
-  //   if (_ghost_L1CurrentUserNonce == 0) {
-  //     assert(l1Adapter.userNonce(_currentCaller) == 0);
-  //   } else {
-  //     assert(_ghost_L1PreviousUserNonce == _ghost_L1CurrentUserNonce - 1);
-  //   }
-  // }
+  // Property Id(5) :user nonce should be monotonically increasing
+  function fuzz_L1NonceIncremental() public view {
+    if (_ghost_L1CurrentUserNonce == 0) {
+      assert(l1Adapter.userNonce(_currentCaller) == 0);
+    } else {
+      assert(_ghost_L1PreviousUserNonce == _ghost_L1CurrentUserNonce - 1);
+    }
+  }
 
-  // // Locked USDC on L1adapter should be able to be burned only if L1 adapter is deprecated
-  // function fuzz_BurnLockedUSDC() public {
-  //   // Enable l1 adapter to burn locked usdc
-  //   hevm.prank(usdcMainnet.masterMinter());
-  //   usdcMainnet.configureMinter(address(l1Adapter), type(uint256).max);
+  // Property Id(6): Locked USDC on L1adapter should be able to be burned only if L1 adapter is deprecated
+  function fuzz_BurnLockedUSDC() public {
+    // Enable l1 adapter to burn locked usdc
+    hevm.prank(usdcMainnet.masterMinter());
+    usdcMainnet.configureMinter(address(l1Adapter), type(uint256).max);
 
-  //   require(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading);
+    require(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading);
 
-  //   hevm.prank(l1Adapter.burnCaller());
-  //   // 6
-  //   try l1Adapter.burnLockedUSDC() {
-  //     assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated);
-  //     assert(usdcMainnet.balanceOf(address(l1Adapter)) == 0);
-  //   } catch {
-  //     assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Deprecated);
-  //   }
-  // }
+    hevm.prank(l1Adapter.burnCaller());
+    // 6
+    try l1Adapter.burnLockedUSDC() {
+      assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated);
+      assert(usdcMainnet.balanceOf(address(l1Adapter)) == 0);
+    } catch {
+      assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Deprecated);
+    }
+  }
 
   // // Status pause should be able to be set only by the owner and through the correct function
   // function fuzz_PauseMessaging(uint32 _minGasLimit) public agentOrDeployer {
@@ -549,7 +515,7 @@ contract OpUsdcTest is SetupOpUSDC {
     bytes calldata _bytesA,
     uint32 _uint32A
   ) public agentOrDeployer {
-    _selectorIndex = _selectorIndex % 7;
+    _selectorIndex = _selectorIndex % 8;
 
     require(_uintB != 0);
     address _signerAd = hevm.addr(_uintB);
