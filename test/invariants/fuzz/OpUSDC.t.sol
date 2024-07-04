@@ -231,84 +231,72 @@ contract OpUsdcTest is SetupOpUSDC {
     }
   }
 
-  // // Status pause should be able to be set only by the owner and through the correct function
-  // function fuzz_PauseMessaging(uint32 _minGasLimit) public agentOrDeployer {
-  //   // Precondition
-  //   IL1OpUSDCBridgeAdapter.Status _previousL1Status = l1Adapter.messengerStatus();
+  // Property Id(7): Status pause should be able to be set only by the owner and through the correct function
+  function fuzz_PauseMessaging(uint32 _minGasLimit) public agentOrDeployer {
+    // Precondition
+    IL1OpUSDCBridgeAdapter.Status _previousL1Status = l1Adapter.messengerStatus();
 
-  //   hevm.prank(_currentCaller);
-  //   // Action
-  //   // 7
-  //   try l1Adapter.stopMessaging(_minGasLimit) {
-  //     // Post condition
-  //     assert(_currentCaller == l1Adapter.owner());
-  //     assert(
-  //       _previousL1Status == IL1OpUSDCBridgeAdapter.Status.Active
-  //         || _previousL1Status == IL1OpUSDCBridgeAdapter.Status.Paused
-  //     );
-  //     assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Paused);
-  //     // TODO: check the stop messaging on l2 was succesful too
-  //     //assert(l2Adapter.isMessagingDisabled());
-  //   } catch {
-  //     assert(
-  //       l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active
-  //         || l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Paused || _currentCaller != l1Adapter.owner()
-  //     );
-  //   }
-  // }
+    hevm.prank(_currentCaller);
+    // Action
+    // 7
+    try l1Adapter.stopMessaging(_minGasLimit) {
+      // Post condition
+      assert(_currentCaller == l1Adapter.owner());
+      assert(
+        _previousL1Status == IL1OpUSDCBridgeAdapter.Status.Active
+          || _previousL1Status == IL1OpUSDCBridgeAdapter.Status.Paused
+      );
+      assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Paused);
+    } catch {
+      assert(
+        l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active
+          || l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Paused || _currentCaller != l1Adapter.owner()
+      );
+    }
+  }
 
-  // // Resume should be able to be set only by the owner and through the correct function
-  // function fuzz_ResumeMessaging(uint32 _minGasLimit) public agentOrDeployer {
-  //   IL1OpUSDCBridgeAdapter.Status _previousL1Status = l1Adapter.messengerStatus();
+  // Property Id(8): Resume should be able to be set only by the owner and through the correct function
+  function fuzz_ResumeMessaging(uint32 _minGasLimit) public agentOrDeployer {
+    IL1OpUSDCBridgeAdapter.Status _previousL1Status = l1Adapter.messengerStatus();
 
-  //   hevm.prank(_currentCaller);
-  //   // 8
-  //   try l1Adapter.resumeMessaging(_minGasLimit) {
-  //     assert(_currentCaller == l1Adapter.owner());
-  //     assert(
-  //       _previousL1Status == IL1OpUSDCBridgeAdapter.Status.Active
-  //         || _previousL1Status == IL1OpUSDCBridgeAdapter.Status.Paused
-  //     );
-  //     assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
-  //     // TODO: check the stop messaging on l2 was succesful too
-  //     //assert(!l2Adapter.isMessagingDisabled());
-  //   } catch {
-  //     assert(
-  //       l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active
-  //         || l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Paused || _currentCaller != l1Adapter.owner()
-  //     );
-  //   }
-  // }
+    hevm.prank(_currentCaller);
+    // 8
+    try l1Adapter.resumeMessaging(_minGasLimit) {
+      assert(_currentCaller == l1Adapter.owner());
+      assert(
+        _previousL1Status == IL1OpUSDCBridgeAdapter.Status.Active
+          || _previousL1Status == IL1OpUSDCBridgeAdapter.Status.Paused
+      );
+      assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
+    } catch {
+      assert(
+        l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active
+          || l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Paused || _currentCaller != l1Adapter.owner()
+      );
+    }
+  }
 
-  // // todo: fix (try never succeed?) - first try again with more runs (needs to msg l2, then msg back l1)
-  // // Set burn only if migrating  9
-  // function fuzz_setBurnAmount() public {
-  //   // Precondition
-  //   uint256 _previousBurnAmount = l1Adapter.burnAmount();
-  //   uint256 _l2totalSupply = usdcBridged.totalSupply();
-  //   IL1OpUSDCBridgeAdapter.Status _previousState = l1Adapter.messengerStatus();
+  // Property Id(9): Set burn only if migrating  9
+  function fuzz_setBurnAmount() public {
+    // Precondition
+    uint256 _previousBurnAmount = l1Adapter.burnAmount();
+    uint256 _l2totalSupply = usdcBridged.totalSupply();
+    IL1OpUSDCBridgeAdapter.Status _previousState = l1Adapter.messengerStatus();
 
-  //   // Ensure the message is in the queue, to the l1adapter, from the l2 adapter
-  //   require(
-  //     mockMessenger.isInQueue(
-  //       address(l1Adapter), abi.encodeWithSignature('setBurnAmount(uint256)', _l2totalSupply), address(l2Adapter)
-  //     )
-  //   );
-
-  //   hevm.prank(l1Adapter.MESSENGER());
-  //   // Action
-  //   // 9
-  //   try l1Adapter.setBurnAmount(_l2totalSupply) {
-  //     //Precontion
-  //     assert(_previousState == IL1OpUSDCBridgeAdapter.Status.Upgrading);
-  //     // Postcondition
-  //     assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated);
-  //     assert(l1Adapter.burnAmount() == _l2totalSupply);
-  //     _ghost_hasBeenDeprecatedBefore = true;
-  //   } catch {
-  //     assert(l1Adapter.burnAmount() == _previousBurnAmount);
-  //   }
-  // }
+    hevm.prank(l1Adapter.MESSENGER());
+    // Action
+    // 9
+    try l1Adapter.setBurnAmount(_l2totalSupply) {
+      //Precontion
+      assert(_previousState == IL1OpUSDCBridgeAdapter.Status.Upgrading);
+      // Postcondition
+      assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated);
+      assert(l1Adapter.burnAmount() == _l2totalSupply);
+      _ghost_hasBeenDeprecatedBefore = true;
+    } catch {
+      assert(l1Adapter.burnAmount() == _previousBurnAmount);
+    }
+  }
 
   // ///Deprecated state should be irreversible  10
   // function fuzz_deprecatedIrreversible() public {
