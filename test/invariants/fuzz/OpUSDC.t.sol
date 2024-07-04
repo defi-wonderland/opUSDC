@@ -298,37 +298,38 @@ contract OpUsdcTest is SetupOpUSDC {
     }
   }
 
-  // ///Deprecated state should be irreversible  10
-  // function fuzz_deprecatedIrreversible() public {
-  //   // If the l1 adapter has been deprecated once before, it cannot have any other status ever again
-  //   if (_ghost_hasBeenDeprecatedBefore) assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated);
-  // }
+  // Property Id(10): Deprecated state should be irreversible
+  function fuzz_deprecatedIrreversible() public view {
+    // If the l1 adapter has been deprecated once before, it cannot have any other status ever again
+    if (_ghost_hasBeenDeprecatedBefore) assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated);
+  }
 
-  // // Upgrading state only via migrate to native, should be callable multiple times (msg fails)
-  // function fuzz_migrateToNativeMultipleCall(address _burnCaller, address _roleCaller) public {
-  //   // Precondition
-  //   // Insure we haven't started the migration or we only initiated/is pending in the bridge
-  //   require(
-  //     l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active
-  //       || l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading
-  //   );
+  // Property Id(11): Upgrading state only via migrate to native, should be callable multiple times (msg fails)
+  function fuzz_migrateToNativeMultipleCall(address _burnCaller, address _roleCaller) public {
+    // Precondition
+    // Insure we haven't started the migration or we only initiated/is pending in the bridge
+    require(
+      l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active
+        || l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading
+    );
 
-  //   require(_burnCaller != address(0) && _roleCaller != address(0));
-  //   // Action
-  //   // 11
-  //   try l1Adapter.migrateToNative(_burnCaller, _roleCaller, 0, 0) {
-  //     assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading);
-  //   } catch {}
+    require(_burnCaller != address(0) && _roleCaller != address(0));
 
-  //   // try calling a second time
-  //   try l1Adapter.migrateToNative(_burnCaller, _roleCaller, 0, 0) {}
-  //   catch {
-  //     assert(false);
-  //   }
+    // Set wrong adapter to make the calls fail on l2
+    mockMessenger.setDomaninMessageSender(address(l2Adapter));
 
-  //   // Postcondition
-  //   assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading);
-  // }
+    // Action
+    // 11
+    try l1Adapter.migrateToNative(_burnCaller, _roleCaller, 0, 0) {
+      assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading);
+    } catch {}
+
+    // try calling a second time
+    try l1Adapter.migrateToNative(_burnCaller, _roleCaller, 0, 0) {}
+    catch {
+      assert(false);
+    }
+  }
 
   // // All in flight transactions should successfully settle after a migration to native usdc 12
   // // we leverage the mock bridge queue (fifo)
