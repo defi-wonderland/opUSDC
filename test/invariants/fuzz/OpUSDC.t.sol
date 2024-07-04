@@ -106,7 +106,7 @@ contract OpUsdcTest is SetupOpUSDC {
     }
   }
 
-  // Property Id(2): Can receive USDC even if the state is not active
+  // Property Id(12): Can receive USDC even if the state is not active
   function fuzz_receiveMessageIfNotActiveL1(address _to, uint256 _amount) public agentOrDeployer {
     // Precondition
     require(_amount > 0);
@@ -127,11 +127,9 @@ contract OpUsdcTest is SetupOpUSDC {
     // Action
     try l1Adapter.receiveMessage(_to, _amount) {
       // Postcondition
-      //Property Id(2)
       if (_to == address(l1Adapter)) assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
       else assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
     } catch {
-      //Property Id(2)
       assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
     }
   }
@@ -201,6 +199,29 @@ contract OpUsdcTest is SetupOpUSDC {
       // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
       assert(l2Adapter.isMessagingDisabled());
       assert(usdcBridged.balanceOf(_signer) == _fromBalanceBefore);
+    }
+  }
+
+  // Property Id(12): Can receive USDC even if the state is not active
+  function fuzz_receiveMessageIfNotActiveL2(address _to, uint256 _amount) public agentOrDeployer {
+    // Precondition
+    require(_amount > 0);
+    require(_to != address(0) && _to != address(usdcMainnet) && _to != address(usdcBridged));
+    require(l2Adapter.isMessagingDisabled());
+
+    // Set L1 Adapter as sender
+    mockMessenger.setDomaninMessageSender(address(l1Adapter));
+
+    // cache balances
+    uint256 _toBalanceBefore = usdcBridged.balanceOf(_to);
+
+    hevm.prank(l2Adapter.MESSENGER());
+    // Action
+    try l1Adapter.receiveMessage(_to, _amount) {
+      // Postcondition
+      assert(usdcBridged.balanceOf(_to) == _toBalanceBefore + _amount);
+    } catch {
+      assert(usdcBridged.balanceOf(_to) == _toBalanceBefore);
     }
   }
 
@@ -315,7 +336,7 @@ contract OpUsdcTest is SetupOpUSDC {
 
     require(_burnCaller != address(0) && _roleCaller != address(0));
 
-    // Set wrong adapter to make the calls fail on l2
+    // Set adapter to make the calls fail on l2
     mockMessenger.setDomaninMessageSender(address(l2Adapter));
 
     // Action
@@ -331,30 +352,29 @@ contract OpUsdcTest is SetupOpUSDC {
     }
   }
 
-  // // All in flight transactions should successfully settle after a migration to native usdc 12
-  // // we leverage the mock bridge queue (fifo)
-  // function fuzz_noDropPendingTxWhenMigration() public {
-  //   // preconditions
+  // Property Id(10): All in flight transactions should successfully settle after a migration to native usdc 12
+  function fuzz_noDropPendingTxWhenMigration() public {
+    // preconditions
 
-  //   // action
+    // action
 
-  //   // add to bridge queue
-  //   // send msg to l1 [USDC to l1]
-  //   // send msg to l2  [USDC to l1, USDC to l2]
-  //   // migration [USDC to l1, USDC to l2, receiveMigrateToNative]
+    // add to bridge queue
+    // send msg to l1 [USDC to l1]
+    // send msg to l2  [USDC to l1, USDC to l2]
+    // migration [USDC to l1, USDC to l2, receiveMigrateToNative]
 
-  //   // execute: [USDC to l1, USDC to l2, receiveMigrateToNative] then [USDC to l2, receiveMigrateToNative] then [receiveMigrateToNative] then [setBurnAmount]
+    // execute: [USDC to l1, USDC to l2, receiveMigrateToNative] then [USDC to l2, receiveMigrateToNative] then [receiveMigrateToNative] then [setBurnAmount]
 
-  //   // add to queue
-  //   // send msg to l1 [setBurnAmount, USDC to l1]
-  //   // send msg to l2 [setBurnAmount, USDC to l1, USDC to l2]
+    // add to queue
+    // send msg to l1 [setBurnAmount, USDC to l1]
+    // send msg to l2 [setBurnAmount, USDC to l1, USDC to l2]
 
-  //   // execute [setBurnAmount, USDC to l1, USDC to l2] then [USDC to l1, USDC to l2] then [USDC to l2]
+    // execute [setBurnAmount, USDC to l1, USDC to l2] then [USDC to l1, USDC to l2] then [USDC to l2]
 
-  //   // postconditions
-  //   // balance are correct
-  //   // sending msg is now paused
-  // }
+    // postconditions
+    // balance are correct
+    // sending msg is now paused
+  }
 
   // // todo: add adapters to agents? Force calling from the adapter?
   // // Bridged USDC Proxy should only be upgradeable through the L2 Adapter  13
