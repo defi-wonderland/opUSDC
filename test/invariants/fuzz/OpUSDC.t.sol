@@ -241,15 +241,19 @@ contract OpUsdcTest is SetupOpUSDC {
     hevm.prank(usdcMainnet.masterMinter());
     usdcMainnet.configureMinter(address(l1Adapter), type(uint256).max);
 
-    require(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading);
+    require(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated);
+
+    uint256 _currentBalance = usdcMainnet.balanceOf(address(l1Adapter));
+    uint256 _burnAmount = l1Adapter.burnAmount();
+    uint256 _expectedBalance = _burnAmount > _currentBalance ? 0 : _currentBalance - _burnAmount;
 
     hevm.prank(l1Adapter.burnCaller());
     // 6
     try l1Adapter.burnLockedUSDC() {
       assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Deprecated);
-      assert(usdcMainnet.balanceOf(address(l1Adapter)) == 0);
+      assert(usdcMainnet.balanceOf(address(l1Adapter)) == _expectedBalance);
     } catch {
-      assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Deprecated);
+      assert(false);
     }
   }
 
