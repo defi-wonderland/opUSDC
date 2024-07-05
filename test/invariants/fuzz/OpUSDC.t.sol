@@ -445,21 +445,22 @@ contract OpUsdcTest is SetupOpUSDC {
 
   // USDC proxy admin and token ownership rights on l2 can only be transferred after the migration to native flow  17
   function fuzz_onlyMigrateToNativeForOwnershipTransfer(address _newOwner) public {
+    address _roleCaller = l2Adapter.roleCaller();
     // Precondition
     //Insure the adapter has received the migration to native message
-    require(l2Adapter.roleCaller() != address(0));
+    require(_roleCaller != address(0));
     //Insura that the new owner is not the zero address, transfer ownership to the zero address is not allowed
     require(
       _newOwner != address(0) && _newOwner != usdcBridged.owner() && l2Adapter.roleCaller() != usdcBridged.admin()
     );
 
-    hevm.prank(l2Adapter.roleCaller());
+    hevm.prank(_roleCaller);
     // Action
     try l2Adapter.transferUSDCRoles(_newOwner) {
       // 17
       // Postcondition
       assert(usdcBridged.owner() == _newOwner);
-      assert(usdcBridged.admin() == _currentCaller);
+      assert(usdcBridged.admin() == _roleCaller);
     } catch {}
   }
 
