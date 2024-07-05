@@ -105,6 +105,9 @@ contract OpUsdcTest_SymbTest is HalmosTest {
 
     // Allow minting usdc
     vm.prank(usdcMainnet.masterMinter());
+    usdcMainnet.configureMinter(address(l1Adapter), type(uint256).max);
+
+    vm.prank(usdcMainnet.masterMinter());
     usdcMainnet.configureMinter(address(usdcMinter), type(uint256).max);
   }
 
@@ -207,6 +210,7 @@ contract OpUsdcTest_SymbTest is HalmosTest {
   function check_burnLockedOnlyIfDeprecated(address sender, address rolecaller, address burner, uint256 amt) public {
     // Precondition
     vm.assume(burner != address(0));
+    vm.assume(owner != burner);
     _mainnetMint(sender, amt);
 
     vm.startPrank(sender);
@@ -242,7 +246,9 @@ contract OpUsdcTest_SymbTest is HalmosTest {
       // Postcondition
       assert(usdcMainnet.balanceOf(address(l1Adapter)) == 0);
       assert(l1Adapter.burnCaller() == address(0));
-    } catch {}
+    } catch {
+      assert(false);
+    }
   }
 
   /// @custom:property-id 11
