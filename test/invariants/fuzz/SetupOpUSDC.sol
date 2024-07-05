@@ -44,6 +44,7 @@ contract SetupOpUSDC is EchidnaTest {
   function _setupUsdc() internal {
     hevm.prank(usdcMainnet.masterMinter());
     usdcMainnet.configureMinter(address(_usdcMinter), type(uint256).max);
+    usdcMainnet.configureMinter(address(l1Adapter), type(uint256).max); // Allow burning the locked supplye
   }
 
   // Deploy: USDC L1, factory L1, L1 adapter
