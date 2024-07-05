@@ -45,11 +45,10 @@ contract OpUsdcTest is SetupOpUSDC {
   /// @custom:property User who bridges tokens should receive them on the destination chain
   function fuzz_noMessageIfNotActiveL1(address _to, uint256 _amount, uint32 _minGasLimit) public agentOrDeployer {
     // Precondition
-    require(_amount > 0);
     require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
 
     // Avoid balance overflow
-    _preventBalanceOverflow(_to, _amount);
+    _amount = _boundAmountToMint(_to, _amount);
 
     // provided enough usdc on l1
     _dealAndApproveUSDC(_currentCaller, _amount);
@@ -95,7 +94,7 @@ contract OpUsdcTest is SetupOpUSDC {
     bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signer, _privateKey, address(l1Adapter));
 
     // Avoid balance overflow
-    _preventBalanceOverflow(_to, _amount);
+    _amount = _boundAmountToMint(_to, _amount);
 
     // provided enough usdc on l1
     _dealAndApproveUSDC(_signer, _amount);
@@ -128,7 +127,7 @@ contract OpUsdcTest is SetupOpUSDC {
     require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
 
     // Avoid balance overflow
-    _preventBalanceOverflow(_to, _amount);
+    _amount = _boundAmountToMint(_to, _amount);
 
     // provided enough usdc on l2
     _dealAndApproveBridgedUSDC(_currentCaller, _amount, _minGasLimit);
@@ -174,7 +173,7 @@ contract OpUsdcTest is SetupOpUSDC {
     uint256 _deadline = block.timestamp + 1 days;
 
     // Avoid balance overflow
-    _preventBalanceOverflow(_to, _amount);
+    _amount = _boundAmountToMint(_to, _amount);
 
     // provided enough usdc on l2
     _dealAndApproveBridgedUSDC(_signer, _amount, _minGasLimit);
@@ -864,11 +863,13 @@ contract OpUsdcTest is SetupOpUSDC {
   }
 
   // TODO: review this and use different approach if the message is trigger by l1Adapter or l2Adapter
-  function _preventBalanceOverflow(address _to, uint256 _amount) internal view {
-    require(usdcMainnet.balanceOf(_to) < 2 ** 255 - 1 - _amount);
-    require(usdcBridged.balanceOf(_to) < 2 ** 255 - 1 - _amount);
-    require(usdcMainnet.balanceOf(address(l1Adapter)) < 2 ** 255 - 1 - _amount);
-    require(usdcBridged.balanceOf(address(l2Adapter)) < 2 ** 255 - 1 - _amount);
+  function _boundAmountToMint(address _to, uint256 _amount) internal view returns (uint256) {
+    uint256 _maxBalance = max(
+      max(usdcMainnet.balanceOf(_to), usdcBridged.balanceOf(_to)),
+      max(usdcMainnet.balanceOf(address(l1Adapter)), usdcBridged.balanceOf(address(l2Adapter)))
+    );
+
+    return clamp(_maxBalance, 1, 2 ** 255 - 1 - _maxBalance);
   }
 
   function _dealAndApproveUSDC(address _from, uint256 _amount) internal {
