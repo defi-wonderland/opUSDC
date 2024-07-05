@@ -82,7 +82,6 @@ contract OpUsdcTest is SetupOpUSDC {
     uint32 _minGasLimit
   ) public {
     // Precondition
-    require(_amount > 0);
     require(_privateKey != 0);
     require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
 
@@ -123,7 +122,6 @@ contract OpUsdcTest is SetupOpUSDC {
   /// @custom:property User who bridges tokens should receive them on the destination chain
   function fuzz_noMessageIfNotActiveL2(address _to, uint256 _amount, uint32 _minGasLimit) public agentOrDeployer {
     // Preconditions
-    require(_amount > 0);
     require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
 
     // Avoid balance overflow
@@ -161,13 +159,10 @@ contract OpUsdcTest is SetupOpUSDC {
     uint32 _minGasLimit
   ) public {
     // Preconditions
-    require(_amount > 0);
     require(_privateKey != 0);
     require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
 
-    // Get address from signer private key
     address _signer = hevm.addr(_privateKey);
-    //Forge signature
     uint256 _nonce = l2Adapter.userNonce(_signer);
     bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signer, _privateKey, address(l2Adapter));
     uint256 _deadline = block.timestamp + 1 days;
@@ -338,9 +333,10 @@ contract OpUsdcTest is SetupOpUSDC {
   /// @custom:property Can receive USDC even if the state is not active
   function fuzz_receiveMessageIfNotActiveL1(address _to, uint256 _amount) public agentOrDeployer {
     // Precondition
-    require(_amount > 0);
     require(_to != address(0) && _to != address(usdcMainnet) && _to != address(usdcBridged));
     require(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active);
+
+    _amount = _boundAmountToMint(_to, _amount);
 
     // provided enough usdc on l1
     hevm.prank(_usdcMinter);
@@ -367,9 +363,10 @@ contract OpUsdcTest is SetupOpUSDC {
   /// @custom:property Can receive USDC even if the state is not active
   function fuzz_receiveMessageIfNotActiveL2(address _to, uint256 _amount) public agentOrDeployer {
     // Precondition
-    require(_amount > 0);
     require(_to != address(0) && _to != address(usdcMainnet) && _to != address(usdcBridged));
     require(l2Adapter.isMessagingDisabled());
+
+    _amount = clamp(_amount, 0, usdcBridged.balanceOf(_to) - 2 ** 255 - 1 - _amount);
 
     // Set L1 Adapter as sender
     mockMessenger.setDomaninMessageSender(address(l1Adapter));
@@ -379,7 +376,7 @@ contract OpUsdcTest is SetupOpUSDC {
 
     hevm.prank(l2Adapter.MESSENGER());
     // Action
-    try l1Adapter.receiveMessage(_to, _amount) {
+    try l2Adapter.receiveMessage(_to, _amount) {
       // Postcondition
       assert(usdcBridged.balanceOf(_to) == _toBalanceBefore + _amount);
     } catch {
@@ -540,8 +537,7 @@ contract OpUsdcTest is SetupOpUSDC {
 
     if (_selectorIndex == 0) {
       // Do not revert on the transferFrom call
-      require(_uintA > 0);
-      require(usdcMainnet.balanceOf(_currentCaller) < 2 ** 255 - 1 - _uintA);
+      _uintA = _boundAmountToMint(_currentCaller, _uintA);
       hevm.prank(_usdcMinter);
       usdcMainnet.mint(_currentCaller, _uintA);
 
