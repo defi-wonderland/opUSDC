@@ -443,31 +443,25 @@ contract OpUsdcTest is SetupOpUSDC {
   //   } catch {}
   // }
 
-  // // USDC proxy admin and token ownership rights on l2 can only be transferred after the migration to native flow  17
-  // function fuzz_onlyMigrateToNativeForOwnershipTransfer(address _newOwner) public {
-  //   // Precondition
-  //   //Insure the adapter has received the migration to native message
-  //   require(l2Adapter.isMessagingDisabled());
-  //   require(l2Adapter.roleCaller() != address(0));
-  //   //Insura that the new owner is not the zero address, transfer ownership to the zero address is not allowed
-  //   require(_newOwner != address(0));
-  //   //Insure the USDC is owned by the adapter meaning the migration has not been done yet
-  //   require(usdcBridged.owner() == address(l2Adapter) && usdcBridged.admin() == address(l2Adapter));
+  // USDC proxy admin and token ownership rights on l2 can only be transferred after the migration to native flow  17
+  function fuzz_onlyMigrateToNativeForOwnershipTransfer(address _newOwner) public {
+    // Precondition
+    //Insure the adapter has received the migration to native message
+    require(l2Adapter.roleCaller() != address(0));
+    //Insura that the new owner is not the zero address, transfer ownership to the zero address is not allowed
+    require(
+      _newOwner != address(0) && _newOwner != usdcBridged.owner() && l2Adapter.roleCaller() != usdcBridged.admin()
+    );
 
-  //   hevm.prank(l2Adapter.roleCaller());
-  //   // Action
-  //   try l2Adapter.transferUSDCRoles(_newOwner) {
-  //     // 17
-  //     // Postcondition
-  //     assert(usdcBridged.owner() == _newOwner);
-  //     assert(usdcBridged.admin() == _currentCaller);
-  //   } catch {
-  //     // Postcondition
-  //     assert(usdcBridged.owner() == address(l2Adapter));
-  //     assert(usdcBridged.admin() == address(l2Adapter));
-  //   }
-  //   // 17
-  // }
+    hevm.prank(l2Adapter.roleCaller());
+    // Action
+    try l2Adapter.transferUSDCRoles(_newOwner) {
+      // 17
+      // Postcondition
+      assert(usdcBridged.owner() == _newOwner);
+      assert(usdcBridged.admin() == _currentCaller);
+    } catch {}
+  }
 
   // Property Id(18): Status should either be active, paused, upgrading or deprecated
   function fuzz_correctStatus() public view {
@@ -671,6 +665,10 @@ contract OpUsdcTest is SetupOpUSDC {
   function generateMessageUSDCL1() public agentOrDeployer {}
 
   function generateMessageUSDCL2() public agentOrDeployer {}
+
+  function randomizeXDomainSender(address _sender) public {
+    mockMessenger.setDomaninMessageSender(_sender);
+  }
 
   // TODO: review this and use different approach if the message is trigger by l1Adapter or l2Adapter
   function _preventBalanceOverflow(address _to, uint256 _amount) internal view {
