@@ -97,6 +97,18 @@ contract EchidnaTest is AgentsHandler {
   IHevm hevm = IHevm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
   constructor() AgentsHandler(5) {}
+
+  function clamp(uint256 _value, uint256 _min, uint256 _max) internal pure returns (uint256) {
+    return _min + (_value % (_max - _min));
+  }
+
+  function max(uint256 a, uint256 b) internal pure returns (uint256) {
+    return a > b ? a : b;
+  }
+
+  function min(uint256 a, uint256 b) internal pure returns (uint256) {
+    return a < b ? a : b;
+  }
 }
 
 contract HalmosTest is SymTest, Test {}
