@@ -11,5 +11,6 @@ deployContracts: [
   ["0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2", "Create2Deployer"]
 ]
 cryticArgs: ["--compile-libraries=(USDCInitTxs,0x1f),(CrossChainDeployments,0x20)"] 
-workers: 2
-testLimit: 500000
+workers: 4
+seqLen: 200
+testLimit: 1000000
