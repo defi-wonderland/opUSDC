@@ -656,15 +656,181 @@ contract OpUsdcTest is SetupOpUSDC {
     mockMessenger.sendMessage(_currentCaller, _payload, _uint32A);
   }
 
-  function generateCallFactory() public agentOrDeployer {}
+  function generateCallFactory() public agentOrDeployer {
+    bytes[] memory usdcInitTxns = new bytes[](3);
+    usdcInitTxns[0] = USDCInitTxs.INITIALIZEV2;
+    usdcInitTxns[1] = USDCInitTxs.INITIALIZEV2_1;
+    usdcInitTxns[2] = USDCInitTxs.INITIALIZEV2_2;
 
-  function generateCallUSDCL1() public agentOrDeployer {}
+    IL1OpUSDCFactory.L2Deployments memory _l2Deployments =
+      IL1OpUSDCFactory.L2Deployments(address(this), USDC_IMPLEMENTATION_CREATION_CODE, usdcInitTxns, 3_000_000);
 
-  function generateCallUSDCL2() public agentOrDeployer {}
+    hevm.prank(_currentCaller);
+    factory.deploy(address(mockMessenger), _currentCaller, _l2Deployments);
+  }
 
-  function generateMessageUSDCL1() public agentOrDeployer {}
+  function generateCallUSDCL1(
+    uint256 _selectorIndex,
+    address _addressA,
+    address _addressB,
+    address _addressC,
+    address _addressD,
+    uint256 _uintA,
+    uint8 _uint8A
+  ) public agentOrDeployer {
+    _selectorIndex = _selectorIndex % 12;
 
-  function generateMessageUSDCL2() public agentOrDeployer {}
+    if (_selectorIndex == 0) {
+      usdcMainnet.mint(_addressA, _uintA);
+    } else if (_selectorIndex == 1) {
+      usdcMainnet.burn(_uintA);
+    } else if (_selectorIndex == 2) {
+      usdcMainnet.transferOwnership(_addressA);
+    } else if (_selectorIndex == 3) {
+      usdcMainnet.changeAdmin(_addressA);
+    } else if (_selectorIndex == 4) {
+      usdcMainnet.initialize('', '', '', _uint8A, _addressA, _addressB, _addressC, _addressD);
+    } else if (_selectorIndex == 5) {
+      usdcMainnet.configureMinter(_addressA, _uintA);
+    } else if (_selectorIndex == 6) {
+      usdcMainnet.updateMasterMinter(_addressA);
+    } else if (_selectorIndex == 7) {
+      usdcMainnet.upgradeTo(_addressA);
+    } else if (_selectorIndex == 8) {
+      usdcMainnet.upgradeToAndCall(_addressA, '');
+    } // Add a call here?
+    else if (_selectorIndex == 9) {
+      usdcMainnet.transfer(_addressA, _uintA);
+    } else if (_selectorIndex == 10) {
+      usdcMainnet.approve(_addressA, _uintA);
+    } else if (_selectorIndex == 11) {
+      usdcMainnet.transferFrom(_addressA, _addressB, _uintA);
+    }
+  }
+
+  // target both usdc contract and proxy
+  function generateCallUSDCL2(
+    uint256 _selectorIndex,
+    address _addressA,
+    address _addressB,
+    address _addressC,
+    address _addressD,
+    uint256 _uintA,
+    uint8 _uint8A
+  ) public agentOrDeployer {
+    _selectorIndex = _selectorIndex % 12;
+
+    if (_selectorIndex == 0) {
+      usdcBridged.mint(_addressA, _uintA);
+    } else if (_selectorIndex == 1) {
+      usdcBridged.burn(_uintA);
+    } else if (_selectorIndex == 2) {
+      usdcBridged.transferOwnership(_addressA);
+    } else if (_selectorIndex == 3) {
+      usdcBridged.changeAdmin(_addressA);
+    } else if (_selectorIndex == 4) {
+      usdcBridged.initialize('', '', '', _uint8A, _addressA, _addressB, _addressC, _addressD);
+    } else if (_selectorIndex == 5) {
+      usdcBridged.configureMinter(_addressA, _uintA);
+    } else if (_selectorIndex == 6) {
+      usdcBridged.updateMasterMinter(_addressA);
+    } else if (_selectorIndex == 7) {
+      usdcBridged.upgradeTo(_addressA);
+    } else if (_selectorIndex == 8) {
+      usdcBridged.upgradeToAndCall(_addressA, '');
+    } // Add a call here?
+    else if (_selectorIndex == 9) {
+      usdcBridged.transfer(_addressA, _uintA);
+    } else if (_selectorIndex == 10) {
+      usdcBridged.approve(_addressA, _uintA);
+    } else if (_selectorIndex == 11) {
+      usdcBridged.transferFrom(_addressA, _addressB, _uintA);
+    }
+  }
+
+  function generateMessageUSDCL1(
+    int256 _selectorIndex,
+    address _addressA,
+    address _addressB,
+    address _addressC,
+    address _addressD,
+    uint256 _uintA,
+    uint8 _uint8A
+  ) public agentOrDeployer {
+    _selectorIndex = _selectorIndex % 12;
+
+    bytes memory _calldata;
+
+    if (_selectorIndex == 0) {
+      _calldata = abi.encodeCall(usdcMainnet.mint, (_addressA, _uintA));
+    } else if (_selectorIndex == 1) {
+      _calldata = abi.encodeCall(usdcMainnet.burn, (_uintA));
+    } else if (_selectorIndex == 2) {
+      _calldata = abi.encodeCall(usdcMainnet.transferOwnership, (_addressA));
+    } else if (_selectorIndex == 3) {
+      _calldata = abi.encodeCall(usdcMainnet.changeAdmin, (_addressA));
+    } else if (_selectorIndex == 4) {
+      _calldata =
+        abi.encodeCall(usdcMainnet.initialize, ('', '', '', _uint8A, _addressA, _addressB, _addressC, _addressD));
+    } else if (_selectorIndex == 5) {
+      _calldata = abi.encodeCall(usdcMainnet.configureMinter, (_addressA, _uintA));
+    } else if (_selectorIndex == 6) {
+      _calldata = abi.encodeCall(usdcMainnet.updateMasterMinter, (_addressA));
+    } else if (_selectorIndex == 7) {
+      _calldata = abi.encodeCall(usdcMainnet.upgradeTo, (_addressA));
+    } else if (_selectorIndex == 8) {
+      _calldata = abi.encodeCall(usdcMainnet.upgradeToAndCall, (_addressA, ''));
+    } // Add a call here?
+    else if (_selectorIndex == 9) {
+      _calldata = abi.encodeCall(usdcMainnet.transfer, (_addressA, _uintA));
+    } else if (_selectorIndex == 10) {
+      _calldata = abi.encodeCall(usdcMainnet.approve, (_addressA, _uintA));
+    } else if (_selectorIndex == 11) {
+      _calldata = abi.encodeCall(usdcMainnet.transferFrom, (_addressA, _addressB, _uintA));
+    }
+  }
+
+  function generateMessageUSDCL2(
+    int256 _selectorIndex,
+    address _addressA,
+    address _addressB,
+    address _addressC,
+    address _addressD,
+    uint256 _uintA,
+    uint8 _uint8A
+  ) public agentOrDeployer {
+    _selectorIndex = _selectorIndex % 12;
+
+    bytes memory _calldata;
+
+    if (_selectorIndex == 0) {
+      _calldata = abi.encodeCall(usdcBridged.mint, (_addressA, _uintA));
+    } else if (_selectorIndex == 1) {
+      _calldata = abi.encodeCall(usdcBridged.burn, (_uintA));
+    } else if (_selectorIndex == 2) {
+      _calldata = abi.encodeCall(usdcBridged.transferOwnership, (_addressA));
+    } else if (_selectorIndex == 3) {
+      _calldata = abi.encodeCall(usdcBridged.changeAdmin, (_addressA));
+    } else if (_selectorIndex == 4) {
+      _calldata =
+        abi.encodeCall(usdcBridged.initialize, ('', '', '', _uint8A, _addressA, _addressB, _addressC, _addressD));
+    } else if (_selectorIndex == 5) {
+      _calldata = abi.encodeCall(usdcBridged.configureMinter, (_addressA, _uintA));
+    } else if (_selectorIndex == 6) {
+      _calldata = abi.encodeCall(usdcBridged.updateMasterMinter, (_addressA));
+    } else if (_selectorIndex == 7) {
+      _calldata = abi.encodeCall(usdcBridged.upgradeTo, (_addressA));
+    } else if (_selectorIndex == 8) {
+      _calldata = abi.encodeCall(usdcBridged.upgradeToAndCall, (_addressA, ''));
+    } // Add a call here?
+    else if (_selectorIndex == 9) {
+      _calldata = abi.encodeCall(usdcBridged.transfer, (_addressA, _uintA));
+    } else if (_selectorIndex == 10) {
+      _calldata = abi.encodeCall(usdcBridged.approve, (_addressA, _uintA));
+    } else if (_selectorIndex == 11) {
+      _calldata = abi.encodeCall(usdcBridged.transferFrom, (_addressA, _addressB, _uintA));
+    }
+  }
 
   function randomizeXDomainSender(address _sender) public {
     mockMessenger.setDomaninMessageSender(_sender);
