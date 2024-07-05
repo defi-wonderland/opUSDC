@@ -2,18 +2,17 @@
 pragma solidity 0.8.25;
 
 import {HalmosTest, HalmosUtils} from '../AdvancedTestsUtils.sol';
+
 import {IL1OpUSDCBridgeAdapter, L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCFactory, L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
 import {FallbackProxyAdmin, L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
-import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
-import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
-import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
 
-import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
+import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
+
+import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
+import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementationCreationCode.sol';
-
-import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {Create2Deployer} from 'test/invariants/fuzz/Create2Deployer.sol';
 import {ITestCrossDomainMessenger} from 'test/utils/interfaces/ITestCrossDomainMessenger.sol';
 
@@ -83,8 +82,8 @@ contract OpUsdcTest_SymbTest is HalmosTest {
 
     usdcBridged = IUSDC(targetProxy);
 
-    // address computedAddress = HalmosUtils.computeCreateAddress(owner, 5); <-- no!
-    // Halmos deploy at address + 1, starting at 0xaaaa
+    // address computedAddress = HalmosUtils.computeCreateAddress(owner, 5); <-- no! create logic isn't supported, due to symbolic keccak oputput
+    // Halmos deploy at address + 1, starting at 0xaaaa0000
 
     // Deploy l1 adapter
     l1Adapter = new L1OpUSDCBridgeAdapter(
@@ -109,7 +108,8 @@ contract OpUsdcTest_SymbTest is HalmosTest {
     usdcMainnet.configureMinter(address(usdcMinter), type(uint256).max);
   }
 
-  // debug: setup
+  /// @custom:property-id 0
+  /// @custom:property Setup should be correct
   function check_setup() public view {
     assert(l2Adapter.LINKED_ADAPTER() == address(l1Adapter));
     assert(l2Adapter.MESSENGER() == address(mockMessenger));
@@ -122,7 +122,8 @@ contract OpUsdcTest_SymbTest is HalmosTest {
     assert(l1Adapter.USDC() == address(usdcMainnet));
   }
 
-  // | New messages should not be sent if the state is not active| Unit test           | 1   | [X]  | [ ]  |
+  /// @custom:property-id 1
+  /// @custom:property New messages should not be sent if the state is not active
   function check_noNewMsgIfNotActiveL1(address dest, uint256 amt, uint32 minGas) public {
     // Precondition
     // messaging is inactive
@@ -132,25 +133,29 @@ contract OpUsdcTest_SymbTest is HalmosTest {
     // Action
     try l1Adapter.sendMessage(dest, amt, minGas) {
       // Postcondition
-      assert(false);
+      assert(false); // cannot happen
     } catch {}
   }
 
+  /// @custom:property-id 1
+  /// @custom:property New messages should not be sent if the state is not active
   function check_noNewMsgIfNotActiveL2(address dest, uint256 amt, uint32 minGas) public {
     // Precondition
-    // messaging is inactive (use the bridge for the caller auth)
+    // L2 messaging is inactive (use the bridge for the caller auth)
     vm.prank(address(l1Adapter));
     mockMessenger.sendMessage(address(l2Adapter), abi.encodeWithSignature('receiveStopMessaging()'), minGas);
 
     // Action
     try l2Adapter.sendMessage(dest, amt, minGas) {
       // Postcondition
-      assert(false);
+      assert(false); // cannot happen
     } catch {}
   }
 
-  // | User who bridges tokens should receive them on the destination chain                                        | High level          | 2   | [X]  | [ ]  |
-  // | Assuming the adapter is the only minter the amount locked in L1 should always equal the amount minted on L2 | High level          | 3   | [X]  | [ ]  |
+  /// @custom:property-id 2
+  /// @custom:property User who bridges tokens should receive them on the destination chain
+  /// @custom:property-id 3
+  /// @custom:property Assuming the adapter is the only minter the amount locked in L1 should always equal the amount minted on L2
   function check_messageReceivedL2(address sender, address dest, uint256 amt, uint32 minGas) public {
     // Precondition
     _mainnetMint(sender, amt);
@@ -171,32 +176,37 @@ contract OpUsdcTest_SymbTest is HalmosTest {
     assert(usdcMainnet.balanceOf(address(l1Adapter)) == usdcBridged.totalSupply());
   }
 
-  // todo: false negative!!
-  function check_nonceMonotonicallyIncreases(uint256 numberMessages, address dest, uint256 amt) public {
+  /// @custom:property-id 5
+  /// @custom:property Nonce should increase monotonically for each user
+  /// @custom:property-not-tested
+  // -- Halmos generates a false negative, due to isValidSignatureCall
+  // function check_nonceMonotonicallyIncreases(uint256 numberMessages, address dest, uint256 amt) public {
+  //   // Precondition
+  //   (address sender, uint256 privateKey) = makeAddrAndKey('sender');
+
+  //   vm.assume(sender != address(0) && dest != address(0) && amt > 0);
+
+  //   uint256 nonceBefore = l1Adapter.userNonce(sender);
+
+  //   bytes32 digest =
+  //     keccak256(abi.encode(l1Adapter, block.chainid, dest, amt, nonceBefore + 1)).toEthSignedMessageHash();
+  //   (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
+  //   bytes memory signature = abi.encodePacked(r, s, v);
+
+  //   // Action
+  //   for (uint256 i = 0; i < numberMessages; i++) {
+  //     l1Adapter.sendMessage(sender, dest, amt, signature, block.timestamp + 1000, 0);
+  //   }
+
+  //   // Postcondition
+  //   assert(l1Adapter.userNonce(sender) == nonceBefore + numberMessages);
+  // }
+
+  /// @custom:property-id 6
+  /// @custom:property burn locked only if deprecated
+  function check_burnLockedOnlyIfDeprecated(address sender, address rolecaller, address burner, uint256 amt) public {
     // Precondition
-    (address sender, uint256 privateKey) = makeAddrAndKey('sender');
-
-    vm.assume(sender != address(0) && dest != address(0) && amt > 0);
-
-    uint256 nonceBefore = l1Adapter.userNonce(sender);
-
-    bytes32 digest =
-      keccak256(abi.encode(l1Adapter, block.chainid, dest, amt, nonceBefore + 1)).toEthSignedMessageHash();
-    (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
-    bytes memory signature = abi.encodePacked(r, s, v);
-
-    // Action
-    for (uint256 i = 0; i < numberMessages; i++) {
-      l1Adapter.sendMessage(sender, dest, amt, signature, block.timestamp + 1000, 0);
-    }
-
-    // Postcondition
-    assert(l1Adapter.userNonce(sender) == nonceBefore + numberMessages);
-  }
-
-  // | burn locked only if deprecated                                                                              | Unit test           | 6   | [X]  | [ ]  |
-  function check_burnLockedOnlyIfDeprecated(address sender, address rolecaller, uint256 amt) public {
-    // Precondition
+    vm.assume(burner != address(0));
     _mainnetMint(sender, amt);
 
     vm.startPrank(sender);
@@ -204,15 +214,28 @@ contract OpUsdcTest_SymbTest is HalmosTest {
     l1Adapter.sendMessage(sender, amt, 0);
     vm.stopPrank();
 
+    // No burn before migration
     vm.startPrank(owner);
     // Action
     try l1Adapter.burnLockedUSDC() {
       // Postcondition
-      assert(false); // This should not happen, as owner is contrained as non-0 address
+      assert(false); // This should not happen
     } catch {}
 
+    // Owner cannot burn
     // Precondition
-    l1Adapter.migrateToNative(rolecaller, owner, 0, 0);
+    l1Adapter.migrateToNative(rolecaller, burner, 0, 0);
+
+    // Action
+    try l1Adapter.burnLockedUSDC() {
+      // Postcondition
+      assert(false); // Owner cannot burn
+    } catch {}
+
+    // Burner can burn
+    // Precondition
+    vm.stopPrank();
+    vm.prank(burner);
 
     // Action
     try l1Adapter.burnLockedUSDC() {
@@ -222,7 +245,8 @@ contract OpUsdcTest_SymbTest is HalmosTest {
     } catch {}
   }
 
-  // | Upgrading state only via migrate to native, should be callable multiple times (msg fails)                   | State transition    | 11  | [X]  | [ ]  |
+  /// @custom:property-id 11
+  /// @custom:property  Upgrading state only via migrate to native, should be callable multiple times (if crosschain msg fails)
   function check_multipleMigrateCalls() public {
     // Precondition
     address burnCaller = svm.createAddress('newBurnCaller');
@@ -254,7 +278,8 @@ contract OpUsdcTest_SymbTest is HalmosTest {
     }
   }
 
-  // | All in flight transactions should successfully settle after a migration to native usdc                      | High level          | 12  | [ ]  | [ ]  |
+  /// @custom:property-id 12
+  /// @custom:property All in flight transactions should successfully settle after a migration to native usdc
   function check_settleWhenUpgraded(address dest, uint256 amt) public {
     // Precondition
     _mainnetMint(address(l1Adapter), amt);
@@ -285,23 +310,27 @@ contract OpUsdcTest_SymbTest is HalmosTest {
     }
   }
 
-  // | Bridged USDC Proxy should only be upgradeable through the L2 Adapter                                        | High level          | 13  | [ ]  | [ ]  |
-  function check_usdceProxyOnlyUpgradeableThroughL2Adapter(address caller) public {
-    // Precondition
-    address newImplementation = address(new MockBridge());
+  /// @custom:property-id 13
+  /// @custom:property Bridged USDC Proxy should only be upgradeable through the L2 Adapter
+  /// @custom:property-not-tested
+  // -- extcodehash representation has an unexpected behavior, seems to behave as a symbolic value (this make a isContract check fail in the OZ Address)
+  // function check_usdceProxyOnlyUpgradeableThroughL2Adapter(address caller) public {
+  //   // Precondition
+  //   address newImplementation = address(new MockBridge());
 
-    vm.startPrank(caller);
+  //   vm.startPrank(caller);
 
-    // Action
-    try FallbackProxyAdmin(l2Adapter.FALLBACK_PROXY_ADMIN()).upgradeTo(newImplementation) {
-      // Postcondition
-      assert(caller == address(l2Adapter));
-    } catch {
-      assert(caller != address(l2Adapter));
-    }
-  }
+  //   // Action
+  //   try FallbackProxyAdmin(l2Adapter.FALLBACK_PROXY_ADMIN()).upgradeTo(newImplementation) {
+  //     // Postcondition
+  //     assert(caller == address(l2Adapter));
+  //   } catch {
+  //     assert(caller != address(l2Adapter));
+  //   }
+  // }
 
-  // | Incoming successful messages should only come from the linked adapter's                                     | High level          | 14  | [ ]  | [ ]  |
+  /// @custom:property-id 14
+  /// @custom:property Incoming successful messages should only come from the linked adapter's
   function check_succMessageOnlyFromAdapter(address senderOtherChain) public {
     // Precondition
     mockMessenger.setDomaninMessageSender(address(senderOtherChain));
@@ -316,12 +345,38 @@ contract OpUsdcTest_SymbTest is HalmosTest {
       assert(senderOtherChain != address(l2Adapter));
     }
   }
-  // | Any chain should be able to have as many protocols deployed without the factory blocking deployments        | High level          | 15  | [ ]  | [ ]  |
-  // | Protocols deployed on one L2 should never have a matching address with a protocol on a different L2         | High level          | 16  | [ ]  | [ ]  |
-  // | USDC proxy admin and token ownership rights can only be transferred during the migration to native flow     | High level          | 17  | [ ]  | [ ]  |
-  // | Status should either be active, paused, upgrading or deprecated                                             | Valid state         | 18  | [X]  | [ ]  |
-  // | All addresses precomputed in the factory match the deployed addresses / L1 nonce == L2 factory nonce        | Variable transition |     | depr | depr |
 
+  /// @custom:property-id 15
+  /// @custom:property Any chain should be able to have as many protocols deployed without the factory blocking deployments
+  /// @custom:property-not-tested
+  /// @custom:property-id 16
+  /// @custom:property Protocols deployed on one L2 should never have a matching address with a protocol on a different L2
+  /// @custom:property-not-tested
+  // -- Test fails, most likely due to the create computation (trace says addresses are different tho, but not symbolic?)
+  // function check_uniqueAddresses() public {
+  //   // Precondition
+  //   mockMessenger.stopMessageRelay();
+
+  //   bytes[] memory usdcInitTxns = new bytes[](3);
+  //   usdcInitTxns[0] = USDCInitTxs.INITIALIZEV2;
+  //   usdcInitTxns[1] = USDCInitTxs.INITIALIZEV2_1;
+  //   usdcInitTxns[2] = USDCInitTxs.INITIALIZEV2_2;
+
+  //   IL1OpUSDCFactory.L2Deployments memory _l2Deployments = IL1OpUSDCFactory.L2Deployments(address(123), USDC_IMPLEMENTATION_CREATION_CODE, usdcInitTxns, 3_000_000);
+  //   (address _l1Adapter, address _l2Factory, address _l2Adapter) = factory.deploy(address(mockMessenger), address(123), _l2Deployments);
+
+  //   // Action
+  //   try factory.deploy(address(mockMessenger), address(123), _l2Deployments) returns (address _secondL1Adapter, address _secondL2Factory, address _secondL2Adapter) {
+  //     // Postcondition
+  //     assert(_l1Adapter == _secondL1Adapter);
+  //     assert(_l2Factory != _secondL2Factory);
+  //     assert(_l2Adapter != _secondL2Adapter);
+  //   } catch {
+  //     assert(false); // Can never revert
+  //   }
+  // }
+
+  /// @dev Mint arbitrary amount of USDC on mainnet to dest
   function _mainnetMint(address dest, uint256 amt) internal {
     vm.assume(amt > 0); // cannot mint 0 usdc
     vm.assume(usdcMainnet.balanceOf(dest) < 2 ** 255 - 1 - amt); // usdc max supply
@@ -334,7 +389,7 @@ contract OpUsdcTest_SymbTest is HalmosTest {
   }
 }
 
-// Atomically transmit any message
+/// @dev Mock a messaging bridge which atomically transmit any message
 contract MockBridge is ITestCrossDomainMessenger {
   uint256 public messageNonce;
   address public l1Adapter;
