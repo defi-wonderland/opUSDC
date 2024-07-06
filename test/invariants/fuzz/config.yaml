@@ -1,8 +1,8 @@
 # https://github.com/crytic/echidna/blob/master/tests/solidity/basic/default.yaml for more options
 testMode: assertion
-# corpusDir: test/invariants/fuzz/corpus/
+corpusDir: test/invariants/fuzz/corpus/
 coverageFormats: ["html","lcov"]
-allContracts: true
+allContracts: false
 codeSize: 0x9999
 deployContracts: [
   ["0x1f", "USDCInitTxs"],

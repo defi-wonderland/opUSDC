@@ -47,15 +47,13 @@ contract OpUsdcTest is SetupOpUSDC {
     // Precondition
     require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
 
-    // Avoid balance overflow
     _amount = _boundAmountToMint(_to, _amount);
 
-    // provided enough usdc on l1
     _dealAndApproveUSDC(_currentCaller, _amount);
 
-    // cache balances
     uint256 _fromBalanceBefore = usdcMainnet.balanceOf(_currentCaller);
     uint256 _toBalanceBefore = usdcBridged.balanceOf(_to);
+    uint256 _initialNonce = l1Adapter.userNonce(_currentCaller);
 
     hevm.prank(_currentCaller);
     // Action
@@ -64,8 +62,11 @@ contract OpUsdcTest is SetupOpUSDC {
       assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
       assert(usdcMainnet.balanceOf(_currentCaller) == _fromBalanceBefore - _amount);
       assert(usdcBridged.balanceOf(_to) == _toBalanceBefore + _amount);
+
+      _ghost_L1PreviousUserNonce = _initialNonce;
+      _ghost_L1CurrentUserNonce = l1Adapter.userNonce(_currentCaller);
     } catch {
-      // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
+      // can fail either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
       assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active);
       assert(usdcMainnet.balanceOf(_currentCaller) == _fromBalanceBefore);
     }
@@ -85,32 +86,33 @@ contract OpUsdcTest is SetupOpUSDC {
     require(_privateKey != 0);
     require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
 
-    // Avoid balance overflow
     _amount = _boundAmountToMint(_to, _amount);
 
-    // Get address from signer private key
+    // create valid signature
     address _signer = hevm.addr(_privateKey);
-    // forge signature
     uint256 _nonce = l1Adapter.userNonce(_signer);
     uint256 _deadline = block.timestamp + 1 days;
     bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signer, _privateKey, address(l1Adapter));
 
-    // provided enough usdc on l1
     _dealAndApproveUSDC(_signer, _amount);
 
-    // cache balances
     uint256 _fromBalanceBefore = usdcMainnet.balanceOf(_signer);
     uint256 _toBalanceBefore = usdcBridged.balanceOf(_to);
+    uint256 _initialNonce = l1Adapter.userNonce(_currentCaller);
 
     hevm.prank(_currentCaller);
 
+    // Action
     try l1Adapter.sendMessage(_signer, _to, _amount, _signature, _deadline, _minGasLimit) {
       // Postcondition
       assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Active);
       assert(usdcMainnet.balanceOf(_signer) == _fromBalanceBefore - _amount);
       assert(usdcBridged.balanceOf(_to) == _toBalanceBefore + _amount);
+
+      _ghost_L1PreviousUserNonce = _initialNonce;
+      _ghost_L1CurrentUserNonce = l1Adapter.userNonce(_currentCaller);
     } catch {
-      // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
+      // can fail either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
       assert(l1Adapter.messengerStatus() != IL1OpUSDCBridgeAdapter.Status.Active);
       assert(usdcMainnet.balanceOf(_signer) == _fromBalanceBefore);
     }
@@ -124,17 +126,15 @@ contract OpUsdcTest is SetupOpUSDC {
     // Preconditions
     require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
 
-    // Avoid balance overflow
     _amount = _boundAmountToMint(_to, _amount);
 
-    // provided enough usdc on l2
     _dealAndApproveBridgedUSDC(_currentCaller, _amount, _minGasLimit);
 
-    // cache balances
     uint256 _fromBalanceBefore = usdcBridged.balanceOf(_currentCaller);
     uint256 _toBalanceBefore = usdcMainnet.balanceOf(_to);
 
     hevm.prank(_currentCaller);
+
     // Action
     try l2Adapter.sendMessage(_to, _amount, _minGasLimit) {
       // Postcondition
@@ -143,7 +143,7 @@ contract OpUsdcTest is SetupOpUSDC {
       if (_to == address(l1Adapter)) assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
       else assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
     } catch {
-      // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
+      // can fail either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
       assert(l2Adapter.isMessagingDisabled());
       assert(usdcBridged.balanceOf(_currentCaller) == _fromBalanceBefore);
     }
@@ -163,7 +163,6 @@ contract OpUsdcTest is SetupOpUSDC {
     require(_privateKey != 0);
     require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
 
-    // Avoid balance overflow
     _amount = _boundAmountToMint(_to, _amount);
 
     address _signer = hevm.addr(_privateKey);
@@ -171,10 +170,8 @@ contract OpUsdcTest is SetupOpUSDC {
     bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signer, _privateKey, address(l2Adapter));
     uint256 _deadline = block.timestamp + 1 days;
 
-    // provided enough usdc on l2
     _dealAndApproveBridgedUSDC(_signer, _amount, _minGasLimit);
 
-    // cache balances
     uint256 _fromBalanceBefore = usdcBridged.balanceOf(_signer);
     uint256 _toBalanceBefore = usdcMainnet.balanceOf(_to);
 
@@ -187,7 +184,7 @@ contract OpUsdcTest is SetupOpUSDC {
       if (_to == address(l1Adapter)) assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
       else assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
     } catch {
-      // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
+      // can fail either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
       assert(l2Adapter.isMessagingDisabled());
       assert(usdcBridged.balanceOf(_signer) == _fromBalanceBefore);
     }
@@ -315,7 +312,10 @@ contract OpUsdcTest is SetupOpUSDC {
 
     require(_burnCaller != address(0) && _roleCaller != address(0));
 
-    hevm.store(address(mockMessenger), bytes32(uint256(2)), bytes32(uint256(1)));
+    // As the bridge would relay and execute the migration atomically, including deprecating l1adapter, we need to prevent
+    // it from relaying the message to test this property
+    mockMessenger.pauseMessaging();
+
     // Action
     // 11
     try l1Adapter.migrateToNative(_burnCaller, _roleCaller, 0, 0) {
@@ -342,10 +342,10 @@ contract OpUsdcTest is SetupOpUSDC {
     hevm.prank(_usdcMinter);
     usdcMainnet.mint(address(l1Adapter), _amount);
 
-    // Set L1 Adapter as sender
-    mockMessenger.setDomaninMessageSender(address(l2Adapter));
+    // Set L2Adapter as the sender on L2
+    mockMessenger.setDomainMessageSender(address(l2Adapter));
 
-    // cache balances
+    // cache balance
     uint256 _toBalanceBefore = usdcMainnet.balanceOf(_to);
 
     hevm.prank(l1Adapter.MESSENGER());
@@ -369,9 +369,9 @@ contract OpUsdcTest is SetupOpUSDC {
     _amount = clamp(_amount, 0, usdcBridged.balanceOf(_to) - 2 ** 255 - 1 - _amount);
 
     // Set L1 Adapter as sender
-    mockMessenger.setDomaninMessageSender(address(l1Adapter));
+    mockMessenger.setDomainMessageSender(address(l1Adapter));
 
-    // cache balances
+    // cache balance
     uint256 _toBalanceBefore = usdcBridged.balanceOf(_to);
 
     hevm.prank(l2Adapter.MESSENGER());
@@ -554,7 +554,12 @@ contract OpUsdcTest is SetupOpUSDC {
         _ghost_L1CurrentUserNonce = l1Adapter.userNonce(_currentCaller);
       } catch {}
     } else if (_selectorIndex == 1) {
-      try l1Adapter.sendMessage(_signerAd, _addressB, _uintA, _signature, _deadline, _uint32A) {} catch {}
+      uint256 _initialNonce = l1Adapter.userNonce(_currentCaller);
+
+      try l1Adapter.sendMessage(_signerAd, _addressB, _uintA, _signature, _deadline, _uint32A) {
+        _ghost_L1PreviousUserNonce = _initialNonce;
+        _ghost_L1CurrentUserNonce = l1Adapter.userNonce(_currentCaller);
+      } catch {}
     } else if (_selectorIndex == 2) {
       try l1Adapter.receiveMessage(_addressA, _uintA) {} catch {}
     } else if (_selectorIndex == 3) {
@@ -890,8 +895,13 @@ contract OpUsdcTest is SetupOpUSDC {
     hevm.prank(_from);
     usdcMainnet.approve(address(l1Adapter), _amount);
 
+    uint256 _initialNonce = l1Adapter.userNonce(_currentCaller);
+
     hevm.prank(_from);
     l1Adapter.sendMessage(_from, _amount, _minGasLimit);
+
+    _ghost_L1PreviousUserNonce = _initialNonce;
+    _ghost_L1CurrentUserNonce = l1Adapter.userNonce(_currentCaller);
 
     // Approve the L2 adapter to spend the bridgedUSDC
     hevm.prank(_from);
