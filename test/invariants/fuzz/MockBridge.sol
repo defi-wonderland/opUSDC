@@ -5,9 +5,9 @@ import {ITestCrossDomainMessenger} from 'test/utils/interfaces/ITestCrossDomainM
 
 // Relay any message
 contract MockBridge is ITestCrossDomainMessenger {
-  uint256 public messageNonce;
-
   address internal _currentXDomSender;
+  uint256 public messageNonce;
+  uint256 internal _failCall;
 
   function OTHER_MESSENGER() external pure returns (address) {
     return address(0);
@@ -18,11 +18,16 @@ contract MockBridge is ITestCrossDomainMessenger {
   }
 
   function sendMessage(address _target, bytes calldata _message, uint32) external {
-    _currentXDomSender = msg.sender;
-    messageNonce++;
+    if (_failCall == 1) {
+      _currentXDomSender = address(0);
+      _failCall = 0;
+    } else {
+      _currentXDomSender = msg.sender;
+      messageNonce++;
 
-    (bool success,) = _target.call(_message);
-    success;
+      (bool success,) = _target.call(_message);
+      success;
+    }
   }
 
   function relayMessage(

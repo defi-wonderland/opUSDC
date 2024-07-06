@@ -142,7 +142,6 @@ contract OpUsdcTest is SetupOpUSDC {
       assert(usdcBridged.balanceOf(_currentCaller) == _fromBalanceBefore - _amount);
       if (_to == address(l1Adapter)) assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
       else assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
-      assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
     } catch {
       // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
       assert(l2Adapter.isMessagingDisabled());
@@ -316,6 +315,7 @@ contract OpUsdcTest is SetupOpUSDC {
 
     require(_burnCaller != address(0) && _roleCaller != address(0));
 
+    hevm.store(address(mockMessenger), bytes32(uint256(2)), bytes32(uint256(1)));
     // Action
     // 11
     try l1Adapter.migrateToNative(_burnCaller, _roleCaller, 0, 0) {
