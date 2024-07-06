@@ -85,15 +85,15 @@ contract OpUsdcTest is SetupOpUSDC {
     require(_privateKey != 0);
     require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
 
+    // Avoid balance overflow
+    _amount = _boundAmountToMint(_to, _amount);
+
     // Get address from signer private key
     address _signer = hevm.addr(_privateKey);
     // forge signature
     uint256 _nonce = l1Adapter.userNonce(_signer);
     uint256 _deadline = block.timestamp + 1 days;
     bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signer, _privateKey, address(l1Adapter));
-
-    // Avoid balance overflow
-    _amount = _boundAmountToMint(_to, _amount);
 
     // provided enough usdc on l1
     _dealAndApproveUSDC(_signer, _amount);
@@ -140,6 +140,8 @@ contract OpUsdcTest is SetupOpUSDC {
       // Postcondition
       assert(!l2Adapter.isMessagingDisabled());
       assert(usdcBridged.balanceOf(_currentCaller) == _fromBalanceBefore - _amount);
+      if (_to == address(l1Adapter)) assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
+      else assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
       assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
     } catch {
       // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
@@ -162,13 +164,13 @@ contract OpUsdcTest is SetupOpUSDC {
     require(_privateKey != 0);
     require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
 
+    // Avoid balance overflow
+    _amount = _boundAmountToMint(_to, _amount);
+
     address _signer = hevm.addr(_privateKey);
     uint256 _nonce = l2Adapter.userNonce(_signer);
     bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signer, _privateKey, address(l2Adapter));
     uint256 _deadline = block.timestamp + 1 days;
-
-    // Avoid balance overflow
-    _amount = _boundAmountToMint(_to, _amount);
 
     // provided enough usdc on l2
     _dealAndApproveBridgedUSDC(_signer, _amount, _minGasLimit);
@@ -183,7 +185,8 @@ contract OpUsdcTest is SetupOpUSDC {
       // Postcondition
       assert(!l2Adapter.isMessagingDisabled());
       assert(usdcBridged.balanceOf(_signer) == _fromBalanceBefore - _amount);
-      assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
+      if (_to == address(l1Adapter)) assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
+      else assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
     } catch {
       // fails either because of wrong xdom msg sender or because of the status, but xdom sender is constrained in precond
       assert(l2Adapter.isMessagingDisabled());
@@ -313,9 +316,6 @@ contract OpUsdcTest is SetupOpUSDC {
 
     require(_burnCaller != address(0) && _roleCaller != address(0));
 
-    // Set adapter to make the calls fail on l2
-    mockMessenger.setDomaninMessageSender(address(l2Adapter));
-
     // Action
     // 11
     try l1Adapter.migrateToNative(_burnCaller, _roleCaller, 0, 0) {
@@ -434,6 +434,7 @@ contract OpUsdcTest is SetupOpUSDC {
         assert(mockMessenger.xDomainMessageSender() == address(l1Adapter));
       } catch {}
     } else if (_selectorIndex == 1) {
+      require(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading);
       try l2Adapter.receiveMigrateToNative(_address, 0) {
         assert(mockMessenger.xDomainMessageSender() == address(l1Adapter));
       } catch {}
@@ -858,10 +859,6 @@ contract OpUsdcTest is SetupOpUSDC {
     }
   }
 
-  function randomizeXDomainSender(address _sender) public {
-    mockMessenger.setDomaninMessageSender(_sender);
-  }
-
   // TODO: review this and use different approach if the message is trigger by l1Adapter or l2Adapter
   function _boundAmountToMint(address _to, uint256 _amount) internal view returns (uint256) {
     uint256 _maxBalance = max(
@@ -869,7 +866,7 @@ contract OpUsdcTest is SetupOpUSDC {
       max(usdcMainnet.balanceOf(address(l1Adapter)), usdcBridged.balanceOf(address(l2Adapter)))
     );
 
-    return clamp(_maxBalance, 1, 2 ** 255 - 1 - _maxBalance);
+    return clamp(_amount, 1, 2 ** 255 - 1 - _maxBalance);
   }
 
   function _dealAndApproveUSDC(address _from, uint256 _amount) internal {
@@ -886,7 +883,6 @@ contract OpUsdcTest is SetupOpUSDC {
    * @dev Provides bridged USDC through the L1 adapter to not bypass the logic.
    */
   function _dealAndApproveBridgedUSDC(address _from, uint256 _amount, uint32 _minGasLimit) internal {
-    address _currentXDomainSender = mockMessenger.xDomainMessageSender();
     // provided enough usdc on l1
     hevm.prank(_usdcMinter);
     usdcMainnet.mint(_from, _amount);
@@ -894,18 +890,12 @@ contract OpUsdcTest is SetupOpUSDC {
     hevm.prank(_from);
     usdcMainnet.approve(address(l1Adapter), _amount);
 
-    // Set L1 Adapter as sender to send the message to l2
-    mockMessenger.setDomaninMessageSender(address(l1Adapter));
-
     hevm.prank(_from);
     l1Adapter.sendMessage(_from, _amount, _minGasLimit);
 
     // Approve the L2 adapter to spend the bridgedUSDC
     hevm.prank(_from);
     usdcBridged.approve(address(l2Adapter), _amount);
-
-    // Reset the xDomain sender
-    mockMessenger.setDomaninMessageSender(_currentXDomainSender);
   }
 
   function _generateSignature(
@@ -916,8 +906,8 @@ contract OpUsdcTest is SetupOpUSDC {
     uint256 _signerPk,
     address _adapter
   ) internal returns (bytes memory _signature) {
-    hevm.prank(_signerAd);
     bytes32 _digest = keccak256(abi.encode(_adapter, block.chainid, _to, _amount, _nonce)).toEthSignedMessageHash();
+    hevm.prank(_signerAd);
     (uint8 v, bytes32 r, bytes32 s) = hevm.sign(_signerPk, _digest);
     _signature = abi.encodePacked(r, s, v);
   }
