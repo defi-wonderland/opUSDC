@@ -15,6 +15,8 @@ import {IUSDC} from 'interfaces/external/IUSDC.sol';
  * L2 contracts have the same address on different L2s when triggered by different owners.
  */
 contract L2OpUSDCFactory is IL2OpUSDCFactory {
+  address constant L2_MESSENGER = 0x4200000000000000000000000000000000000007;
+
   /**
    * @notice Deploys the USDC implementation, proxy, and L2 adapter contracts all at once, and then initializes the USDC
    * @param _l1Adapter The address of the L1 adapter contract
@@ -43,8 +45,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     emit USDCProxyDeployed(_usdcProxy);
 
     // Deploy L2 Adapter
-    address _l2Messenger = 0x4200000000000000000000000000000000000007;
-    bytes memory _l2AdapterCArgs = abi.encode(_usdcProxy, _l2Messenger, _l1Adapter, _l2AdapterOwner);
+    bytes memory _l2AdapterCArgs = abi.encode(_usdcProxy, L2_MESSENGER, _l1Adapter, _l2AdapterOwner);
     bytes memory _l2AdapterInitCode = bytes.concat(type(L2OpUSDCBridgeAdapter).creationCode, _l2AdapterCArgs);
     (address _l2Adapter) = _deployCreate(_l2AdapterInitCode);
     emit L2AdapterDeployed(_l2Adapter);

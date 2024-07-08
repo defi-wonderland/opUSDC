@@ -91,10 +91,10 @@ contract Integration_Bridging is IntegrationBase {
 
     vm.prank(_signerAd);
     MAINNET_USDC.approve(address(l1Adapter), _amount);
-
-    uint256 _nonce = vm.getNonce(_signerAd);
-    bytes memory _signature = _generateSignature(_signerAd, _amount, _nonce, _signerAd, _signerPk, address(l1Adapter));
     uint256 _deadline = block.timestamp + 1 days;
+    uint256 _nonce = vm.getNonce(_signerAd);
+    bytes memory _signature =
+      _generateSignature(_signerAd, _amount, _deadline, _nonce, _signerAd, _signerPk, address(l1Adapter));
 
     // Different address can execute the message
     vm.prank(_user);
@@ -132,12 +132,13 @@ contract Integration_Bridging is IntegrationBase {
 
     vm.prank(_signerAd);
     MAINNET_USDC.approve(address(l1Adapter), _amount);
+    uint256 _deadline = block.timestamp + 1 days;
 
     uint256 _nonce = vm.getNonce(_signerAd);
 
     // Changing to `to` param to _user but we call it with _signerAd
-    bytes memory _signature = _generateSignature(_user, _amount, _nonce, _signerAd, _signerPk, address(l1Adapter));
-    uint256 _deadline = block.timestamp + 1 days;
+    bytes memory _signature =
+      _generateSignature(_user, _amount, _deadline, _nonce, _signerAd, _signerPk, address(l1Adapter));
 
     // Different address can execute the message
     vm.startPrank(_user);

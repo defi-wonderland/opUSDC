@@ -28,7 +28,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /**
    * @notice Modifier to check if the sender is the linked adapter through the messenger
    */
-  modifier checkSender() {
+  modifier onlyLinkedAdapter() {
     if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != LINKED_ADAPTER) {
       revert IOpUSDCBridgeAdapter_InvalidSender();
     }
@@ -93,7 +93,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _amount The amount of USDC tokens that will be burned
    * @dev Only callable by a whitelisted messenger during its migration process
    */
-  function setBurnAmount(uint256 _amount) external checkSender {
+  function setBurnAmount(uint256 _amount) external onlyLinkedAdapter {
     if (messengerStatus != Status.Upgrading) revert IOpUSDCBridgeAdapter_NotUpgrading();
 
     burnAmount = _amount;
@@ -230,7 +230,8 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     if (block.timestamp > _deadline) revert IOpUSDCBridgeAdapter_MessageExpired();
 
     // Hash the message
-    bytes32 _messageHash = keccak256(abi.encode(address(this), block.chainid, _to, _amount, userNonce[_signer]++));
+    bytes32 _messageHash =
+      keccak256(abi.encode(address(this), block.chainid, _to, _amount, _deadline, userNonce[_signer]++));
 
     _checkSignature(_signer, _messageHash, _signature);
 
@@ -251,7 +252,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _user The user to mint the bridged representation for
    * @param _amount The amount of tokens to mint
    */
-  function receiveMessage(address _user, uint256 _amount) external override checkSender {
+  function receiveMessage(address _user, uint256 _amount) external override onlyLinkedAdapter {
     // Transfer the tokens to the user
     IUSDC(USDC).safeTransfer(_user, _amount);
     emit MessageReceived(_user, _amount, MESSENGER);
