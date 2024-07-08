@@ -3,9 +3,7 @@
 There are 4 main contracts, one abstract and 2 peripherals ones (lib, utils), total sloc is 379. Main implementation is built symetrically - L1 and L2, with a factory/children pattern.
 
 ## Unit Tests
-Units tests are provided by the development team and are not following the current Wonderland guideline (which is intended, as this is a pilot project).
-
-Current coverage is 100% of the branches for the 7 contracts, across 121 tests (all passing).
+Current coverage is 100% of the branches for the 7 contracts, across 121 tests (all passing), except one branch flagged as non covered in the L1Adapter (a burn amount of 0, which should not revert) - manually reviewed as covered though.
 | File                                            | % Lines          | % Statements     | % Branches      | % Funcs         |
 |-------------------------------------------------|------------------|------------------|-----------------|-----------------|
 | src/contracts/L1OpUSDCBridgeAdapter.sol         | 100.00% (45/45)  | 100.00% (68/68)  | 95.83% (23/24)  | 100.00% (10/10) |
@@ -16,7 +14,6 @@ Current coverage is 100% of the branches for the 7 contracts, across 121 tests (
 | src/contracts/utils/FallbackProxyAdmin.sol      | 100.00% (4/4)    | 100.00% (4/4)    | 100.00% (0/0)   | 100.00% (4/4)   |
 | src/libraries/CrossChainDeployments.sol         | 100.00% (25/25)  | 100.00% (26/26)  | 100.00% (16/16) | 100.00% (3/3)   |
 
-Their quality and coverage are judged as good, and rewriting them from scratch only to use the branched-tree technique would therefore be a non-efficient use of resources.
 
 ## Integration Tests
 The integration tests are implemented by switching between 3 different forks: mainnet, Optimism and Base. Crosschain messaging is achieved via the ICrossDomainMessenger contracts already deployed on the 3 chains (see IntegrationBase.sol).

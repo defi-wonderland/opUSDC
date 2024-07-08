@@ -303,7 +303,7 @@ contract OpUsdcTest_SymbTest is HalmosTest {
 
     uint256 _l1AdapterBalanceBefore = usdcMainnet.balanceOf(address(l1Adapter));
 
-    mockMessenger.setDomaninMessageSender(address(l2Adapter));
+    mockMessenger.setDomainMessageSender(address(l2Adapter));
     vm.prank(l1Adapter.MESSENGER());
 
     // Action
@@ -339,7 +339,7 @@ contract OpUsdcTest_SymbTest is HalmosTest {
   /// @custom:property Incoming successful messages should only come from the linked adapter's
   function check_succMessageOnlyFromAdapter(address senderOtherChain) public {
     // Precondition
-    mockMessenger.setDomaninMessageSender(address(senderOtherChain));
+    mockMessenger.setDomainMessageSender(address(senderOtherChain));
 
     vm.startPrank(address(mockMessenger));
 
@@ -442,7 +442,7 @@ contract MockBridge is ITestCrossDomainMessenger {
     _bridgeStopped = true;
   }
 
-  function setDomaninMessageSender(address _sender) external {
+  function setDomainMessageSender(address _sender) external {
     _currentXDomSender = _sender;
   }
 }
