@@ -24,13 +24,15 @@ contract Helpers is Test {
   function _generateSignature(
     address _to,
     uint256 _amount,
+    uint256 _deadline,
     uint256 _nonce,
     address _signerAd,
     uint256 _signerPk,
     address _adapter
   ) internal returns (bytes memory _signature) {
     vm.startPrank(_signerAd);
-    bytes32 _digest = keccak256(abi.encode(_adapter, block.chainid, _to, _amount, _nonce)).toEthSignedMessageHash();
+    bytes32 _digest =
+      keccak256(abi.encode(_adapter, block.chainid, _to, _amount, _deadline, _nonce)).toEthSignedMessageHash();
     (uint8 v, bytes32 r, bytes32 s) = vm.sign(_signerPk, _digest);
     _signature = abi.encodePacked(r, s, v);
     vm.stopPrank();

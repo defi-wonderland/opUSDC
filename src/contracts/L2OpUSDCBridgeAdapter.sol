@@ -39,7 +39,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /**
    * @notice Modifier to check if the sender is the linked adapter through the messenger
    */
-  modifier checkSender() {
+  modifier onlyLinkedAdapter() {
     if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != LINKED_ADAPTER) {
       revert IOpUSDCBridgeAdapter_InvalidSender();
     }
@@ -74,7 +74,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _roleCaller The address that will be allowed to transfer the USDC roles
    * @param _setBurnAmountMinGasLimit Minimum gas limit that the setBurnAmount message can be executed on L1
    */
-  function receiveMigrateToNative(address _roleCaller, uint32 _setBurnAmountMinGasLimit) external checkSender {
+  function receiveMigrateToNative(address _roleCaller, uint32 _setBurnAmountMinGasLimit) external onlyLinkedAdapter {
     isMessagingDisabled = true;
     roleCaller = _roleCaller;
 
@@ -109,7 +109,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /**
    * @notice Receive the stop messaging message from the linked adapter and stop outgoing messages
    */
-  function receiveStopMessaging() external checkSender {
+  function receiveStopMessaging() external onlyLinkedAdapter {
     isMessagingDisabled = true;
 
     emit MessagingStopped(MESSENGER);
@@ -118,7 +118,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /**
    * @notice Resume messaging after it was stopped
    */
-  function receiveResumeMessaging() external checkSender {
+  function receiveResumeMessaging() external onlyLinkedAdapter {
     // NOTE: This is safe because this message can only be received when messaging is not deprecated on the L1 messenger
     isMessagingDisabled = false;
 
@@ -176,7 +176,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     if (block.timestamp > _deadline) revert IOpUSDCBridgeAdapter_MessageExpired();
 
     // Hash the message
-    bytes32 _messageHash = keccak256(abi.encode(address(this), block.chainid, _to, _amount, userNonce[_signer]++));
+    bytes32 _messageHash =
+      keccak256(abi.encode(address(this), block.chainid, _to, _amount, _deadline, userNonce[_signer]++));
 
     _checkSignature(_signer, _messageHash, _signature);
 
@@ -199,7 +200,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _user The user to mint the bridged representation for
    * @param _amount The amount of tokens to mint
    */
-  function receiveMessage(address _user, uint256 _amount) external override checkSender {
+  function receiveMessage(address _user, uint256 _amount) external override onlyLinkedAdapter {
     // Mint the tokens to the user
     IUSDC(USDC).mint(_user, _amount);
     emit MessageReceived(_user, _amount, MESSENGER);
