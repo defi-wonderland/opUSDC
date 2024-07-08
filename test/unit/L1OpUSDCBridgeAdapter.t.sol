@@ -96,10 +96,11 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
     address _burnCaller
   ) external {
     vm.assume(_burnCaller != address(0));
+    address _roleCaller = address(0);
     // Execute
     vm.prank(_owner);
     vm.expectRevert(abi.encodeWithSelector(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidAddress.selector));
-    adapter.migrateToNative(address(0), _burnCaller, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
+    adapter.migrateToNative(_roleCaller, _burnCaller, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
   }
 
   /**
@@ -111,10 +112,11 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
     address _roleCaller
   ) external {
     vm.assume(_roleCaller != address(0));
+    address _burnCaller = address(0);
     // Execute
     vm.prank(_owner);
     vm.expectRevert(abi.encodeWithSelector(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidAddress.selector));
-    adapter.migrateToNative(_roleCaller, address(0), _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
+    adapter.migrateToNative(_roleCaller, _burnCaller, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
   }
 
   /**
