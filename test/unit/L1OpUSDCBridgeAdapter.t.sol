@@ -788,7 +788,8 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     vm.warp(_deadline - 1);
     uint256 _nonce = adapter.userNonce(_signerAd);
     (address _notSignerAd, uint256 _notSignerPk) = makeAddrAndKey('notSigner');
-    bytes memory _signature = _generateSignature(_to, _amount, _nonce, _notSignerAd, _notSignerPk, address(adapter));
+    bytes memory _signature =
+      _generateSignature(_to, _amount, _deadline, _nonce, _notSignerAd, _notSignerPk, address(adapter));
 
     // Execute
     vm.prank(_user);
@@ -803,7 +804,8 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     vm.assume(_deadline > 0);
     vm.warp(_deadline - 1);
     uint256 _nonce = adapter.userNonce(_signerAd);
-    bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
+    bytes memory _signature =
+      _generateSignature(_to, _amount, _deadline, _nonce, _signerAd, _signerPk, address(adapter));
 
     vm.mockCall(
       _usdc,
@@ -834,7 +836,8 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     vm.assume(_deadline > 0);
     vm.warp(_deadline - 1);
     uint256 _nonce = adapter.userNonce(_signerAd);
-    bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
+    bytes memory _signature =
+      _generateSignature(_to, _amount, _deadline, _nonce, _signerAd, _signerPk, address(adapter));
 
     _mockAndExpect(
       _usdc,
@@ -864,7 +867,8 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     vm.assume(_deadline > 0);
     vm.warp(_deadline - 1);
     uint256 _nonce = adapter.userNonce(_signerAd);
-    bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
+    bytes memory _signature =
+      _generateSignature(_to, _amount, _deadline, _nonce, _signerAd, _signerPk, address(adapter));
 
     vm.mockCall(
       _usdc,
