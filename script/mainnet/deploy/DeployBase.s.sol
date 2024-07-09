@@ -11,7 +11,7 @@ contract DeployBase is Script {
   address public constant L1_MESSENGER = 0x866E82a600A1414e583f7F13623F1aC5d58b0Afa;
   uint32 public constant MIN_GAS_LIMIT_DEPLOY = 9_000_000;
   IL1OpUSDCFactory public immutable L1_FACTORY = IL1OpUSDCFactory(vm.envAddress('L1_FACTORY_MAINNET'));
-  address public deployer = vm.rememberKey(vm.envUint('MAINNET_DEPLOYER_PK'));
+  address public deployer = vm.rememberKey(vm.envUint('MAINNET_PK'));
 
   function run() public {
     vm.startBroadcast(deployer);
