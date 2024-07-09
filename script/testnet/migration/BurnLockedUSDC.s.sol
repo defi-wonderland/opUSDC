@@ -2,7 +2,6 @@
 pragma solidity 0.8.25;
 
 import {Script} from 'forge-std/Script.sol';
-import {console} from 'forge-std/Test.sol';
 import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 
 contract MigrateToNativeOp is Script {

@@ -2,7 +2,6 @@
 pragma solidity 0.8.25;
 
 import {Script} from 'forge-std/Script.sol';
-import {console} from 'forge-std/Test.sol';
 import {IL2OpUSDCBridgeAdapter} from 'interfaces/IL2OpUSDCBridgeAdapter.sol';
 
 /// NOTE: To be executed on L2
