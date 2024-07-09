@@ -8,7 +8,7 @@ import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 
 contract L1FactoryDeployAndSetup is Script {
   address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-  address public deployer = vm.rememberKey(vm.envUint('MAINNET_DEPLOYER_PK'));
+  address public deployer = vm.rememberKey(vm.envUint('MAINNET_PK'));
 
   function run() public {
     vm.startBroadcast(deployer);
@@ -16,7 +16,6 @@ contract L1FactoryDeployAndSetup is Script {
     IL1OpUSDCFactory _l1Factory = new L1OpUSDCFactory(USDC);
     console.log('L1OpUSDCFactory deployed at:', address(_l1Factory));
     /// NOTE: Hardcode the address on `L1_FACTORY_MAINNET` inside the `.env` file
-
     vm.stopBroadcast();
   }
 }
