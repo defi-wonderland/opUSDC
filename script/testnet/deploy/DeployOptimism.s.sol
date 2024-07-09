@@ -16,7 +16,6 @@ contract DeployOptimism is Script {
 
   function run() public {
     vm.startBroadcast(deployer);
-    // Deploy the L2 contracts
     bytes[] memory _usdcInitTxs = new bytes[](3);
     _usdcInitTxs[0] = USDCInitTxs.INITIALIZEV2;
     _usdcInitTxs[1] = USDCInitTxs.INITIALIZEV2_1;
@@ -28,10 +27,13 @@ contract DeployOptimism is Script {
       usdcInitTxs: _usdcInitTxs,
       minGasLimitDeploy: MIN_GAS_LIMIT_DEPLOY
     });
+
+    // Deploy the L2 contracts
     (address _l1Adapter, address _l2Factory, address _l2Adapter) =
       L1_FACTORY.deploy(L1_MESSENGER, deployer, _l2Deployments);
     vm.stopBroadcast();
 
+    /// NOTE: Hardcode the `L1_ADAPTER_OP_SEPOLIA` and `L2_ADAPTER_OP_SEPOLIA` addresses inside the `.env` file
     console.log('L1 Adapter:', _l1Adapter);
     console.log('L2 Factory:', _l2Factory);
     console.log('L2 Adapter:', _l2Adapter);
