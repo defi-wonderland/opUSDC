@@ -207,7 +207,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   }
 
   /**
-   * @notice Send tokens to other chain through the linked adapter
+   * @notice Send signer tokens to other chain through the linked adapter
    * @param _signer The address of the user sending the message
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
