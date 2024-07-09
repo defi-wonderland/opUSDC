@@ -4,6 +4,7 @@ pragma solidity 0.8.25;
 import {Script} from 'forge-std/Script.sol';
 import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 
+/// Warning: Script created only for testing purposes.
 contract MigrateToNativeOp is Script {
   uint32 public constant MIN_GAS_LIMIT_RECEIVE_L2 = 100_000;
   uint32 public constant MIN_GAS_LIMIT_SET_BURN_AMOUNT_L2 = 100_000;
