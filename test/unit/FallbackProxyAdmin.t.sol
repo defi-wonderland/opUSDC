@@ -19,6 +19,9 @@ abstract contract Base is Helpers {
 contract FallbackProxyAdmin_Unit_Constructor is Base {}
 
 contract FallbackProxyAdmin_Unit_ChangeAdmin is Base {
+  /**
+   * @notice Ensures that the msg.sender cant change the admin if not the owner
+   */
   function test_revertIfNotOwner(address _newOwner) public {
     vm.assume(_newOwner != _owner);
 
@@ -27,6 +30,9 @@ contract FallbackProxyAdmin_Unit_ChangeAdmin is Base {
     admin.changeAdmin(_newOwner);
   }
 
+  /**
+   * @notice Ensures that the owner can change the admin if the owner
+   */
   function test_changeAdmin(address _newOwner) public {
     vm.assume(_newOwner != _owner);
 
@@ -37,6 +43,9 @@ contract FallbackProxyAdmin_Unit_ChangeAdmin is Base {
 }
 
 contract FallbackProxyAdmin_Unit_UpgradeTo is Base {
+  /**
+   * @notice Ensures that the msg.sender cant call upgradeTo if not the owner
+   */
   function test_revertIfNotOwner(address _newImplementation) public {
     vm.assume(_newImplementation != _owner);
 
@@ -45,6 +54,9 @@ contract FallbackProxyAdmin_Unit_UpgradeTo is Base {
     admin.upgradeTo(_newImplementation);
   }
 
+  /**
+   * @notice Ensures that the owner can call upgradeTo
+   */
   function test_upgradeTo(address _newImplementation) public {
     _mockAndExpect(_usdc, abi.encodeWithSignature('upgradeTo(address)', _newImplementation), abi.encode());
     vm.prank(_owner);
@@ -53,6 +65,9 @@ contract FallbackProxyAdmin_Unit_UpgradeTo is Base {
 }
 
 contract FallbackProxyAdmin_Unit_UpgradeToAndCall is Base {
+  /**
+   * @notice Ensures that the msg.sender cant call upgradeToAndCall if not the owner
+   */
   function test_revertIfNotOwner(address _newImplementation, bytes memory _data) public {
     vm.assume(_newImplementation != _owner);
 
@@ -61,6 +76,9 @@ contract FallbackProxyAdmin_Unit_UpgradeToAndCall is Base {
     admin.upgradeToAndCall(_newImplementation, _data);
   }
 
+  /**
+   * @notice Ensures that the owner can call upgradeToAndCall
+   */
   function test_upgradeToAndCall(address _newImplementation, bytes memory _data) public {
     _mockAndExpect(
       _usdc, abi.encodeWithSignature('upgradeToAndCall(address,bytes)', _newImplementation, _data), abi.encode()
