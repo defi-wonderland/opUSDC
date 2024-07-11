@@ -12,7 +12,7 @@ interface IL2OpUSDCBridgeAdapter {
    * @notice Emitted when the owner message is sent
    * @param _functionSignature The signature of the function sent
    */
-  event UsdcFunctionSent(bytes4 _functionSignature);
+  event USDCFunctionSent(bytes4 _functionSignature);
 
   /*///////////////////////////////////////////////////////////////
                             LOGIC
