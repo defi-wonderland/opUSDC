@@ -8,6 +8,9 @@ number_underscore = 'thousands'
 multiline_func_header = 'params_first'
 sort_imports = true
 
+[profile.default]
+solc_version = '0.8.25'
+
 [profile.optimized]
 via_ir = true
 out = 'out-via-ir'
