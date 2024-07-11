@@ -9,14 +9,6 @@ contract MockBridge is ITestCrossDomainMessenger {
   address internal _currentXDomSender;
   bool internal _paused;
 
-  function OTHER_MESSENGER() external pure returns (address) {
-    return address(0);
-  }
-
-  function xDomainMessageSender() external view returns (address) {
-    return _currentXDomSender;
-  }
-
   function sendMessage(address _target, bytes calldata _message, uint32) external {
     if (_paused) return;
     _currentXDomSender = msg.sender;
@@ -47,5 +39,13 @@ contract MockBridge is ITestCrossDomainMessenger {
 
   function setDomainMessageSender(address _sender) external {
     _currentXDomSender = _sender;
+  }
+
+  function xDomainMessageSender() external view returns (address) {
+    return _currentXDomSender;
+  }
+
+  function OTHER_MESSENGER() external pure returns (address) {
+    return address(0);
   }
 }

@@ -5,6 +5,7 @@ import {Test} from 'forge-std/Test.sol';
 import {MockERC20} from 'forge-std/mocks/MockERC20.sol';
 import {SymTest} from 'halmos-cheatcodes/SymTest.sol';
 
+// solhint-disable
 interface IHevm {
   // Set block.timestamp to newTimestamp
   function warp(uint256 newTimestamp) external;

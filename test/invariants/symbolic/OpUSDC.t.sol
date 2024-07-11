@@ -1,23 +1,20 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import {HalmosTest, HalmosUtils} from '../AdvancedTestsUtils.sol';
+import {HalmosTest} from '../AdvancedTestsUtils.sol';
 
+import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
 import {IL1OpUSDCBridgeAdapter, L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
-import {IL1OpUSDCFactory, L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
-import {FallbackProxyAdmin, L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
-
+import {L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
+import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
-
-import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementationCreationCode.sol';
 import {Create2Deployer} from 'test/invariants/fuzz/Create2Deployer.sol';
 import {ITestCrossDomainMessenger} from 'test/utils/interfaces/ITestCrossDomainMessenger.sol';
 
-import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
-
+// solhint-disable
 contract OpUsdcTest_SymbTest is HalmosTest {
   using MessageHashUtils for bytes32;
 

@@ -14,6 +14,7 @@ import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementation
 import {Create2Deployer} from 'test/invariants/fuzz/Create2Deployer.sol';
 import {MockBridge} from 'test/invariants/fuzz/MockBridge.sol';
 
+// solhint-disable
 contract SetupOpUSDC is EchidnaTest {
   IUSDC usdcMainnet;
   IUSDC usdcBridged;
