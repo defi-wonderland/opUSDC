@@ -99,7 +99,7 @@ abstract contract Base is Test, Helpers {
 
 contract L1OpUSDCFactory_Unit_Constructor is Base {
   /**
-   * @notice Test the constructor params are correctly set
+   * @notice Check the constructor params are correctly set
    */
   function test_setImmutables() public view {
     // Assert
