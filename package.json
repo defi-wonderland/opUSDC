@@ -1,7 +1,7 @@
 {
   "name": "op-usdc",
   "version": "1.0.0",
-  "description": "opUSDC, a USDC bridge for any op-chain's canonical bridge",
+  "description": "opUSDC, a bridged USDC bridge for any op-chain's canonical bridge",
   "license": "MIT",
   "author": "Wonderland",
   "scripts": {
