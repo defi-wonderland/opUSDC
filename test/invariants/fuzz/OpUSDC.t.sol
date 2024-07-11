@@ -9,6 +9,8 @@ import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementationCreationCode.sol';
 
 //solhint-disable custom-errors
+//solhint-disable ordering
+//solhint-disable reason-string
 contract OpUsdcTest is SetupOpUSDC {
   using MessageHashUtils for bytes32;
   /////////////////////////////////////////////////////////////////////
