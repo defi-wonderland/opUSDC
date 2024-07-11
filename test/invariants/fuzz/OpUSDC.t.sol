@@ -11,6 +11,7 @@ import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementation
 //solhint-disable custom-errors
 //solhint-disable ordering
 //solhint-disable reason-string
+//solhint-disable max-line-length
 contract OpUsdcTest is SetupOpUSDC {
   using MessageHashUtils for bytes32;
   /////////////////////////////////////////////////////////////////////

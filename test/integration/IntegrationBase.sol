@@ -211,6 +211,9 @@ contract IntegrationBase is Helpers {
 }
 
 contract IntegrationSetup is IntegrationBase {
+  /**
+   * @notice Ensure the setup is correct
+   */
   function testSetup() public {
     vm.selectFork(mainnet);
     assertEq(l1Adapter.LINKED_ADAPTER(), address(l2Adapter));

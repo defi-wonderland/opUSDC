@@ -28,7 +28,7 @@ interface IL2OpUSDCBridgeAdapter {
   /**
    * @notice Transfer the USDC roles to the new owner
    * @param _owner The address to transfer ownerships to
-   * @dev Cam only be called by the role caller set in the migration process
+   * @dev n only be called by the role caller set in the migration process
    */
   function transferUSDCRoles(address _owner) external;
 
@@ -47,6 +47,7 @@ interface IL2OpUSDCBridgeAdapter {
    * @dev can't execute the following list of transactions:
    *  • transferOwnership (0xf2fde38b)
    *  • changeAdmin (0x8f283970)
+   * @dev UpgradeTo and UpgradeToAndCall go through the fallback admin
    * @param _data The calldata to execute on the USDC contract
    */
   function callUsdcTransaction(bytes calldata _data) external;

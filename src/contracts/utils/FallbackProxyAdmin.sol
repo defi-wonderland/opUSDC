@@ -18,6 +18,7 @@ contract FallbackProxyAdmin is Ownable {
 
   /**
    * @notice Construct the FallbackProxyAdmin contract
+   * @param _usdc USDC address
    */
   constructor(address _usdc) Ownable(msg.sender) {
     USDC = _usdc;
