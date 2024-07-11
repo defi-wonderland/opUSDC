@@ -1,9 +1,9 @@
 # Tests summary.
 
-There are 4 main contracts, one abstract and 2 peripherals ones (lib, utils), total sloc is 379. Main implementation is built symetrically - L1 and L2, with a factory/children pattern.
+There are 4 main contracts, one abstract and 2 peripherals ones (lib, utils), total sloc is 379. Main implementation is built symetrically - L1 and L2, with a factory/child pattern.
 
 ## Unit Tests
-Current coverage is 100% of the branches for the 7 contracts, across 121 tests (all passing), except one branch flagged as non covered in the L1Adapter (a burn amount of 0, which should not revert) - manually reviewed as covered though.
+Current coverage is 100% of the branches for the 7 contracts, across 121 tests (all passing), except one branch flagged as non covered in the L1Adapter (a burn amount of 0, which should not revert) - manually reviewed as covered.
 | File                                            | % Lines          | % Statements     | % Branches      | % Funcs         |
 |-------------------------------------------------|------------------|------------------|-----------------|-----------------|
 | src/contracts/L1OpUSDCBridgeAdapter.sol         | 100.00% (45/45)  | 100.00% (68/68)  | 95.83% (23/24)  | 100.00% (10/10) |
@@ -33,11 +33,17 @@ The following tests are conducted:
 - update different privilegied roles in the L2 deployment (pauser, master minter, black lister, rescuer)
 
 ## Property Tests
-We identified 19 properties before, during and after the implementation period. One became deprecated following additional refactor, leaving with 19 to tests.
+We identified 19 properties before, during and after the implementation period. One became deprecated following additional refactor, leaving with 18 to tests.
 
 ### Fuzzing Campaign
 We used Echidna to test these 18 properties. The setup runs entirely on the same chains, introducing 2 small differences with the real-life deployments: we use a mock bridge contract relaying every call received to another address atomically; the "L2" adapter has not the same address as its L1 counterpart (as they'd collide otherwise).
 
+The 18 properties tested currently hold.
+
+Limitations and future improvements:
+- A more realistic implementation of the mock bridge should have a queue, executing transaction in fifo ordering
+- The call generators should add additional constraints and post-conditions check, to have a more reliable test setup
+
 
 ### Formal Verification: Symbolic Execution
-We used Halmos to test 6 of these properties.
+We used Halmos to test 6 of these properties. Properties not tested are either not easily challenged with symbolic execution (statefullness needed) or limited by Halmos itself (hitting loops in the implementation for instance).
