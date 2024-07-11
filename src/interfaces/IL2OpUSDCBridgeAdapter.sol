@@ -28,7 +28,7 @@ interface IL2OpUSDCBridgeAdapter {
   /**
    * @notice Transfer the USDC roles to the new owner
    * @param _owner The address to transfer ownerships to
-   * @dev n only be called by the role caller set in the migration process
+   * @dev Can only be called by the role caller set in the migration process
    */
   function transferUSDCRoles(address _owner) external;
 
