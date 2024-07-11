@@ -96,10 +96,11 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
     address _burnCaller
   ) external {
     vm.assume(_burnCaller != address(0));
+    address _roleCaller = address(0);
     // Execute
     vm.prank(_owner);
     vm.expectRevert(abi.encodeWithSelector(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidAddress.selector));
-    adapter.migrateToNative(address(0), _burnCaller, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
+    adapter.migrateToNative(_roleCaller, _burnCaller, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
   }
 
   /**
@@ -111,10 +112,11 @@ contract L1OpUSDCBridgeAdapter_Unit_MigrateToNative is Base {
     address _roleCaller
   ) external {
     vm.assume(_roleCaller != address(0));
+    address _burnCaller = address(0);
     // Execute
     vm.prank(_owner);
     vm.expectRevert(abi.encodeWithSelector(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidAddress.selector));
-    adapter.migrateToNative(_roleCaller, address(0), _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
+    adapter.migrateToNative(_roleCaller, _burnCaller, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
   }
 
   /**
@@ -380,8 +382,8 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
   function test_burnNotCalledIfAmountIsZero(address _circle) external {
     adapter.forTest_setBurnCaller(_circle);
     adapter.forTest_setMessengerStatus(IL1OpUSDCBridgeAdapter.Status.Deprecated);
+    adapter.forTest_setBurnAmount(0);
 
-    // This should pass without needing to mock because its set to zero by default
     // Execute
     vm.prank(_circle);
     adapter.burnLockedUSDC();
@@ -788,7 +790,8 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     vm.warp(_deadline - 1);
     uint256 _nonce = adapter.userNonce(_signerAd);
     (address _notSignerAd, uint256 _notSignerPk) = makeAddrAndKey('notSigner');
-    bytes memory _signature = _generateSignature(_to, _amount, _nonce, _notSignerAd, _notSignerPk, address(adapter));
+    bytes memory _signature =
+      _generateSignature(_to, _amount, _deadline, _nonce, _notSignerAd, _notSignerPk, address(adapter));
 
     // Execute
     vm.prank(_user);
@@ -803,7 +806,8 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     vm.assume(_deadline > 0);
     vm.warp(_deadline - 1);
     uint256 _nonce = adapter.userNonce(_signerAd);
-    bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
+    bytes memory _signature =
+      _generateSignature(_to, _amount, _deadline, _nonce, _signerAd, _signerPk, address(adapter));
 
     vm.mockCall(
       _usdc,
@@ -834,7 +838,8 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     vm.assume(_deadline > 0);
     vm.warp(_deadline - 1);
     uint256 _nonce = adapter.userNonce(_signerAd);
-    bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
+    bytes memory _signature =
+      _generateSignature(_to, _amount, _deadline, _nonce, _signerAd, _signerPk, address(adapter));
 
     _mockAndExpect(
       _usdc,
@@ -864,7 +869,8 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     vm.assume(_deadline > 0);
     vm.warp(_deadline - 1);
     uint256 _nonce = adapter.userNonce(_signerAd);
-    bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signerAd, _signerPk, address(adapter));
+    bytes memory _signature =
+      _generateSignature(_to, _amount, _deadline, _nonce, _signerAd, _signerPk, address(adapter));
 
     vm.mockCall(
       _usdc,
