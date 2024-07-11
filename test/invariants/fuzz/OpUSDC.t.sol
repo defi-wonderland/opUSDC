@@ -92,7 +92,8 @@ contract OpUsdcTest is SetupOpUSDC {
     address _signer = hevm.addr(_privateKey);
     uint256 _nonce = l1Adapter.userNonce(_signer);
     uint256 _deadline = block.timestamp + 1 days;
-    bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signer, _privateKey, address(l1Adapter));
+    bytes memory _signature =
+      _generateSignature(_to, _amount, _deadline, _nonce, _signer, _privateKey, address(l1Adapter));
 
     _dealAndApproveUSDC(_signer, _amount);
 
@@ -167,8 +168,9 @@ contract OpUsdcTest is SetupOpUSDC {
 
     address _signer = hevm.addr(_privateKey);
     uint256 _nonce = l2Adapter.userNonce(_signer);
-    bytes memory _signature = _generateSignature(_to, _amount, _nonce, _signer, _privateKey, address(l2Adapter));
     uint256 _deadline = block.timestamp + 1 days;
+    bytes memory _signature =
+      _generateSignature(_to, _amount, _deadline, _nonce, _signer, _privateKey, address(l2Adapter));
 
     _dealAndApproveBridgedUSDC(_signer, _amount, _minGasLimit);
 
@@ -531,8 +533,9 @@ contract OpUsdcTest is SetupOpUSDC {
     require(_uintB != 0);
     address _signerAd = hevm.addr(_uintB);
     uint256 _nonce = l1Adapter.userNonce(_signerAd);
-    bytes memory _signature = _generateSignature(_addressB, _uintA, _nonce, _signerAd, _uintB, address(l1Adapter));
     uint256 _deadline = block.timestamp + 1 days;
+    bytes memory _signature =
+      _generateSignature(_addressB, _uintA, _deadline, _nonce, _signerAd, _uintB, address(l1Adapter));
 
     hevm.prank(_currentCaller);
 
@@ -592,8 +595,9 @@ contract OpUsdcTest is SetupOpUSDC {
     require(_uintB != 0);
     address _signerAd = hevm.addr(_uintB);
     uint256 _nonce = l2Adapter.userNonce(_signerAd);
-    bytes memory _signature = _generateSignature(_addressB, _uintA, _nonce, _signerAd, _uintB, address(l2Adapter));
     uint256 _deadline = block.timestamp + 1 days;
+    bytes memory _signature =
+      _generateSignature(_addressB, _uintA, _deadline, _nonce, _signerAd, _uintB, address(l2Adapter));
 
     hevm.prank(_currentCaller);
 
@@ -911,12 +915,14 @@ contract OpUsdcTest is SetupOpUSDC {
   function _generateSignature(
     address _to,
     uint256 _amount,
+    uint256 _deadline,
     uint256 _nonce,
     address _signerAd,
     uint256 _signerPk,
     address _adapter
   ) internal returns (bytes memory _signature) {
-    bytes32 _digest = keccak256(abi.encode(_adapter, block.chainid, _to, _amount, _nonce)).toEthSignedMessageHash();
+    bytes32 _digest =
+      keccak256(abi.encode(_adapter, block.chainid, _to, _amount, _deadline, _nonce)).toEthSignedMessageHash();
     hevm.prank(_signerAd);
     (uint8 v, bytes32 r, bytes32 s) = hevm.sign(_signerPk, _digest);
     _signature = abi.encodePacked(r, s, v);
