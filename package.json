@@ -17,7 +17,9 @@
     "lint:sol-tests": "solhint -c .solhint.tests.json 'test/**/*.sol'",
     "prepare": "husky install",
     "test": "forge test -vvv",
+    "test:fuzz": "echidna test/invariants/fuzz/OpUSDC.t.sol --config test/invariants/fuzz/config.yaml --contract OpUsdcTest",
     "test:integration": "forge test --match-contract Integration -vvv",
+    "test:symb": "halmos",
     "test:unit": "forge test --match-contract Unit -vvv",
     "test:unit:deep": "FOUNDRY_FUZZ_RUNS=5000 yarn test:unit"
   },
