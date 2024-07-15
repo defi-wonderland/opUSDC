@@ -177,7 +177,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
 
     // Hash the message
     bytes32 _messageHash =
-      keccak256(abi.encode(address(this), block.chainid, _to, _amount, _deadline, userNonce[_signer]++));
+      keccak256(abi.encode(address(this), block.chainid, _to, _amount, _deadline, _minGasLimit, userNonce[_signer]++));
 
     _checkSignature(_signer, _messageHash, _signature);
 
