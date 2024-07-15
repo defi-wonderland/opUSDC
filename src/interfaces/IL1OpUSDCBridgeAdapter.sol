@@ -32,8 +32,9 @@ interface IL1OpUSDCBridgeAdapter {
 
   /**
    * @notice Emitted when the migration process is complete
+   * @param _burnedAmount The amount of USDC tokens that were burned
    */
-  event MigrationComplete();
+  event MigrationComplete(uint256 _burnedAmount);
 
   /*///////////////////////////////////////////////////////////////
                             LOGIC
