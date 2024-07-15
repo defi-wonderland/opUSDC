@@ -24,6 +24,10 @@ contract ForTestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
   function forTest_setMessengerStatus(Status _status) external {
     messengerStatus = _status;
   }
+
+  function forTest_setBlacklistedFunds(uint256 _amount) external {
+    blacklistedFunds = _amount;
+  }
 }
 
 abstract contract Base is Helpers {
@@ -672,9 +676,72 @@ contract L1OpUSDCBridgeAdapter_Unit_ResumeMessaging is Base {
   }
 }
 
+contract L1OpUSDCBridgeAdapter_Unit_WithdrawBlacklistedFunds is Base {
+  event BlacklistedFundsWithdrawn(address _owner, uint256 _amount);
+
+  /**
+   * @notice Check that reverts if not owner
+   */
+  function test_revertIfNotOwner(address _executor) external {
+    vm.assume(_executor != _owner);
+    // Execute
+    vm.prank(_executor);
+    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _executor));
+    adapter.withdrawBlacklistedFunds();
+  }
+
+  /**
+   * @notice Check that the funds are withdrawn as expected
+   */
+  function test_withdrawFunds(uint256 _amount) external {
+    vm.assume(_amount > 0);
+    adapter.forTest_setBlacklistedFunds(_amount);
+
+    _mockAndExpect(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _owner, _amount), abi.encode());
+
+    // Execute
+    vm.prank(_owner);
+    adapter.withdrawBlacklistedFunds();
+  }
+
+  /**
+   * @notice Check that the state is changed as expected
+   */
+  function test_setState(uint256 _amount) external {
+    vm.assume(_amount > 0);
+    adapter.forTest_setBlacklistedFunds(_amount);
+
+    vm.mockCall(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _owner, _amount), abi.encode());
+
+    // Execute
+    vm.prank(_owner);
+    adapter.withdrawBlacklistedFunds();
+
+    assertEq(adapter.blacklistedFunds(), 0, 'Blacklisted funds should be set to 0');
+  }
+
+  /**
+   * @notice Check that the event is emitted as expected
+   */
+  function test_emitEvent(uint256 _amount) external {
+    vm.assume(_amount > 0);
+    adapter.forTest_setBlacklistedFunds(_amount);
+
+    vm.mockCall(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _owner, _amount), abi.encode());
+
+    // Expect events
+    vm.expectEmit(true, true, true, true);
+    emit BlacklistedFundsWithdrawn(_owner, _amount);
+
+    // Execute
+    vm.prank(_owner);
+    adapter.withdrawBlacklistedFunds();
+  }
+}
 /*///////////////////////////////////////////////////////////////
                           MESSAGING
 ///////////////////////////////////////////////////////////////*/
+
 contract L1OpUSDCBridgeAdapter_Unit_SendMessage is Base {
   /**
    * @notice Check that the function reverts if messager is not active
@@ -951,5 +1018,28 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 
     vm.prank(_messenger);
     adapter.receiveMessage(_user, _amount);
+  }
+}
+
+contract L1OpUSDCBridgeAdapter_Unit_AttemptTransfer is Base {
+  /**
+   * @notice Check that the function reverts if the sender is not the contract
+   */
+  function test_onlySelf(address _notSelf, uint256 _amount) external {
+    vm.assume(_notSelf != address(adapter));
+    // Execute
+    vm.prank(_notSelf);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
+    adapter.attemptTransfer(_user, _amount);
+  }
+
+  /**
+   * @notice Check that the function transfers the tokens
+   */
+  function test_transfer(uint256 _amount) external {
+    _mockAndExpect(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _user, _amount), abi.encode());
+
+    vm.prank(address(adapter));
+    adapter.attemptTransfer(_user, _amount);
   }
 }

@@ -35,6 +35,13 @@ interface IL1OpUSDCBridgeAdapter {
    */
   event MigrationComplete();
 
+  /**
+   * @notice Emitted when the blacklisted funds are withdrawn
+   * @param _owner The owner of the contract
+   * @param _amount The amount of funds that were withdrawn
+   */
+  event BlacklistedFundsWithdrawn(address _owner, uint256 _amount);
+
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   ///////////////////////////////////////////////////////////////*/
@@ -81,6 +88,11 @@ interface IL1OpUSDCBridgeAdapter {
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function resumeMessaging(uint32 _minGasLimit) external;
+
+  /**
+   * @notice Withdraws the blacklisted funds
+   */
+  function withdrawBlacklistedFunds() external;
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES

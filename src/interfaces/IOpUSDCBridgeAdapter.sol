@@ -45,6 +45,13 @@ interface IOpUSDCBridgeAdapter {
    */
   event MigratingToNative(address _messenger, address _caller);
 
+  /**
+   * @notice Emitted when a message fails
+   * @param _user The user that the message failed for
+   * @param _amount The amount of tokens that were added to the blacklisted funds
+   */
+  event MessageFailed(address _user, uint256 _amount);
+
   /*///////////////////////////////////////////////////////////////
                             ERRORS
   ///////////////////////////////////////////////////////////////*/
@@ -171,4 +178,9 @@ interface IOpUSDCBridgeAdapter {
    * @return _nonce The nonce of the user
    */
   function userNonce(address _user) external view returns (uint256 _nonce);
+
+  /**
+   * @notice Returns the amount of funds locked that got blacklisted
+   */
+  function blacklistedFunds() external view returns (uint256);
 }

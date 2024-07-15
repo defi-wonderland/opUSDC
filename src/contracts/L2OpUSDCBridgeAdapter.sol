@@ -78,7 +78,9 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     isMessagingDisabled = true;
     roleCaller = _roleCaller;
 
-    uint256 _burnAmount = IUSDC(USDC).totalSupply();
+    // We need to do totalSupply + blacklistedFunds because on `receiveMessage` mint would fail causing the totalSupply to not increase
+    // But the native token is still locked on L1
+    uint256 _burnAmount = IUSDC(USDC).totalSupply() + blacklistedFunds;
 
     ICrossDomainMessenger(MESSENGER).sendMessage(
       LINKED_ADAPTER, abi.encodeWithSignature('setBurnAmount(uint256)', _burnAmount), _setBurnAmountMinGasLimit
@@ -202,8 +204,12 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    */
   function receiveMessage(address _user, uint256 _amount) external override onlyLinkedAdapter {
     // Mint the tokens to the user
-    IUSDC(USDC).mint(_user, _amount);
-    emit MessageReceived(_user, _amount, MESSENGER);
+    try IUSDC(USDC).mint(_user, _amount) {
+      emit MessageReceived(_user, _amount, MESSENGER);
+    } catch {
+      blacklistedFunds += _amount;
+      emit MessageFailed(_user, _amount);
+    }
   }
 
   /*///////////////////////////////////////////////////////////////

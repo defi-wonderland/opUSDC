@@ -23,6 +23,10 @@ contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
   function forTest_setRoleCaller(address _roleCaller) external {
     roleCaller = _roleCaller;
   }
+
+  function forTest_setBlacklistedFunds(uint256 _amount) external {
+    blacklistedFunds = _amount;
+  }
 }
 
 abstract contract Base is Helpers {
@@ -542,6 +546,8 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
 }
 
 contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
+  event MessageFailed(address _user, uint256 _amount);
+
   /**
    * @notice Check that the function reverts if the sender is not the messenger
    */
@@ -593,6 +599,45 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
     // Execute
     vm.expectEmit(true, true, true, true);
     emit MessageReceived(_user, _amount, _messenger);
+
+    vm.prank(_messenger);
+    adapter.receiveMessage(_user, _amount);
+  }
+
+  /**
+   * @notice Check that blacklisted funds are updated as expected
+   */
+  function test_updateBlacklistedFunds(uint256 _amount) external {
+    vm.assume(_amount > 0);
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+
+    // Need to mock call, then mock the revert (foundry bug?)
+
+    vm.mockCall(_usdc, abi.encodeWithSignature('mint(address,uint256)', _user, _amount), abi.encode(true));
+    vm.mockCallRevert(_usdc, abi.encodeWithSignature('mint(address,uint256)', _user, _amount), abi.encode(false));
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveMessage(_user, _amount);
+
+    assertEq(adapter.blacklistedFunds(), _amount, 'Blacklisted funds should be set to the amount');
+  }
+
+  /**
+   * @notice Check that the event is emitted as expected
+   */
+  function test_emitEventFail(uint256 _amount) external {
+    vm.assume(_amount > 0);
+
+    // Mock calls
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+
+    // Need to mock call, then mock the revert (foundry bug?)
+    vm.mockCall(_usdc, abi.encodeWithSignature('mint(address,uint256)', _user, _amount), abi.encode(true));
+    vm.mockCallRevert(_usdc, abi.encodeWithSignature('mint(address,uint256)', _user, _amount), abi.encode(false));
+
+    // Execute
+    vm.expectEmit(true, true, true, true);
+    emit MessageFailed(_user, _amount);
 
     vm.prank(_messenger);
     adapter.receiveMessage(_user, _amount);

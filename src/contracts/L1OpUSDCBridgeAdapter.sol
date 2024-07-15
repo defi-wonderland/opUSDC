@@ -134,7 +134,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   }
 
   /*///////////////////////////////////////////////////////////////
-                          MESSAGING CONTROL
+                          ADMIN CONTROL
   ///////////////////////////////////////////////////////////////*/
 
   /**
@@ -179,6 +179,17 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     );
 
     emit MessagingResumed(MESSENGER);
+  }
+
+  /**
+   * @notice Withdraws the blacklisted funds
+   */
+  function withdrawBlacklistedFunds() external onlyOwner {
+    uint256 _amount = blacklistedFunds;
+    blacklistedFunds = 0;
+
+    IUSDC(USDC).safeTransfer(owner(), _amount);
+    emit BlacklistedFundsWithdrawn(owner(), _amount);
   }
 
   /*///////////////////////////////////////////////////////////////
@@ -254,7 +265,23 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    */
   function receiveMessage(address _user, uint256 _amount) external override onlyLinkedAdapter {
     // Transfer the tokens to the user
-    IUSDC(USDC).safeTransfer(_user, _amount);
-    emit MessageReceived(_user, _amount, MESSENGER);
+    try this.attemptTransfer(_user, _amount) {
+      emit MessageReceived(_user, _amount, MESSENGER);
+    } catch {
+      blacklistedFunds += _amount;
+      emit MessageFailed(_user, _amount);
+    }
+  }
+
+  /**
+   * @notice Attempts to transfer the tokens to the user
+   * @param _to The target address on the destination chain
+   * @param _amount The amount of tokens to send
+   * @dev This function should only be called when receiving a message
+   * And is a workaround for the fact that try/catch can only work on external calls and SafeERC20 is an internal library
+   */
+  function attemptTransfer(address _to, uint256 _amount) external {
+    if (msg.sender != address(this)) revert IOpUSDCBridgeAdapter_InvalidSender();
+    IUSDC(USDC).safeTransfer(_to, _amount);
   }
 }
