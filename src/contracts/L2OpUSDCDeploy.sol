@@ -8,7 +8,7 @@ import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 /**
  * @title L2OpUSDCDeploy
- * @notice Factory contract for deploying the L2 USDC implementation, proxy, and `L2OpUSDCBridgeAdapter` contract,
+ * @notice Deployer contract for deploying the L2 USDC implementation, proxy, and `L2OpUSDCBridgeAdapter` contract,
  * all at once on the `deploy` function.
  * @dev The salt is always different for each deployed instance of this contract on the L1 Factory, and the L2 contracts
  * are deployed with `CREATE` to guarantee that the addresses are unique among all the L2s, so we avoid a scenario where
