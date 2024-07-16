@@ -3,18 +3,18 @@ pragma solidity 0.8.25;
 
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
-import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
+import {IL2OpUSDCDeploy} from 'interfaces/IL2OpUSDCDeploy.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 /**
- * @title L2OpUSDCFactory
+ * @title L2OpUSDCDeploy
  * @notice Factory contract for deploying the L2 USDC implementation, proxy, and `L2OpUSDCBridgeAdapter` contract,
  * all at once on the `deploy` function.
  * @dev The salt is always different for each deployed instance of this contract on the L1 Factory, and the L2 contracts
  * are deployed with `CREATE` to guarantee that the addresses are unique among all the L2s, so we avoid a scenario where
  * L2 contracts have the same address on different L2s when triggered by different owners.
  */
-contract L2OpUSDCFactory is IL2OpUSDCFactory {
+contract L2OpUSDCDeploy is IL2OpUSDCDeploy {
   address internal constant _L2_MESSENGER = 0x4200000000000000000000000000000000000007;
 
   /**
@@ -99,7 +99,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
     for (uint256 _i; _i < _initTxs.length; _i++) {
       (bool _success,) = _usdc.call(_initTxs[_i]);
       if (!_success) {
-        revert IL2OpUSDCFactory_InitializationFailed(_i + 1);
+        revert IL2OpUSDCDeploy_InitializationFailed(_i + 1);
       }
     }
   }
@@ -114,7 +114,7 @@ contract L2OpUSDCFactory is IL2OpUSDCFactory {
       _newContract := create(0x0, add(_initCode, 0x20), mload(_initCode))
     }
     if (_newContract == address(0) || _newContract.code.length == 0) {
-      revert IL2OpUSDCFactory_DeploymentFailed();
+      revert IL2OpUSDCDeploy_DeploymentFailed();
     }
   }
 }

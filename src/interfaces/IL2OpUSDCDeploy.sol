@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-interface IL2OpUSDCFactory {
+interface IL2OpUSDCDeploy {
   /*///////////////////////////////////////////////////////////////
                             STRUCTS
   ///////////////////////////////////////////////////////////////*/
@@ -49,11 +49,11 @@ interface IL2OpUSDCFactory {
   /**
    * @notice Thrown when a contract deployment fails
    */
-  error IL2OpUSDCFactory_DeploymentFailed();
+  error IL2OpUSDCDeploy_DeploymentFailed();
 
   /**
    * @notice Thrown when an USDC initialization tx failed
    * @param _txIndex The index of the failed initialization tx
    */
-  error IL2OpUSDCFactory_InitializationFailed(uint256 _txIndex);
+  error IL2OpUSDCDeploy_InitializationFailed(uint256 _txIndex);
 }

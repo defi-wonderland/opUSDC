@@ -551,7 +551,7 @@ DA:234,13
 DA:237,0
 end_of_record
 
-SF:/home/hexshire/opUSDC/src/contracts/L2OpUSDCFactory.sol
+SF:/home/hexshire/opUSDC/src/contracts/L2OpUSDCDeploy.sol
 DA:17,8
 DA:18,0
 DA:30,28
@@ -639,7 +639,7 @@ end_of_record
 SF:/home/hexshire/opUSDC/src/interfaces/IL2OpUSDCBridgeAdapter.sol
 end_of_record
 
-SF:/home/hexshire/opUSDC/src/interfaces/IL2OpUSDCFactory.sol
+SF:/home/hexshire/opUSDC/src/interfaces/IL2OpUSDCDeploy.sol
 end_of_record
 
 SF:/home/hexshire/opUSDC/src/interfaces/IOpUSDCBridgeAdapter.sol
