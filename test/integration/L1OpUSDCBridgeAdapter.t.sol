@@ -92,14 +92,13 @@ contract Integration_Bridging is IntegrationBase {
     vm.prank(_signerAd);
     MAINNET_USDC.approve(address(l1Adapter), _amount);
     uint256 _deadline = block.timestamp + 1 days;
-    uint256 _nonce = vm.getNonce(_signerAd);
     bytes memory _signature = _generateSignature(
-      _signerAd, _amount, _deadline, _MIN_GAS_LIMIT, _nonce, _signerAd, _signerPk, address(l1Adapter)
+      _signerAd, _amount, _deadline, _MIN_GAS_LIMIT, _USER_NONCE, _signerAd, _signerPk, address(l1Adapter)
     );
 
     // Different address can execute the message
     vm.prank(_user);
-    l1Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _MIN_GAS_LIMIT);
+    l1Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _USER_NONCE, _deadline, _MIN_GAS_LIMIT);
 
     assertEq(MAINNET_USDC.balanceOf(_signerAd), 0);
     assertEq(MAINNET_USDC.balanceOf(_user), _amount);
@@ -144,7 +143,7 @@ contract Integration_Bridging is IntegrationBase {
     // Different address can execute the message
     vm.startPrank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSignature.selector);
-    l1Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _MIN_GAS_LIMIT);
+    l1Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _USER_NONCE, _deadline, _MIN_GAS_LIMIT);
     vm.stopPrank();
   }
 }

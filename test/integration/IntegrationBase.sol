@@ -40,6 +40,7 @@ contract IntegrationBase is Helpers {
   uint32 internal constant _MIN_GAS_LIMIT = 1_000_000;
   // The extra gas buffer added to the minimum gas limit for the relayMessage function
   uint64 internal constant _SEQUENCER_GAS_OVERHEAD = 700_000;
+  uint256 internal constant _USER_NONCE = 1;
 
   /// @notice Value used for the L2 sender storage slot in both the OptimismPortal and the
   ///         CrossDomainMessenger contracts before an actual sender is set. This value is

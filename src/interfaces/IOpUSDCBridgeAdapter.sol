@@ -88,6 +88,8 @@ interface IOpUSDCBridgeAdapter {
    */
   error IOpUSDCBridgeAdapter_InvalidSender();
 
+  error IOpUSDCBridgeAdapter_InvalidNonce();
+
   /**
    * @notice Error when the signature is invalid
    */
@@ -120,6 +122,7 @@ interface IOpUSDCBridgeAdapter {
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
    * @param _signature The signature of the user
+   * @param _nonce The nonce of the user
    * @param _deadline The deadline for the message to be executed
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
@@ -128,6 +131,7 @@ interface IOpUSDCBridgeAdapter {
     address _to,
     uint256 _amount,
     bytes calldata _signature,
+    uint256 _nonce,
     uint256 _deadline,
     uint32 _minGasLimit
   ) external;
@@ -167,8 +171,9 @@ interface IOpUSDCBridgeAdapter {
 
   /**
    * @notice Returns the nonce of a given user to avoid replay attacks
-   * @param _user The user to fetch the nonce for
-   * @return _nonce The nonce of the user
+   * @param _user The user to check for
+   * @param _nonce The nonce to check for
+   * @return _used If the nonce has been used
    */
-  function userNonce(address _user) external view returns (uint256 _nonce);
+  function userNonces(address _user, uint256 _nonce) external view returns (bool _used);
 }

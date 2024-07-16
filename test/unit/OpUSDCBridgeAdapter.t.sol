@@ -23,6 +23,7 @@ contract ForTestOpUSDCBridgeAdapter is OpUSDCBridgeAdapter {
     address _to,
     uint256 _amount,
     bytes calldata _signature,
+    uint256 _nonce,
     uint256 _deadline,
     uint32 _minGasLimit
   ) external override {}
@@ -77,7 +78,7 @@ contract OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
    */
   function test_doNothing() public {
     // Execute
-    adapter.sendMessage(address(0), address(0), 0, '', 0, 0);
+    adapter.sendMessage(address(0), address(0), 0, '', 0, 0, 0);
   }
 }
 
