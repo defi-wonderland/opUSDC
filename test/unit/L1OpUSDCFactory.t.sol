@@ -2,9 +2,9 @@
 pragma solidity 0.8.25;
 
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
-import {IL2OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
+import {IL2OpUSDCDeploy} from 'contracts/L1OpUSDCFactory.sol';
 import {L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
-import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
+import {L2OpUSDCDeploy} from 'contracts/L2OpUSDCDeploy.sol';
 import {Test} from 'forge-std/Test.sol';
 import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 import {ICreate2Deployer} from 'interfaces/external/ICreate2Deployer.sol';
@@ -52,7 +52,7 @@ abstract contract Base is Test, Helpers {
 
   IL1OpUSDCFactory.L2Deployments internal _l2Deployments;
   bytes[] internal _usdcInitTxs;
-  IL2OpUSDCFactory.USDCInitializeData internal _usdcInitializeData;
+  IL2OpUSDCDeploy.USDCInitializeData internal _usdcInitializeData;
 
   function setUp() public virtual {
     // Deploy factory
@@ -73,7 +73,7 @@ abstract contract Base is Test, Helpers {
       minGasLimitDeploy: _minGasLimitDeploy
     });
 
-    _usdcInitializeData = IL2OpUSDCFactory.USDCInitializeData({
+    _usdcInitializeData = IL2OpUSDCDeploy.USDCInitializeData({
       tokenName: _tokenName,
       tokenSymbol: _tokenSymbol,
       tokenCurrency: _tokenCurrency,
@@ -161,7 +161,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
       _usdcInitializeData,
       _l2Deployments.usdcInitTxs
     );
-    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
+    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCDeploy).creationCode, _l2FactoryCArgs);
     address _l2Factory =
       factory.forTest_precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), factory.L2_CREATE2_DEPLOYER());
 
@@ -236,7 +236,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
       _usdcInitializeData,
       _l2Deployments.usdcInitTxs
     );
-    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
+    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCDeploy).creationCode, _l2FactoryCArgs);
     bytes memory _l2FactoryCreate2Tx =
       abi.encodeWithSelector(ICreate2Deployer.deploy.selector, _zeroValue, _salt, _l2FactoryInitCode);
 
@@ -294,7 +294,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
       _usdcInitializeData,
       _l2Deployments.usdcInitTxs
     );
-    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
+    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCDeploy).creationCode, _l2FactoryCArgs);
     address _expectedL2Factory =
       factory.forTest_precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), factory.L2_CREATE2_DEPLOYER());
 
