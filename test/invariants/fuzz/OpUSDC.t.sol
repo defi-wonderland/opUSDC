@@ -96,7 +96,7 @@ contract OpUsdcTest is SetupOpUSDC {
     uint256 _nonce = l1Adapter.userNonce(_signer);
     uint256 _deadline = block.timestamp + 1 days;
     bytes memory _signature =
-      _generateSignature(_to, _amount, _deadline, _nonce, _signer, _privateKey, address(l1Adapter));
+      _generateSignature(_to, _amount, _deadline, _minGasLimit, _nonce, _signer, _privateKey, address(l1Adapter));
 
     _dealAndApproveUSDC(_signer, _amount);
 
@@ -173,7 +173,7 @@ contract OpUsdcTest is SetupOpUSDC {
     uint256 _nonce = l2Adapter.userNonce(_signer);
     uint256 _deadline = block.timestamp + 1 days;
     bytes memory _signature =
-      _generateSignature(_to, _amount, _deadline, _nonce, _signer, _privateKey, address(l2Adapter));
+      _generateSignature(_to, _amount, _deadline, _minGasLimit, _nonce, _signer, _privateKey, address(l2Adapter));
 
     _dealAndApproveBridgedUSDC(_signer, _amount, _minGasLimit);
 
@@ -538,7 +538,7 @@ contract OpUsdcTest is SetupOpUSDC {
     uint256 _nonce = l1Adapter.userNonce(_signerAd);
     uint256 _deadline = block.timestamp + 1 days;
     bytes memory _signature =
-      _generateSignature(_addressB, _uintA, _deadline, _nonce, _signerAd, _uintB, address(l1Adapter));
+      _generateSignature(_addressB, _uintA, _deadline, _uint32A, _nonce, _signerAd, _uintB, address(l1Adapter));
 
     hevm.prank(_currentCaller);
 
@@ -600,7 +600,7 @@ contract OpUsdcTest is SetupOpUSDC {
     uint256 _nonce = l2Adapter.userNonce(_signerAd);
     uint256 _deadline = block.timestamp + 1 days;
     bytes memory _signature =
-      _generateSignature(_addressB, _uintA, _deadline, _nonce, _signerAd, _uintB, address(l2Adapter));
+      _generateSignature(_addressB, _uintA, _deadline, _uint32A, _nonce, _signerAd, _uintB, address(l2Adapter));
 
     hevm.prank(_currentCaller);
 
@@ -919,13 +919,14 @@ contract OpUsdcTest is SetupOpUSDC {
     address _to,
     uint256 _amount,
     uint256 _deadline,
+    uint256 _minGasLimit,
     uint256 _nonce,
     address _signerAd,
     uint256 _signerPk,
     address _adapter
   ) internal returns (bytes memory _signature) {
-    bytes32 _digest =
-      keccak256(abi.encode(_adapter, block.chainid, _to, _amount, _deadline, _nonce)).toEthSignedMessageHash();
+    bytes32 _digest = keccak256(abi.encode(_adapter, block.chainid, _to, _amount, _deadline, _minGasLimit, _nonce))
+      .toEthSignedMessageHash();
     hevm.prank(_signerAd);
     (uint8 v, bytes32 r, bytes32 s) = hevm.sign(_signerPk, _digest);
     _signature = abi.encodePacked(r, s, v);
