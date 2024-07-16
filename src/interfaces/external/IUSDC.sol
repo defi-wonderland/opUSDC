@@ -152,6 +152,13 @@ interface IUSDC is IERC20 {
   function blacklister() external view returns (address _blacklister);
 
   /**
+   * @notice Checks if account is blacklisted
+   * @param _account The address to check
+   * @return _result True if the account is blacklisted, false if not
+   */
+  function isBlacklisted(address _account) external view returns (bool _result);
+
+  /**
    * @notice Returns the address of the current admin
    * @return _admin Address of the current admin
    */

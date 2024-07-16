@@ -110,6 +110,11 @@ interface IOpUSDCBridgeAdapter {
    */
   error IOpUSDCBridgeAdapter_NotUpgrading();
 
+  /**
+   * @notice Error when the address is blacklisted
+   */
+  error IOpUSDCBridgeAdapter_BlacklistedAddress();
+
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   ///////////////////////////////////////////////////////////////*/

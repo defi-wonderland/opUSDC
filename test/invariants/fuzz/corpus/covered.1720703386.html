@@ -1,4 +1,26 @@
-<style> code { white-space: pre-wrap; display: block; background-color: #eee; }.executed { background-color: #afa; }.reverted { background-color: #ffa; }.unexecuted { background-color: #faa; }.neutral { background-color: #eee; }</style><b>/home/hexshire/opUSDC/node_modules/@openzeppelin/contracts/access/Ownable.sol</b>
+<style>
+   code {
+      white-space: pre-wrap;
+      display: block;
+      background-color: #eee;
+   }
+
+   .executed {
+      background-color: #afa;
+   }
+
+   .reverted {
+      background-color: #ffa;
+   }
+
+   .unexecuted {
+      background-color: #faa;
+   }
+
+   .neutral {
+      background-color: #eee;
+   }
+</style><b>/home/hexshire/opUSDC/node_modules/@openzeppelin/contracts/access/Ownable.sol</b>
 <code>
    1 |     | <span class='unexecuted'>// SPDX-License-Identifier: MIT</span>
    2 |     | <span class='neutral'>// OpenZeppelin Contracts (last updated v5.0.0) (access/Ownable.sol)</span>
@@ -24263,7 +24285,7 @@
    3 |     | <span class='neutral'></span>
    4 |     | <span class='neutral'>import {L1OpUSDCBridgeAdapter} from &#39;contracts/L1OpUSDCBridgeAdapter.sol&#39;;</span>
    5 |     | <span class='neutral'>import {IL1OpUSDCFactory} from &#39;interfaces/IL1OpUSDCFactory.sol&#39;;</span>
-   6 |     | <span class='neutral'>import {IL2OpUSDCFactory} from &#39;interfaces/IL2OpUSDCFactory.sol&#39;;</span>
+   6 |     | <span class='neutral'>import {IL2OpUSDCDeploy} from &#39;interfaces/IL2OpUSDCDeploy.sol&#39;;</span>
    7 |     | <span class='neutral'></span>
    8 |     | <span class='neutral'>import {IUSDC} from &#39;interfaces/external/IUSDC.sol&#39;;</span>
    9 |     | <span class='neutral'>import {CrossChainDeployments} from &#39;libraries/CrossChainDeployments.sol&#39;;</span>
@@ -24340,8 +24362,8 @@
   80 | *   | <span class='executed'>    _l1Adapter = CrossChainDeployments.precalculateCreateAddress(address(this), _currentNonce);</span>
   81 |     | <span class='neutral'></span>
   82 |     | <span class='neutral'>    // Get the L1 USDC naming and decimals to ensure they are the same on the L2, guaranteeing the same standard</span>
-  83 | *   | <span class='executed'>    IL2OpUSDCFactory.USDCInitializeData memory _usdcInitializeData =</span>
-  84 | *   | <span class='executed'>      IL2OpUSDCFactory.USDCInitializeData(USDC_NAME, USDC_SYMBOL, USDC.currency(), USDC.decimals());</span>
+  83 | *   | <span class='executed'>    IL2OpUSDCDeploy.USDCInitializeData memory _usdcInitializeData =</span>
+  84 | *   | <span class='executed'>      IL2OpUSDCDeploy.USDCInitializeData(USDC_NAME, USDC_SYMBOL, USDC.currency(), USDC.decimals());</span>
   85 |     | <span class='neutral'></span>
   86 |     | <span class='neutral'>    // Use the nonce as salt to ensure always a different salt since the nonce is always increasing</span>
   87 | *   | <span class='executed'>    bytes32 _salt = bytes32(_currentNonce);</span>
@@ -24618,25 +24640,25 @@
 </code>
 <br />
 
-<b>/home/hexshire/opUSDC/src/contracts/L2OpUSDCFactory.sol</b>
+<b>/home/hexshire/opUSDC/src/contracts/L2OpUSDCDeploy.sol</b>
 <code>
    1 |     | <span class='neutral'>// SPDX-License-Identifier: MIT</span>
    2 |     | <span class='neutral'>pragma solidity 0.8.25;</span>
    3 |     | <span class='neutral'></span>
    4 |     | <span class='neutral'>import {L2OpUSDCBridgeAdapter} from &#39;contracts/L2OpUSDCBridgeAdapter.sol&#39;;</span>
    5 |     | <span class='neutral'>import {USDC_PROXY_CREATION_CODE} from &#39;contracts/utils/USDCProxyCreationCode.sol&#39;;</span>
-   6 |     | <span class='neutral'>import {IL2OpUSDCFactory} from &#39;interfaces/IL2OpUSDCFactory.sol&#39;;</span>
+   6 |     | <span class='neutral'>import {IL2OpUSDCDeploy} from &#39;interfaces/IL2OpUSDCDeploy.sol&#39;;</span>
    7 |     | <span class='neutral'>import {IUSDC} from &#39;interfaces/external/IUSDC.sol&#39;;</span>
    8 |     | <span class='neutral'></span>
    9 |     | <span class='neutral'>/**</span>
-  10 |     | <span class='neutral'> * @title L2OpUSDCFactory</span>
+  10 |     | <span class='neutral'> * @title L2OpUSDCDeploy</span>
   11 |     | <span class='neutral'> * @notice Factory contract for deploying the L2 USDC implementation, proxy, and `L2OpUSDCBridgeAdapter` contract,</span>
   12 |     | <span class='neutral'> * all at once on the `deploy` function.</span>
   13 |     | <span class='neutral'> * @dev The salt is always different for each deployed instance of this contract on the L1 Factory, and the L2 contracts</span>
   14 |     | <span class='neutral'> * are deployed with `CREATE` to guarantee that the addresses are unique among all the L2s, so we avoid a scenario where</span>
   15 |     | <span class='neutral'> * L2 contracts have the same address on different L2s when triggered by different owners.</span>
   16 |     | <span class='neutral'> */</span>
-  17 |     | <span class='unexecuted'>contract L2OpUSDCFactory is IL2OpUSDCFactory {</span>
+  17 |     | <span class='unexecuted'>contract L2OpUSDCDeploy is IL2OpUSDCDeploy {</span>
   18 |     | <span class='unexecuted'>  address internal constant _L2_MESSENGER = 0x4200000000000000000000000000000000000007;</span>
   19 |     | <span class='neutral'></span>
   20 |     | <span class='neutral'>  /**</span>
@@ -24721,7 +24743,7 @@
   99 |     | <span class='unexecuted'>    for (uint256 _i; _i &lt; _initTxs.length; _i++) {</span>
  100 |     | <span class='unexecuted'>      (bool _success,) = _usdc.call(_initTxs[_i]);</span>
  101 |     | <span class='unexecuted'>      if (!_success) {</span>
- 102 |     | <span class='unexecuted'>        revert IL2OpUSDCFactory_InitializationFailed(_i + 1);</span>
+ 102 |     | <span class='unexecuted'>        revert IL2OpUSDCDeploy_InitializationFailed(_i + 1);</span>
  103 |     | <span class='neutral'>      }</span>
  104 |     | <span class='neutral'>    }</span>
  105 |     | <span class='neutral'>  }</span>
@@ -24736,7 +24758,7 @@
  114 |     | <span class='unexecuted'>      _newContract := create(0x0, add(_initCode, 0x20), mload(_initCode))</span>
  115 |     | <span class='neutral'>    }</span>
  116 |     | <span class='unexecuted'>    if (_newContract == address(0) || _newContract.code.length == 0) {</span>
- 117 |     | <span class='unexecuted'>      revert IL2OpUSDCFactory_DeploymentFailed();</span>
+ 117 |     | <span class='unexecuted'>      revert IL2OpUSDCDeploy_DeploymentFailed();</span>
  118 |     | <span class='neutral'>    }</span>
  119 |     | <span class='neutral'>  }</span>
  120 |     | <span class='neutral'>}</span>
@@ -25247,12 +25269,12 @@
 </code>
 <br />
 
-<b>/home/hexshire/opUSDC/src/interfaces/IL2OpUSDCFactory.sol</b>
+<b>/home/hexshire/opUSDC/src/interfaces/IL2OpUSDCDeploy.sol</b>
 <code>
   1 |     | <span class='neutral'>// SPDX-License-Identifier: MIT</span>
   2 |     | <span class='neutral'>pragma solidity 0.8.25;</span>
   3 |     | <span class='neutral'></span>
-  4 |     | <span class='neutral'>interface IL2OpUSDCFactory {</span>
+  4 |     | <span class='neutral'>interface IL2OpUSDCDeploy {</span>
   5 |     | <span class='neutral'>  /*///////////////////////////////////////////////////////////////</span>
   6 |     | <span class='neutral'>                            STRUCTS</span>
   7 |     | <span class='neutral'>  ///////////////////////////////////////////////////////////////*/</span>
@@ -25300,13 +25322,13 @@
  49 |     | <span class='neutral'>  /**</span>
  50 |     | <span class='neutral'>   * @notice Thrown when a contract deployment fails</span>
  51 |     | <span class='neutral'>   */</span>
- 52 |     | <span class='neutral'>  error IL2OpUSDCFactory_DeploymentFailed();</span>
+ 52 |     | <span class='neutral'>  error IL2OpUSDCDeploy_DeploymentFailed();</span>
  53 |     | <span class='neutral'></span>
  54 |     | <span class='neutral'>  /**</span>
  55 |     | <span class='neutral'>   * @notice Thrown when an USDC initialization tx failed</span>
  56 |     | <span class='neutral'>   * @param _txIndex The index of the failed initialization tx</span>
  57 |     | <span class='neutral'>   */</span>
- 58 |     | <span class='neutral'>  error IL2OpUSDCFactory_InitializationFailed(uint256 _txIndex);</span>
+ 58 |     | <span class='neutral'>  error IL2OpUSDCDeploy_InitializationFailed(uint256 _txIndex);</span>
  59 |     | <span class='neutral'>}</span>
  60 |     | <span class='neutral'></span>
 
@@ -25702,7 +25724,7 @@
 <code>
    1 |     | <span class='neutral'>pragma solidity 0.8.25;</span>
    2 |     | <span class='neutral'></span>
-   3 |     | <span class='neutral'>import {L2OpUSDCFactory} from &#39;contracts/L2OpUSDCFactory.sol&#39;;</span>
+   3 |     | <span class='neutral'>import {L2OpUSDCDeploy} from &#39;contracts/L2OpUSDCDeploy.sol&#39;;</span>
    4 |     | <span class='neutral'>import {ICreate2Deployer} from &#39;interfaces/external/ICreate2Deployer.sol&#39;;</span>
    5 |     | <span class='neutral'>import {ICrossDomainMessenger} from &#39;interfaces/external/ICrossDomainMessenger.sol&#39;;</span>
    6 |     | <span class='neutral'></span>
@@ -25731,7 +25753,7 @@
   29 |     | <span class='neutral'>    address _create2Deployer,</span>
   30 |     | <span class='neutral'>    uint32 _minGasLimit</span>
   31 | *   | <span class='executed'>  ) external returns (address _l2Factory) {</span>
-  32 | *   | <span class='executed'>    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _args);</span>
+  32 | *   | <span class='executed'>    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCDeploy).creationCode, _args);</span>
   33 | *   | <span class='executed'>    _l2Factory = precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), _create2Deployer);</span>
   34 |     | <span class='neutral'></span>
   35 | *   | <span class='executed'>    bytes memory _l2FactoryDeploymentsTx =</span>
@@ -26989,9 +27011,9 @@
    6 |     | <span class='neutral'>import {L1OpUSDCBridgeAdapter} from &#39;contracts/L1OpUSDCBridgeAdapter.sol&#39;;</span>
    7 |     | <span class='neutral'>import {IL1OpUSDCFactory, L1OpUSDCFactory} from &#39;contracts/L1OpUSDCFactory.sol&#39;;</span>
    8 |     | <span class='neutral'>import {L2OpUSDCBridgeAdapter} from &#39;contracts/L2OpUSDCBridgeAdapter.sol&#39;;</span>
-   9 |     | <span class='neutral'>import {L2OpUSDCFactory} from &#39;contracts/L2OpUSDCFactory.sol&#39;;</span>
+   9 |     | <span class='neutral'>import {L2OpUSDCDeploy} from &#39;contracts/L2OpUSDCDeploy.sol&#39;;</span>
   10 |     | <span class='neutral'>import {USDCInitTxs} from &#39;contracts/utils/USDCInitTxs.sol&#39;;</span>
-  11 |     | <span class='neutral'>import {IL2OpUSDCFactory} from &#39;interfaces/IL2OpUSDCFactory.sol&#39;;</span>
+  11 |     | <span class='neutral'>import {IL2OpUSDCDeploy} from &#39;interfaces/IL2OpUSDCDeploy.sol&#39;;</span>
   12 |     | <span class='neutral'>import {IUSDC} from &#39;interfaces/external/IUSDC.sol&#39;;</span>
   13 |     | <span class='neutral'>import {USDC_IMPLEMENTATION_CREATION_CODE} from &#39;script/utils/USDCImplementationCreationCode.sol&#39;;</span>
   14 |     | <span class='neutral'>import {Create2Deployer} from &#39;test/invariants/fuzz/Create2Deployer.sol&#39;;</span>
@@ -27007,7 +27029,7 @@
   24 |     | <span class='neutral'>  L1OpUSDCFactory internal factory;</span>
   25 |     | <span class='neutral'></span>
   26 |     | <span class='neutral'>  L2OpUSDCBridgeAdapter internal l2Adapter;</span>
-  27 |     | <span class='neutral'>  L2OpUSDCFactory internal l2Factory;</span>
+  27 |     | <span class='neutral'>  L2OpUSDCDeploy internal l2Factory;</span>
   28 |     | <span class='neutral'></span>
   29 |     | <span class='neutral'>  MockBridge internal mockMessenger;</span>
   30 |     | <span class='neutral'>  Create2Deployer internal create2Deployer;</span>
@@ -27060,14 +27082,14 @@
   77 |     | <span class='neutral'>    (address _l1Adapter, address _l2Factory, address _l2Adapter) =</span>
   78 |     | <span class='unexecuted'>      factory.deploy(address(mockMessenger), address(this), _l2Deployments);</span>
   79 |     | <span class='neutral'></span>
-  80 |     | <span class='unexecuted'>    l2Factory = L2OpUSDCFactory(_l2Factory);</span>
+  80 |     | <span class='unexecuted'>    l2Factory = L2OpUSDCDeploy(_l2Factory);</span>
   81 |     | <span class='unexecuted'>    l1Adapter = L1OpUSDCBridgeAdapter(_l1Adapter);</span>
   82 |     | <span class='unexecuted'>    l2Adapter = L2OpUSDCBridgeAdapter(_l2Adapter);</span>
   83 |     | <span class='neutral'>  }</span>
   84 |     | <span class='neutral'></span>
   85 |     | <span class='neutral'>  // Send a (mock) message to the L2 messenger to deploy the L2 factory and the L2 adapter (which deploys usdc L2 too)</span>
   86 |     | <span class='unexecuted'>  function _l2Setup(IL1OpUSDCFactory.L2Deployments memory _l2Deployments) internal {</span>
-  87 |     | <span class='unexecuted'>    IL2OpUSDCFactory.USDCInitializeData memory usdcInitializeData = IL2OpUSDCFactory.USDCInitializeData(</span>
+  87 |     | <span class='unexecuted'>    IL2OpUSDCDeploy.USDCInitializeData memory usdcInitializeData = IL2OpUSDCDeploy.USDCInitializeData(</span>
   88 |     | <span class='unexecuted'>      factory.USDC_NAME(), factory.USDC_SYMBOL(), usdcMainnet.currency(), usdcMainnet.decimals()</span>
   89 |     | <span class='neutral'>    );</span>
   90 |     | <span class='neutral'></span>
@@ -27079,7 +27101,7 @@
   96 |     | <span class='unexecuted'>      _l2Deployments.usdcInitTxs // encodePacked?</span>
   97 |     | <span class='neutral'>    );</span>
   98 |     | <span class='neutral'></span>
-  99 |     | <span class='unexecuted'>    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2factoryConstructorArgs);</span>
+  99 |     | <span class='unexecuted'>    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCDeploy).creationCode, _l2factoryConstructorArgs);</span>
  100 |     | <span class='neutral'></span>
  101 |     | <span class='neutral'>    // !!!! Nonce incremented to avoid collision !!!</span>
  102 |     | <span class='unexecuted'>    mockMessenger.relayMessage(</span>
@@ -27146,4 +27168,3 @@
 
 </code>
 <br />
-
