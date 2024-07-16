@@ -129,6 +129,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     }
 
     burnCaller = address(0);
+    isMigrated = true;
 
     emit MigrationComplete();
   }
@@ -254,11 +255,12 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
 
   /**
    * @notice Receive the message from the other chain and transfer the tokens to the user
-   * @dev This function should only be called when receiving a message to mint the bridged representation
-   * @param _user The user to mint the bridged representation for
-   * @param _amount The amount of tokens to mint
+   * @dev This function should only be called when receiving a message to trasnfer the tokens
+   * @param _user The user to transfer the tokens to
+   * @param _amount The amount of tokens to transfer
    */
   function receiveMessage(address _user, uint256 _amount) external override onlyLinkedAdapter {
+    if (isMigrated) revert IOpUSDCBridgeAdapter_Migrated();
     // Transfer the tokens to the user
     IUSDC(USDC).safeTransfer(_user, _amount);
     emit MessageReceived(_user, _amount, MESSENGER);

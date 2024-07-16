@@ -108,6 +108,11 @@ interface IOpUSDCBridgeAdapter {
    */
   error IOpUSDCBridgeAdapter_BlacklistedAddress();
 
+  /**
+   *  @notice Error when bridgedUSDC has already been migrated to native USDC
+   */
+  error IOpUSDCBridgeAdapter_Migrated();
+
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   ///////////////////////////////////////////////////////////////*/
@@ -176,4 +181,10 @@ interface IOpUSDCBridgeAdapter {
    * @return _nonce The nonce of the user
    */
   function userNonce(address _user) external view returns (uint256 _nonce);
+
+  /**
+   * @notice Fetches whether bridged USDC has been migrated to native USDC
+   * @return _isMigrated Whether bridged USDC has been migrated to native USDC
+   */
+  function isMigrated() external view returns (bool _isMigrated);
 }

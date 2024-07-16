@@ -189,7 +189,8 @@ contract Integration_Migration is IntegrationBase {
 
     uint256 _burnAmount = bridgedUSDC.totalSupply();
 
-    assertEq(l2Adapter.isMessagingDisabled(), true);
+    assert(l2Adapter.isMigrated());
+    assert(l2Adapter.isMessagingDisabled());
     assertEq(l2Adapter.roleCaller(), _circle);
 
     vm.prank(_circle);
@@ -213,6 +214,7 @@ contract Integration_Migration is IntegrationBase {
     vm.prank(_circle);
     l1Adapter.burnLockedUSDC();
 
+    assert(l1Adapter.isMigrated());
     assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), 0);
     assertEq(l1Adapter.burnAmount(), 0);
     assertEq(l1Adapter.burnCaller(), address(0));
@@ -244,7 +246,7 @@ contract Integration_Integration_PermissionedFlows is IntegrationBase {
       abi.encodeWithSignature('receiveStopMessaging()')
     );
 
-    assertEq(l2Adapter.isMessagingDisabled(), true);
+    assert(l2Adapter.isMessagingDisabled());
 
     vm.selectFork(mainnet);
 

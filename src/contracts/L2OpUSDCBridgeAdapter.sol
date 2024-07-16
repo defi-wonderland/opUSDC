@@ -84,6 +84,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
       LINKED_ADAPTER, abi.encodeWithSignature('setBurnAmount(uint256)', _burnAmount), _setBurnAmountMinGasLimit
     );
 
+    isMigrated = true;
+
     emit MigratingToNative(MESSENGER, _roleCaller);
   }
 
@@ -207,6 +209,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _amount The amount of tokens to mint
    */
   function receiveMessage(address _user, uint256 _amount) external override onlyLinkedAdapter {
+    if (isMigrated) revert IOpUSDCBridgeAdapter_Migrated();
     // Mint the tokens to the user
     IUSDC(USDC).mint(_user, _amount);
     emit MessageReceived(_user, _amount, MESSENGER);
