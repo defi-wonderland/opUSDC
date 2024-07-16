@@ -91,8 +91,10 @@ interface IL1OpUSDCBridgeAdapter {
 
   /**
    * @notice Withdraws the blacklisted funds
+   * @dev Only callable by the owner
+   * @param _to The address to send the funds to
    */
-  function withdrawBlacklistedFunds() external;
+  function withdrawBlacklistedFunds(address _to) external;
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES

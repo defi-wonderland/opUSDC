@@ -181,6 +181,7 @@ interface IOpUSDCBridgeAdapter {
 
   /**
    * @notice Returns the amount of funds locked that got blacklisted
+   * @return _amount The amount of funds locked from blacklisted messages
    */
-  function blacklistedFunds() external view returns (uint256);
+  function blacklistedFunds() external view returns (uint256 _amount);
 }

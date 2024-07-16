@@ -183,13 +183,15 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
 
   /**
    * @notice Withdraws the blacklisted funds
+   * @dev Only callable by the owner
+   * @param _to The address to send the funds to
    */
-  function withdrawBlacklistedFunds() external onlyOwner {
+  function withdrawBlacklistedFunds(address _to) external onlyOwner {
     uint256 _amount = blacklistedFunds;
     blacklistedFunds = 0;
 
-    IUSDC(USDC).safeTransfer(owner(), _amount);
-    emit BlacklistedFundsWithdrawn(owner(), _amount);
+    IUSDC(USDC).safeTransfer(_to, _amount);
+    emit BlacklistedFundsWithdrawn(_to, _amount);
   }
 
   /*///////////////////////////////////////////////////////////////
