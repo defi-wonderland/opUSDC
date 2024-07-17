@@ -79,6 +79,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    */
   function receiveMigrateToNative(address _roleCaller, uint32 _setBurnAmountMinGasLimit) external onlyLinkedAdapter {
     isMessagingDisabled = true;
+    isMigrated = true;
     roleCaller = _roleCaller;
 
     uint256 _burnAmount = IUSDC(USDC).totalSupply();
@@ -86,8 +87,6 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     ICrossDomainMessenger(MESSENGER).sendMessage(
       LINKED_ADAPTER, abi.encodeWithSignature('setBurnAmount(uint256)', _burnAmount), _setBurnAmountMinGasLimit
     );
-
-    isMigrated = true;
 
     emit MigratingToNative(MESSENGER, _roleCaller);
   }
