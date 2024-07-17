@@ -108,7 +108,7 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
 }
 
 contract L1OpUSDCFactory_Unit_Deploy is Base {
-  event L1AdapterDeployedAndL2AddressesSet(address _l1Adapter, address _l2Factory, address _l2Adapter);
+  event ProtocolDeployed(address _l1Adapter, address _l2Factory, address _l2Adapter);
 
   /**
    * @notice Check the function reverts if the `initialize()` tx is the first init tx
@@ -286,7 +286,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
 
     // Expect the `L1AdapterDeployed` event to be emitted
     vm.expectEmit(true, true, true, true);
-    emit L1AdapterDeployedAndL2AddressesSet(_l1Adapter, _l2Factory, _l2Adapter);
+    emit ProtocolDeployed(_l1Adapter, _l2Factory, _l2Adapter);
 
     // Execute
     vm.prank(_user);

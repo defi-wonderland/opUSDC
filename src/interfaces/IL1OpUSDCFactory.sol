@@ -31,7 +31,7 @@ interface IL1OpUSDCFactory {
    * @param _l2Factory The address of the L2 factory where L2 contract will be deployed
    * @param _l2Adapter The address of the L2 adapter where L2 contract will be deployed
    */
-  event L1AdapterDeployedAndL2AddressesSet(address _l1Adapter, address _l2Factory, address _l2Adapter);
+  event ProtocolDeployed(address _l1Adapter, address _l2Factory, address _l2Adapter);
 
   /*///////////////////////////////////////////////////////////////
                             ERRORS
