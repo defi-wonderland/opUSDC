@@ -259,7 +259,6 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _amount The amount of tokens to transfer
    */
   function receiveMessage(address _user, uint256 _amount) external override onlyLinkedAdapter {
-    if (isMigrated) revert IOpUSDCBridgeAdapter_Migrated();
     // Transfer the tokens to the user
     IUSDC(USDC).safeTransfer(_user, _amount);
     emit MessageReceived(_user, _amount, MESSENGER);

@@ -24,10 +24,6 @@ contract ForTestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
   function forTest_setMessengerStatus(Status _status) external {
     messengerStatus = _status;
   }
-
-  function forTest_setIsMigrated(bool _isMigrated) external {
-    isMigrated = _isMigrated;
-  }
 }
 
 abstract contract Base is Helpers {
@@ -961,19 +957,6 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
     // Execute
     vm.prank(_messenger);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
-    adapter.receiveMessage(_user, _amount);
-  }
-
-  /**
-   * @notice Check that the function reverts if the contract is migrated to native
-   */
-  function test_revertIfMigratedToNative(uint256 _amount) external {
-    adapter.forTest_setIsMigrated(true);
-    // Mock calls
-    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
-    // Execute
-    vm.prank(_messenger);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_Migrated.selector);
     adapter.receiveMessage(_user, _amount);
   }
 

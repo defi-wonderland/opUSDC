@@ -34,6 +34,9 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   bool public isMessagingDisabled;
 
   /// @inheritdoc IL2OpUSDCBridgeAdapter
+  bool public isMigrated;
+
+  /// @inheritdoc IL2OpUSDCBridgeAdapter
   address public roleCaller;
 
   /**

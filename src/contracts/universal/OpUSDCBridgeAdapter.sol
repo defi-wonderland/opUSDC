@@ -22,9 +22,6 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, Ownable {
   /// @inheritdoc IOpUSDCBridgeAdapter
   mapping(address _user => uint256 _nonce) public userNonce;
 
-  /// @inheritdoc IOpUSDCBridgeAdapter
-  bool public isMigrated;
-
   /**
    * @notice Construct the OpUSDCBridgeAdapter contract
    * @param _usdc The address of the USDC Contract to be used by the adapter

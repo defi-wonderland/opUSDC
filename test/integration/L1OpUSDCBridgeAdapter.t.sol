@@ -214,7 +214,6 @@ contract Integration_Migration is IntegrationBase {
     vm.prank(_circle);
     l1Adapter.burnLockedUSDC();
 
-    assert(l1Adapter.isMigrated());
     assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), 0);
     assertEq(l1Adapter.burnAmount(), 0);
     assertEq(l1Adapter.burnCaller(), address(0));

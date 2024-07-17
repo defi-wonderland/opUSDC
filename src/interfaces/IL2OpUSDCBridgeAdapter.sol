@@ -62,6 +62,12 @@ interface IL2OpUSDCBridgeAdapter {
   function isMessagingDisabled() external view returns (bool _isMessagingDisabled);
 
   /**
+   * @notice Fetches whether bridged USDC has been migrated to native USDC
+   * @return _isMigrated Whether bridged USDC has been migrated to native USDC
+   */
+  function isMigrated() external view returns (bool _isMigrated);
+
+  /**
    * @notice Fetches the address of the role caller
    * @return _roleCaller The address of the role caller
    */
