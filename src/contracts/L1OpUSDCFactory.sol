@@ -104,6 +104,6 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     // Deploy the L1 adapter
     address(new L1OpUSDCBridgeAdapter(address(USDC), _l1Messenger, _l2Adapter, _l1AdapterOwner));
 
-    emit L1AdapterDeployed(_l1Adapter);
+    emit L1AdapterDeployedAndL2AddressesSet(_l1Adapter, _l2Factory, _l2Adapter);
   }
 }
