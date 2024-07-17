@@ -68,7 +68,7 @@ abstract contract Base is Test, Helpers {
     bytes memory _usdcImplementationInitCode = '0x6080333333';
     _l2Deployments = IL1OpUSDCFactory.L2Deployments({
       l2AdapterOwner: _l2AdapterOwner,
-      usdcImplementationInitCode: _usdcImplementationInitCode,
+      usdcImplAddr: _usdcImplAddress,
       usdcInitTxs: _usdcInitTxs,
       minGasLimitDeploy: _minGasLimitDeploy
     });
@@ -157,7 +157,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
     bytes memory _l2FactoryCArgs = abi.encode(
       _l1Adapter,
       _l2Deployments.l2AdapterOwner,
-      _l2Deployments.usdcImplementationInitCode,
+      _l2Deployments.usdcImplAddr,
       _usdcInitializeData,
       _l2Deployments.usdcInitTxs
     );
@@ -166,7 +166,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
       factory.forTest_precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), factory.L2_CREATE2_DEPLOYER());
 
     // Calculate the L2 adapter address
-    address _l2Adapter = factory.forTest_precalculateCreateAddress(_l2Factory, 3);
+    address _l2Adapter = factory.forTest_precalculateCreateAddress(_l2Factory, 2);
 
     // Mock all the `deploy` function calls
     _mockDeployCalls();
@@ -232,7 +232,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
     bytes memory _l2FactoryCArgs = abi.encode(
       _l1Adapter,
       _l2Deployments.l2AdapterOwner,
-      _l2Deployments.usdcImplementationInitCode,
+      _l2Deployments.usdcImplAddr,
       _usdcInitializeData,
       _l2Deployments.usdcInitTxs
     );
@@ -270,7 +270,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
     bytes memory _l2FactoryCArgs = abi.encode(
       _l1Adapter,
       _l2Deployments.l2AdapterOwner,
-      _l2Deployments.usdcImplementationInitCode,
+      _l2Deployments.usdcImplAddr,
       _usdcInitializeData,
       _l2Deployments.usdcInitTxs
     );
@@ -279,7 +279,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
       factory.forTest_precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), factory.L2_CREATE2_DEPLOYER());
 
     // Calculate the L2 adapter address
-    address _l2Adapter = factory.forTest_precalculateCreateAddress(_l2Factory, 3);
+    address _l2Adapter = factory.forTest_precalculateCreateAddress(_l2Factory, 2);
 
     // Mock all the `deploy` function calls
     _mockDeployCalls();
@@ -307,7 +307,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
     bytes memory _l2FactoryCArgs = abi.encode(
       _expectedL1Adapter,
       _l2Deployments.l2AdapterOwner,
-      _l2Deployments.usdcImplementationInitCode,
+      _l2Deployments.usdcImplAddr,
       _usdcInitializeData,
       _l2Deployments.usdcInitTxs
     );
@@ -316,7 +316,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
       factory.forTest_precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), factory.L2_CREATE2_DEPLOYER());
 
     // Calculate the L2 adapter address
-    address _expectedL2Adapter = factory.forTest_precalculateCreateAddress(_expectedL2Factory, 3);
+    address _expectedL2Adapter = factory.forTest_precalculateCreateAddress(_expectedL2Factory, 2);
 
     // Mock all the `deploy` function calls
     _mockDeployCalls();
