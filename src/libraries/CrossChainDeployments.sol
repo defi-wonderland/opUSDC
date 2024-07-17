@@ -3,6 +3,7 @@ pragma solidity 0.8.25;
 import {L2OpUSDCDeploy} from 'contracts/L2OpUSDCDeploy.sol';
 import {ICreate2Deployer} from 'interfaces/external/ICreate2Deployer.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
+import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
 
 /**
  * @title CrossChainDeployments
@@ -34,7 +35,17 @@ library CrossChainDeployments {
 
     bytes memory _l2FactoryDeploymentsTx =
       abi.encodeWithSelector(ICreate2Deployer.deploy.selector, 0, _salt, _l2FactoryInitCode);
-    ICrossDomainMessenger(_messenger).sendMessage(_create2Deployer, _l2FactoryDeploymentsTx, _minGasLimit);
+
+    address _portal;
+
+    // Some messengers are still using the legacy `portal` function so we need to handle this case
+    try ICrossDomainMessenger(_messenger).portal() returns (address _p) {
+      _portal = _p;
+    } catch {
+      _portal = ICrossDomainMessenger(_messenger).PORTAL();
+    }
+
+    IOptimismPortal(_portal).depositTransaction(_create2Deployer, 0, _minGasLimit, false, _l2FactoryDeploymentsTx);
   }
 
   /**

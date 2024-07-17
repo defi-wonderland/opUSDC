@@ -19,4 +19,17 @@ interface ICrossDomainMessenger {
    * @return _sender Address of the sender of the currently executing message on the other chain.
    */
   function xDomainMessageSender() external view returns (address _sender);
+
+  /**
+   * @notice Returns the address of the portal.
+   * @return _portal Address of the portal.
+   */
+  function portal() external view returns (address _portal);
+
+  /**
+   * @notice Returns the address of the portal.
+   * @dev This is a legacy function that is used for any legacy messengers.
+   * @return _portal Address of the portal.
+   */
+  function PORTAL() external view returns (address _portal);
 }
