@@ -7,7 +7,7 @@ import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/Messa
 import {IL1OpUSDCBridgeAdapter, L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
-import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
+import {L2OpUSDCDeploy} from 'contracts/L2OpUSDCDeploy.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementationCreationCode.sol';
@@ -25,7 +25,7 @@ contract OpUsdcTest_SymbTest is HalmosTest {
   L1OpUSDCFactory internal factory;
 
   L2OpUSDCBridgeAdapter internal l2Adapter;
-  L2OpUSDCFactory internal l2Factory;
+  L2OpUSDCDeploy internal l2Factory;
 
   MockBridge internal mockMessenger;
   Create2Deployer internal create2Deployer;
