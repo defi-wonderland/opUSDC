@@ -108,7 +108,7 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
 }
 
 contract L1OpUSDCFactory_Unit_Deploy is Base {
-  event L1AdapterDeployed(address _l1Adapter);
+  event ProtocolDeployed(address _l1Adapter, address _l2Factory, address _l2Adapter);
 
   /**
    * @notice Check the function reverts if the `initialize()` tx is the first init tx
@@ -260,16 +260,33 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
    * @notice Check the `L1AdapterDeployed` event is properly emitted
    */
   function test_emitEvent() public {
-    // Calculate the l1 adapter address
+    bytes32 _salt = bytes32(factory.deploymentsSaltCounter() + 1);
+
+    // Calculate the L1 Adapter address
     uint256 _factoryNonce = vm.getNonce(address(factory));
     address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce);
+
+    // Calculate the l2 factory address
+    bytes memory _l2FactoryCArgs = abi.encode(
+      _l1Adapter,
+      _l2Deployments.l2AdapterOwner,
+      _l2Deployments.usdcImplementationInitCode,
+      _usdcInitializeData,
+      _l2Deployments.usdcInitTxs
+    );
+    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCDeploy).creationCode, _l2FactoryCArgs);
+    address _l2Factory =
+      factory.forTest_precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), factory.L2_CREATE2_DEPLOYER());
+
+    // Calculate the L2 adapter address
+    address _l2Adapter = factory.forTest_precalculateCreateAddress(_l2Factory, 3);
 
     // Mock all the `deploy` function calls
     _mockDeployCalls();
 
     // Expect the `L1AdapterDeployed` event to be emitted
     vm.expectEmit(true, true, true, true);
-    emit L1AdapterDeployed(_l1Adapter);
+    emit ProtocolDeployed(_l1Adapter, _l2Factory, _l2Adapter);
 
     // Execute
     vm.prank(_user);
