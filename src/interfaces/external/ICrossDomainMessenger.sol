@@ -31,5 +31,6 @@ interface ICrossDomainMessenger {
    * @dev This is a legacy function that is used for any legacy messengers.
    * @return _portal Address of the portal.
    */
+  // solhint-disable-next-line func-name-mixedcase
   function PORTAL() external view returns (address _portal);
 }

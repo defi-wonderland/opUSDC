@@ -14,6 +14,12 @@ library CrossChainDeployments {
   /// @notice RLP encoding deployer length prefix for calculating the address of a contract deployed through `CREATE`
   bytes1 internal constant _LEN = bytes1(0x94);
 
+  /// @notice The status of if the transaction is a contract creation
+  bool internal constant _IS_CONTRACT_CREATION = false;
+
+  /// @notice The msg.value sent with the transaction
+  uint256 internal constant _VALUE = 0;
+
   /**
    * @notice Deploys the L2 factory contract through the L1 messenger
    * @param _args The initialization arguments for the L2 factory
@@ -45,7 +51,9 @@ library CrossChainDeployments {
       _portal = ICrossDomainMessenger(_messenger).PORTAL();
     }
 
-    IOptimismPortal(_portal).depositTransaction(_create2Deployer, 0, _minGasLimit, false, _l2FactoryDeploymentsTx);
+    IOptimismPortal(_portal).depositTransaction(
+      _create2Deployer, _VALUE, _minGasLimit, _IS_CONTRACT_CREATION, _l2FactoryDeploymentsTx
+    );
   }
 
   /**
