@@ -249,9 +249,9 @@ contract Integration_Migration is IntegrationBase {
   }
 
   /**
-   * @notice Test migration flow is some calls reverted cause of blacklisted funds
+   * @notice Test migration flow with some calls reverted cause of blacklisted funds on L2
    */
-  function test_migrationToNativeWithBlacklistedFunds() public {
+  function test_migrationToNativeWithBlacklistedFundsOnL2() public {
     vm.selectFork(optimism);
     vm.prank(bridgedUSDC.blacklister());
     bridgedUSDC.blacklist(_user);
@@ -298,6 +298,172 @@ contract Integration_Migration is IntegrationBase {
       abi.encodeWithSignature('setBurnAmount(uint256)', _burnAmount)
     );
 
+    assertEq(l1Adapter.burnAmount(), _burnAmount);
+    assertEq(l1Adapter.USDC(), address(MAINNET_USDC));
+    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Deprecated));
+
+    vm.prank(_circle);
+    l1Adapter.burnLockedUSDC();
+
+    assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), 0);
+    assertEq(l1Adapter.burnAmount(), 0);
+    assertEq(l1Adapter.burnCaller(), address(0));
+  }
+
+  /**
+   * @notice Test migration flow with some calls reverted cause of blacklisted funds on L1
+   */
+  function test_migrationToNativeWithBlacklistedFundsOnL1() public {
+    uint256 _blacklistedAmount = _amount + 100;
+
+    vm.selectFork(optimism);
+    _mintSupplyOnL2(optimism, OP_ALIASED_L1_MESSENGER, _blacklistedAmount);
+
+    vm.startPrank(_user);
+    bridgedUSDC.approve(address(l2Adapter), _blacklistedAmount);
+    l2Adapter.sendMessage(_user, _blacklistedAmount, _MIN_GAS_LIMIT);
+    vm.stopPrank();
+
+    vm.selectFork(mainnet);
+    vm.prank(MAINNET_USDC.blacklister());
+    MAINNET_USDC.blacklist(_user);
+    _relayL2ToL1Message(
+      address(l2Adapter),
+      address(l1Adapter),
+      _ZERO_VALUE,
+      _MIN_GAS_LIMIT,
+      abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _blacklistedAmount)
+    );
+    assertEq(l1Adapter.blacklistedFunds(), _blacklistedAmount);
+
+    vm.prank(_owner);
+    l1Adapter.migrateToNative(_circle, _circle, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
+
+    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Upgrading));
+    assertEq(l1Adapter.burnCaller(), _circle);
+
+    vm.selectFork(optimism);
+    _relayL1ToL2Message(
+      OP_ALIASED_L1_MESSENGER,
+      address(l1Adapter),
+      address(l2Adapter),
+      _ZERO_VALUE,
+      _minGasLimitReceiveOnL2,
+      abi.encodeWithSignature('receiveMigrateToNative(address,uint32)', _circle, _minGasLimitSetBurnAmount)
+    );
+
+    uint256 _burnAmount = bridgedUSDC.totalSupply() + l2Adapter.blacklistedFunds();
+
+    assertEq(l2Adapter.isMessagingDisabled(), true);
+    assertEq(l2Adapter.roleCaller(), _circle);
+
+    vm.prank(_circle);
+    l2Adapter.transferUSDCRoles(_circle);
+
+    assertEq(bridgedUSDC.owner(), _circle);
+
+    vm.selectFork(mainnet);
+    _relayL2ToL1Message(
+      address(l2Adapter),
+      address(l1Adapter),
+      _ZERO_VALUE,
+      _minGasLimitSetBurnAmount,
+      abi.encodeWithSignature('setBurnAmount(uint256)', _burnAmount)
+    );
+
+    assertEq(l1Adapter.burnAmount(), _burnAmount);
+    assertEq(l1Adapter.USDC(), address(MAINNET_USDC));
+    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Deprecated));
+
+    vm.prank(_circle);
+    l1Adapter.burnLockedUSDC();
+
+    assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), 0);
+    assertEq(l1Adapter.burnAmount(), 0);
+    assertEq(l1Adapter.burnCaller(), address(0));
+  }
+
+  /**
+   * @notice Test migration flow with some calls reverted cause of blacklisted funds on L2 and L1
+   */
+  function test_migrationToNativeWithBlacklistedFundsOnL1AndL2() public {
+    uint256 _blacklistedAmount = _amount + 100;
+    uint256 _finalBlacklistedAmount = _blacklistedAmount + _blacklistedAmount;
+
+    // Blacklist funds on L1
+    vm.selectFork(optimism);
+    _mintSupplyOnL2(optimism, OP_ALIASED_L1_MESSENGER, _blacklistedAmount);
+
+    vm.startPrank(_user);
+    bridgedUSDC.approve(address(l2Adapter), _blacklistedAmount);
+    l2Adapter.sendMessage(_user, _blacklistedAmount, _MIN_GAS_LIMIT);
+    vm.stopPrank();
+
+    vm.selectFork(mainnet);
+
+    vm.prank(MAINNET_USDC.blacklister());
+    MAINNET_USDC.blacklist(_user);
+
+    _relayL2ToL1Message(
+      address(l2Adapter),
+      address(l1Adapter),
+      _ZERO_VALUE,
+      _MIN_GAS_LIMIT,
+      abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _blacklistedAmount)
+    );
+    assertEq(l1Adapter.blacklistedFunds(), _blacklistedAmount);
+
+    vm.prank(MAINNET_USDC.blacklister());
+    MAINNET_USDC.unBlacklist(_user);
+
+    // Blacklist funds on L2
+    vm.selectFork(optimism);
+    vm.prank(bridgedUSDC.blacklister());
+    bridgedUSDC.blacklist(_user);
+
+    _mintSupplyOnL2(optimism, OP_ALIASED_L1_MESSENGER, _blacklistedAmount);
+
+    assertEq(l2Adapter.blacklistedFunds(), _blacklistedAmount);
+
+    vm.selectFork(mainnet);
+
+    vm.prank(_owner);
+    l1Adapter.migrateToNative(_circle, _circle, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
+
+    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Upgrading));
+    assertEq(l1Adapter.burnCaller(), _circle);
+
+    vm.selectFork(optimism);
+    _relayL1ToL2Message(
+      OP_ALIASED_L1_MESSENGER,
+      address(l1Adapter),
+      address(l2Adapter),
+      _ZERO_VALUE,
+      _minGasLimitReceiveOnL2,
+      abi.encodeWithSignature('receiveMigrateToNative(address,uint32)', _circle, _minGasLimitSetBurnAmount)
+    );
+
+    uint256 _burnAmount = bridgedUSDC.totalSupply() + l2Adapter.blacklistedFunds();
+
+    assertEq(l2Adapter.isMessagingDisabled(), true);
+    assertEq(l2Adapter.roleCaller(), _circle);
+
+    vm.prank(_circle);
+    l2Adapter.transferUSDCRoles(_circle);
+
+    assertEq(bridgedUSDC.owner(), _circle);
+
+    vm.selectFork(mainnet);
+    _relayL2ToL1Message(
+      address(l2Adapter),
+      address(l1Adapter),
+      _ZERO_VALUE,
+      _minGasLimitSetBurnAmount,
+      abi.encodeWithSignature('setBurnAmount(uint256)', _burnAmount)
+    );
+
+    // Balance should be equal to the two blacklisted transfers + the amount minted in the setup
+    assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), _finalBlacklistedAmount + _amount);
     assertEq(l1Adapter.burnAmount(), _burnAmount);
     assertEq(l1Adapter.USDC(), address(MAINNET_USDC));
     assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Deprecated));

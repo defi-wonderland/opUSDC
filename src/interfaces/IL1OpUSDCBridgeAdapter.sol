@@ -90,13 +90,6 @@ interface IL1OpUSDCBridgeAdapter {
    */
   function resumeMessaging(uint32 _minGasLimit) external;
 
-  /**
-   * @notice Withdraws the blacklisted funds
-   * @dev Only callable by the owner
-   * @param _to The address to send the funds to
-   */
-  function withdrawBlacklistedFunds(address _to) external;
-
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
   ///////////////////////////////////////////////////////////////*/

@@ -675,68 +675,6 @@ contract L1OpUSDCBridgeAdapter_Unit_ResumeMessaging is Base {
   }
 }
 
-contract L1OpUSDCBridgeAdapter_Unit_WithdrawBlacklistedFunds is Base {
-  event BlacklistedFundsWithdrawn(address _owner, uint256 _amount);
-
-  /**
-   * @notice Check that reverts if not owner
-   */
-  function test_revertIfNotOwner(address _executor, address _to) external {
-    vm.assume(_executor != _owner);
-    // Execute
-    vm.prank(_executor);
-    vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, _executor));
-    adapter.withdrawBlacklistedFunds(_to);
-  }
-
-  /**
-   * @notice Check that the funds are withdrawn as expected
-   */
-  function test_withdrawFunds(uint256 _amount, address _to) external {
-    vm.assume(_amount > 0);
-    adapter.forTest_setBlacklistedFunds(_amount);
-
-    _mockAndExpect(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _to, _amount), abi.encode());
-
-    // Execute
-    vm.prank(_owner);
-    adapter.withdrawBlacklistedFunds(_to);
-  }
-
-  /**
-   * @notice Check that the state is changed as expected
-   */
-  function test_setState(uint256 _amount, address _to) external {
-    vm.assume(_amount > 0);
-    adapter.forTest_setBlacklistedFunds(_amount);
-
-    vm.mockCall(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _to, _amount), abi.encode());
-
-    // Execute
-    vm.prank(_owner);
-    adapter.withdrawBlacklistedFunds(_to);
-
-    assertEq(adapter.blacklistedFunds(), 0, 'Blacklisted funds should be set to 0');
-  }
-
-  /**
-   * @notice Check that the event is emitted as expected
-   */
-  function test_emitEvent(uint256 _amount, address _to) external {
-    vm.assume(_amount > 0);
-    adapter.forTest_setBlacklistedFunds(_amount);
-
-    vm.mockCall(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _to, _amount), abi.encode());
-
-    // Expect events
-    vm.expectEmit(true, true, true, true);
-    emit BlacklistedFundsWithdrawn(_to, _amount);
-
-    // Execute
-    vm.prank(_owner);
-    adapter.withdrawBlacklistedFunds(_to);
-  }
-}
 /*///////////////////////////////////////////////////////////////
                           MESSAGING
 ///////////////////////////////////////////////////////////////*/

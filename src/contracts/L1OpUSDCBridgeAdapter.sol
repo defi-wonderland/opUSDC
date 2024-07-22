@@ -113,7 +113,8 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     if (messengerStatus != Status.Deprecated) revert IOpUSDCBridgeAdapter_BurnAmountNotSet();
 
     // Burn the USDC tokens
-    uint256 _burnAmount = burnAmount;
+    // NOTE: If in flight transactions fail due to blacklist after migration, they will just be trapped in this contract as its deprecated
+    uint256 _burnAmount = burnAmount + blacklistedFunds;
     if (_burnAmount != 0) {
       // NOTE: This is a very edge case and will only happen if the chain operator adds a second minter on L2
       // So now this adapter doesnt have the full backing supply locked in this contract
@@ -179,19 +180,6 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     );
 
     emit MessagingResumed(MESSENGER);
-  }
-
-  /**
-   * @notice Withdraws the blacklisted funds
-   * @dev Only callable by the owner
-   * @param _to The address to send the funds to
-   */
-  function withdrawBlacklistedFunds(address _to) external onlyOwner {
-    uint256 _amount = blacklistedFunds;
-    blacklistedFunds = 0;
-
-    IUSDC(USDC).safeTransfer(_to, _amount);
-    emit BlacklistedFundsWithdrawn(_to, _amount);
   }
 
   /*///////////////////////////////////////////////////////////////
