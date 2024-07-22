@@ -77,6 +77,14 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, Ownable {
   function receiveMessage(address _user, uint256 _amount) external virtual;
 
   /**
+   * @notice Cancels a signature by setting the nonce as used
+   * @param _nonce The nonce of the signature to cancel
+   */
+  function cancelSignature(uint256 _nonce) external {
+    userNonces[msg.sender][_nonce] = true;
+  }
+
+  /**
    * @notice Check the signature of a message
    * @param _signer the address that signed the message
    * @param _messageHash the hash of the message that was signed

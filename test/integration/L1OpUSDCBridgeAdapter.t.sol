@@ -120,6 +120,33 @@ contract Integration_Bridging is IntegrationBase {
   }
 
   /**
+   * @notice Test signature message reverts with a signature that was cancel by disabling the nonce
+   */
+  function test_bridgeFromL1WithCanceledSignature() public {
+    (address _signerAd, uint256 _signerPk) = makeAddrAndKey('signer');
+    vm.selectFork(mainnet);
+
+    // We need to do this instead of `deal` because deal doesnt change `totalSupply` state
+    vm.prank(MAINNET_USDC.masterMinter());
+    MAINNET_USDC.mint(_signerAd, _amount);
+
+    // Changing to `to` param to _user but we call it with _signerAd
+    uint256 _deadline = block.timestamp + 1 days;
+    bytes memory _signature = _generateSignature(
+      _user, _amount, _deadline, _MIN_GAS_LIMIT, _USER_NONCE, _signerAd, _signerPk, address(l1Adapter)
+    );
+
+    // Cancel the signature
+    vm.prank(_signerAd);
+    l1Adapter.cancelSignature(_USER_NONCE);
+
+    // Different address will execute the message, and it should revert because the nonce is disabled
+    vm.startPrank(_user);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidNonce.selector);
+    l1Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _USER_NONCE, _deadline, _MIN_GAS_LIMIT);
+  }
+
+  /**
    * @notice Test signature message reverts with incorrect signature
    */
   function test_bridgeFromL1WithIncorrectSignature() public {
@@ -130,15 +157,14 @@ contract Integration_Bridging is IntegrationBase {
     vm.prank(MAINNET_USDC.masterMinter());
     MAINNET_USDC.mint(_signerAd, _amount);
 
-    vm.prank(_signerAd);
-    MAINNET_USDC.approve(address(l1Adapter), _amount);
-    uint256 _deadline = block.timestamp + 1 days;
-
-    uint256 _nonce = vm.getNonce(_signerAd);
+    // vm.prank(_signerAd);
+    // MAINNET_USDC.approve(address(l1Adapter), _amount);
 
     // Changing to `to` param to _user but we call it with _signerAd
-    bytes memory _signature =
-      _generateSignature(_user, _amount, _deadline, _MIN_GAS_LIMIT, _nonce, _signerAd, _signerPk, address(l1Adapter));
+    uint256 _deadline = block.timestamp + 1 days;
+    bytes memory _signature = _generateSignature(
+      _user, _amount, _deadline, _MIN_GAS_LIMIT, _USER_NONCE, _signerAd, _signerPk, address(l1Adapter)
+    );
 
     // Different address can execute the message
     vm.startPrank(_user);

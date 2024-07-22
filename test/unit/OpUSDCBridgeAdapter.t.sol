@@ -92,6 +92,17 @@ contract ForTestOpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
   }
 }
 
+contract OpUSDCBridgeAdapter_Unit_CancelSignature is Base {
+  function test_setNonceAsUsed(address _caller, uint256 _nonce) public {
+    // Execute
+    vm.prank(_caller);
+    adapter.cancelSignature(_nonce);
+
+    // Assert
+    assertEq(adapter.userNonces(_caller, _nonce), true, 'Nonce should be set as used');
+  }
+}
+
 contract OpUSDCBridgeAdapter_Unit_CheckSignature is Base {
   /**
    * @notice Check that the signature is valid

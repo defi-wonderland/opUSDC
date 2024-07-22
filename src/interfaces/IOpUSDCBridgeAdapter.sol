@@ -149,6 +149,12 @@ interface IOpUSDCBridgeAdapter {
    */
   function receiveMessage(address _user, uint256 _amount) external;
 
+  /**
+   * @notice Cancels a signature by setting the nonce as used
+   * @param _nonce The nonce of the signature to cancel
+   */
+  function cancelSignature(uint256 _nonce) external;
+
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
   ///////////////////////////////////////////////////////////////*/
