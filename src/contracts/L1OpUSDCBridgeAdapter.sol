@@ -113,14 +113,15 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     if (messengerStatus != Status.Deprecated) revert IOpUSDCBridgeAdapter_BurnAmountNotSet();
 
     // Burn the USDC tokens
-    if (burnAmount != 0) {
+    uint256 _burnAmount = burnAmount;
+    if (_burnAmount != 0) {
       // NOTE: This is a very edge case and will only happen if the chain operator adds a second minter on L2
       // So now this adapter doesnt have the full backing supply locked in this contract
       // Incase the bridged usdc token has other minters and the supply sent is greater then what we have
       // We need to burn the full amount stored in this contract
       // This could also cause in-flight messages to fail because of the multiple supply sources
       uint256 _balanceOf = IUSDC(USDC).balanceOf(address(this));
-      uint256 _burnAmount = burnAmount > _balanceOf ? _balanceOf : burnAmount;
+      _burnAmount = _burnAmount > _balanceOf ? _balanceOf : _burnAmount;
 
       IUSDC(USDC).burn(_burnAmount);
 
@@ -129,8 +130,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     }
 
     burnCaller = address(0);
-
-    emit MigrationComplete();
+    emit MigrationComplete(_burnAmount);
   }
 
   /*///////////////////////////////////////////////////////////////
@@ -192,6 +192,9 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external override {
+    // Ensure the address is not blacklisted
+    if (IUSDC(USDC).isBlacklisted(_to)) revert IOpUSDCBridgeAdapter_BlacklistedAddress();
+
     // Ensure messaging is enabled
     if (messengerStatus != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
@@ -225,9 +228,13 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     uint256 _deadline,
     uint32 _minGasLimit
   ) external override {
+    // Ensure the address is not blacklisted
+    if (IUSDC(USDC).isBlacklisted(_to)) revert IOpUSDCBridgeAdapter_BlacklistedAddress();
+
     // Ensure messaging is enabled
     if (messengerStatus != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
+    // Ensure the nonce has not already been used
     if (userNonces[_signer][_nonce]) revert IOpUSDCBridgeAdapter_InvalidNonce();
 
     // Ensure the deadline has not passed

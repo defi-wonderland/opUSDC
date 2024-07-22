@@ -4,11 +4,11 @@ pragma solidity 0.8.25;
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCFactory, L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
-import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
+import {L2OpUSDCDeploy} from 'contracts/L2OpUSDCDeploy.sol';
 import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
 
 import {StdStorage, stdStorage} from 'forge-std/StdStorage.sol';
-import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
+import {IL2OpUSDCDeploy} from 'interfaces/IL2OpUSDCDeploy.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementationCreationCode.sol';
@@ -67,10 +67,10 @@ contract IntegrationBase is Helpers {
   // OpUSDC Protocol
   L1OpUSDCBridgeAdapter public l1Adapter;
   L1OpUSDCFactory public l1Factory;
-  L2OpUSDCFactory public l2Factory;
+  L2OpUSDCDeploy public l2Factory;
   L2OpUSDCBridgeAdapter public l2Adapter;
   IUSDC public bridgedUSDC;
-  IL2OpUSDCFactory.USDCInitializeData public usdcInitializeData;
+  IL2OpUSDCDeploy.USDCInitializeData public usdcInitializeData;
   IL1OpUSDCFactory.L2Deployments public l2Deployments;
 
   function setUp() public virtual {
@@ -98,7 +98,7 @@ contract IntegrationBase is Helpers {
 
     // Get salt and initialize data for l2 deployments
     bytes32 _salt = bytes32(l1Factory.deploymentsSaltCounter());
-    usdcInitializeData = IL2OpUSDCFactory.USDCInitializeData(
+    usdcInitializeData = IL2OpUSDCDeploy.USDCInitializeData(
       l1Factory.USDC_NAME(), l1Factory.USDC_SYMBOL(), MAINNET_USDC.currency(), MAINNET_USDC.decimals()
     );
 
@@ -112,7 +112,7 @@ contract IntegrationBase is Helpers {
 
     l2Adapter = L2OpUSDCBridgeAdapter(_l2Adapter);
     bridgedUSDC = IUSDC(l2Adapter.USDC());
-    l2Factory = L2OpUSDCFactory(_l2Factory);
+    l2Factory = L2OpUSDCDeploy(_l2Factory);
 
     // Make foundry know these two address exist on both forks
     vm.makePersistent(address(l1Adapter));
@@ -126,7 +126,7 @@ contract IntegrationBase is Helpers {
     address _aliasedL1Messenger,
     bytes32 _salt,
     address _l1Adapter,
-    IL2OpUSDCFactory.USDCInitializeData memory _usdcInitializeData,
+    IL2OpUSDCDeploy.USDCInitializeData memory _usdcInitializeData,
     IL1OpUSDCFactory.L2Deployments memory _l2Deployments
   ) internal {
     bytes memory _l2FactoryCArgs = abi.encode(
@@ -136,7 +136,7 @@ contract IntegrationBase is Helpers {
       _usdcInitializeData,
       _l2Deployments.usdcInitTxs
     );
-    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
+    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCDeploy).creationCode, _l2FactoryCArgs);
 
     _relayL1ToL2Message(
       _aliasedL1Messenger,

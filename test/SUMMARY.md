@@ -9,7 +9,7 @@ Current coverage is 100% of the branches for the 7 contracts, across 121 tests (
 | src/contracts/L1OpUSDCBridgeAdapter.sol         | 100.00% (45/45)  | 100.00% (68/68)  | 95.83% (23/24)  | 100.00% (10/10) |
 | src/contracts/L1OpUSDCFactory.sol               | 100.00% (12/12)  | 100.00% (17/17)  | 100.00% (2/2)   | 100.00% (2/2)   |
 | src/contracts/L2OpUSDCBridgeAdapter.sol         | 100.00% (40/40)  | 100.00% (52/52)  | 100.00% (16/16) | 100.00% (10/10) |
-| src/contracts/L2OpUSDCFactory.sol               | 100.00% (26/26)  | 100.00% (40/40)  | 100.00% (4/4)   | 100.00% (3/3)   |
+| src/contracts/L2OpUSDCDeploy.sol                | 100.00% (26/26)  | 100.00% (40/40)  | 100.00% (4/4)   | 100.00% (3/3)   |
 | src/contracts/universal/OpUSDCBridgeAdapter.sol | 100.00% (5/5)    | 100.00% (6/6)    | 100.00% (2/2)   | 100.00% (2/2)   |
 | src/contracts/utils/FallbackProxyAdmin.sol      | 100.00% (4/4)    | 100.00% (4/4)    | 100.00% (0/0)   | 100.00% (4/4)   |
 | src/libraries/CrossChainDeployments.sol         | 100.00% (25/25)  | 100.00% (26/26)  | 100.00% (16/16) | 100.00% (3/3)   |

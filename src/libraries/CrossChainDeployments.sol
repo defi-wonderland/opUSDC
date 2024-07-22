@@ -1,6 +1,6 @@
 pragma solidity 0.8.25;
 
-import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
+import {L2OpUSDCDeploy} from 'contracts/L2OpUSDCDeploy.sol';
 import {ICreate2Deployer} from 'interfaces/external/ICreate2Deployer.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 
@@ -29,7 +29,7 @@ library CrossChainDeployments {
     address _create2Deployer,
     uint32 _minGasLimit
   ) external returns (address _l2Factory) {
-    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _args);
+    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCDeploy).creationCode, _args);
     _l2Factory = precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), _create2Deployer);
 
     bytes memory _l2FactoryDeploymentsTx =

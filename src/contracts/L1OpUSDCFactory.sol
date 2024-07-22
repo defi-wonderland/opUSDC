@@ -3,7 +3,7 @@ pragma solidity 0.8.25;
 
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
-import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
+import {IL2OpUSDCDeploy} from 'interfaces/IL2OpUSDCDeploy.sol';
 
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 import {CrossChainDeployments} from 'libraries/CrossChainDeployments.sol';
@@ -80,8 +80,8 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     _l1Adapter = CrossChainDeployments.precalculateCreateAddress(address(this), _currentNonce);
 
     // Get the L1 USDC naming and decimals to ensure they are the same on the L2, guaranteeing the same standard
-    IL2OpUSDCFactory.USDCInitializeData memory _usdcInitializeData =
-      IL2OpUSDCFactory.USDCInitializeData(USDC_NAME, USDC_SYMBOL, USDC.currency(), USDC.decimals());
+    IL2OpUSDCDeploy.USDCInitializeData memory _usdcInitializeData =
+      IL2OpUSDCDeploy.USDCInitializeData(USDC_NAME, USDC_SYMBOL, USDC.currency(), USDC.decimals());
 
     // Use the nonce as salt to ensure always a different salt since the nonce is always increasing
     bytes32 _salt = bytes32(_currentNonce);
@@ -104,6 +104,6 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     // Deploy the L1 adapter
     address(new L1OpUSDCBridgeAdapter(address(USDC), _l1Messenger, _l2Adapter, _l1AdapterOwner));
 
-    emit L1AdapterDeployed(_l1Adapter);
+    emit ProtocolDeployed(_l1Adapter, _l2Factory, _l2Adapter);
   }
 }

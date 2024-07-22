@@ -6,9 +6,9 @@ import {EchidnaTest} from '../AdvancedTestsUtils.sol';
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCFactory, L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
-import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
+import {L2OpUSDCDeploy} from 'contracts/L2OpUSDCDeploy.sol';
 import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
-import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
+import {IL2OpUSDCDeploy} from 'interfaces/IL2OpUSDCDeploy.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementationCreationCode.sol';
 import {Create2Deployer} from 'test/invariants/fuzz/Create2Deployer.sol';
@@ -25,7 +25,7 @@ contract SetupOpUSDC is EchidnaTest {
   L1OpUSDCFactory internal factory;
 
   L2OpUSDCBridgeAdapter internal l2Adapter;
-  L2OpUSDCFactory internal l2Factory;
+  L2OpUSDCDeploy internal l2Factory;
 
   MockBridge internal mockMessenger;
   Create2Deployer internal create2Deployer;
@@ -78,14 +78,14 @@ contract SetupOpUSDC is EchidnaTest {
     (address _l1Adapter, address _l2Factory, address _l2Adapter) =
       factory.deploy(address(mockMessenger), address(this), _l2Deployments);
 
-    l2Factory = L2OpUSDCFactory(_l2Factory);
+    l2Factory = L2OpUSDCDeploy(_l2Factory);
     l1Adapter = L1OpUSDCBridgeAdapter(_l1Adapter);
     l2Adapter = L2OpUSDCBridgeAdapter(_l2Adapter);
   }
 
   // Send a (mock) message to the L2 messenger to deploy the L2 factory and the L2 adapter (which deploys usdc L2 too)
   function _l2Setup(IL1OpUSDCFactory.L2Deployments memory _l2Deployments) internal {
-    IL2OpUSDCFactory.USDCInitializeData memory usdcInitializeData = IL2OpUSDCFactory.USDCInitializeData(
+    IL2OpUSDCDeploy.USDCInitializeData memory usdcInitializeData = IL2OpUSDCDeploy.USDCInitializeData(
       factory.USDC_NAME(), factory.USDC_SYMBOL(), usdcMainnet.currency(), usdcMainnet.decimals()
     );
 
@@ -97,7 +97,7 @@ contract SetupOpUSDC is EchidnaTest {
       _l2Deployments.usdcInitTxs // encodePacked?
     );
 
-    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2factoryConstructorArgs);
+    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCDeploy).creationCode, _l2factoryConstructorArgs);
 
     // !!!! Nonce incremented to avoid collision !!!
     mockMessenger.relayMessage(

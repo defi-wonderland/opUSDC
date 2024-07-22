@@ -2,22 +2,22 @@
 pragma solidity 0.8.25;
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
-import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
+import {L2OpUSDCDeploy} from 'contracts/L2OpUSDCDeploy.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {Test} from 'forge-std/Test.sol';
-import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
+import {IL2OpUSDCDeploy} from 'interfaces/IL2OpUSDCDeploy.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
-contract L2OpUSDCFactoryForTest is L2OpUSDCFactory {
+contract L2OpUSDCDeployForTest is L2OpUSDCDeploy {
   constructor(
     address _l1Adapter,
     address _l2AdapterOwner,
     bytes memory _usdcImplementationInitCode,
     USDCInitializeData memory _usdcInitializeData,
     bytes[] memory _usdcInitTxs
-  ) L2OpUSDCFactory(_l1Adapter, _l2AdapterOwner, _usdcImplementationInitCode, _usdcInitializeData, _usdcInitTxs) {}
+  ) L2OpUSDCDeploy(_l1Adapter, _l2AdapterOwner, _usdcImplementationInitCode, _usdcInitializeData, _usdcInitTxs) {}
 
   function forTest_deployCreate(bytes memory _initCode) public returns (address _newContract) {
     _newContract = _deployCreate(_initCode);
@@ -34,7 +34,7 @@ contract L2OpUSDCFactoryForTest is L2OpUSDCFactory {
 }
 
 contract Base is Test, Helpers {
-  L2OpUSDCFactoryForTest public factory;
+  L2OpUSDCDeployForTest public factory;
 
   address internal _l2Messenger = 0x4200000000000000000000000000000000000007;
   address internal _l1Factory = makeAddr('l1Factory');
@@ -49,7 +49,7 @@ contract Base is Test, Helpers {
   address internal _dummyContract;
   bytes internal _usdcImplInitCode;
 
-  IL2OpUSDCFactory.USDCInitializeData internal _usdcInitializeData;
+  IL2OpUSDCDeploy.USDCInitializeData internal _usdcInitializeData;
   bytes[] internal _emptyInitTxs;
   bytes[] internal _initTxsUsdc;
   bytes[] internal _badInitTxs;
@@ -58,13 +58,13 @@ contract Base is Test, Helpers {
     // Precalculate the factory address. The real create 2 deployer will do it through `CREATE2`, but we'll use `CREATE`
     // just for scope of the unit tests
     uint256 _deployerNonce = vm.getNonce(_create2Deployer);
-    factory = L2OpUSDCFactoryForTest(_precalculateCreateAddress(_create2Deployer, _deployerNonce));
+    factory = L2OpUSDCDeployForTest(_precalculateCreateAddress(_create2Deployer, _deployerNonce));
 
     // Set the implementations bytecode and init code
     _usdcImplInitCode = type(ForTestDummyContract).creationCode;
 
     // Set the initialize data
-    _usdcInitializeData = IL2OpUSDCFactory.USDCInitializeData({
+    _usdcInitializeData = IL2OpUSDCDeploy.USDCInitializeData({
       tokenName: 'USD Coin',
       tokenSymbol: 'USDC',
       tokenCurrency: 'USD',
@@ -88,7 +88,7 @@ contract Base is Test, Helpers {
   }
 }
 
-contract L2OpUSDCFactory_Unit_Constructor is Base {
+contract L2OpUSDCDeploy_Unit_Constructor is Base {
   event USDCImplementationDeployed(address _l2UsdcImplementation);
   event USDCProxyDeployed(address _l2UsdcProxy);
   event L2AdapterDeployed(address _l2Adapter);
@@ -107,7 +107,7 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
 
     // Execute
     vm.prank(_create2Deployer);
-    new L2OpUSDCFactory(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
+    new L2OpUSDCDeploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
 
     // Assert the USDC implementation was deployed
     assertGt(_usdcImplementation.code.length, 0, 'USDC implementation was not deployed');
@@ -132,7 +132,7 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
 
     // Execute
     vm.prank(_create2Deployer);
-    new L2OpUSDCFactory(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
+    new L2OpUSDCDeploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
 
     // Assert the USDC proxy was deployed
     assertGt(_usdcProxy.code.length, 0, 'USDC proxy was not deployed');
@@ -157,7 +157,7 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
 
     // Execute
     vm.prank(_create2Deployer);
-    new L2OpUSDCFactory(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
+    new L2OpUSDCDeploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
 
     // Assert the adapter was deployed
     assertGt(_l2Adapter.code.length, 0, 'L2 adapter was not deployed');
@@ -187,7 +187,7 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
 
     // Execute
     vm.prank(_create2Deployer);
-    new L2OpUSDCFactory(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
+    new L2OpUSDCDeploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
   }
 
   /**
@@ -203,7 +203,7 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
 
     // Execute
     vm.prank(_create2Deployer);
-    new L2OpUSDCFactory(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _initTxsUsdc);
+    new L2OpUSDCDeploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _initTxsUsdc);
   }
 
   /**
@@ -220,11 +220,11 @@ contract L2OpUSDCFactory_Unit_Constructor is Base {
 
     // Execute
     vm.prank(_create2Deployer);
-    new L2OpUSDCFactory(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _initTxsUsdc);
+    new L2OpUSDCDeploy(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _initTxsUsdc);
   }
 }
 
-contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
+contract L2OpUSDCDeploy_Unit_ExecuteInitTxs is Base {
   /**
    * @notice Deploy the factory to test the internal function
    */
@@ -232,7 +232,7 @@ contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
     super.setUp();
 
     vm.prank(_create2Deployer);
-    new L2OpUSDCFactoryForTest(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
+    new L2OpUSDCDeployForTest(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
   }
 
   /**
@@ -339,7 +339,7 @@ contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
       vm.mockCallRevert(address(factory), _badInitTxs[_i], '');
 
       // Expect it to revert with the right index as argument
-      vm.expectRevert(abi.encodeWithSelector(IL2OpUSDCFactory.IL2OpUSDCFactory_InitializationFailed.selector, _i + 1));
+      vm.expectRevert(abi.encodeWithSelector(IL2OpUSDCDeploy.IL2OpUSDCDeploy_InitializationFailed.selector, _i + 1));
       // Execute
       factory.forTest_executeInitTxs(address(factory), _usdcInitializeData, _l2Adapter, _badInitTxs);
     }
@@ -360,7 +360,7 @@ contract L2OpUSDCFactory_Unit_ExecuteInitTxs is Base {
   }
 }
 
-contract L2OpUSDCFactory_Unit_DeployCreate is Base {
+contract L2OpUSDCDeploy_Unit_DeployCreate is Base {
   /**
    * @notice Deploy the factory to test the internal function
    */
@@ -368,7 +368,7 @@ contract L2OpUSDCFactory_Unit_DeployCreate is Base {
     super.setUp();
 
     vm.prank(_create2Deployer);
-    new L2OpUSDCFactoryForTest(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
+    new L2OpUSDCDeployForTest(_l1Adapter, _l2AdapterOwner, _usdcImplInitCode, _usdcInitializeData, _emptyInitTxs);
   }
 
   /**
@@ -398,7 +398,7 @@ contract L2OpUSDCFactory_Unit_DeployCreate is Base {
     bytes memory _badInitCode = '0x0000405060';
 
     // Expect the tx to revert
-    vm.expectRevert(IL2OpUSDCFactory.IL2OpUSDCFactory_DeploymentFailed.selector);
+    vm.expectRevert(IL2OpUSDCDeploy.IL2OpUSDCDeploy_DeploymentFailed.selector);
 
     // Execute
     factory.forTest_deployCreate(_badInitCode);
