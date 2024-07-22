@@ -88,6 +88,9 @@ interface IOpUSDCBridgeAdapter {
    */
   error IOpUSDCBridgeAdapter_InvalidSender();
 
+  /**
+   * @notice Error when the nonce is already used for the given signature
+   */
   error IOpUSDCBridgeAdapter_InvalidNonce();
 
   /**

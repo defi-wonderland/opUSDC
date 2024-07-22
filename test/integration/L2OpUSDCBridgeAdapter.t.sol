@@ -130,17 +130,21 @@ contract Integration_Bridging is IntegrationBase {
   }
 
   /**
-   * @notice Test signature message reverts with a signature that was cancel by disabling the nonce
+   * @notice Test signature message reverts with a signature that was canceled by disabling the nonce
    */
   function test_bridgeFromL2WithCanceledSignature() public {
     (address _signerAd, uint256 _signerPk) = makeAddrAndKey('signer');
-    vm.selectFork(mainnet);
+    vm.selectFork(optimism);
 
     // Mint to increment total supply of bridgedUSDC and balance of _user
     vm.startPrank(address(l2Adapter));
     bridgedUSDC.mint(_signerAd, _amount);
     bridgedUSDC.mint(_user, _amount);
     vm.stopPrank();
+
+    // Give allowance to the adapter
+    vm.prank(_signerAd);
+    bridgedUSDC.approve(address(l2Adapter), _amount);
 
     // Changing to `to` param to _user but we call it with _signerAd
     uint256 _deadline = block.timestamp + 1 days;
@@ -150,12 +154,12 @@ contract Integration_Bridging is IntegrationBase {
 
     // Cancel the signature
     vm.prank(_signerAd);
-    l1Adapter.cancelSignature(_USER_NONCE);
+    l2Adapter.cancelSignature(_USER_NONCE);
 
     // Different address will execute the message, and it should revert because the nonce is disabled
     vm.startPrank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidNonce.selector);
-    l1Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _USER_NONCE, _deadline, _MIN_GAS_LIMIT);
+    l2Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _USER_NONCE, _deadline, _MIN_GAS_LIMIT);
   }
 
   /**
@@ -170,6 +174,10 @@ contract Integration_Bridging is IntegrationBase {
     bridgedUSDC.mint(_signerAd, _amount);
     bridgedUSDC.mint(_user, _amount);
     vm.stopPrank();
+
+    // Give allowance to the adapter
+    vm.prank(_signerAd);
+    bridgedUSDC.approve(address(l2Adapter), _amount);
 
     // Changing to `to` param to _user but we call it with _signerAd
     uint256 _deadline = block.timestamp + 1 days;

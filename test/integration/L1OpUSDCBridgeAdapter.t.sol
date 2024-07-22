@@ -120,7 +120,7 @@ contract Integration_Bridging is IntegrationBase {
   }
 
   /**
-   * @notice Test signature message reverts with a signature that was cancel by disabling the nonce
+   * @notice Test signature message reverts with a signature that was canceled by disabling the nonce
    */
   function test_bridgeFromL1WithCanceledSignature() public {
     (address _signerAd, uint256 _signerPk) = makeAddrAndKey('signer');
@@ -129,6 +129,10 @@ contract Integration_Bridging is IntegrationBase {
     // We need to do this instead of `deal` because deal doesnt change `totalSupply` state
     vm.prank(MAINNET_USDC.masterMinter());
     MAINNET_USDC.mint(_signerAd, _amount);
+
+    // Give allowance to the adapter
+    vm.prank(_signerAd);
+    MAINNET_USDC.approve(address(l1Adapter), _amount);
 
     // Changing to `to` param to _user but we call it with _signerAd
     uint256 _deadline = block.timestamp + 1 days;
@@ -157,8 +161,9 @@ contract Integration_Bridging is IntegrationBase {
     vm.prank(MAINNET_USDC.masterMinter());
     MAINNET_USDC.mint(_signerAd, _amount);
 
-    // vm.prank(_signerAd);
-    // MAINNET_USDC.approve(address(l1Adapter), _amount);
+    // Give allowance to the adapter
+    vm.prank(_signerAd);
+    MAINNET_USDC.approve(address(l1Adapter), _amount);
 
     // Changing to `to` param to _user but we call it with _signerAd
     uint256 _deadline = block.timestamp + 1 days;
