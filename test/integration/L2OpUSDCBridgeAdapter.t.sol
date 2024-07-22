@@ -137,14 +137,13 @@ contract Integration_Bridging is IntegrationBase {
     vm.prank(_signerAd);
     bridgedUSDC.approve(address(l2Adapter), _amount);
     uint256 _deadline = block.timestamp + 1 days;
-    uint256 _nonce = vm.getNonce(_signerAd);
     bytes memory _signature = _generateSignature(
-      _signerAd, _amount, _deadline, _MIN_GAS_LIMIT, _nonce, _signerAd, _signerPk, address(l2Adapter)
+      _signerAd, _amount, _deadline, _MIN_GAS_LIMIT, _USER_NONCE, _signerAd, _signerPk, address(l2Adapter)
     );
 
     // Different address can execute the message
     vm.prank(_user);
-    l2Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _MIN_GAS_LIMIT);
+    l2Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _USER_NONCE, _deadline, _MIN_GAS_LIMIT);
 
     assertEq(bridgedUSDC.balanceOf(_signerAd), 0);
     assertEq(bridgedUSDC.balanceOf(_user), _amount);
@@ -166,6 +165,39 @@ contract Integration_Bridging is IntegrationBase {
   }
 
   /**
+   * @notice Test signature message reverts with a signature that was canceled by disabling the nonce
+   */
+  function test_bridgeFromL2WithCanceledSignature() public {
+    (address _signerAd, uint256 _signerPk) = makeAddrAndKey('signer');
+    vm.selectFork(optimism);
+
+    // Mint to increment total supply of bridgedUSDC and balance of _user
+    vm.startPrank(address(l2Adapter));
+    bridgedUSDC.mint(_signerAd, _amount);
+    bridgedUSDC.mint(_user, _amount);
+    vm.stopPrank();
+
+    // Give allowance to the adapter
+    vm.prank(_signerAd);
+    bridgedUSDC.approve(address(l2Adapter), _amount);
+
+    // Changing to `to` param to _user but we call it with _signerAd
+    uint256 _deadline = block.timestamp + 1 days;
+    bytes memory _signature = _generateSignature(
+      _user, _amount, _deadline, _MIN_GAS_LIMIT, _USER_NONCE, _signerAd, _signerPk, address(l2Adapter)
+    );
+
+    // Cancel the signature
+    vm.prank(_signerAd);
+    l2Adapter.cancelSignature(_USER_NONCE);
+
+    // Different address will execute the message, and it should revert because the nonce is disabled
+    vm.startPrank(_user);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidNonce.selector);
+    l2Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _USER_NONCE, _deadline, _MIN_GAS_LIMIT);
+  }
+
+  /**
    * @notice Test signature message reverts with incorrect signature
    */
   function test_bridgeFromL2WithIncorrectSignature() public {
@@ -178,19 +210,20 @@ contract Integration_Bridging is IntegrationBase {
     bridgedUSDC.mint(_user, _amount);
     vm.stopPrank();
 
+    // Give allowance to the adapter
     vm.prank(_signerAd);
     bridgedUSDC.approve(address(l2Adapter), _amount);
-    uint256 _deadline = block.timestamp + 1 days;
-    uint256 _nonce = vm.getNonce(_signerAd);
 
     // Changing to `to` param to _user but we call it with _signerAd
-    bytes memory _signature =
-      _generateSignature(_user, _amount, _deadline, _MIN_GAS_LIMIT, _nonce, _signerAd, _signerPk, address(l2Adapter));
+    uint256 _deadline = block.timestamp + 1 days;
+    bytes memory _signature = _generateSignature(
+      _user, _amount, _deadline, _MIN_GAS_LIMIT, _USER_NONCE, _signerAd, _signerPk, address(l2Adapter)
+    );
 
     // Different address can execute the message
     vm.startPrank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSignature.selector);
-    l2Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _MIN_GAS_LIMIT);
+    l2Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _USER_NONCE, _deadline, _MIN_GAS_LIMIT);
     vm.stopPrank();
   }
 }
