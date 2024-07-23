@@ -67,7 +67,7 @@ abstract contract Base is Test, Helpers {
     // Define the L2 deployments struct data
     uint32 _minGasLimitDeploy = 8_000_000;
     address _l2AdapterOwner = makeAddr('l2AdapterOwner');
-    bytes memory _usdcImplementationInitCode = '0x6080333333';
+
     _l2Deployments = IL1OpUSDCFactory.L2Deployments({
       l2AdapterOwner: _l2AdapterOwner,
       usdcImplAddr: _usdcImplAddress,

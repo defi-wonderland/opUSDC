@@ -61,8 +61,8 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * @return _l2Adapter The address of the L2 adapter
    * @dev It can fail on L2 due to a gas miscalculation, but in that case the tx can be replayed. It only deploys 1 L2
    * factory per L2 deployments, to make sure the nonce is being tracked correctly while precalculating addresses
-   * @dev There is one message for the L2 factory deployment and another for the L2 adapter deployment because if the L2
-   * factory is already deployed, that message will fail but the other will be executed
+   * @dev The implementation of the USDC contract needs to be deployed on L2 before this is called
+   * Then set the `usdcImplAddr` in the L2Deployments struct to the address of the deployed USDC implementation contract
    */
   function deploy(
     address _l1Messenger,
