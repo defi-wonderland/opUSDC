@@ -23,6 +23,14 @@ contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
   function forTest_setRoleCaller(address _roleCaller) external {
     roleCaller = _roleCaller;
   }
+
+  function forTest_setUserNonce(address _user, uint256 _nonce, bool _used) external {
+    userNonces[_user][_nonce] = _used;
+  }
+
+  function forTest_setUserBlacklistedFunds(address _user, uint256 _amount) external {
+    userBlacklistedFunds[_user] = _amount;
+  }
 }
 
 abstract contract Base is Helpers {
@@ -345,6 +353,26 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessage is Base {
   }
 
   /**
+   * @notice Check that the function reverts if the nonce is already used
+   */
+  function test_revertOnUsedNonce(
+    address _to,
+    uint256 _amount,
+    bytes memory _signature,
+    uint256 _nonce,
+    uint256 _deadline,
+    uint32 _minGasLimit
+  ) external {
+    vm.mockCall(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(false));
+    adapter.forTest_setUserNonce(_signerAd, _nonce, true);
+
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidNonce.selector);
+    adapter.sendMessage(_signerAd, _to, _amount, _signature, _nonce, _deadline, _minGasLimit);
+  }
+
+  /**
    * @notice Check that burning tokens and sending a message works as expected
    */
   function test_expectedCall(address _to, uint256 _amount, uint32 _minGasLimit) external {
@@ -407,6 +435,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     address _to,
     uint256 _amount,
     bytes memory _signature,
+    uint256 _nonce,
     uint256 _deadline,
     uint32 _minGasLimit
   ) external {
@@ -414,7 +443,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     // Execute
     vm.prank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_BlacklistedAddress.selector);
-    adapter.sendMessage(_signerAd, _to, _amount, _signature, _deadline, _minGasLimit);
+    adapter.sendMessage(_signerAd, _to, _amount, _signature, _nonce, _deadline, _minGasLimit);
   }
   /**
    * @notice Check that the function reverts if messaging is disabled
@@ -424,6 +453,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     address _to,
     uint256 _amount,
     bytes memory _signature,
+    uint256 _nonce,
     uint256 _deadline,
     uint32 _minGasLimit
   ) external {
@@ -434,7 +464,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     // Execute
     vm.prank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
-    adapter.sendMessage(_signerAd, _to, _amount, _signature, _deadline, _minGasLimit);
+    adapter.sendMessage(_signerAd, _to, _amount, _signature, _nonce, _deadline, _minGasLimit);
   }
 
   /**
@@ -444,6 +474,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     address _to,
     uint256 _amount,
     bytes memory _signature,
+    uint256 _nonce,
     uint256 _timestamp,
     uint256 _deadline,
     uint32 _minGasLimit
@@ -454,16 +485,21 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     // Execute
     vm.prank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessageExpired.selector);
-    adapter.sendMessage(_signerAd, _to, _amount, _signature, _deadline, _minGasLimit);
+    adapter.sendMessage(_signerAd, _to, _amount, _signature, _nonce, _deadline, _minGasLimit);
   }
 
   /**
    * @notice Check that the function reverts on invalid signature
    */
-  function test_invalidSignature(address _to, uint256 _amount, uint256 _deadline, uint32 _minGasLimit) external {
+  function test_invalidSignature(
+    address _to,
+    uint256 _amount,
+    uint256 _nonce,
+    uint256 _deadline,
+    uint32 _minGasLimit
+  ) external {
     vm.assume(_deadline > 0);
     vm.warp(_deadline - 1);
-    uint256 _nonce = adapter.userNonce(_signerAd);
     (address _notSignerAd, uint256 _notSignerPk) = makeAddrAndKey('notSigner');
     bytes memory _signature =
       _generateSignature(_to, _amount, _deadline, _minGasLimit, _nonce, _notSignerAd, _notSignerPk, address(adapter));
@@ -471,50 +507,21 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     // Execute
     vm.prank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSignature.selector);
-    adapter.sendMessage(_signerAd, _to, _amount, _signature, _deadline, _minGasLimit);
-  }
-
-  /**
-   * @notice Check nonce increment
-   */
-  function test_nonceIncrement(address _to, uint256 _amount, uint256 _deadline, uint32 _minGasLimit) external {
-    vm.assume(_deadline > 0);
-    vm.warp(_deadline - 1);
-    uint256 _nonce = adapter.userNonce(_signerAd);
-    bytes memory _signature =
-      _generateSignature(_to, _amount, _deadline, _minGasLimit, _nonce, _signerAd, _signerPk, address(adapter));
-
-    vm.mockCall(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(false));
-    vm.mockCall(
-      _usdc,
-      abi.encodeWithSignature('transferFrom(address,address,uint256)', _user, address(adapter), _amount),
-      abi.encode(true)
-    );
-    vm.mockCall(_usdc, abi.encodeWithSignature('burn(uint256)', _amount), abi.encode(true));
-    vm.mockCall(
-      _messenger,
-      abi.encodeWithSignature(
-        'sendMessage(address,bytes,uint32)',
-        _linkedAdapter,
-        abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount),
-        _minGasLimit
-      ),
-      abi.encode()
-    );
-
-    // Execute
-    vm.prank(_user);
-    adapter.sendMessage(_signerAd, _to, _amount, _signature, _deadline, _minGasLimit);
-    assertEq(adapter.userNonce(_signerAd), _nonce + 1, 'Nonce should be incremented');
+    adapter.sendMessage(_signerAd, _to, _amount, _signature, _nonce, _deadline, _minGasLimit);
   }
 
   /**
    * @notice Check that burning tokens and sending a message works as expected
    */
-  function test_expectedCall(address _to, uint256 _amount, uint256 _deadline, uint32 _minGasLimit) external {
+  function test_expectedCall(
+    address _to,
+    uint256 _amount,
+    uint256 _nonce,
+    uint256 _deadline,
+    uint32 _minGasLimit
+  ) external {
     vm.assume(_deadline > 0);
     vm.warp(_deadline - 1);
-    uint256 _nonce = adapter.userNonce(_signerAd);
     bytes memory _signature =
       _generateSignature(_to, _amount, _deadline, _minGasLimit, _nonce, _signerAd, _signerPk, address(adapter));
 
@@ -538,16 +545,21 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
 
     // Execute
     vm.prank(_user);
-    adapter.sendMessage(_signerAd, _to, _amount, _signature, _deadline, _minGasLimit);
+    adapter.sendMessage(_signerAd, _to, _amount, _signature, _nonce, _deadline, _minGasLimit);
   }
 
   /**
    * @notice Check that the event is emitted as expected
    */
-  function test_emitEvent(address _to, uint256 _amount, uint256 _deadline, uint32 _minGasLimit) external {
+  function test_emitEvent(
+    address _to,
+    uint256 _amount,
+    uint256 _nonce,
+    uint256 _deadline,
+    uint32 _minGasLimit
+  ) external {
     vm.assume(_deadline > 0);
     vm.warp(_deadline - 1);
-    uint256 _nonce = adapter.userNonce(_signerAd);
     bytes memory _signature =
       _generateSignature(_to, _amount, _deadline, _minGasLimit, _nonce, _signerAd, _signerPk, address(adapter));
 
@@ -575,11 +587,13 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
 
     // Execute
     vm.prank(_user);
-    adapter.sendMessage(_signerAd, _to, _amount, _signature, _deadline, _minGasLimit);
+    adapter.sendMessage(_signerAd, _to, _amount, _signature, _nonce, _deadline, _minGasLimit);
   }
 }
 
 contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
+  event MessageFailed(address _user, uint256 _amount);
+
   /**
    * @notice Check that the function reverts if the sender is not the messenger
    */
@@ -634,6 +648,100 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 
     vm.prank(_messenger);
     adapter.receiveMessage(_user, _amount);
+  }
+
+  /**
+   * @notice Check that blacklisted funds are updated as expected
+   */
+  function test_updateBlacklistedFunds(uint256 _amount) external {
+    vm.assume(_amount > 0);
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+
+    // Need to mock call, then mock the revert (foundry bug?)
+
+    vm.mockCall(_usdc, abi.encodeWithSignature('mint(address,uint256)', _user, _amount), abi.encode(true));
+    vm.mockCallRevert(_usdc, abi.encodeWithSignature('mint(address,uint256)', _user, _amount), abi.encode(false));
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveMessage(_user, _amount);
+
+    assertEq(adapter.userBlacklistedFunds(_user), _amount, 'Blacklisted funds should be set to the amount');
+  }
+
+  /**
+   * @notice Check that the event is emitted as expected
+   */
+  function test_emitEventFail(uint256 _amount) external {
+    vm.assume(_amount > 0);
+
+    // Mock calls
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+
+    // Need to mock call, then mock the revert (foundry bug?)
+    vm.mockCall(_usdc, abi.encodeWithSignature('mint(address,uint256)', _user, _amount), abi.encode(true));
+    vm.mockCallRevert(_usdc, abi.encodeWithSignature('mint(address,uint256)', _user, _amount), abi.encode(false));
+
+    // Execute
+    vm.expectEmit(true, true, true, true);
+    emit MessageFailed(_user, _amount);
+
+    vm.prank(_messenger);
+    adapter.receiveMessage(_user, _amount);
+  }
+}
+
+contract L2OpUSDCBridgeAdapter_Unit_WithdrawBlacklistedFunds is Base {
+  event BlacklistedFundsWithdrawn(address _user, uint256 _amountWithdrawn);
+  /**
+   * @notice Check that the function expects the correct calls
+   */
+
+  function test_expectedCalls(uint256 _amount, address _user) external {
+    vm.assume(_amount > 0);
+    vm.assume(_user != address(0));
+    adapter.forTest_setUserBlacklistedFunds(_user, _amount);
+
+    // Mock calls
+    _mockAndExpect(_usdc, abi.encodeWithSignature('mint(address,uint256)', _user, _amount), abi.encode(true));
+
+    // Execute
+    vm.prank(_user);
+    adapter.withdrawBlacklistedFunds(_user);
+  }
+
+  /**
+   * @notice Check that the updates the state as expected
+   */
+  function test_updateState(uint256 _amount, address _user) external {
+    vm.assume(_amount > 0);
+    vm.assume(_user != address(0));
+    adapter.forTest_setUserBlacklistedFunds(_user, _amount);
+
+    // Mock calls
+    vm.mockCall(_usdc, abi.encodeWithSignature('mint(address,uint256)', _user, _amount), abi.encode(true));
+
+    // Execute
+    vm.prank(_user);
+    adapter.withdrawBlacklistedFunds(_user);
+
+    assertEq(adapter.userBlacklistedFunds(_user), 0, 'User blacklisted funds should be updated');
+  }
+
+  function test_emitsEvent(uint256 _amount, address _user) external {
+    vm.assume(_amount > 0);
+    vm.assume(_user != address(0));
+    adapter.forTest_setUserBlacklistedFunds(_user, _amount);
+
+    // Mock calls
+    vm.mockCall(_usdc, abi.encodeWithSignature('mint(address,uint256)', _user, _amount), abi.encode(true));
+
+    // Expect events
+    vm.expectEmit(true, true, true, true);
+    emit BlacklistedFundsWithdrawn(_user, _amount);
+
+    // Execute
+    vm.prank(_user);
+    adapter.withdrawBlacklistedFunds(_user);
   }
 }
 
