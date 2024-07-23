@@ -9,6 +9,7 @@ import {Test} from 'forge-std/Test.sol';
 import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 import {ICreate2Deployer} from 'interfaces/external/ICreate2Deployer.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
+import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
 import {CrossChainDeployments} from 'libraries/CrossChainDeployments.sol';
@@ -39,6 +40,7 @@ abstract contract Base is Test, Helpers {
   address internal _l1AdapterOwner = makeAddr('l1AdapterOwner');
   address internal _user = makeAddr('user');
   address internal _usdc = makeAddr('USDC');
+  address internal _portal = makeAddr('portal');
   address internal _usdcImplAddress = makeAddr('bridgedUsdcImpl');
   // cant fuzz this because of foundry's VM
   address internal _l1Messenger = makeAddr('messenger');
@@ -87,7 +89,10 @@ abstract contract Base is Test, Helpers {
    */
   function _mockDeployCalls() internal {
     // Mock the call over the `portal` function on the L1 messenger
-    vm.mockCall(_l1Messenger, abi.encodeWithSelector(ICrossDomainMessenger.sendMessage.selector), abi.encode(''));
+    vm.mockCall(_l1Messenger, abi.encodeWithSelector(ICrossDomainMessenger.portal.selector), abi.encode(_portal));
+
+    // Mock the call over the `depositTransaction` function on the portal
+    vm.mockCall(_portal, abi.encodeWithSelector(IOptimismPortal.depositTransaction.selector), abi.encode(''));
 
     // Mock the call over USDC `currency` function
     vm.mockCall(_usdc, abi.encodeWithSelector(IUSDC.currency.selector), abi.encode(_tokenCurrency));
@@ -108,7 +113,7 @@ contract L1OpUSDCFactory_Unit_Constructor is Base {
 }
 
 contract L1OpUSDCFactory_Unit_Deploy is Base {
-  event L1AdapterDeployed(address _l1Adapter);
+  event ProtocolDeployed(address _l1Adapter, address _l2Factory, address _l2Adapter);
 
   /**
    * @notice Check the function reverts if the `initialize()` tx is the first init tx
@@ -215,6 +220,38 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
   }
 
   /**
+   * @notice Check the portal was fetched correctly
+   */
+  function test_fetchPortal() public {
+    // Mock all the `deploy` function calls
+    _mockDeployCalls();
+
+    // Expect the `portal` function to be called
+    vm.expectCall(_l1Messenger, abi.encodeWithSelector(ICrossDomainMessenger.portal.selector));
+
+    // Execute
+    vm.prank(_user);
+    factory.deploy(_l1Messenger, _l1AdapterOwner, _l2Deployments);
+  }
+
+  /**
+   * @notice Check the portal was fetched correctly if its on legacy version
+   */
+  function test_fetchPortalLegacy() public {
+    // Mock all the `deploy` function calls
+    _mockDeployCalls();
+
+    vm.mockCallRevert(_l1Messenger, abi.encodeWithSelector(ICrossDomainMessenger.portal.selector), abi.encode());
+
+    // Expect the `portal` function to be called
+    _mockAndExpect(_l1Messenger, abi.encodeWithSelector(ICrossDomainMessenger.PORTAL.selector), abi.encode(_portal));
+
+    // Execute
+    vm.prank(_user);
+    factory.deploy(_l1Messenger, _l1AdapterOwner, _l2Deployments);
+  }
+
+  /**
    * @notice Check the `deploy` call over the `create2Deployer` is correctly sent through the messenger
    */
   function test_sendFactoryDeploymentMessage() public {
@@ -242,12 +279,14 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
 
     // Expect the `sendMessage` to be properly called
     vm.expectCall(
-      _l1Messenger,
+      _portal,
       abi.encodeWithSelector(
-        ICrossDomainMessenger.sendMessage.selector,
+        IOptimismPortal.depositTransaction.selector,
         factory.L2_CREATE2_DEPLOYER(),
-        _l2FactoryCreate2Tx,
-        _l2Deployments.minGasLimitDeploy
+        0,
+        _l2Deployments.minGasLimitDeploy,
+        false,
+        _l2FactoryCreate2Tx
       )
     );
 
@@ -260,16 +299,33 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
    * @notice Check the `L1AdapterDeployed` event is properly emitted
    */
   function test_emitEvent() public {
-    // Calculate the l1 adapter address
+    bytes32 _salt = bytes32(factory.deploymentsSaltCounter() + 1);
+
+    // Calculate the L1 Adapter address
     uint256 _factoryNonce = vm.getNonce(address(factory));
     address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce);
+
+    // Calculate the l2 factory address
+    bytes memory _l2FactoryCArgs = abi.encode(
+      _l1Adapter,
+      _l2Deployments.l2AdapterOwner,
+      _l2Deployments.usdcImplementationInitCode,
+      _usdcInitializeData,
+      _l2Deployments.usdcInitTxs
+    );
+    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCDeploy).creationCode, _l2FactoryCArgs);
+    address _l2Factory =
+      factory.forTest_precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), factory.L2_CREATE2_DEPLOYER());
+
+    // Calculate the L2 adapter address
+    address _l2Adapter = factory.forTest_precalculateCreateAddress(_l2Factory, 3);
 
     // Mock all the `deploy` function calls
     _mockDeployCalls();
 
     // Expect the `L1AdapterDeployed` event to be emitted
     vm.expectEmit(true, true, true, true);
-    emit L1AdapterDeployed(_l1Adapter);
+    emit ProtocolDeployed(_l1Adapter, _l2Factory, _l2Adapter);
 
     // Execute
     vm.prank(_user);

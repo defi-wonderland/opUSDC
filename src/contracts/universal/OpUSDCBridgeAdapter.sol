@@ -20,7 +20,7 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, Ownable {
   address public immutable MESSENGER;
 
   /// @inheritdoc IOpUSDCBridgeAdapter
-  mapping(address _user => uint256 _nonce) public userNonce;
+  mapping(address _user => mapping(uint256 _nonce => bool _used)) public userNonces;
 
   /**
    * @notice Construct the OpUSDCBridgeAdapter contract
@@ -54,6 +54,7 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, Ownable {
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
    * @param _signature The signature of the user
+   * @param _nonce The nonce of the user
    * @param _deadline The deadline for the message to be executed
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
@@ -62,6 +63,7 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, Ownable {
     address _to,
     uint256 _amount,
     bytes calldata _signature,
+    uint256 _nonce,
     uint256 _deadline,
     uint32 _minGasLimit
   ) external virtual;
@@ -73,6 +75,14 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, Ownable {
    * @param _amount The amount of tokens to mint
    */
   function receiveMessage(address _user, uint256 _amount) external virtual;
+
+  /**
+   * @notice Cancels a signature by setting the nonce as used
+   * @param _nonce The nonce of the signature to cancel
+   */
+  function cancelSignature(uint256 _nonce) external {
+    userNonces[msg.sender][_nonce] = true;
+  }
 
   /**
    * @notice Check the signature of a message
