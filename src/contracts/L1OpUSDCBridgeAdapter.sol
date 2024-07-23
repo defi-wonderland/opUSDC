@@ -113,6 +113,9 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     if (messengerStatus != Status.Deprecated) revert IOpUSDCBridgeAdapter_BurnAmountNotSet();
 
     // Burn the USDC tokens
+    // NOTE: If in flight transactions fail due to user being blacklisted after migration
+    // The funds will just be trapped in this contract as its deprecated
+    // If the user is after unblacklisted, they will be able to withdraw their usdc
     uint256 _burnAmount = burnAmount;
     if (_burnAmount != 0) {
       // NOTE: This is a very edge case and will only happen if the chain operator adds a second minter on L2
@@ -134,7 +137,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   }
 
   /*///////////////////////////////////////////////////////////////
-                          MESSAGING CONTROL
+                          ADMIN CONTROL
   ///////////////////////////////////////////////////////////////*/
 
   /**
@@ -268,7 +271,38 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    */
   function receiveMessage(address _user, uint256 _amount) external override onlyLinkedAdapter {
     // Transfer the tokens to the user
+    try this.attemptTransfer(_user, _amount) {
+      emit MessageReceived(_user, _amount, MESSENGER);
+    } catch {
+      userBlacklistedFunds[_user] += _amount;
+      emit MessageFailed(_user, _amount);
+    }
+  }
+
+  /**
+   * @notice Withdraws the blacklisted funds from the contract incase they get unblacklisted
+   * @param _user The user to withdraw the funds for
+   */
+  function withdrawBlacklistedFunds(address _user) external override {
+    uint256 _amount = userBlacklistedFunds[_user];
+    userBlacklistedFunds[_user] = 0;
+
+    // The check for if the user is blacklisted happens in USDC's contract
     IUSDC(USDC).safeTransfer(_user, _amount);
-    emit MessageReceived(_user, _amount, MESSENGER);
+
+    emit BlacklistedFundsWithdrawn(_user, _amount);
+  }
+
+  /**
+   * @notice Attempts to transfer the tokens to the user
+   * @param _to The target address on the destination chain
+   * @param _amount The amount of tokens to send
+   * @dev This function should only be called when receiving a message
+   * And is a workaround for the fact that try/catch
+   * Only works on external calls and SafeERC20 is an internal library
+   */
+  function attemptTransfer(address _to, uint256 _amount) external {
+    if (msg.sender != address(this)) revert IOpUSDCBridgeAdapter_InvalidSender();
+    IUSDC(USDC).safeTransfer(_to, _amount);
   }
 }

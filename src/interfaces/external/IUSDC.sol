@@ -69,6 +69,18 @@ interface IUSDC is IERC20 {
   function updateMasterMinter(address _newMasterMinter) external;
 
   /**
+   * @notice Adds account to blacklist
+   * @param _account The address to blacklist
+   */
+  function blacklist(address _account) external;
+
+  /**
+   * @notice Removes account from blacklist.
+   * @param _account The address to remove from the blacklist.
+   */
+  function unBlacklist(address _account) external;
+
+  /**
    * @notice Function to upgrade the usdc proxy to a new implementation
    * @param _newImplementation Address of the new implementation
    */

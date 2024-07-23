@@ -296,4 +296,42 @@ contract Integration_Integration_PermissionedFlows is IntegrationBase {
 
     assertEq(l2Adapter.isMessagingDisabled(), false);
   }
+
+  /**
+   * @notice Test that the user can withdraw the blacklisted funds if they get unblacklisted
+   */
+  function test_userCanWithdrawBlacklistedFunds() public {
+    vm.selectFork(mainnet);
+    _mintSupplyOnL2(optimism, OP_ALIASED_L1_MESSENGER, _amount);
+
+    vm.selectFork(optimism);
+    vm.startPrank(_user);
+    bridgedUSDC.approve(address(l2Adapter), _amount);
+    l2Adapter.sendMessage(_user, _amount, _MIN_GAS_LIMIT);
+    vm.stopPrank();
+    assertEq(bridgedUSDC.balanceOf(_user), 0);
+
+    vm.selectFork(mainnet);
+
+    vm.prank(MAINNET_USDC.blacklister());
+    MAINNET_USDC.blacklist(_user);
+    _relayL2ToL1Message(
+      address(l2Adapter),
+      address(l1Adapter),
+      _ZERO_VALUE,
+      _MIN_GAS_LIMIT,
+      abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _amount)
+    );
+
+    assertEq(MAINNET_USDC.balanceOf(_user), 0);
+
+    vm.prank(MAINNET_USDC.blacklister());
+    MAINNET_USDC.unBlacklist(_user);
+
+    vm.prank(_user);
+    l1Adapter.withdrawBlacklistedFunds(_user);
+
+    assertEq(MAINNET_USDC.balanceOf(_user), _amount);
+    assertEq(l1Adapter.userBlacklistedFunds(_user), 0);
+  }
 }

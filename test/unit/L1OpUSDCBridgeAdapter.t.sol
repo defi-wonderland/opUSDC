@@ -28,6 +28,10 @@ contract ForTestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
   function forTest_setUserNonce(address _user, uint256 _nonce, bool _used) external {
     userNonces[_user][_nonce] = _used;
   }
+
+  function forTest_setUserBlacklistedFunds(address _user, uint256 _amount) external {
+    userBlacklistedFunds[_user] = _amount;
+  }
 }
 
 abstract contract Base is Helpers {
@@ -678,6 +682,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ResumeMessaging is Base {
 /*///////////////////////////////////////////////////////////////
                           MESSAGING
 ///////////////////////////////////////////////////////////////*/
+
 contract L1OpUSDCBridgeAdapter_Unit_SendMessage is Base {
   /**
    * @notice Check that the function reverts if the address is blacklisted
@@ -945,6 +950,8 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
 }
 
 contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
+  event MessageFailed(address _user, uint256 _amount);
+
   /**
    * @notice Check that the function reverts if the sender is not the messenger
    */
@@ -998,5 +1005,139 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 
     vm.prank(_messenger);
     adapter.receiveMessage(_user, _amount);
+  }
+
+  /**
+   * @notice Check that blacklisted funds are incremented as expected on failure
+   */
+  function test_incrementBlacklistedFundsOnTransferReturnFalse(uint256 _amount, address _user) external {
+    vm.assume(_amount > 0);
+    vm.assume(_user != address(0));
+
+    // Mock calls
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    vm.mockCall(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _user, _amount), abi.encode(false));
+
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveMessage(_user, _amount);
+
+    assertEq(adapter.userBlacklistedFunds(_user), _amount, 'User blacklisted funds should be incremented');
+  }
+
+  /**
+   * @notice Check that blacklisted funds are incremented as expected on failure
+   */
+  function test_incrementBlacklistedFundsOnTransferRevert(uint256 _amount, address _user) external {
+    vm.assume(_amount > 0);
+    vm.assume(_user != address(0));
+
+    // Mock calls
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    vm.mockCall(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _user, _amount), abi.encode(true));
+    vm.mockCallRevert(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _user, _amount), abi.encode());
+
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveMessage(_user, _amount);
+
+    assertEq(adapter.userBlacklistedFunds(_user), _amount, 'User blacklisted funds should be incremented');
+  }
+
+  /**
+   * @notice Check that event is emitted as expected on failure
+   */
+  function test_incrementBlacklistedFundsEmitsFailureEvent(uint256 _amount, address _user) external {
+    vm.assume(_amount > 0);
+    vm.assume(_user != address(0));
+
+    // Mock calls
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    vm.mockCall(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _user, _amount), abi.encode(true));
+    vm.mockCallRevert(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _user, _amount), abi.encode());
+
+    // Execute
+    vm.expectEmit(true, true, true, true);
+    vm.prank(_messenger);
+    emit MessageFailed(_user, _amount);
+    adapter.receiveMessage(_user, _amount);
+  }
+}
+
+contract L1OpUSDCBridgeAdapter_Unit_WithdrawBlacklistedFunds is Base {
+  event BlacklistedFundsWithdrawn(address _user, uint256 _amountWithdrawn);
+
+  /**
+   * @notice Check that the function expects the correct calls
+   */
+  function test_expectedCalls(uint256 _amount, address _user) external {
+    vm.assume(_amount > 0);
+    vm.assume(_user != address(0));
+    adapter.forTest_setUserBlacklistedFunds(_user, _amount);
+
+    // Mock calls
+    _mockAndExpect(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _user, _amount), abi.encode(true));
+
+    // Execute
+    vm.prank(_user);
+    adapter.withdrawBlacklistedFunds(_user);
+  }
+
+  /**
+   * @notice Check that the updates the state as expected
+   */
+  function test_updateState(uint256 _amount, address _user) external {
+    vm.assume(_amount > 0);
+    vm.assume(_user != address(0));
+    adapter.forTest_setUserBlacklistedFunds(_user, _amount);
+
+    // Mock calls
+    vm.mockCall(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _user, _amount), abi.encode(true));
+
+    // Execute
+    vm.prank(_user);
+    adapter.withdrawBlacklistedFunds(_user);
+
+    assertEq(adapter.userBlacklistedFunds(_user), 0, 'User blacklisted funds should be updated');
+  }
+
+  function test_emitsEvent(uint256 _amount, address _user) external {
+    vm.assume(_amount > 0);
+    vm.assume(_user != address(0));
+    adapter.forTest_setUserBlacklistedFunds(_user, _amount);
+
+    // Mock calls
+    vm.mockCall(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _user, _amount), abi.encode(true));
+
+    // Expect events
+    vm.expectEmit(true, true, true, true);
+    emit BlacklistedFundsWithdrawn(_user, _amount);
+
+    // Execute
+    vm.prank(_user);
+    adapter.withdrawBlacklistedFunds(_user);
+  }
+}
+
+contract L1OpUSDCBridgeAdapter_Unit_AttemptTransfer is Base {
+  /**
+   * @notice Check that the function reverts if the sender is not the contract
+   */
+  function test_onlySelf(address _notSelf, uint256 _amount) external {
+    vm.assume(_notSelf != address(adapter));
+    // Execute
+    vm.prank(_notSelf);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
+    adapter.attemptTransfer(_user, _amount);
+  }
+
+  /**
+   * @notice Check that the function transfers the tokens
+   */
+  function test_transfer(uint256 _amount) external {
+    _mockAndExpect(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _user, _amount), abi.encode());
+
+    vm.prank(address(adapter));
+    adapter.attemptTransfer(_user, _amount);
   }
 }
