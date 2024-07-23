@@ -128,6 +128,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
 
       // Set the burn amount to 0
       burnAmount = 0;
+      blacklistedFunds = 0;
     }
 
     burnCaller = address(0);
@@ -273,8 +274,25 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
       emit MessageReceived(_user, _amount, MESSENGER);
     } catch {
       blacklistedFunds += _amount;
+      userBlacklistedFunds[_user] += _amount;
       emit MessageFailed(_user, _amount);
     }
+  }
+
+  /**
+   * @notice Withdraws the blacklisted funds from the contract incase they get unblacklisted
+   * @param _user The user to withdraw the funds for
+   */
+  function withdrawBlacklistedFunds(address _user) external override {
+    uint256 _amount = userBlacklistedFunds[_user];
+    uint256 _totalBlacklistedFunds = blacklistedFunds;
+    blacklistedFunds = _totalBlacklistedFunds - _amount;
+    userBlacklistedFunds[_user] = 0;
+
+    // The check for if the user is blacklisted happens in USDC's contract
+    IUSDC(USDC).safeTransfer(_user, _amount);
+
+    emit BlacklistedFundsWithdrawn(_user, _amount, _totalBlacklistedFunds);
   }
 
   /**
