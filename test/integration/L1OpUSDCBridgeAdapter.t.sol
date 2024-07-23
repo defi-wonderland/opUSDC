@@ -315,7 +315,6 @@ contract Integration_Integration_PermissionedFlows is IntegrationBase {
 
     vm.prank(MAINNET_USDC.blacklister());
     MAINNET_USDC.blacklist(_user);
-    uint256 _blacklistedAmount = _amount + 100;
     _relayL2ToL1Message(
       address(l2Adapter),
       address(l1Adapter),
