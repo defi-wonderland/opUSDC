@@ -955,6 +955,8 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
 }
 
 contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
+  event MessageFailed(address _user, uint256 _amount);
+
   /**
    * @notice Check that the function reverts if the sender is not the messenger
    */
@@ -1007,6 +1009,64 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
     emit MessageReceived(_user, _amount, _messenger);
 
     vm.prank(_messenger);
+    adapter.receiveMessage(_user, _amount);
+  }
+
+  /**
+   * @notice Check that blacklisted funds are incremented as expected on failure
+   */
+  function test_incrementBlacklistedFundsOnTransferReturnFalse(uint256 _amount, address _user) external {
+    vm.assume(_amount > 0);
+    vm.assume(_user != address(0));
+
+    // Mock calls
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    vm.mockCall(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _user, _amount), abi.encode(false));
+
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveMessage(_user, _amount);
+
+    assertEq(adapter.blacklistedFunds(), _amount, 'Blacklisted funds should be incremented');
+    assertEq(adapter.userBlacklistedFunds(_user), _amount, 'User blacklisted funds should be incremented');
+  }
+
+  /**
+   * @notice Check that blacklisted funds are incremented as expected on failure
+   */
+  function test_incrementBlacklistedFundsOnTransferRevert(uint256 _amount, address _user) external {
+    vm.assume(_amount > 0);
+    vm.assume(_user != address(0));
+
+    // Mock calls
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    vm.mockCall(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _user, _amount), abi.encode(true));
+    vm.mockCallRevert(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _user, _amount), abi.encode());
+
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveMessage(_user, _amount);
+
+    assertEq(adapter.blacklistedFunds(), _amount, 'Blacklisted funds should be incremented');
+    assertEq(adapter.userBlacklistedFunds(_user), _amount, 'User blacklisted funds should be incremented');
+  }
+
+  /**
+   * @notice Check that event is emitted as expected on failure
+   */
+  function test_incrementBlacklistedFundsEmitsFailureEvent(uint256 _amount, address _user) external {
+    vm.assume(_amount > 0);
+    vm.assume(_user != address(0));
+
+    // Mock calls
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    vm.mockCall(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _user, _amount), abi.encode(true));
+    vm.mockCallRevert(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _user, _amount), abi.encode());
+
+    // Execute
+    vm.expectEmit(true, true, true, true);
+    vm.prank(_messenger);
+    emit MessageFailed(_user, _amount);
     adapter.receiveMessage(_user, _amount);
   }
 }

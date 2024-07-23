@@ -257,9 +257,11 @@ contract Integration_Migration is IntegrationBase {
     bridgedUSDC.blacklist(_user);
     uint256 _blacklistedAmount = _amount + 100;
 
+    uint256 _blacklistedAmountBef = l2Adapter.blacklistedFunds();
+
     _mintSupplyOnL2(optimism, OP_ALIASED_L1_MESSENGER, _blacklistedAmount);
 
-    assertEq(l2Adapter.blacklistedFunds(), _blacklistedAmount);
+    assertEq(l2Adapter.blacklistedFunds(), _blacklistedAmountBef + _blacklistedAmount);
 
     vm.selectFork(mainnet);
 
@@ -319,9 +321,11 @@ contract Integration_Migration is IntegrationBase {
     bridgedUSDC.blacklist(_user);
     uint256 _blacklistedAmount = _amount + 100;
 
+    uint256 _blacklistedAmountBef = l2Adapter.blacklistedFunds();
+
     _mintSupplyOnL2(optimism, OP_ALIASED_L1_MESSENGER, _blacklistedAmount);
 
-    assertEq(l2Adapter.blacklistedFunds(), _blacklistedAmount);
+    assertEq(l2Adapter.blacklistedFunds(), _blacklistedAmountBef + _blacklistedAmount);
 
     vm.selectFork(mainnet);
 
@@ -402,6 +406,7 @@ contract Integration_Migration is IntegrationBase {
     vm.selectFork(mainnet);
     vm.prank(MAINNET_USDC.blacklister());
     MAINNET_USDC.blacklist(_user);
+    uint256 _blacklistedAmountBef = l1Adapter.blacklistedFunds();
     _relayL2ToL1Message(
       address(l2Adapter),
       address(l1Adapter),
@@ -409,7 +414,7 @@ contract Integration_Migration is IntegrationBase {
       _MIN_GAS_LIMIT,
       abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _blacklistedAmount)
     );
-    assertEq(l1Adapter.blacklistedFunds(), _blacklistedAmount);
+    assertEq(l1Adapter.blacklistedFunds(), _blacklistedAmountBef + _blacklistedAmount);
 
     vm.prank(_owner);
     l1Adapter.migrateToNative(_circle, _circle, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
@@ -475,6 +480,7 @@ contract Integration_Migration is IntegrationBase {
     vm.selectFork(mainnet);
     vm.prank(MAINNET_USDC.blacklister());
     MAINNET_USDC.blacklist(_user);
+    uint256 _blacklistedAmountBef = l1Adapter.blacklistedFunds();
     _relayL2ToL1Message(
       address(l2Adapter),
       address(l1Adapter),
@@ -482,7 +488,7 @@ contract Integration_Migration is IntegrationBase {
       _MIN_GAS_LIMIT,
       abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _blacklistedAmount)
     );
-    assertEq(l1Adapter.blacklistedFunds(), _blacklistedAmount);
+    assertEq(l1Adapter.blacklistedFunds(), _blacklistedAmountBef + _blacklistedAmount);
 
     vm.prank(_owner);
     l1Adapter.migrateToNative(_circle, _circle, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
@@ -562,6 +568,7 @@ contract Integration_Migration is IntegrationBase {
     vm.prank(MAINNET_USDC.blacklister());
     MAINNET_USDC.blacklist(_user);
 
+    uint256 _blacklistedAmountBef = l1Adapter.blacklistedFunds();
     _relayL2ToL1Message(
       address(l2Adapter),
       address(l1Adapter),
@@ -569,7 +576,7 @@ contract Integration_Migration is IntegrationBase {
       _MIN_GAS_LIMIT,
       abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _blacklistedAmount)
     );
-    assertEq(l1Adapter.blacklistedFunds(), _blacklistedAmount);
+    assertEq(l1Adapter.blacklistedFunds(), _blacklistedAmountBef + _blacklistedAmount);
 
     vm.prank(MAINNET_USDC.blacklister());
     MAINNET_USDC.unBlacklist(_user);
@@ -579,9 +586,11 @@ contract Integration_Migration is IntegrationBase {
     vm.prank(bridgedUSDC.blacklister());
     bridgedUSDC.blacklist(_user);
 
+    _blacklistedAmountBef = l2Adapter.blacklistedFunds();
+
     _mintSupplyOnL2(optimism, OP_ALIASED_L1_MESSENGER, _blacklistedAmount);
 
-    assertEq(l2Adapter.blacklistedFunds(), _blacklistedAmount);
+    assertEq(l2Adapter.blacklistedFunds(), _blacklistedAmountBef + _blacklistedAmount);
 
     vm.selectFork(mainnet);
 
