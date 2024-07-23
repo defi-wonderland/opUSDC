@@ -10,6 +10,8 @@ import {L2OpUSDCDeploy} from 'contracts/L2OpUSDCDeploy.sol';
 import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
 import {IL2OpUSDCDeploy} from 'interfaces/IL2OpUSDCDeploy.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
+
+import {CrossChainDeployments} from 'libraries/CrossChainDeployments.sol';
 import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementationCreationCode.sol';
 import {Create2Deployer} from 'test/invariants/fuzz/Create2Deployer.sol';
 import {MockBridge} from 'test/invariants/fuzz/MockBridge.sol';
@@ -19,7 +21,9 @@ contract SetupOpUSDC is EchidnaTest {
   IUSDC usdcMainnet;
   IUSDC usdcBridged;
 
-  address internal usdcBridgedImplementation;
+  bytes32 internal _salt = keccak256(abi.encode(address(this)));
+  address internal usdcBridgedImplementation =
+    CrossChainDeployments.precalculateCreate2Address(_salt, keccak256(USDC_IMPLEMENTATION_CREATION_CODE), address(this));
 
   L1OpUSDCBridgeAdapter internal l1Adapter;
   L1OpUSDCFactory internal factory;
@@ -72,8 +76,7 @@ contract SetupOpUSDC is EchidnaTest {
     mockMessenger = MockBridge(0x4200000000000000000000000000000000000007);
 
     // owner is this contract, as managed in the _agents handler
-    _l2Deployments =
-      IL1OpUSDCFactory.L2Deployments(address(this), USDC_IMPLEMENTATION_CREATION_CODE, usdcInitTxns, 3_000_000);
+    _l2Deployments = IL1OpUSDCFactory.L2Deployments(address(this), usdcBridgedImplementation, 3_000_000, usdcInitTxns);
 
     (address _l1Adapter, address _l2Factory, address _l2Adapter) =
       factory.deploy(address(mockMessenger), address(this), _l2Deployments);
@@ -85,6 +88,18 @@ contract SetupOpUSDC is EchidnaTest {
 
   // Send a (mock) message to the L2 messenger to deploy the L2 factory and the L2 adapter (which deploys usdc L2 too)
   function _l2Setup(IL1OpUSDCFactory.L2Deployments memory _l2Deployments) internal {
+    bytes memory _USDC_IMPLEMENTATION_CREATION_CODE = USDC_IMPLEMENTATION_CREATION_CODE;
+    bytes32 _saltForCreation = _salt;
+    address impl;
+    assembly {
+      impl :=
+        create2(
+          0, add(_USDC_IMPLEMENTATION_CREATION_CODE, 0x20), mload(_USDC_IMPLEMENTATION_CREATION_CODE), _saltForCreation
+        )
+    }
+
+    require(impl == usdcBridgedImplementation, 'Implementation address mismatch');
+
     IL2OpUSDCDeploy.USDCInitializeData memory usdcInitializeData = IL2OpUSDCDeploy.USDCInitializeData(
       factory.USDC_NAME(), factory.USDC_SYMBOL(), usdcMainnet.currency(), usdcMainnet.decimals()
     );
@@ -92,7 +107,7 @@ contract SetupOpUSDC is EchidnaTest {
     bytes memory _l2factoryConstructorArgs = abi.encode(
       address(l1Adapter),
       _l2Deployments.l2AdapterOwner,
-      _l2Deployments.usdcImplementationInitCode,
+      _l2Deployments.usdcImplAddr,
       usdcInitializeData, // encode?
       _l2Deployments.usdcInitTxs // encodePacked?
     );
@@ -112,8 +127,5 @@ contract SetupOpUSDC is EchidnaTest {
     );
 
     usdcBridged = IUSDC(l2Adapter.USDC());
-
-    usdcBridgedImplementation =
-      address(uint160(uint256(hevm.load(address(usdcBridged), keccak256('org.zeppelinos.proxy.implementation')))));
   }
 }

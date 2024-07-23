@@ -6,6 +6,7 @@ import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {IL2OpUSDCBridgeAdapter} from 'interfaces/IL2OpUSDCBridgeAdapter.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
+import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementationCreationCode.sol';
 
 contract Integration_Factories is IntegrationBase {
   /**
@@ -89,7 +90,6 @@ contract Integration_Factories is IntegrationBase {
     assertTrue(_secondL2Factory != address(l2Factory));
     assertTrue(_secondL2Adapter != address(l2Adapter));
     assertTrue(_secondL2Usdc != bridgedUSDC);
-    assertTrue(_secondL2Usdc.implementation() != IUSDC(bridgedUSDC).implementation());
   }
 
   /**
@@ -104,18 +104,10 @@ contract Integration_Factories is IntegrationBase {
     (address _opL1Adapter, address _opL2Factory, address _opL2Adapter) =
       l1Factory.deploy(address(OPTIMISM_L1_MESSENGER), _owner, l2Deployments);
     bytes32 _opSalt = bytes32(l1Factory.deploymentsSaltCounter());
-
-    // Check the L1 adapter was deployed
-    assertGt(_opL1Adapter.code.length, 0);
-
-    // Deploy L1 Adapter and trigger the contracts deployments on BASE
-    (address _baseL1Adapter, address _baseL2Factory, address _baseL2Adapter) =
-      l1Factory.deploy(address(BASE_L1_MESSENGER), _owner, l2Deployments);
-    bytes32 _baseSalt = bytes32(l1Factory.deploymentsSaltCounter());
     vm.stopPrank();
 
     // Check the L1 adapter was deployed
-    assertGt(_baseL1Adapter.code.length, 0);
+    assertGt(_opL1Adapter.code.length, 0);
 
     // Relay the L2 deployments on OP
     vm.selectFork(optimism);
@@ -129,6 +121,30 @@ contract Integration_Factories is IntegrationBase {
     assertGt(_opL2Adapter.code.length, 0);
 
     // Relay the L2 deployments on BASE
+    vm.selectFork(base);
+    // Deploy implementation on base
+    address _usdcImplAddr;
+    bytes memory _USDC_IMPLEMENTATION_CREATION_CODE = USDC_IMPLEMENTATION_CREATION_CODE;
+    assembly {
+      _usdcImplAddr :=
+        create(0, add(_USDC_IMPLEMENTATION_CREATION_CODE, 0x20), mload(_USDC_IMPLEMENTATION_CREATION_CODE))
+    }
+    l2Deployments.usdcImplAddr = _usdcImplAddr;
+
+    // Go back to mainnet to trigger the deployment from L1
+    vm.selectFork(mainnet);
+
+    vm.startPrank(_owner);
+    // Deploy L1 Adapter and trigger the contracts deployments on BASE
+    (address _baseL1Adapter, address _baseL2Factory, address _baseL2Adapter) =
+      l1Factory.deploy(address(BASE_L1_MESSENGER), _owner, l2Deployments);
+    bytes32 _baseSalt = bytes32(l1Factory.deploymentsSaltCounter());
+    vm.stopPrank();
+
+    // Check the L1 adapter was deployed
+    assertGt(_baseL1Adapter.code.length, 0);
+
+    // Back to base to relay the L2 deployments
     vm.selectFork(base);
     _relayL2Deployments(BASE_ALIASED_L1_MESSENGER, _baseSalt, _baseL1Adapter, usdcInitializeData, l2Deployments);
 

@@ -21,7 +21,7 @@ contract L2OpUSDCDeploy is IL2OpUSDCDeploy {
    * @notice Deploys the USDC implementation, proxy, and L2 adapter contracts all at once, and then initializes the USDC
    * @param _l1Adapter The address of the L1 adapter contract
    * @param _l2AdapterOwner The address of the L2 adapter owner
-   * @param _usdcImplementationInitCode The creation code with the constructor arguments for the USDC implementation
+   * @param _usdcImplAddr The address of the USDC implementation on L2 to connect the proxy to
    * @param _usdcInitializeData The USDC name, symbol, currency, and decimals used on the first `initialize()` call
    * @param _usdcInitTxs The initialization transactions for the USDC proxy and implementation contracts
    * @dev The USDC proxy owner needs to be set on the first init tx, and will be set to the L2 adapter address
@@ -30,16 +30,12 @@ contract L2OpUSDCDeploy is IL2OpUSDCDeploy {
   constructor(
     address _l1Adapter,
     address _l2AdapterOwner,
-    bytes memory _usdcImplementationInitCode,
+    address _usdcImplAddr,
     USDCInitializeData memory _usdcInitializeData,
     bytes[] memory _usdcInitTxs
   ) {
-    // Deploy USDC implementation
-    (address _usdcImplementation) = _deployCreate(_usdcImplementationInitCode);
-    emit USDCImplementationDeployed(_usdcImplementation);
-
     // Deploy USDC proxy
-    bytes memory _usdcProxyCArgs = abi.encode(_usdcImplementation);
+    bytes memory _usdcProxyCArgs = abi.encode(_usdcImplAddr);
     bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);
     (address _usdcProxy) = _deployCreate(_usdcProxyInitCode);
     emit USDCProxyDeployed(_usdcProxy);
@@ -55,8 +51,7 @@ contract L2OpUSDCDeploy is IL2OpUSDCDeploy {
     // Change the USDC admin so the init txs can be executed over the proxy from this contract
     IUSDC(_usdcProxy).changeAdmin(_fallbackProxyAdmin);
 
-    // Execute the USDC initialization transactions over the USDC contracts
-    _executeInitTxs(_usdcImplementation, _usdcInitializeData, _l2Adapter, _usdcInitTxs);
+    // Execute the USDC initialization transactions over the USDC proxy
     _executeInitTxs(_usdcProxy, _usdcInitializeData, _l2Adapter, _usdcInitTxs);
   }
 

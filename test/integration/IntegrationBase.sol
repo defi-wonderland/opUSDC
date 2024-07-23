@@ -80,13 +80,20 @@ contract IntegrationBase is Helpers {
 
     l1Factory = new L1OpUSDCFactory(address(MAINNET_USDC));
 
+    vm.selectFork(optimism);
+    address _usdcImplAddr;
+    bytes memory _USDC_IMPLEMENTATION_CREATION_CODE = USDC_IMPLEMENTATION_CREATION_CODE;
+    assembly {
+      _usdcImplAddr :=
+        create(0, add(_USDC_IMPLEMENTATION_CREATION_CODE, 0x20), mload(_USDC_IMPLEMENTATION_CREATION_CODE))
+    }
+
     // Define the initialization transactions
     usdcInitTxns[0] = USDCInitTxs.INITIALIZEV2;
     usdcInitTxns[1] = USDCInitTxs.INITIALIZEV2_1;
     usdcInitTxns[2] = USDCInitTxs.INITIALIZEV2_2;
     // Define the L2 deployments data
-    l2Deployments =
-      IL1OpUSDCFactory.L2Deployments(_owner, USDC_IMPLEMENTATION_CREATION_CODE, usdcInitTxns, MIN_GAS_LIMIT_DEPLOY);
+    l2Deployments = IL1OpUSDCFactory.L2Deployments(_owner, _usdcImplAddr, MIN_GAS_LIMIT_DEPLOY, usdcInitTxns);
 
     vm.selectFork(mainnet);
 
@@ -132,7 +139,7 @@ contract IntegrationBase is Helpers {
     bytes memory _l2FactoryCArgs = abi.encode(
       _l1Adapter,
       _l2Deployments.l2AdapterOwner,
-      _l2Deployments.usdcImplementationInitCode,
+      _l2Deployments.usdcImplAddr,
       _usdcInitializeData,
       _l2Deployments.usdcInitTxs
     );

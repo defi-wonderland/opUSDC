@@ -8,17 +8,17 @@ interface IL1OpUSDCFactory {
   /**
    * @notice The struct to hold the deployments data to deploy the L2 Factory, L2 adapter, and the L2 USDC contracts
    * @param l2AdapterOwner The address of the owner of the L2 adapter
-   * @param minGasLimitCreate2Factory The minimum gas limit for the L2 factory deployment
-   * @param usdcImplementationInitCode The creation code with the constructor arguments for the USDC implementation
+   * @param usdcImplAddr The address of the USDC implementation on L2 to connect the proxy to
+   * @param minGasLimitDeploy The minimum gas limit for the L2 factory deployment
+   * @param minGasLimitDeploy The minimum gas limit for calling the deploying the L2 Factory, L2 adapter, and L2 USDC
    * @param usdcInitTxs The initialization transactions to be executed on the USDC contract. The `initialize()` first
    * init tx must not be included since it is defined in the L2 factory contract
-   * @param minGasLimitDeploy The minimum gas limit for calling the deploying the L2 Factory, L2 adapter, and L2 USDC
    */
   struct L2Deployments {
     address l2AdapterOwner;
-    bytes usdcImplementationInitCode;
-    bytes[] usdcInitTxs;
+    address usdcImplAddr;
     uint32 minGasLimitDeploy;
+    bytes[] usdcInitTxs;
   }
 
   /*///////////////////////////////////////////////////////////////
