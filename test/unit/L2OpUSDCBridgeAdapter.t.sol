@@ -800,6 +800,17 @@ contract L2OpUSDCBridgeAdapter_Unit_CallUsdcTransaction is Base {
   }
 
   /**
+   * @notice Check that the function reverts function selector is updateMasterMinter (0xaa20e1e4)
+   */
+  function test_revertIfTxIsUpdateMasterMinter(bytes memory _data) external {
+    _data = bytes.concat(bytes4(0xaa20e1e4), _data);
+    // Execute
+    vm.prank(_owner);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_ForbiddenTransaction.selector);
+    adapter.callUsdcTransaction(_data);
+  }
+
+  /**
    * @notice Check that the function upgradeTo gets called through the fallback admin
    */
   function test_upgradeTo(address _newImplementation) external {

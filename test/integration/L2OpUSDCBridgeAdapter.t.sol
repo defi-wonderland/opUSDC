@@ -301,29 +301,6 @@ contract Integration_PermissionedUsdcFlows is IntegrationBase {
   }
 
   /**
-   * @notice Test `updateMasterMinter` USDC function on L2
-   */
-  function test_UpdateMasterMinter() public {
-    // Setup necessary data
-    bytes memory _calldata = abi.encodeWithSignature('updateMasterMinter(address)', _notOwner);
-
-    // Use L2OpUSDCBridgeAdapter owner to call `updateMasterMinter` function through the adapter
-    vm.startPrank(_owner);
-
-    // Call `updateMasterMinter` function
-    l2Adapter.callUsdcTransaction(_calldata);
-
-    //Call masterMinter function to get the masterMinter
-    (, bytes memory _data) = address(bridgedUSDC).call(abi.encodeWithSignature('masterMinter()'));
-
-    //Get masterMinter from _data
-    address _masterMinter = address(uint160(uint256(bytes32(_data))));
-
-    // Check that the USDC masterMinter has been updated
-    assertEq(_masterMinter, _notOwner);
-  }
-
-  /**
    * @notice Test `updateBlacklister` USDC function on L2
    */
   function test_UpdateBlacklister() public {

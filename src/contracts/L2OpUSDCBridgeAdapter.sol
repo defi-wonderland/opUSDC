@@ -26,6 +26,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   bytes4 internal constant _UPGRADE_TO_SELECTOR = 0x3659cfe6;
   ///@notice `upgradeToAndCall(address,bytes)` USDC function selector
   bytes4 internal constant _UPGRADE_TO_AND_CALL_SELECTOR = 0x4f1ef286;
+  ///@notice `updateMasterMinter(address)` USDC function selector
+  bytes4 internal constant _UPDATE_MASTER_MINTER_SELECTOR = 0xaa20e1e4;
 
   /// @inheritdoc IL2OpUSDCBridgeAdapter
   FallbackProxyAdmin public immutable FALLBACK_PROXY_ADMIN;
@@ -266,7 +268,10 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     bytes4 _selector = bytes4(_data);
     bool _success;
 
-    if (_selector == _TRANSFER_OWNERSHIP_SELECTOR || _selector == _CHANGE_ADMIN_SELECTOR) {
+    if (
+      _selector == _TRANSFER_OWNERSHIP_SELECTOR || _selector == _CHANGE_ADMIN_SELECTOR
+        || _selector == _UPDATE_MASTER_MINTER_SELECTOR
+    ) {
       revert IOpUSDCBridgeAdapter_ForbiddenTransaction();
     } else if (_selector == _UPGRADE_TO_SELECTOR || _selector == _UPGRADE_TO_AND_CALL_SELECTOR) {
       (_success,) = address(FALLBACK_PROXY_ADMIN).call(_data);
