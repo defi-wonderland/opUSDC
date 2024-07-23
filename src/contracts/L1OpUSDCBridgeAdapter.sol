@@ -114,6 +114,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
 
     // Burn the USDC tokens
     // NOTE: If in flight transactions fail due to blacklist after migration, they will just be trapped in this contract as its deprecated
+    // If the user is after unblacklisted, they will be able to withdraw their usdc
     uint256 _burnAmount = burnAmount + blacklistedFunds;
     if (_burnAmount != 0) {
       // NOTE: This is a very edge case and will only happen if the chain operator adds a second minter on L2
