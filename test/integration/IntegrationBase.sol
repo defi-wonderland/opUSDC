@@ -11,9 +11,9 @@ import {StdStorage, stdStorage} from 'forge-std/StdStorage.sol';
 import {IL2OpUSDCDeploy} from 'interfaces/IL2OpUSDCDeploy.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
-import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementationCreationCode.sol';
 import {AddressAliasHelper} from 'test/utils/AddressAliasHelper.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
+import {USDC_IMPLEMENTATION_CREATION_CODE} from 'test/utils/USDCImplementationCreationCode.sol';
 import {ITestCrossDomainMessenger} from 'test/utils/interfaces/ITestCrossDomainMessenger.sol';
 
 contract IntegrationBase is Helpers {
