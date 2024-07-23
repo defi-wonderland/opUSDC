@@ -113,7 +113,8 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     if (messengerStatus != Status.Deprecated) revert IOpUSDCBridgeAdapter_BurnAmountNotSet();
 
     // Burn the USDC tokens
-    // NOTE: If in flight transactions fail due to blacklist after migration, they will just be trapped in this contract as its deprecated
+    // NOTE: If in flight transactions fail due to user being blacklisted after migration
+    // The funds will just be trapped in this contract as its deprecated
     // If the user is after unblacklisted, they will be able to withdraw their usdc
     uint256 _burnAmount = burnAmount + blacklistedFunds;
     if (_burnAmount != 0) {
