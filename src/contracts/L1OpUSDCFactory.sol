@@ -33,8 +33,8 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
   /// @dev Used to check the first init tx doesn't match it since it is already defined in the L2 factory contract
   bytes4 internal constant _INITIALIZE_SELECTOR = 0x3357162b;
 
-  /// @notice The L2 Adapter is the third contract to be deployed on the L2 factory so its nonce is 3
-  uint256 internal constant _L2_ADAPTER_DEPLOYMENT_NONCE = 3;
+  /// @notice The L2 Adapter is the second contract to be deployed on the L2 factory so its nonce is 2
+  uint256 internal constant _L2_ADAPTER_DEPLOYMENT_NONCE = 2;
 
   /// @inheritdoc IL1OpUSDCFactory
   IUSDC public immutable USDC;
@@ -61,8 +61,8 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * @return _l2Adapter The address of the L2 adapter
    * @dev It can fail on L2 due to a gas miscalculation, but in that case the tx can be replayed. It only deploys 1 L2
    * factory per L2 deployments, to make sure the nonce is being tracked correctly while precalculating addresses
-   * @dev There is one message for the L2 factory deployment and another for the L2 adapter deployment because if the L2
-   * factory is already deployed, that message will fail but the other will be executed
+   * @dev The implementation of the USDC contract needs to be deployed on L2 before this is called
+   * Then set the `usdcImplAddr` in the L2Deployments struct to the address of the deployed USDC implementation contract
    */
   function deploy(
     address _l1Messenger,
@@ -89,7 +89,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     bytes memory _l2FactoryCArgs = abi.encode(
       _l1Adapter,
       _l2Deployments.l2AdapterOwner,
-      _l2Deployments.usdcImplementationInitCode,
+      _l2Deployments.usdcImplAddr,
       _usdcInitializeData,
       _l2Deployments.usdcInitTxs
     );

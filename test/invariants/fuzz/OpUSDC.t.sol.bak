@@ -465,7 +465,7 @@ contract OpUsdcTest is SetupOpUSDC {
     usdcInitTxns[2] = USDCInitTxs.INITIALIZEV2_2;
 
     IL1OpUSDCFactory.L2Deployments memory _l2Deployments =
-      IL1OpUSDCFactory.L2Deployments(address(this), USDC_IMPLEMENTATION_CREATION_CODE, usdcInitTxns, 3_000_000);
+      IL1OpUSDCFactory.L2Deployments(address(this), usdcBridgedImplementation, 3_000_000, usdcInitTxns);
 
     try factory.deploy(address(mockMessenger), _currentCaller, _l2Deployments) returns (
       address, address _l2Factory, address _l2Adapter
