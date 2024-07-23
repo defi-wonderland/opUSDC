@@ -45,6 +45,20 @@ interface IOpUSDCBridgeAdapter {
    */
   event MigratingToNative(address _messenger, address _caller);
 
+  /**
+   * @notice Emitted when a message fails
+   * @param _user The user that the message failed for
+   * @param _amount The amount of tokens that were added to the blacklisted funds
+   */
+  event MessageFailed(address _user, uint256 _amount);
+
+  /**
+   * @notice Emitted when the blacklisted funds are withdrawn
+   * @param _user The user that the funds were withdrawn for
+   * @param _amountWithdrawn The amount of tokens that were withdrawn
+   */
+  event BlacklistedFundsWithdrawn(address _user, uint256 _amountWithdrawn);
+
   /*///////////////////////////////////////////////////////////////
                             ERRORS
   ///////////////////////////////////////////////////////////////*/
@@ -158,6 +172,12 @@ interface IOpUSDCBridgeAdapter {
   function receiveMessage(address _user, uint256 _amount) external;
 
   /**
+   * @notice Withdraws the blacklisted funds from the contract if they get unblacklisted
+   * @param _user The user to withdraw the funds for
+   */
+  function withdrawBlacklistedFunds(address _user) external;
+
+  /**
    * @notice Cancels a signature by setting the nonce as used
    * @param _nonce The nonce of the signature to cancel
    */
@@ -195,4 +215,11 @@ interface IOpUSDCBridgeAdapter {
    * @return _used If the nonce has been used
    */
   function userNonces(address _user, uint256 _nonce) external view returns (bool _used);
+
+  /**
+   * @notice Returns the amount of funds locked that got blacklisted for a specific user
+   * @param _user The user to check for
+   * @return _amount The amount of funds locked from blacklisted messages
+   */
+  function userBlacklistedFunds(address _user) external view returns (uint256 _amount);
 }

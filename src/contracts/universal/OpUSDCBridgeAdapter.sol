@@ -22,6 +22,9 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, Ownable {
   /// @inheritdoc IOpUSDCBridgeAdapter
   mapping(address _user => mapping(uint256 _nonce => bool _used)) public userNonces;
 
+  /// @inheritdoc IOpUSDCBridgeAdapter
+  mapping(address _user => uint256 _blacklistedAmount) public userBlacklistedFunds;
+
   /**
    * @notice Construct the OpUSDCBridgeAdapter contract
    * @param _usdc The address of the USDC Contract to be used by the adapter
@@ -75,6 +78,12 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, Ownable {
    * @param _amount The amount of tokens to mint
    */
   function receiveMessage(address _user, uint256 _amount) external virtual;
+
+  /**
+   * @notice Withdraws the blacklisted funds from the contract if they get unblacklisted
+   * @param _user The user to withdraw the funds for
+   */
+  function withdrawBlacklistedFunds(address _user) external virtual;
 
   /**
    * @notice Cancels a signature by setting the nonce as used

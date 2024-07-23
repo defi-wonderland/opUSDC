@@ -82,6 +82,9 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     isMigrated = true;
     roleCaller = _roleCaller;
 
+    // We need to do totalSupply + blacklistedFunds
+    // Because on `receiveMessage` mint would fail causing the totalSupply to not increase
+    // But the native token is still locked on L1
     uint256 _burnAmount = IUSDC(USDC).totalSupply();
 
     ICrossDomainMessenger(MESSENGER).sendMessage(
@@ -221,8 +224,30 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   function receiveMessage(address _user, uint256 _amount) external override onlyLinkedAdapter {
     if (isMigrated) revert IOpUSDCBridgeAdapter_Migrated();
     // Mint the tokens to the user
+    try IUSDC(USDC).mint(_user, _amount) {
+      emit MessageReceived(_user, _amount, MESSENGER);
+    } catch {
+      userBlacklistedFunds[_user] += _amount;
+      emit MessageFailed(_user, _amount);
+    }
+  }
+
+  /**
+   * @notice Mints the blacklisted funds from the contract incase they get unblacklisted
+   * @param _user The user to withdraw the funds for
+   */
+  function withdrawBlacklistedFunds(address _user) external override {
+    uint256 _amount = userBlacklistedFunds[_user];
+    userBlacklistedFunds[_user] = 0;
+
+    // NOTE: This will fail after migration as the adapter will no longer be a minter
+    // All funds need to be recovered from the contract before migration if applicable
+    // TODO: If migration has happend instead send a message back to L1 to recover the funds
+
+    // The check for if the user is blacklisted happens in USDC's contract
     IUSDC(USDC).mint(_user, _amount);
-    emit MessageReceived(_user, _amount, MESSENGER);
+
+    emit BlacklistedFundsWithdrawn(_user, _amount);
   }
 
   /*///////////////////////////////////////////////////////////////

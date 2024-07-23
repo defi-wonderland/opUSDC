@@ -89,6 +89,41 @@ contract Integration_Bridging is IntegrationBase {
   }
 
   /**
+   * @notice Test bridging with a user who is blacklisted on L1
+   */
+  function test_bridgingWithBlacklistedUser() public {
+    vm.selectFork(mainnet);
+    vm.prank(MAINNET_USDC.blacklister());
+    MAINNET_USDC.blacklist(_user);
+
+    vm.selectFork(optimism);
+    // Mint to increment total supply of bridgedUSDC and balance of _user
+    vm.prank(address(l2Adapter));
+    bridgedUSDC.mint(_user, _amount);
+
+    vm.startPrank(_user);
+    bridgedUSDC.approve(address(l2Adapter), _amount);
+    l2Adapter.sendMessage(_user, _amount, _MIN_GAS_LIMIT);
+    vm.stopPrank();
+
+    assertEq(bridgedUSDC.balanceOf(_user), 0);
+    assertEq(bridgedUSDC.balanceOf(address(l2Adapter)), 0);
+
+    vm.selectFork(mainnet);
+    _relayL2ToL1Message(
+      address(l2Adapter),
+      address(l1Adapter),
+      _ZERO_VALUE,
+      _MIN_GAS_LIMIT,
+      abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _amount)
+    );
+
+    assertEq(MAINNET_USDC.balanceOf(_user), 0);
+    assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), _amount);
+    assertEq(l1Adapter.userBlacklistedFunds(_user), _amount);
+  }
+
+  /**
    * @notice Test bridging with signature
    */
   function test_bridgeFromL2WithSig() public {
