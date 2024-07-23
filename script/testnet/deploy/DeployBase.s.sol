@@ -1,5 +1,3 @@
-// TODO: Refactor this with new deployment logic in a future PR
-
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
