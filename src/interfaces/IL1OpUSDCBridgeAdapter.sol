@@ -36,13 +36,6 @@ interface IL1OpUSDCBridgeAdapter {
    */
   event MigrationComplete(uint256 _burnedAmount);
 
-  /**
-   * @notice Emitted when the blacklisted funds are withdrawn
-   * @param _owner The owner of the contract
-   * @param _amount The amount of funds that were withdrawn
-   */
-  event BlacklistedFundsWithdrawn(address _owner, uint256 _amount);
-
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   ///////////////////////////////////////////////////////////////*/

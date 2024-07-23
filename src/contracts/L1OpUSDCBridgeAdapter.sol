@@ -116,7 +116,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     // NOTE: If in flight transactions fail due to user being blacklisted after migration
     // The funds will just be trapped in this contract as its deprecated
     // If the user is after unblacklisted, they will be able to withdraw their usdc
-    uint256 _burnAmount = burnAmount + blacklistedFunds;
+    uint256 _burnAmount = burnAmount;
     if (_burnAmount != 0) {
       // NOTE: This is a very edge case and will only happen if the chain operator adds a second minter on L2
       // So now this adapter doesnt have the full backing supply locked in this contract
@@ -130,7 +130,6 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
 
       // Set the burn amount to 0
       burnAmount = 0;
-      blacklistedFunds = 0;
     }
 
     burnCaller = address(0);
@@ -275,7 +274,6 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     try this.attemptTransfer(_user, _amount) {
       emit MessageReceived(_user, _amount, MESSENGER);
     } catch {
-      blacklistedFunds += _amount;
       userBlacklistedFunds[_user] += _amount;
       emit MessageFailed(_user, _amount);
     }
@@ -287,14 +285,12 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    */
   function withdrawBlacklistedFunds(address _user) external override {
     uint256 _amount = userBlacklistedFunds[_user];
-    uint256 _totalBlacklistedFunds = blacklistedFunds;
-    blacklistedFunds = _totalBlacklistedFunds - _amount;
     userBlacklistedFunds[_user] = 0;
 
     // The check for if the user is blacklisted happens in USDC's contract
     IUSDC(USDC).safeTransfer(_user, _amount);
 
-    emit BlacklistedFundsWithdrawn(_user, _amount, _totalBlacklistedFunds);
+    emit BlacklistedFundsWithdrawn(_user, _amount);
   }
 
   /**

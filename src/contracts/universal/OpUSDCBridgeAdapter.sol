@@ -23,9 +23,6 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, Ownable {
   mapping(address _user => mapping(uint256 _nonce => bool _used)) public userNonces;
 
   /// @inheritdoc IOpUSDCBridgeAdapter
-  uint256 public blacklistedFunds;
-
-  /// @inheritdoc IOpUSDCBridgeAdapter
   mapping(address _user => uint256 _blacklistedAmount) public userBlacklistedFunds;
 
   /**
