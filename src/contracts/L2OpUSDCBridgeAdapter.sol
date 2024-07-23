@@ -233,6 +233,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _user The user to withdraw the funds for
    */
   function withdrawBlacklistedFunds(address _user) external override {
+    // TODO: Add explicit check if migration has happend
+
     uint256 _amount = userBlacklistedFunds[_user];
     uint256 _totalBlacklistedFunds = blacklistedFunds;
     blacklistedFunds = _totalBlacklistedFunds - _amount;
