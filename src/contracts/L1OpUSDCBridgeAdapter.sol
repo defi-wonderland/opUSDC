@@ -200,15 +200,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     // Ensure messaging is enabled
     if (messengerStatus != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
-    // Transfer the tokens to the contract
-    IUSDC(USDC).safeTransferFrom(msg.sender, address(this), _amount);
-
-    // Send the message to the linked adapter
-    ICrossDomainMessenger(MESSENGER).sendMessage(
-      LINKED_ADAPTER, abi.encodeCall(IOpUSDCBridgeAdapter.receiveMessage, (_to, _amount)), _minGasLimit
-    );
-
-    emit MessageSent(msg.sender, _to, _amount, MESSENGER, _minGasLimit);
+    _sendMessage(msg.sender, _to, _amount, _minGasLimit);
   }
 
   /**
@@ -251,15 +243,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     // Mark the nonce as used
     userNonces[_signer][_nonce] = true;
 
-    // Transfer the tokens to the contract
-    IUSDC(USDC).safeTransferFrom(_signer, address(this), _amount);
-
-    // Send the message to the linked adapter
-    ICrossDomainMessenger(MESSENGER).sendMessage(
-      LINKED_ADAPTER, abi.encodeCall(IOpUSDCBridgeAdapter.receiveMessage, (_to, _amount)), _minGasLimit
-    );
-
-    emit MessageSent(_signer, _to, _amount, MESSENGER, _minGasLimit);
+    _sendMessage(_signer, _to, _amount, _minGasLimit);
   }
 
   /**
@@ -303,5 +287,20 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   function attemptTransfer(address _to, uint256 _amount) external {
     if (msg.sender != address(this)) revert IOpUSDCBridgeAdapter_InvalidSender();
     IUSDC(USDC).safeTransfer(_to, _amount);
+  }
+
+  /*///////////////////////////////////////////////////////////////
+                        INTERNAL FUNCTIONS
+  ///////////////////////////////////////////////////////////////*/
+  function _sendMessage(address _from, address _to, uint256 _amount, uint32 _minGasLimit) internal {
+    // Transfer the tokens to the contract
+    IUSDC(USDC).safeTransferFrom(_from, address(this), _amount);
+
+    // Send the message to the linked adapter
+    ICrossDomainMessenger(MESSENGER).sendMessage(
+      LINKED_ADAPTER, abi.encodeCall(IOpUSDCBridgeAdapter.receiveMessage, (_to, _amount)), _minGasLimit
+    );
+
+    emit MessageSent(_from, _to, _amount, MESSENGER, _minGasLimit);
   }
 }
