@@ -75,7 +75,7 @@ library CrossChainDeployments {
       mstore(_ptr, _deployer)
       let _start := add(_ptr, 0x0b)
       mstore8(_start, 0xff)
-      _precalculatedAddress := keccak256(_start, 85)
+      _precalculatedAddress := and(keccak256(_start, 85), 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
     }
   }
 
