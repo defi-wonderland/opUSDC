@@ -61,6 +61,18 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * factory per L2 deployments, to make sure the nonce is being tracked correctly while precalculating addresses
    * @dev The implementation of the USDC contract needs to be deployed on L2 before this is called
    * Then set the `usdcImplAddr` in the L2Deployments struct to the address of the deployed USDC implementation contract
+   *
+   * @dev IMPORTANT!!!!
+   * The _l2Deployments.usdcInitTxs must be manually entered to correctly initialize the USDC contract on L2.
+   * If a function is not included in the init txs, it could lead to potential attack vectors.
+   * We currently hardcode the `initialize()` function in the L2 factory contract, to correctly configure the setup
+   * You must provide the following init txs:
+   * - initalizeV2
+   * - initilizeV2_1
+   * - initializeV2_2
+   *
+   * It is also important to note that circle may add more init functions in future implementations
+   * This is up to the deployer to check and be sure all init transactions are included
    */
   function deploy(
     address _l1Messenger,
