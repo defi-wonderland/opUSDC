@@ -46,7 +46,7 @@ contract Integration_Bridging is IntegrationBase {
       address(l1Adapter),
       _ZERO_VALUE,
       _MIN_GAS_LIMIT,
-      abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _amount)
+      abi.encodeWithSignature('receiveMessage(address,address,uint256)', _user, _user, _amount)
     );
 
     assertEq(MAINNET_USDC.balanceOf(_user), _userBalanceBefore + _amount);
@@ -81,7 +81,7 @@ contract Integration_Bridging is IntegrationBase {
       address(l1Adapter),
       _ZERO_VALUE,
       _MIN_GAS_LIMIT,
-      abi.encodeWithSignature('receiveMessage(address,uint256)', _l1Target, _amount)
+      abi.encodeWithSignature('receiveMessage(address,address,uint256)', _l1Target, _user, _amount)
     );
 
     assertEq(MAINNET_USDC.balanceOf(_l1Target), _userBalanceBefore + _amount);
@@ -115,7 +115,7 @@ contract Integration_Bridging is IntegrationBase {
       address(l1Adapter),
       _ZERO_VALUE,
       _MIN_GAS_LIMIT,
-      abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _amount)
+      abi.encodeWithSignature('receiveMessage(address,address,uint256)', _user, _user, _amount)
     );
 
     assertEq(MAINNET_USDC.balanceOf(_user), 0);
@@ -157,7 +157,7 @@ contract Integration_Bridging is IntegrationBase {
       address(l1Adapter),
       _ZERO_VALUE,
       _MIN_GAS_LIMIT,
-      abi.encodeWithSignature('receiveMessage(address,uint256)', _signerAd, _amount)
+      abi.encodeWithSignature('receiveMessage(address,address,uint256)', _signerAd, _signerAd, _amount)
     );
 
     assertEq(MAINNET_USDC.balanceOf(_signerAd), _userBalanceBefore + _amount);

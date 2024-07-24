@@ -176,7 +176,7 @@ contract IntegrationBase is Helpers {
       address(l2Adapter),
       _ZERO_VALUE,
       _minGasLimitMint,
-      abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _supply)
+      abi.encodeWithSignature('receiveMessage(address,address,uint256)', _user, _user, _supply)
     );
   }
 

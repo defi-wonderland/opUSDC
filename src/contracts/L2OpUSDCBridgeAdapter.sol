@@ -199,10 +199,17 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @notice Receive the message from the other chain and mint the bridged representation for the user
    * @dev This function should only be called when receiving a message to mint the bridged representation
    * @param _user The user to mint the bridged representation for
+   * @param _spender The address that provided the tokens
    * @param _amount The amount of tokens to mint
    */
-  function receiveMessage(address _user, uint256 _amount) external override onlyLinkedAdapter {
-    if (messengerStatus == Status.Deprecated) revert IOpUSDCBridgeAdapter_Migrated();
+  function receiveMessage(address _user, address _spender, uint256 _amount) external override onlyLinkedAdapter {
+    if (messengerStatus == Status.Deprecated) {
+      //Return the funds to the user if the contract is deprecated
+      // The user will need to relay the message manually with a higher gas limit
+      ICrossDomainMessenger(MESSENGER).sendMessage(
+        LINKED_ADAPTER, abi.encodeCall(IOpUSDCBridgeAdapter.receiveMessage, (_spender, _spender, _amount)), 0
+      );
+    }
     // Mint the tokens to the user
     try IUSDC(USDC).mint(_user, _amount) {
       emit MessageReceived(_user, _amount, MESSENGER);
@@ -275,7 +282,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
 
     // Send the message to the linked adapter
     ICrossDomainMessenger(MESSENGER).sendMessage(
-      LINKED_ADAPTER, abi.encodeCall(IOpUSDCBridgeAdapter.receiveMessage, (_to, _amount)), _minGasLimit
+      LINKED_ADAPTER, abi.encodeCall(IOpUSDCBridgeAdapter.receiveMessage, (_to, _from, _amount)), _minGasLimit
     );
 
     emit MessageSent(_from, _to, _amount, MESSENGER, _minGasLimit);

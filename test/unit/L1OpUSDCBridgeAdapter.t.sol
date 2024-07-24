@@ -723,7 +723,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessage is Base {
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
-        abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount),
+        abi.encodeWithSignature('receiveMessage(address,address,uint256)', _to, _user, _amount),
         _minGasLimit
       ),
       abi.encode()
@@ -751,7 +751,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessage is Base {
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
-        abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount),
+        abi.encodeWithSignature('receiveMessage(address,address,uint256)', _to, _amount),
         _minGasLimit
       ),
       abi.encode()
@@ -897,7 +897,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
-        abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount),
+        abi.encodeWithSignature('receiveMessage(address,address,uint256)', _to, _signerAd, _amount),
         _minGasLimit
       ),
       abi.encode()
@@ -934,7 +934,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
-        abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount),
+        abi.encodeWithSignature('receiveMessage(address,address,uint256)', _to, _signerAd, _amount),
         _minGasLimit
       ),
       abi.encode()
@@ -959,7 +959,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
     // Execute
     vm.prank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
-    adapter.receiveMessage(_user, _amount);
+    adapter.receiveMessage(_user, _user, _amount);
   }
 
   /**
@@ -973,7 +973,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
     // Execute
     vm.prank(_messenger);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
-    adapter.receiveMessage(_user, _amount);
+    adapter.receiveMessage(_user, _user, _amount);
   }
 
   /**
@@ -987,7 +987,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 
     // Execute
     vm.prank(_messenger);
-    adapter.receiveMessage(_user, _amount);
+    adapter.receiveMessage(_user, _user, _amount);
   }
 
   /**
@@ -1004,7 +1004,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
     emit MessageReceived(_user, _amount, _messenger);
 
     vm.prank(_messenger);
-    adapter.receiveMessage(_user, _amount);
+    adapter.receiveMessage(_user, _user, _amount);
   }
 
   /**
@@ -1020,7 +1020,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 
     // Execute
     vm.prank(_messenger);
-    adapter.receiveMessage(_user, _amount);
+    adapter.receiveMessage(_user, _user, _amount);
 
     assertEq(adapter.userBlacklistedFunds(_user), _amount, 'User blacklisted funds should be incremented');
   }
@@ -1039,7 +1039,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 
     // Execute
     vm.prank(_messenger);
-    adapter.receiveMessage(_user, _amount);
+    adapter.receiveMessage(_user, _user, _amount);
 
     assertEq(adapter.userBlacklistedFunds(_user), _amount, 'User blacklisted funds should be incremented');
   }
@@ -1060,7 +1060,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
     vm.expectEmit(true, true, true, true);
     vm.prank(_messenger);
     emit MessageFailed(_user, _amount);
-    adapter.receiveMessage(_user, _amount);
+    adapter.receiveMessage(_user, _user, _amount);
   }
 }
 
