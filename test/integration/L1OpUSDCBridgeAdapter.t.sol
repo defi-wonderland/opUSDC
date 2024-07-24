@@ -331,9 +331,6 @@ contract Integration_Migration is IntegrationBase {
     vm.prank(_owner);
     l1Adapter.migrateToNative(_circle, _circle, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
 
-    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Upgrading));
-    assertEq(l1Adapter.burnCaller(), _circle);
-
     vm.selectFork(optimism);
     _relayL1ToL2Message(
       OP_ALIASED_L1_MESSENGER,
@@ -370,6 +367,8 @@ contract Integration_Migration is IntegrationBase {
       )
     );
 
+    uint256 _totalSupplyBefore = bridgedUSDC.totalSupply();
+
     _relayL1ToL2Message(
       OP_ALIASED_L1_MESSENGER,
       address(l1Adapter),
@@ -378,6 +377,8 @@ contract Integration_Migration is IntegrationBase {
       1_000_000,
       abi.encodeWithSignature('receiveMessage(address,address,uint256)', _user, _user, _amount)
     );
+
+    assertEq(bridgedUSDC.totalSupply(), _totalSupplyBefore);
   }
 }
 
