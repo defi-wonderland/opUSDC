@@ -253,6 +253,20 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveStopMessaging is Base {
   }
 
   /**
+   * @notice Check that function reverts if status is Deprecated
+   */
+  function test_revertIfDeprecated() external {
+    adapter.forTest_setMessengerStatus(IOpUSDCBridgeAdapter.Status.Deprecated);
+
+    _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+
+    // Execute
+    vm.prank(_messenger);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
+    adapter.receiveStopMessaging();
+  }
+
+  /**
    * @notice Check that isMessagingDisabled is set to true
    */
   function test_setIsMessagingDisabledToTrue() external {
@@ -309,6 +323,20 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveResumeMessaging is Base {
     // Execute
     vm.prank(_messenger);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
+    adapter.receiveResumeMessaging();
+  }
+
+  /**
+   * @notice Check that function reverts if status is Deprecated
+   */
+  function test_revertIfDeprecated() external {
+    adapter.forTest_setMessengerStatus(IOpUSDCBridgeAdapter.Status.Deprecated);
+
+    _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+
+    // Execute
+    vm.prank(_messenger);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
     adapter.receiveResumeMessaging();
   }
 
@@ -639,15 +667,26 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
   }
 
   /**
-   * @notice Check that the function reverts if the contract is migrated to native
+   * @notice Check that the function returns the funds if the contract is deprecated
    */
   function test_revertIfMigratedToNative(uint256 _amount) external {
     adapter.forTest_setMessengerStatus(IOpUSDCBridgeAdapter.Status.Deprecated);
     // Mock calls
     vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+
+    // Expected call
+    _mockAndExpect(
+      _messenger,
+      abi.encodeWithSignature(
+        'sendMessage(address,bytes,uint32)',
+        _linkedAdapter,
+        abi.encodeWithSignature('receiveMessage(address,address,uint256)', _user, _user, _amount),
+        150_000
+      ),
+      abi.encode()
+    );
     // Execute
     vm.prank(_messenger);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_Migrated.selector);
     adapter.receiveMessage(_user, _user, _amount);
   }
 

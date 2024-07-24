@@ -186,8 +186,6 @@ contract Integration_Migration is IntegrationBase {
   function setUp() public override {
     super.setUp();
 
-    _mintSupplyOnL2(optimism, OP_ALIASED_L1_MESSENGER, _amount);
-
     vm.selectFork(mainnet);
     // Adapter needs to be minter to burn
     vm.prank(MAINNET_USDC.masterMinter());
@@ -198,6 +196,70 @@ contract Integration_Migration is IntegrationBase {
    * @notice Test the migration to native usdc flow
    */
   function test_migrationToNativeUSDC() public {
+    _mintSupplyOnL2(optimism, OP_ALIASED_L1_MESSENGER, _amount);
+
+    vm.selectFork(mainnet);
+
+    vm.prank(_owner);
+    l1Adapter.migrateToNative(_circle, _circle, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
+
+    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Upgrading));
+    assertEq(l1Adapter.burnCaller(), _circle);
+
+    vm.selectFork(optimism);
+    _relayL1ToL2Message(
+      OP_ALIASED_L1_MESSENGER,
+      address(l1Adapter),
+      address(l2Adapter),
+      _ZERO_VALUE,
+      _minGasLimitReceiveOnL2,
+      abi.encodeWithSignature('receiveMigrateToNative(address,uint32)', _circle, _minGasLimitSetBurnAmount)
+    );
+
+    uint256 _burnAmount = bridgedUSDC.totalSupply();
+
+    assertEq(uint256(l2Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Deprecated));
+    assertEq(l2Adapter.roleCaller(), _circle);
+    assertEq(bridgedUSDC.isMinter(address(l2Adapter)), false);
+
+    vm.prank(_circle);
+    l2Adapter.transferUSDCRoles(_circle);
+
+    assertEq(bridgedUSDC.owner(), _circle);
+
+    vm.selectFork(mainnet);
+    _relayL2ToL1Message(
+      address(l2Adapter),
+      address(l1Adapter),
+      _ZERO_VALUE,
+      _minGasLimitSetBurnAmount,
+      abi.encodeWithSignature('setBurnAmount(uint256)', _burnAmount)
+    );
+
+    assertEq(l1Adapter.burnAmount(), _burnAmount);
+    assertEq(l1Adapter.USDC(), address(MAINNET_USDC));
+    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Deprecated));
+
+    vm.prank(_circle);
+    l1Adapter.burnLockedUSDC();
+
+    assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), 0);
+    assertEq(l1Adapter.burnAmount(), 0);
+    assertEq(l1Adapter.burnCaller(), address(0));
+  }
+
+  /**
+   * @notice Test the migration to native usdc flow with zero balance on L1
+   * @dev This is a very edge case and will only happen if the chain operator adds a second minter on L2
+   *      So now this adapter doesnt have the full backing supply locked in this contract
+   */
+  function test_migrationToNativeUSDCWithZeroBalanceOnL1() public {
+    vm.selectFork(optimism);
+    vm.prank(bridgedUSDC.masterMinter());
+    bridgedUSDC.configureMinter(_owner, type(uint256).max);
+    vm.prank(_owner);
+    bridgedUSDC.mint(_owner, _amount);
+
     vm.selectFork(mainnet);
 
     vm.prank(_owner);

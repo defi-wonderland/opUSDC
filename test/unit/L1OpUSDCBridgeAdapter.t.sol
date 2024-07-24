@@ -391,6 +391,26 @@ contract L1OpUSDCBridgeAdapter_Unit_BurnLockedUSDC is Base {
     adapter.forTest_setBurnCaller(_circle);
     adapter.forTest_setMessengerStatus(IOpUSDCBridgeAdapter.Status.Deprecated);
     adapter.forTest_setBurnAmount(0);
+    vm.mockCall(_usdc, abi.encodeWithSignature('balanceOf(address)', address(adapter)), abi.encode(uint256(0)));
+    // Execute
+    vm.prank(_circle);
+    adapter.burnLockedUSDC();
+  }
+
+  /**
+   * @notice Check that the burn function is called as expected when burn amount is greater than adapter balance
+   */
+  function test_burnCalledIfAmountIsGteBalance(uint256 _burnAmount, uint256 _balance, address _circle) external {
+    adapter.forTest_setBurnCaller(_circle);
+    adapter.forTest_setMessengerStatus(IOpUSDCBridgeAdapter.Status.Deprecated);
+
+    vm.assume(_balance > 0);
+    vm.assume(_burnAmount > _balance);
+
+    _mockAndExpect(_usdc, abi.encodeWithSignature('burn(uint256)', _balance), abi.encode(true));
+    _mockAndExpect(_usdc, abi.encodeWithSignature('balanceOf(address)', address(adapter)), abi.encode(_balance));
+
+    adapter.forTest_setBurnAmount(_burnAmount);
 
     // Execute
     vm.prank(_circle);
