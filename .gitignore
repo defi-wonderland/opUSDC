@@ -1,6 +1,7 @@
 # General
 yarn-error.log
 node_modules
+src/contracts/external/USDC/node_modules/
 .DS_STORE
 .vscode
 

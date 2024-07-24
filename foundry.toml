@@ -9,7 +9,8 @@ multiline_func_header = 'params_first'
 sort_imports = true
 
 [profile.default]
-solc_version = '0.8.25'
+auto_detect_solc = true
+
 
 [profile.optimized]
 via_ir = true

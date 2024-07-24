@@ -2,9 +2,11 @@
 pragma solidity 0.8.25;
 
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
+
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {IL2OpUSDCDeploy} from 'interfaces/IL2OpUSDCDeploy.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
+import {AdminUpgradeabilityProxy} from 'src/external/upgradeability/AdminUpgradeabilityProxy.sol';
 
 /**
  * @title L2OpUSDCDeploy
@@ -54,6 +56,9 @@ contract L2OpUSDCDeploy is IL2OpUSDCDeploy {
     address _fallbackProxyAdmin = address(L2OpUSDCBridgeAdapter(_l2Adapter).FALLBACK_PROXY_ADMIN());
     // Change the USDC admin so the init txs can be executed over the proxy from this contract
     IUSDC(_usdcProxy).changeAdmin(_fallbackProxyAdmin);
+
+    // TODO
+    new AdminUpgradeabilityProxy(_usdcImplementation);
 
     // Execute the USDC initialization transactions over the USDC contracts
     _executeInitTxs(_usdcImplementation, _usdcInitializeData, _l2Adapter, _usdcInitTxs);
