@@ -330,9 +330,20 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveResumeMessaging is Base {
 
 contract L2OpUSDCBridgeAdapter_Unit_SendMessage is Base {
   /**
+   * @notice Check that the function reverts if the address is zero
+   */
+  function test_revertOnZeroAddress(uint256 _amount, uint32 _minGasLimit) external {
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidAddress.selector);
+    adapter.sendMessage(address(0), _amount, _minGasLimit);
+  }
+
+  /**
    * @notice Check that the function reverts if the address is blacklisted
    */
   function test_revertOnBlacklistedAddress(address _to, uint256 _amount, uint32 _minGasLimit) external {
+    vm.assume(_to != address(0));
     vm.mockCall(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(true));
     // Execute
     vm.prank(_user);
@@ -344,6 +355,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessage is Base {
    * @notice Check that sending a message reverts if messaging is disabled
    */
   function test_revertOnMessagingDisabled(address _to, uint256 _amount, uint32 _minGasLimit) external {
+    vm.assume(_to != address(0));
     adapter.forTest_setIsMessagingDisabled();
     vm.mockCall(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(false));
     // Execute
@@ -363,6 +375,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessage is Base {
     uint256 _deadline,
     uint32 _minGasLimit
   ) external {
+    vm.assume(_to != address(0));
     vm.mockCall(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(false));
     adapter.forTest_setUserNonce(_signerAd, _nonce, true);
 
@@ -403,6 +416,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessage is Base {
    * @notice Check that the event is emitted as expected
    */
   function test_emitEvent(address _to, uint256 _amount, uint32 _minGasLimit) external {
+    vm.assume(_to != address(0));
     // Mock calls
     vm.mockCall(_usdc, abi.encodeWithSignature('burn(address,uint256)', _user, _amount), abi.encode(true));
     vm.mockCall(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(false));
@@ -429,6 +443,16 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessage is Base {
 
 contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
   /**
+   * @notice Check that the function reverts if the address is zero
+   */
+  function test_revertOnZeroAddress(uint256 _amount, uint32 _minGasLimit) external {
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidAddress.selector);
+    adapter.sendMessage(address(0), _amount, _minGasLimit);
+  }
+
+  /**
    * @notice Check that the function reverts if the address is blacklisted
    */
   function test_revertOnBlacklistedAddress(
@@ -439,6 +463,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     uint256 _deadline,
     uint32 _minGasLimit
   ) external {
+    vm.assume(_to != address(0));
     vm.mockCall(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(true));
     // Execute
     vm.prank(_user);
@@ -457,6 +482,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     uint256 _deadline,
     uint32 _minGasLimit
   ) external {
+    vm.assume(_to != address(0));
     adapter.forTest_setIsMessagingDisabled();
 
     vm.mockCall(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(false));
@@ -479,6 +505,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     uint256 _deadline,
     uint32 _minGasLimit
   ) external {
+    vm.assume(_to != address(0));
     vm.assume(_timestamp > _deadline);
     vm.warp(_timestamp);
     vm.mockCall(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(false));
@@ -498,6 +525,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     uint256 _deadline,
     uint32 _minGasLimit
   ) external {
+    vm.assume(_to != address(0));
     vm.assume(_deadline > 0);
     vm.warp(_deadline - 1);
     (address _notSignerAd, uint256 _notSignerPk) = makeAddrAndKey('notSigner');
@@ -520,6 +548,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     uint256 _deadline,
     uint32 _minGasLimit
   ) external {
+    vm.assume(_to != address(0));
     vm.assume(_deadline > 0);
     vm.warp(_deadline - 1);
     bytes memory _signature =
@@ -558,6 +587,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     uint256 _deadline,
     uint32 _minGasLimit
   ) external {
+    vm.assume(_to != address(0));
     vm.assume(_deadline > 0);
     vm.warp(_deadline - 1);
     bytes memory _signature =
