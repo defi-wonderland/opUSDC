@@ -389,6 +389,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessage is Base {
    * @notice Check that burning tokens and sending a message works as expected
    */
   function test_expectedCall(address _to, uint256 _amount, uint32 _minGasLimit) external {
+    vm.assume(_to != address(0));
     _mockAndExpect(
       _usdc,
       abi.encodeWithSignature('transferFrom(address,address,uint256)', _user, address(adapter), _amount),
