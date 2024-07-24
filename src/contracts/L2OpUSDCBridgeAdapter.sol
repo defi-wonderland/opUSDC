@@ -207,18 +207,18 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    */
   function receiveMessage(address _user, address _spender, uint256 _amount) external override onlyLinkedAdapter {
     if (messengerStatus == Status.Deprecated) {
-      //Return the funds to the user if the contract is deprecated
-      // The user will need to relay the message manually with a higher gas limit
+      // Return the funds to the address where the tokens were sent from
       ICrossDomainMessenger(MESSENGER).sendMessage(
-        LINKED_ADAPTER, abi.encodeCall(IOpUSDCBridgeAdapter.receiveMessage, (_spender, _spender, _amount)), 0
+        LINKED_ADAPTER, abi.encodeCall(IOpUSDCBridgeAdapter.receiveMessage, (_spender, _spender, _amount)), 150_000
       );
-    }
-    // Mint the tokens to the user
-    try IUSDC(USDC).mint(_user, _amount) {
-      emit MessageReceived(_user, _amount, MESSENGER);
-    } catch {
-      userBlacklistedFunds[_user] += _amount;
-      emit MessageFailed(_user, _amount);
+    } else {
+      // Mint the tokens to the user
+      try IUSDC(USDC).mint(_user, _amount) {
+        emit MessageReceived(_user, _amount, MESSENGER);
+      } catch {
+        userBlacklistedFunds[_user] += _amount;
+        emit MessageFailed(_user, _amount);
+      }
     }
   }
 
