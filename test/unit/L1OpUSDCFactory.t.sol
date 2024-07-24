@@ -47,7 +47,8 @@ abstract contract Base is Test, Helpers {
   address internal _newMasterMinter = makeAddr('newMasterMinter');
   address internal _newPauser = makeAddr('newPauser');
   address internal _newBlacklister = makeAddr('newBlacklister');
-  string internal _tokenName = 'Bridged USDC';
+  string internal _chainName = 'Test';
+  string internal _tokenName = 'Bridged USDC (Test)';
   string internal _tokenSymbol = 'USDC.e';
   string internal _tokenCurrency = 'USD';
   uint8 internal _tokenDecimals = 6;
@@ -128,7 +129,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_user);
-    factory.deploy(_l1Messenger, _l1AdapterOwner, _l2Deployments);
+    factory.deploy(_l1Messenger, _l1AdapterOwner, _chainName, _l2Deployments);
   }
 
   /**
@@ -141,7 +142,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_user);
-    factory.deploy(_l1Messenger, _l1AdapterOwner, _l2Deployments);
+    factory.deploy(_l1Messenger, _l1AdapterOwner, _chainName, _l2Deployments);
 
     // Assert
     assertEq(factory.deploymentsSaltCounter(), _saltBefore + 1, 'Invalid salt counter');
@@ -178,7 +179,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_user);
-    factory.deploy(_l1Messenger, _l1AdapterOwner, _l2Deployments);
+    factory.deploy(_l1Messenger, _l1AdapterOwner, _chainName, _l2Deployments);
 
     // Assert the contract was deployed by checking its bytecode length is greater than 0
     assertGt(_l1Adapter.code.length, 0, 'L1 adapter not deployed');
@@ -201,7 +202,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_user);
-    factory.deploy(_l1Messenger, _l1AdapterOwner, _l2Deployments);
+    factory.deploy(_l1Messenger, _l1AdapterOwner, _chainName, _l2Deployments);
   }
 
   /**
@@ -216,7 +217,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_user);
-    factory.deploy(_l1Messenger, _l1AdapterOwner, _l2Deployments);
+    factory.deploy(_l1Messenger, _l1AdapterOwner, _chainName, _l2Deployments);
   }
 
   /**
@@ -231,7 +232,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_user);
-    factory.deploy(_l1Messenger, _l1AdapterOwner, _l2Deployments);
+    factory.deploy(_l1Messenger, _l1AdapterOwner, _chainName, _l2Deployments);
   }
 
   /**
@@ -248,7 +249,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_user);
-    factory.deploy(_l1Messenger, _l1AdapterOwner, _l2Deployments);
+    factory.deploy(_l1Messenger, _l1AdapterOwner, _chainName, _l2Deployments);
   }
 
   /**
@@ -292,7 +293,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_user);
-    factory.deploy(_l1Messenger, _l1AdapterOwner, _l2Deployments);
+    factory.deploy(_l1Messenger, _l1AdapterOwner, _chainName, _l2Deployments);
   }
 
   /**
@@ -329,7 +330,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     vm.prank(_user);
-    factory.deploy(_l1Messenger, _l1AdapterOwner, _l2Deployments);
+    factory.deploy(_l1Messenger, _l1AdapterOwner, _chainName, _l2Deployments);
   }
 
   /**
@@ -362,7 +363,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
 
     // Execute
     (address _l1Adapter, address _l2Factory, address _l2Adapter) =
-      factory.deploy(_l1Messenger, _l1AdapterOwner, _l2Deployments);
+      factory.deploy(_l1Messenger, _l1AdapterOwner, _chainName, _l2Deployments);
 
     // Assert
     assertEq(_l1Adapter, _expectedL1Adapter, 'Invalid l1 adapter address');

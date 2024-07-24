@@ -40,6 +40,7 @@ contract IntegrationBase is Helpers {
   // The extra gas buffer added to the minimum gas limit for the relayMessage function
   uint64 internal constant _SEQUENCER_GAS_OVERHEAD = 700_000;
   uint256 internal constant _USER_NONCE = 1;
+  string public constant CHAIN_NAME = 'Test';
 
   /// @notice Value used for the L2 sender storage slot in both the OptimismPortal and the
   ///         CrossDomainMessenger contracts before an actual sender is set. This value is
@@ -98,14 +99,14 @@ contract IntegrationBase is Helpers {
 
     vm.prank(_owner);
     (address _l1Adapter, address _l2Factory, address _l2Adapter) =
-      l1Factory.deploy(address(OPTIMISM_L1_MESSENGER), _owner, l2Deployments);
+      l1Factory.deploy(address(OPTIMISM_L1_MESSENGER), _owner, CHAIN_NAME, l2Deployments);
 
     l1Adapter = L1OpUSDCBridgeAdapter(_l1Adapter);
 
     // Get salt and initialize data for l2 deployments
     bytes32 _salt = bytes32(l1Factory.deploymentsSaltCounter());
     usdcInitializeData = IL2OpUSDCDeploy.USDCInitializeData(
-      l1Factory.USDC_NAME(), l1Factory.USDC_SYMBOL(), MAINNET_USDC.currency(), MAINNET_USDC.decimals()
+      'Bridged USDC (Test)', l1Factory.USDC_SYMBOL(), MAINNET_USDC.currency(), MAINNET_USDC.decimals()
     );
 
     // Give max minting power to the master minter

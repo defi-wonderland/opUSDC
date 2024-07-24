@@ -9,6 +9,7 @@ import {USDCInitTxs} from 'src/contracts/utils/USDCInitTxs.sol';
 contract DeployBase is Script {
   address public constant L1_MESSENGER = 0xC34855F4De64F1840e5686e64278da901e261f20;
   uint32 public constant MIN_GAS_LIMIT_DEPLOY = 9_000_000;
+  string public constant CHAIN_NAME = 'Base Sepolia';
   IL1OpUSDCFactory public immutable L1_FACTORY = IL1OpUSDCFactory(vm.envAddress('L1_FACTORY_SEPOLIA'));
   address public immutable USDC_BASE_SEPOLIA_IMPLEMENTATION = vm.envAddress('USDC_BASE_SEPOLIA_IMPLEMENTATION');
 
@@ -30,7 +31,7 @@ contract DeployBase is Script {
 
     // Deploy the L2 contracts
     (address _l1Adapter, address _l2Factory, address _l2Adapter) =
-      L1_FACTORY.deploy(L1_MESSENGER, owner, _l2Deployments);
+      L1_FACTORY.deploy(L1_MESSENGER, owner, CHAIN_NAME, _l2Deployments);
     vm.stopBroadcast();
 
     /// NOTE: Hardcode the `L1_ADAPTER_BASE_SEPOLIA` and `L2_ADAPTER_BASE_SEPOLIA` addresses inside the `.env` file

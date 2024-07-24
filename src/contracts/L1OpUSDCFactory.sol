@@ -52,6 +52,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * the L1 messenger
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
    * @param _l1AdapterOwner The address of the owner of the L1 adapter
+   * @param _chainName The name of the L2 Op chain
    * @param _l2Deployments The deployments data for the L2 adapter, and the L2 USDC contracts
    * @return _l1Adapter The address of the L1 adapter
    * @return _l2Factory The address of the L2 factory
@@ -60,10 +61,23 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * factory per L2 deployments, to make sure the nonce is being tracked correctly while precalculating addresses
    * @dev The implementation of the USDC contract needs to be deployed on L2 before this is called
    * Then set the `usdcImplAddr` in the L2Deployments struct to the address of the deployed USDC implementation contract
+   *
+   * @dev IMPORTANT!!!!
+   * The _l2Deployments.usdcInitTxs must be manually entered to correctly initialize the USDC contract on L2.
+   * If a function is not included in the init txs, it could lead to potential attack vectors.
+   * We currently hardcode the `initialize()` function in the L2 factory contract, to correctly configure the setup
+   * You must provide the following init txs:
+   * - initalizeV2
+   * - initilizeV2_1
+   * - initializeV2_2
+   *
+   * It is also important to note that circle may add more init functions in future implementations
+   * This is up to the deployer to check and be sure all init transactions are included
    */
   function deploy(
     address _l1Messenger,
     address _l1AdapterOwner,
+    string calldata _chainName,
     L2Deployments calldata _l2Deployments
   ) external returns (address _l1Adapter, address _l2Factory, address _l2Adapter) {
     // Checks that the first init tx selector is not equal to the `initialize()` function since  we manually
@@ -77,9 +91,9 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     _l1Adapter = CrossChainDeployments.precalculateCreateAddress(address(this), _currentNonce);
 
     // Get the L1 USDC naming and decimals to ensure they are the same on the L2, guaranteeing the same standard
-    IL2OpUSDCDeploy.USDCInitializeData memory _usdcInitializeData =
-      IL2OpUSDCDeploy.USDCInitializeData(USDC_NAME, USDC_SYMBOL, USDC.currency(), USDC.decimals());
-
+    IL2OpUSDCDeploy.USDCInitializeData memory _usdcInitializeData = IL2OpUSDCDeploy.USDCInitializeData(
+      string.concat(USDC_NAME, ' ', '(', _chainName, ')'), USDC_SYMBOL, USDC.currency(), USDC.decimals()
+    );
     // Use the nonce as salt to ensure always a different salt since the nonce is always increasing
     bytes32 _salt = bytes32(_currentNonce);
     // Get the L2 factory init code and precalculate its address
