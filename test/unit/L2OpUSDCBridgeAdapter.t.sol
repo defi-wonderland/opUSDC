@@ -109,6 +109,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
     vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
     _mockAndExpect(_usdc, abi.encodeWithSignature('totalSupply()'), abi.encode(_burnAmount));
+    _mockAndExpect(_usdc, abi.encodeWithSignature('removeMinter(address)', adapter), abi.encode(true));
     _mockAndExpect(
       _messenger,
       abi.encodeWithSignature(
@@ -130,6 +131,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
     vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
     _mockAndExpect(_usdc, abi.encodeWithSignature('totalSupply()'), abi.encode(100));
+    _mockAndExpect(_usdc, abi.encodeWithSignature('removeMinter(address)', adapter), abi.encode(true));
     _mockAndExpect(
       _messenger,
       abi.encodeWithSignature(
@@ -157,6 +159,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
     vm.mockCall(_usdc, abi.encodeWithSignature('transferOwnership(address)', _roleCaller), abi.encode());
     vm.mockCall(_usdc, abi.encodeWithSignature('changeAdmin(address)', _roleCaller), abi.encode());
     vm.mockCall(_usdc, abi.encodeWithSignature('totalSupply()'), abi.encode(_burnAmount));
+    vm.mockCall(_usdc, abi.encodeWithSignature('removeMinter(address)', adapter), abi.encode(true));
     vm.mockCall(
       _messenger,
       abi.encodeWithSignature(

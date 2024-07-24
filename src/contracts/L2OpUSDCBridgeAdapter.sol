@@ -89,6 +89,9 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     // But the native token is still locked on L1
     uint256 _burnAmount = IUSDC(USDC).totalSupply();
 
+    // Remove the L2 Adapter as a minter
+    IUSDC(USDC).removeMinter(address(this));
+
     ICrossDomainMessenger(MESSENGER).sendMessage(
       LINKED_ADAPTER, abi.encodeWithSignature('setBurnAmount(uint256)', _burnAmount), _setBurnAmountMinGasLimit
     );
