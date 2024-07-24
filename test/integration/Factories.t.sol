@@ -6,7 +6,7 @@ import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {IL2OpUSDCBridgeAdapter} from 'interfaces/IL2OpUSDCBridgeAdapter.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
-import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementationCreationCode.sol';
+import {USDC_IMPLEMENTATION_CREATION_CODE} from 'test/utils/USDCImplementationCreationCode.sol';
 
 contract Integration_Factories is IntegrationBase {
   /**

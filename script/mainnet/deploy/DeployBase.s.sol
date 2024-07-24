@@ -4,7 +4,6 @@ pragma solidity 0.8.25;
 import {Script} from 'forge-std/Script.sol';
 import {console} from 'forge-std/Test.sol';
 import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
-import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementationCreationCode.sol';
 import {USDCInitTxs} from 'src/contracts/utils/USDCInitTxs.sol';
 
 contract DeployBase is Script {
