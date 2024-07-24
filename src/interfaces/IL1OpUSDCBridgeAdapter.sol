@@ -3,24 +3,6 @@ pragma solidity 0.8.25;
 
 interface IL1OpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
-                            ENUMS
-  ///////////////////////////////////////////////////////////////*/
-
-  /**
-   * @notice The status of an L1 Messenger
-   * @param Active The messenger is active
-   * @param Paused The messenger is paused
-   * @param Upgrading The messenger is upgrading
-   * @param Deprecated The messenger is deprecated
-   */
-  enum Status {
-    Active,
-    Paused,
-    Upgrading,
-    Deprecated
-  }
-
-  /*///////////////////////////////////////////////////////////////
                             EVENTS
   ///////////////////////////////////////////////////////////////*/
 
@@ -98,10 +80,4 @@ interface IL1OpUSDCBridgeAdapter {
    * @return _burnCaller The address of the burn caller
    */
   function burnCaller() external view returns (address _burnCaller);
-
-  /**
-   * @notice Fetches the status of the messenger
-   * @return _status The status of the messenger
-   */
-  function messengerStatus() external view returns (Status _status);
 }

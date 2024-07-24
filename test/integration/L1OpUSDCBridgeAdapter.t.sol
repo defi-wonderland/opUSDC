@@ -204,7 +204,7 @@ contract Integration_Migration is IntegrationBase {
     vm.prank(_owner);
     l1Adapter.migrateToNative(_circle, _circle, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
 
-    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Upgrading));
+    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Upgrading));
     assertEq(l1Adapter.burnCaller(), _circle);
 
     vm.selectFork(optimism);
@@ -219,8 +219,7 @@ contract Integration_Migration is IntegrationBase {
 
     uint256 _burnAmount = bridgedUSDC.totalSupply();
 
-    assert(l2Adapter.isMigrated());
-    assert(l2Adapter.isMessagingDisabled());
+    assertEq(uint256(l2Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Deprecated));
     assertEq(l2Adapter.roleCaller(), _circle);
     assertEq(bridgedUSDC.isMinter(address(l2Adapter)), false);
 
@@ -240,7 +239,7 @@ contract Integration_Migration is IntegrationBase {
 
     assertEq(l1Adapter.burnAmount(), _burnAmount);
     assertEq(l1Adapter.USDC(), address(MAINNET_USDC));
-    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Deprecated));
+    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Deprecated));
 
     vm.prank(_circle);
     l1Adapter.burnLockedUSDC();
@@ -259,12 +258,12 @@ contract Integration_Integration_PermissionedFlows is IntegrationBase {
   function test_stopAndResumeMessaging() public {
     vm.selectFork(mainnet);
 
-    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Active));
+    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Active));
 
     vm.prank(_owner);
     l1Adapter.stopMessaging(_MIN_GAS_LIMIT);
 
-    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Paused));
+    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Paused));
 
     vm.selectFork(optimism);
     _relayL1ToL2Message(
@@ -276,14 +275,14 @@ contract Integration_Integration_PermissionedFlows is IntegrationBase {
       abi.encodeWithSignature('receiveStopMessaging()')
     );
 
-    assert(l2Adapter.isMessagingDisabled());
+    assertEq(uint256(l2Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Paused));
 
     vm.selectFork(mainnet);
 
     vm.prank(_owner);
     l1Adapter.resumeMessaging(_MIN_GAS_LIMIT);
 
-    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Active));
+    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Active));
 
     vm.selectFork(optimism);
 
@@ -296,7 +295,7 @@ contract Integration_Integration_PermissionedFlows is IntegrationBase {
       abi.encodeWithSignature('receiveResumeMessaging()')
     );
 
-    assertEq(l2Adapter.isMessagingDisabled(), false);
+    assertEq(uint256(l2Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Active));
   }
 
   /**

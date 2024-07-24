@@ -20,6 +20,9 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, Ownable {
   address public immutable MESSENGER;
 
   /// @inheritdoc IOpUSDCBridgeAdapter
+  Status public messengerStatus;
+
+  /// @inheritdoc IOpUSDCBridgeAdapter
   mapping(address _user => mapping(uint256 _nonce => bool _used)) public userNonces;
 
   /// @inheritdoc IOpUSDCBridgeAdapter

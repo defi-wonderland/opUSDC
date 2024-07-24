@@ -3,6 +3,23 @@ pragma solidity 0.8.25;
 
 interface IOpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
+                            ENUMS
+  ///////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice The status of an L1 Messenger
+   * @param Active The messenger is active
+   * @param Paused The messenger is paused
+   * @param Upgrading The messenger is upgrading
+   * @param Deprecated The messenger is deprecated
+   */
+  enum Status {
+    Active,
+    Paused,
+    Upgrading,
+    Deprecated
+  }
+  /*///////////////////////////////////////////////////////////////
                             EVENTS
   ///////////////////////////////////////////////////////////////*/
 
@@ -207,6 +224,12 @@ interface IOpUSDCBridgeAdapter {
    */
   // solhint-disable-next-line func-name-mixedcase
   function MESSENGER() external view returns (address _messenger);
+
+  /**
+   * @notice Fetches the status of the messenger
+   * @return _status The status of the messenger
+   */
+  function messengerStatus() external view returns (Status _status);
 
   /**
    * @notice Returns the nonce of a given user to avoid replay attacks

@@ -24,9 +24,6 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /// @inheritdoc IL1OpUSDCBridgeAdapter
   address public burnCaller;
 
-  /// @inheritdoc IL1OpUSDCBridgeAdapter
-  Status public messengerStatus;
-
   /**
    * @notice Modifier to check if the sender is the linked adapter through the messenger
    */

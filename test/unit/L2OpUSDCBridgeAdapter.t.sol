@@ -16,16 +16,12 @@ contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
     address _owner
   ) L2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _owner) {}
 
-  function forTest_setIsMessagingDisabled() external {
-    isMessagingDisabled = true;
+  function forTest_setMessengerStatus(Status _status) external {
+    messengerStatus = _status;
   }
 
   function forTest_setRoleCaller(address _roleCaller) external {
     roleCaller = _roleCaller;
-  }
-
-  function forTest_setIsMigrated(bool _isMigrated) external {
-    isMigrated = _isMigrated;
   }
 
   function forTest_setUserNonce(address _user, uint256 _nonce, bool _used) external {
@@ -146,7 +142,11 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
     // Execute
     vm.prank(_messenger);
     adapter.receiveMigrateToNative(_roleCaller, _setBurnAmountMinGasLimit);
-    assertEq(adapter.isMessagingDisabled(), true, 'Messaging should be disabled');
+    assertEq(
+      uint256(adapter.messengerStatus()),
+      uint256(IOpUSDCBridgeAdapter.Status.Deprecated),
+      'Messaging should be disabled'
+    );
     assertEq(adapter.roleCaller(), _roleCaller, 'Role caller should be set to the new owner');
   }
 
@@ -226,7 +226,11 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveStopMessaging is Base {
     vm.prank(_notMessenger);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
     adapter.receiveStopMessaging();
-    assertEq(adapter.isMessagingDisabled(), false, 'Messaging should not be disabled');
+    assertEq(
+      uint256(adapter.messengerStatus()),
+      uint256(IOpUSDCBridgeAdapter.Status.Active),
+      'Messaging should not be disabled'
+    );
   }
 
   /**
@@ -241,7 +245,11 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveStopMessaging is Base {
     vm.prank(_messenger);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
     adapter.receiveStopMessaging();
-    assertEq(adapter.isMessagingDisabled(), false, 'Messaging should not be disabled');
+    assertEq(
+      uint256(adapter.messengerStatus()),
+      uint256(IOpUSDCBridgeAdapter.Status.Active),
+      'Messaging should not be disabled'
+    );
   }
 
   /**
@@ -253,7 +261,9 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveStopMessaging is Base {
     // Execute
     vm.prank(_messenger);
     adapter.receiveStopMessaging();
-    assertEq(adapter.isMessagingDisabled(), true, 'Messaging should be disabled');
+    assertEq(
+      uint256(adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Paused), 'Messaging should be disabled'
+    );
   }
 
   /**
@@ -303,15 +313,17 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveResumeMessaging is Base {
   }
 
   /**
-   * @notice Check that isMessagingDisabled is set to false
+   * @notice Check that messaging is enabled
    */
-  function test_setIsMessagingDisabledToFalse() external {
+  function test_setMessengerStatusToActive() external {
     _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
     // Execute
     vm.prank(_messenger);
     adapter.receiveResumeMessaging();
-    assertEq(adapter.isMessagingDisabled(), false, 'Messaging should be disabled');
+    assertEq(
+      uint256(adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Active), 'Messaging should be enabled'
+    );
   }
 
   /**
@@ -350,8 +362,8 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessage is Base {
   /**
    * @notice Check that sending a message reverts if messaging is disabled
    */
-  function test_revertOnMessagingDisabled(address _to, uint256 _amount, uint32 _minGasLimit) external {
-    adapter.forTest_setIsMessagingDisabled();
+  function test_revertOnMessagingPaused(address _to, uint256 _amount, uint32 _minGasLimit) external {
+    adapter.forTest_setMessengerStatus(IOpUSDCBridgeAdapter.Status.Paused);
     vm.mockCall(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(false));
     // Execute
     vm.prank(_user);
@@ -464,7 +476,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     uint256 _deadline,
     uint32 _minGasLimit
   ) external {
-    adapter.forTest_setIsMessagingDisabled();
+    adapter.forTest_setMessengerStatus(IOpUSDCBridgeAdapter.Status.Paused);
 
     vm.mockCall(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(false));
 
@@ -630,7 +642,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
    * @notice Check that the function reverts if the contract is migrated to native
    */
   function test_revertIfMigratedToNative(uint256 _amount) external {
-    adapter.forTest_setIsMigrated(true);
+    adapter.forTest_setMessengerStatus(IOpUSDCBridgeAdapter.Status.Deprecated);
     // Mock calls
     vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
     // Execute
