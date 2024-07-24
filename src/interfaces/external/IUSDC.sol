@@ -55,6 +55,29 @@ interface IUSDC is IERC20 {
   ) external;
 
   /**
+   * @notice Initialize v2
+   * @param _newName   New token name
+   */
+  // solhint-disable-next-line func-name-mixedcase
+  function initializeV2(string calldata _newName) external;
+
+  /**
+   * @notice Initialize v2.1
+   * @param _lostAndFound  The address to which the locked funds are sent
+   */
+  // solhint-disable-next-line func-name-mixedcase
+  function initializeV2_1(address _lostAndFound) external;
+
+  /**
+   * @notice Initialize v2.2
+   * @param _accountsToBlacklist   A list of accounts to migrate from the old blacklist
+   * @param _newSymbol             New token symbol
+   * data structure to the new blacklist data structure.
+   */
+  // solhint-disable-next-line func-name-mixedcase
+  function initializeV2_2(address[] calldata _accountsToBlacklist, string calldata _newSymbol) external;
+
+  /**
    * @dev Function to add/update a new minter
    * @param _minter The address of the minter
    * @param _minterAllowedAmount The minting amount allowed for the minter

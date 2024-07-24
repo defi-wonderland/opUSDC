@@ -9,6 +9,7 @@ import {USDCInitTxs} from 'src/contracts/utils/USDCInitTxs.sol';
 contract DeployBase is Script {
   address public constant L1_MESSENGER = 0x866E82a600A1414e583f7F13623F1aC5d58b0Afa;
   uint32 public constant MIN_GAS_LIMIT_DEPLOY = 9_000_000;
+  string public constant CHAIN_NAME = 'Base';
   IL1OpUSDCFactory public immutable L1_FACTORY = IL1OpUSDCFactory(vm.envAddress('L1_FACTORY_MAINNET'));
   address public immutable USDC_BASE_IMPLEMENTATION = vm.envAddress('USDC_BASE_IMPLEMENTATION');
   address public owner = vm.rememberKey(vm.envUint('MAINNET_PK'));
@@ -29,7 +30,7 @@ contract DeployBase is Script {
 
     // Deploy the L2 contracts
     (address _l1Adapter, address _l2Factory, address _l2Adapter) =
-      L1_FACTORY.deploy(L1_MESSENGER, owner, _l2Deployments);
+      L1_FACTORY.deploy(L1_MESSENGER, owner, CHAIN_NAME, _l2Deployments);
     vm.stopBroadcast();
 
     /// NOTE: Hardcode the `L1_ADAPTER_BASE` and `L2_ADAPTER_BASE` addresses inside the `.env` file
