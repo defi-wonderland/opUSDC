@@ -39,8 +39,7 @@ library CrossChainDeployments {
     bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCDeploy).creationCode, _args);
     _l2Factory = precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), _create2Deployer);
 
-    bytes memory _l2FactoryDeploymentsTx =
-      abi.encodeWithSelector(ICreate2Deployer.deploy.selector, 0, _salt, _l2FactoryInitCode);
+    bytes memory _l2FactoryDeploymentsTx = abi.encodeCall(ICreate2Deployer.deploy, (_VALUE, _salt, _l2FactoryInitCode));
 
     address _portal;
 
@@ -75,7 +74,7 @@ library CrossChainDeployments {
       mstore(_ptr, _deployer)
       let _start := add(_ptr, 0x0b)
       mstore8(_start, 0xff)
-      _precalculatedAddress := keccak256(_start, 85)
+      _precalculatedAddress := and(keccak256(_start, 85), 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
     }
   }
 

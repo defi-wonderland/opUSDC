@@ -4,6 +4,8 @@ pragma solidity 0.8.25;
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
+import {IL2OpUSDCBridgeAdapter} from 'interfaces/IL2OpUSDCBridgeAdapter.sol';
+import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
@@ -60,6 +62,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _burnCaller The address that will be allowed to call this contract to burn the USDC tokens
    * @param _minGasLimitReceiveOnL2 Minimum gas limit that the message can be executed with on L2
    * @param _minGasLimitSetBurnAmount Minimum gas limit that the message can be executed with to set the burn amount
+   * @dev Migrating to native is irreversible and will deprecate these adapters
    */
   function migrateToNative(
     address _roleCaller,
@@ -81,7 +84,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
 
     ICrossDomainMessenger(MESSENGER).sendMessage(
       LINKED_ADAPTER,
-      abi.encodeWithSignature('receiveMigrateToNative(address,uint32)', _roleCaller, _minGasLimitSetBurnAmount),
+      abi.encodeCall(IL2OpUSDCBridgeAdapter.receiveMigrateToNative, (_roleCaller, _minGasLimitSetBurnAmount)),
       _minGasLimitReceiveOnL2
     );
 
@@ -143,7 +146,6 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /**
    * @notice Send a message to the linked adapter to call receiveStopMessaging() and stop outgoing messages.
    * @dev Only callable by the owner of the adapter
-   * @dev Setting isMessagingDisabled to true is an irreversible operation
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function stopMessaging(uint32 _minGasLimit) external onlyOwner {
@@ -156,7 +158,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     messengerStatus = Status.Paused;
 
     ICrossDomainMessenger(MESSENGER).sendMessage(
-      LINKED_ADAPTER, abi.encodeWithSignature('receiveStopMessaging()'), _minGasLimit
+      LINKED_ADAPTER, abi.encodeCall(IL2OpUSDCBridgeAdapter.receiveStopMessaging, ()), _minGasLimit
     );
 
     emit MessagingStopped(MESSENGER);
@@ -178,7 +180,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     messengerStatus = Status.Active;
 
     ICrossDomainMessenger(MESSENGER).sendMessage(
-      LINKED_ADAPTER, abi.encodeWithSignature('receiveResumeMessaging()'), _minGasLimit
+      LINKED_ADAPTER, abi.encodeCall(IL2OpUSDCBridgeAdapter.receiveResumeMessaging, ()), _minGasLimit
     );
 
     emit MessagingResumed(MESSENGER);
@@ -206,7 +208,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
 
     // Send the message to the linked adapter
     ICrossDomainMessenger(MESSENGER).sendMessage(
-      LINKED_ADAPTER, abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount), _minGasLimit
+      LINKED_ADAPTER, abi.encodeCall(IOpUSDCBridgeAdapter.receiveMessage, (_to, _amount)), _minGasLimit
     );
 
     emit MessageSent(msg.sender, _to, _amount, MESSENGER, _minGasLimit);
@@ -257,7 +259,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
 
     // Send the message to the linked adapter
     ICrossDomainMessenger(MESSENGER).sendMessage(
-      LINKED_ADAPTER, abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount), _minGasLimit
+      LINKED_ADAPTER, abi.encodeCall(IOpUSDCBridgeAdapter.receiveMessage, (_to, _amount)), _minGasLimit
     );
 
     emit MessageSent(_signer, _to, _amount, MESSENGER, _minGasLimit);

@@ -67,11 +67,6 @@ interface IL1OpUSDCFactory {
   ///////////////////////////////////////////////////////////////*/
 
   /**
-   * @return _l2Messenger The address of the L2 messenger
-   */
-  function L2_MESSENGER() external view returns (address _l2Messenger);
-
-  /**
    * @return _l2Create2Deployer The address of the `create2Deployer` contract on L2
    */
   function L2_CREATE2_DEPLOYER() external view returns (address _l2Create2Deployer);
