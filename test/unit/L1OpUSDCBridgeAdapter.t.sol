@@ -705,9 +705,20 @@ contract L1OpUSDCBridgeAdapter_Unit_ResumeMessaging is Base {
 
 contract L1OpUSDCBridgeAdapter_Unit_SendMessage is Base {
   /**
+   * @notice Check that the function reverts if the address is zero
+   */
+  function test_revertOnZeroAddress(uint256 _amount, uint32 _minGasLimit) external {
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidAddress.selector);
+    adapter.sendMessage(address(0), _amount, _minGasLimit);
+  }
+
+  /**
    * @notice Check that the function reverts if the address is blacklisted
    */
   function test_revertOnBlacklistedAddress(address _to, uint256 _amount, uint32 _minGasLimit) external {
+    vm.assume(_to != address(0));
     vm.mockCall(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(true));
     // Execute
     vm.prank(_user);
@@ -719,6 +730,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessage is Base {
    * @notice Check that the function reverts if messager is not active
    */
   function test_revertOnMessengerNotActive(address _to, uint256 _amount, uint32 _minGasLimit) external {
+    vm.assume(_to != address(0));
     vm.mockCall(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(false));
 
     adapter.forTest_setMessengerStatus(IOpUSDCBridgeAdapter.Status.Paused);
@@ -732,6 +744,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessage is Base {
    * @notice Check that transferFrom and sendMessage are called as expected
    */
   function test_expectedCall(address _to, uint256 _amount, uint32 _minGasLimit) external {
+    vm.assume(_to != address(0));
     _mockAndExpect(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(false));
     _mockAndExpect(
       _usdc,
@@ -758,6 +771,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessage is Base {
    * @notice Check that the event is emitted as expected
    */
   function test_emitEvent(address _to, uint256 _amount, uint32 _minGasLimit) external {
+    vm.assume(_to != address(0));
     // Mock calls
     vm.mockCall(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(false));
     vm.mockCall(
@@ -789,6 +803,22 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessage is Base {
 
 contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
   /**
+   * @notice Check that the function reverts if the address is zero
+   */
+  function test_revertOnZeroAddress(
+    uint256 _amount,
+    bytes memory _signature,
+    uint256 _nonce,
+    uint256 _deadline,
+    uint32 _minGasLimit
+  ) external {
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidAddress.selector);
+    adapter.sendMessage(_signerAd, address(0), _amount, _signature, _nonce, _deadline, _minGasLimit);
+  }
+
+  /**
    * @notice Check that the function reverts if the address is blacklisted
    */
   function test_revertOnBlacklistedAddress(
@@ -799,6 +829,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     uint256 _deadline,
     uint32 _minGasLimit
   ) external {
+    vm.assume(_to != address(0));
     vm.mockCall(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(true));
     // Execute
     vm.prank(_user);
@@ -817,6 +848,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     uint256 _deadline,
     uint32 _minGasLimit
   ) external {
+    vm.assume(_to != address(0));
     vm.mockCall(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(false));
     adapter.forTest_setMessengerStatus(IOpUSDCBridgeAdapter.Status.Paused);
     // Execute
@@ -836,6 +868,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     uint256 _deadline,
     uint32 _minGasLimit
   ) external {
+    vm.assume(_to != address(0));
     vm.mockCall(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(false));
     adapter.forTest_setUserNonce(_signerAd, _nonce, true);
 
@@ -857,6 +890,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     uint256 _deadline,
     uint32 _minGasLimit
   ) external {
+    vm.assume(_to != address(0));
     vm.mockCall(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(false));
     vm.assume(_timestamp > _deadline);
     vm.warp(_timestamp);
@@ -877,6 +911,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     uint256 _nonce,
     uint32 _minGasLimit
   ) external {
+    vm.assume(_to != address(0));
     vm.assume(_deadline > 0);
     vm.warp(_deadline - 1);
     (address _notSignerAd, uint256 _notSignerPk) = makeAddrAndKey('notSigner');
@@ -901,6 +936,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     uint256 _deadline,
     uint32 _minGasLimit
   ) external {
+    vm.assume(_to != address(0));
     vm.assume(_deadline > 0);
     vm.warp(_deadline - 1);
     bytes memory _signature =
@@ -938,6 +974,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     uint256 _deadline,
     uint32 _minGasLimit
   ) external {
+    vm.assume(_to != address(0));
     vm.assume(_deadline > 0);
     vm.warp(_deadline - 1);
     bytes memory _signature =

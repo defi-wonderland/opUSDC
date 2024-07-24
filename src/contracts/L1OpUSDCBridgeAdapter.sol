@@ -190,6 +190,8 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external override {
+    if (_to == address(0)) revert IOpUSDCBridgeAdapter_InvalidAddress();
+
     // Ensure the address is not blacklisted
     if (IUSDC(USDC).isBlacklisted(_to)) revert IOpUSDCBridgeAdapter_BlacklistedAddress();
 
@@ -218,6 +220,8 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     uint256 _deadline,
     uint32 _minGasLimit
   ) external override {
+    if (_to == address(0)) revert IOpUSDCBridgeAdapter_InvalidAddress();
+
     // Ensure the address is not blacklisted
     if (IUSDC(USDC).isBlacklisted(_to)) revert IOpUSDCBridgeAdapter_BlacklistedAddress();
 
