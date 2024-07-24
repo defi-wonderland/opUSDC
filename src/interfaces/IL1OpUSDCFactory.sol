@@ -9,8 +9,7 @@ interface IL1OpUSDCFactory {
    * @notice The struct to hold the deployments data to deploy the L2 Factory, L2 adapter, and the L2 USDC contracts
    * @param l2AdapterOwner The address of the owner of the L2 adapter
    * @param usdcImplAddr The address of the USDC implementation on L2 to connect the proxy to
-   * @param minGasLimitDeploy The minimum gas limit for the L2 factory deployment
-   * @param minGasLimitDeploy The minimum gas limit for calling the deploying the L2 Factory, L2 adapter, and L2 USDC
+   * @param minGasLimitDeploy The minimum gas limit for deploying the L2 Deploy, L2 adapter, and L2 USDC proxy
    * @param usdcInitTxs The initialization transactions to be executed on the USDC contract. The `initialize()` first
    * init tx must not be included since it is defined in the L2 factory contract
    */
@@ -51,6 +50,7 @@ interface IL1OpUSDCFactory {
    * the L1 messenger
    * @param _l1Messenger The address of the L1 messenger for the L2 Op chain
    * @param _l1AdapterOwner The address of the owner of the L1 adapter
+   * @param _chainName The name of the L2 Op chain
    * @param _l2Deployments The deployments data for the L2 adapter, and the L2 USDC contracts
    * @return _l1Adapter The address of the L1 adapter
    * @return _l2Factory The address of the L2 factory
@@ -59,6 +59,7 @@ interface IL1OpUSDCFactory {
   function deploy(
     address _l1Messenger,
     address _l1AdapterOwner,
+    string calldata _chainName,
     L2Deployments calldata _l2Deployments
   ) external returns (address _l1Adapter, address _l2Factory, address _l2Adapter);
 
