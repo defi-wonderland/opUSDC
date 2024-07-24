@@ -309,6 +309,76 @@ contract Integration_Migration is IntegrationBase {
     assertEq(l1Adapter.burnAmount(), 0);
     assertEq(l1Adapter.burnCaller(), address(0));
   }
+
+  /**
+   * @notice Test relay message after migration to native usdc
+   */
+  function test_relayMessageAfterMigrationToNativeUSDC() public {
+    vm.selectFork(mainnet);
+
+    uint256 _supply = 1_000_000;
+
+    vm.startPrank(MAINNET_USDC.masterMinter());
+    MAINNET_USDC.configureMinter(MAINNET_USDC.masterMinter(), _supply);
+    MAINNET_USDC.mint(_user, _supply);
+    vm.stopPrank();
+
+    vm.startPrank(_user);
+    MAINNET_USDC.approve(address(l1Adapter), _supply);
+    l1Adapter.sendMessage(_user, _supply, _MIN_GAS_LIMIT);
+    vm.stopPrank();
+
+    vm.prank(_owner);
+    l1Adapter.migrateToNative(_circle, _circle, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
+
+    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Upgrading));
+    assertEq(l1Adapter.burnCaller(), _circle);
+
+    vm.selectFork(optimism);
+    _relayL1ToL2Message(
+      OP_ALIASED_L1_MESSENGER,
+      address(l1Adapter),
+      address(l2Adapter),
+      _ZERO_VALUE,
+      _minGasLimitReceiveOnL2,
+      abi.encodeWithSignature('receiveMigrateToNative(address,uint32)', _circle, _minGasLimitSetBurnAmount)
+    );
+
+    uint256 _burnAmount = bridgedUSDC.totalSupply();
+    assertEq(uint256(l2Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Deprecated));
+
+    vm.selectFork(mainnet);
+    _relayL2ToL1Message(
+      address(l2Adapter),
+      address(l1Adapter),
+      _ZERO_VALUE,
+      _minGasLimitSetBurnAmount,
+      abi.encodeWithSignature('setBurnAmount(uint256)', _burnAmount)
+    );
+
+    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Deprecated));
+
+    vm.selectFork(optimism);
+
+    vm.expectCall(
+      0x4200000000000000000000000000000000000007,
+      abi.encodeWithSignature(
+        'sendMessage(address,bytes,uint32)',
+        address(l1Adapter),
+        abi.encodeWithSignature('receiveMessage(address,address,uint256)', _user, _user, _amount),
+        150_000
+      )
+    );
+
+    _relayL1ToL2Message(
+      OP_ALIASED_L1_MESSENGER,
+      address(l1Adapter),
+      address(l2Adapter),
+      _ZERO_VALUE,
+      1_000_000,
+      abi.encodeWithSignature('receiveMessage(address,address,uint256)', _user, _user, _amount)
+    );
+  }
 }
 
 contract Integration_Integration_PermissionedFlows is IntegrationBase {
