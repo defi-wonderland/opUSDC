@@ -222,6 +222,7 @@ contract Integration_Migration is IntegrationBase {
     assert(l2Adapter.isMigrated());
     assert(l2Adapter.isMessagingDisabled());
     assertEq(l2Adapter.roleCaller(), _circle);
+    assertEq(bridgedUSDC.isMinter(address(l2Adapter)), false);
 
     vm.prank(_circle);
     l2Adapter.transferUSDCRoles(_circle);
