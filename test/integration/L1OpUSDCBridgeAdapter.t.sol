@@ -2,7 +2,6 @@
 pragma solidity 0.8.25;
 
 import {IntegrationBase} from './IntegrationBase.sol';
-import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 
 contract Integration_Bridging is IntegrationBase {

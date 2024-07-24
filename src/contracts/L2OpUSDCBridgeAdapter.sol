@@ -117,6 +117,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @notice Receive the stop messaging message from the linked adapter and stop outgoing messages
    */
   function receiveStopMessaging() external onlyLinkedAdapter {
+    if (messengerStatus == Status.Deprecated) revert IOpUSDCBridgeAdapter_MessagingDisabled();
+
     messengerStatus = Status.Paused;
 
     emit MessagingStopped(MESSENGER);
@@ -126,7 +128,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @notice Resume messaging after it was stopped
    */
   function receiveResumeMessaging() external onlyLinkedAdapter {
-    // NOTE: This is safe because this message can only be received when messaging is not deprecated on the L1 messenger
+    if (messengerStatus == Status.Deprecated) revert IOpUSDCBridgeAdapter_MessagingDisabled();
+
     messengerStatus = Status.Active;
 
     emit MessagingResumed(MESSENGER);

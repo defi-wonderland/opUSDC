@@ -641,15 +641,15 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
   /**
    * @notice Check that the function reverts if the contract is migrated to native
    */
-  // function test_revertIfMigratedToNative(uint256 _amount) external {
-  //   adapter.forTest_setMessengerStatus(IOpUSDCBridgeAdapter.Status.Deprecated);
-  //   // Mock calls
-  //   vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
-  //   // Execute
-  //   vm.prank(_messenger);
-  //   vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_Migrated.selector);
-  //   adapter.receiveMessage(_user, _user, _amount);
-  // }
+  function test_revertIfMigratedToNative(uint256 _amount) external {
+    adapter.forTest_setMessengerStatus(IOpUSDCBridgeAdapter.Status.Deprecated);
+    // Mock calls
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    // Execute
+    vm.prank(_messenger);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_Migrated.selector);
+    adapter.receiveMessage(_user, _user, _amount);
+  }
 
   /**
    * @notice Check that the token minting works as expected

@@ -250,10 +250,9 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @notice Receive the message from the other chain and transfer the tokens to the user
    * @dev This function should only be called when receiving a message to transfer the tokens
    * @param _user The user to transfer the tokens to
-   * @param _spender The address that provided the tokens
    * @param _amount The amount of tokens to transfer
    */
-  function receiveMessage(address _user, address _spender, uint256 _amount) external override onlyLinkedAdapter {
+  function receiveMessage(address _user, address, uint256 _amount) external override onlyLinkedAdapter {
     // Transfer the tokens to the user
     try this.attemptTransfer(_user, _amount) {
       emit MessageReceived(_user, _amount, MESSENGER);
