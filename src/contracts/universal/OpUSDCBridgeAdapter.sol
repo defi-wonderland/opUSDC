@@ -111,6 +111,7 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, Ownable, EIP712 {
    * @param _signature the signature of the message
    */
   function _checkSignature(address _signer, bytes32 _messageHash, bytes memory _signature) internal view {
+    // Uses the EIP712 typed data hash
     _messageHash = _hashTypedDataV4(_messageHash);
 
     if (!_signer.isValidSignatureNow(_messageHash, _signature)) revert IOpUSDCBridgeAdapter_InvalidSignature();
