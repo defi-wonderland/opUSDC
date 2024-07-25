@@ -1,17 +1,18 @@
 pragma solidity ^0.8.25;
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
 import {IL1OpUSDCBridgeAdapter, L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
+import {OpUSDCBridgeAdapter} from 'src/contracts/universal/OpUSDCBridgeAdapter.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
 contract ForTestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
   constructor(
     address _usdc,
     address _messenger,
-    address _linkedAdapter,
-    address _owner
-  ) L1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _owner) {}
+    address _linkedAdapter
+  ) L1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
 
   function forTest_setBurnAmount(uint256 _amount) external {
     burnAmount = _amount;
@@ -58,7 +59,10 @@ abstract contract Base is Helpers {
     (_signerAd, _signerPk) = makeAddrAndKey('signer');
     vm.etch(_messenger, 'xDomainMessageSender');
 
-    adapter = new ForTestL1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _owner);
+    address _adapterImpl = address(new ForTestL1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter));
+    adapter = ForTestL1OpUSDCBridgeAdapter(
+      address(new ERC1967Proxy(_adapterImpl, abi.encodeCall(OpUSDCBridgeAdapter.initialize, _owner)))
+    );
   }
 }
 

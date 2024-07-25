@@ -1,8 +1,10 @@
 pragma solidity ^0.8.25;
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
+import {OpUSDCBridgeAdapter} from 'src/contracts/universal/OpUSDCBridgeAdapter.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
 contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
@@ -12,9 +14,8 @@ contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
   constructor(
     address _usdc,
     address _messenger,
-    address _linkedAdapter,
-    address _owner
-  ) L2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _owner) {}
+    address _linkedAdapter
+  ) L2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
 
   function forTest_setIsMessagingDisabled() external {
     isMessagingDisabled = true;
@@ -54,7 +55,11 @@ abstract contract Base is Helpers {
 
   function setUp() public virtual {
     (_signerAd, _signerPk) = makeAddrAndKey('signer');
-    adapter = new ForTestL2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _owner);
+
+    address _adapterImpl = address(new ForTestL2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter));
+    adapter = ForTestL2OpUSDCBridgeAdapter(
+      address(new ERC1967Proxy(_adapterImpl, abi.encodeCall(OpUSDCBridgeAdapter.initialize, _owner)))
+    );
   }
 }
 

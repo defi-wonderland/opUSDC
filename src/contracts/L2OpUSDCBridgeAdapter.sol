@@ -59,9 +59,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   constructor(
     address _usdc,
     address _messenger,
-    address _linkedAdapter,
-    address _owner
-  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _owner) {
+    address _linkedAdapter
+  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {
     FALLBACK_PROXY_ADMIN = new FallbackProxyAdmin(_usdc);
   }
   /* solhint-enable no-unused-vars */

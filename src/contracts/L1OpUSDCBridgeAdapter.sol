@@ -42,15 +42,13 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _usdc The address of the USDC Contract to be used by the adapter
    * @param _messenger The address of the L1 messenger
    * @param _linkedAdapter The address of the linked adapter
-   * @param _owner The address of the owner of the contract
    * @dev The constructor is only used to initialize the OpUSDCBridgeAdapter immutable variables
    */
   constructor(
     address _usdc,
     address _messenger,
-    address _linkedAdapter,
-    address _owner
-  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _owner) {}
+    address _linkedAdapter
+  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
 
   /*///////////////////////////////////////////////////////////////
                               MIGRATION
