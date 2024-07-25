@@ -3,6 +3,9 @@ pragma solidity ^0.8.25;
 
 import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
 import {Test} from 'forge-std/Test.sol';
+import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
+
+import {SigUtils} from 'test/utils/SigUtils.sol';
 
 contract Helpers is Test {
   using MessageHashUtils for bytes32;
@@ -31,9 +34,18 @@ contract Helpers is Test {
     uint256 _signerPk,
     address _adapter
   ) internal returns (bytes memory _signature) {
+    IOpUSDCBridgeAdapter.BridgeMessage memory _message = IOpUSDCBridgeAdapter.BridgeMessage({
+      to: _to,
+      amount: _amount,
+      deadline: _deadline,
+      nonce: _nonce,
+      minGasLimit: uint32(_minGasLimit)
+    });
+
+    SigUtils _sigUtils = new SigUtils(_adapter);
+
     vm.startPrank(_signerAd);
-    bytes32 _digest = keccak256(abi.encode(_adapter, block.chainid, _to, _amount, _deadline, _minGasLimit, _nonce))
-      .toEthSignedMessageHash();
+    bytes32 _digest = SigUtils(_sigUtils).getTypedBridgeMessageHash(_message);
     (uint8 v, bytes32 r, bytes32 s) = vm.sign(_signerPk, _digest);
     _signature = abi.encodePacked(r, s, v);
     vm.stopPrank();

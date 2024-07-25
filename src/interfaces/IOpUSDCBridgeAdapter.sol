@@ -2,6 +2,21 @@
 pragma solidity 0.8.25;
 
 interface IOpUSDCBridgeAdapter {
+  /**
+   * @notice The struct to hold the data for a bridge message with signature
+   * @param to The target address on the destination chain
+   * @param amount The amount of tokens to send
+   * @param deadline The deadline for the message to be executed
+   * @param nonce The nonce of the user
+   * @param minGasLimit The minimum gas limit for the message to be executed
+   */
+  struct BridgeMessage {
+    address to;
+    uint256 amount;
+    uint256 deadline;
+    uint256 nonce;
+    uint32 minGasLimit;
+  }
   /*///////////////////////////////////////////////////////////////
                             EVENTS
   ///////////////////////////////////////////////////////////////*/
