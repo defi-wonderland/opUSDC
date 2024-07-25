@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
+import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
 import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
 import {Test} from 'forge-std/Test.sol';
@@ -10,8 +11,7 @@ contract ForTestOpUSDCBridgeAdapter is OpUSDCBridgeAdapter {
   constructor(
     address _usdc,
     address _messenger,
-    address _linkedAdapter,
-    address _owner
+    address _linkedAdapter
   ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
 
   function receiveMessage(address _user, uint256 _amount) external override {}
@@ -41,15 +41,19 @@ abstract contract Base is Test {
   address internal _usdc = makeAddr('opUSDC');
   address internal _owner = makeAddr('owner');
   address internal _linkedAdapter = makeAddr('linkedAdapter');
+  address internal _messenger = makeAddr('messenger');
+  address internal _adapterImpl;
   address internal _signerAd;
   uint256 internal _signerPk;
   address internal _notSignerAd;
   uint256 internal _notSignerPk;
-  address internal _messenger = makeAddr('messenger');
 
   function setUp() public virtual {
     (_signerAd, _signerPk) = makeAddrAndKey('signer');
-    adapter = new ForTestOpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _owner);
+    _adapterImpl = address(new ForTestOpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter));
+    adapter = ForTestOpUSDCBridgeAdapter(
+      address(new ERC1967Proxy(_adapterImpl, abi.encodeCall(OpUSDCBridgeAdapter.initialize, _owner)))
+    );
   }
 }
 
@@ -59,8 +63,38 @@ contract OpUSDCBridgeAdapter_Unit_Constructor is Base {
    */
   function test_constructorParams() public view {
     assertEq(adapter.USDC(), _usdc, 'USDC should be set to the provided address');
+    assertEq(adapter.MESSENGER(), _messenger, 'Messenger should be set to the provided address');
     assertEq(adapter.LINKED_ADAPTER(), _linkedAdapter, 'Linked adapter should be set to the provided address');
-    assertEq(adapter.owner(), _owner, 'Owner should be set to the provided address');
+  }
+}
+
+contract OpUSDCBridgeAdapter_Unit_Initialize is Base {
+  error InvalidInitialization();
+
+  /**
+   * @notice Check that the initialize function works as expected
+   * @dev Needs to be checked on the proxy since the initialize function is disabled on the implementation
+   */
+  function test_initialize(address _owner) public {
+    // Deploy a proxy contract setting the , and call the initialize function on it to set the owner
+    ForTestOpUSDCBridgeAdapter _newAdapter = ForTestOpUSDCBridgeAdapter(
+      address(new ERC1967Proxy(address(_adapterImpl), abi.encodeCall(OpUSDCBridgeAdapter.initialize, _owner)))
+    );
+
+    // Assert
+    assertEq(_newAdapter.owner(), _owner, 'Owner should be set to the provided address');
+  }
+  /**
+   * @notice Check that the initialize function reverts if it was already called
+   */
+
+  function test_revertIfAlreadyInitialize(address _sender, address _owner) public {
+    // Expect revert with `InvalidInitialization` error
+    vm.expectRevert(InvalidInitialization.selector);
+
+    // Execute
+    vm.prank(_sender);
+    adapter.initialize(_owner);
   }
 }
 
