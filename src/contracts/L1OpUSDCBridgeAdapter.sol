@@ -294,6 +294,13 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
                         INTERNAL FUNCTIONS
   ///////////////////////////////////////////////////////////////*/
+  /**
+   * @notice Send the message to the linked adapter
+   * @param _from address that originated the message
+   * @param _to target address on the destination chain
+   * @param _amount amount of tokens to be bridged
+   * @param _minGasLimit minimum gas limit for the other chain to execute the message
+   */
   function _sendMessage(address _from, address _to, uint256 _amount, uint32 _minGasLimit) internal {
     // Transfer the tokens to the contract
     IUSDC(USDC).safeTransferFrom(_from, address(this), _amount);
