@@ -700,7 +700,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
   /**
    * @notice Check that the function returns the funds if the contract is deprecated
    */
-  function test_revertIfMigratedToNative(uint256 _amount) external {
+  function test_refundSpenderAfterMigration(uint256 _amount) external {
     adapter.forTest_setMessengerStatus(IOpUSDCBridgeAdapter.Status.Deprecated);
     // Mock calls
     vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
