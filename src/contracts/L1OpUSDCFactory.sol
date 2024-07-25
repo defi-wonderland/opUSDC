@@ -4,7 +4,6 @@ pragma solidity 0.8.25;
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 import {IL2OpUSDCDeploy} from 'interfaces/IL2OpUSDCDeploy.sol';
-
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 import {CrossChainDeployments} from 'libraries/CrossChainDeployments.sol';
 
