@@ -4,7 +4,6 @@ pragma solidity ^0.8.25;
 import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
 import {Test} from 'forge-std/Test.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
-
 import {SigUtils} from 'test/utils/SigUtils.sol';
 
 contract Helpers is Test {

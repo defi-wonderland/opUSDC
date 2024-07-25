@@ -38,7 +38,7 @@ contract SigUtils {
    * @param _message The bridge message struct to hash
    * @return _hash The hash of the bridge message struct
    */
-  function getBridgeMessageHash(IOpUSDCBridgeAdapter.BridgeMessage memory _message) public view returns (bytes32 _hash) {
+  function getBridgeMessageHash(IOpUSDCBridgeAdapter.BridgeMessage memory _message) public pure returns (bytes32 _hash) {
     _hash = keccak256(
       abi.encode(
         BRIDGE_MESSAGE_TYPEHASH, _message.to, _message.amount, _message.deadline, _message.nonce, _message.minGasLimit
