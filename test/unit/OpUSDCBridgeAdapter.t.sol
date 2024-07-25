@@ -5,7 +5,6 @@ import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/Messa
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
 import {Test} from 'forge-std/Test.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
-import {SigUtils} from 'test/utils/SigUtils.sol';
 
 contract ForTestOpUSDCBridgeAdapter is OpUSDCBridgeAdapter {
   constructor(
@@ -110,12 +109,10 @@ contract OpUSDCBridgeAdapter_Unit_CheckSignature is Base {
   /**
    * @notice Check that the signature is valid
    */
-  function test_validSignature(IOpUSDCBridgeAdapter.BridgeMessage memory _message) public {
-    SigUtils _sigUtils = new SigUtils(address(adapter));
-
+  function test_validSignature(bytes memory _message) public {
     vm.startPrank(_signerAd);
-    bytes32 _hashedMessage = _sigUtils.getBridgeMessageHash(_message);
-    bytes32 _digest = _sigUtils.getTypedBridgeMessageHash(_message);
+    bytes32 _hashedMessage = keccak256(abi.encodePacked(_message));
+    bytes32 _digest = MessageHashUtils.toEthSignedMessageHash(_hashedMessage);
     (uint8 v, bytes32 r, bytes32 s) = vm.sign(_signerPk, _digest);
     bytes memory _signature = abi.encodePacked(r, s, v);
     vm.stopPrank();
