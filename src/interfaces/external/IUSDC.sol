@@ -86,6 +86,13 @@ interface IUSDC is IERC20 {
   function configureMinter(address _minter, uint256 _minterAllowedAmount) external returns (bool _result);
 
   /**
+   * @notice Removes a minter.
+   * @param _minter The address of the minter to remove.
+   * @return _result True if the operation was successful.
+   */
+  function removeMinter(address _minter) external returns (bool _result);
+
+  /**
    * @notice Updates the master minter address.
    * @param _newMasterMinter The address of the new master minter.
    */

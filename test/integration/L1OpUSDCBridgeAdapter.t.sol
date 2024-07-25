@@ -2,7 +2,6 @@
 pragma solidity 0.8.25;
 
 import {IntegrationBase} from './IntegrationBase.sol';
-import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 
 contract Integration_Bridging is IntegrationBase {
@@ -33,7 +32,7 @@ contract Integration_Bridging is IntegrationBase {
       address(l2Adapter),
       _ZERO_VALUE,
       1_000_000,
-      abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _amount)
+      abi.encodeWithSignature('receiveMessage(address,address,uint256)', _user, _user, _amount)
     );
 
     assertEq(bridgedUSDC.balanceOf(_user), _userBalanceBefore + _amount);
@@ -67,7 +66,7 @@ contract Integration_Bridging is IntegrationBase {
       address(l2Adapter),
       _ZERO_VALUE,
       1_000_000,
-      abi.encodeWithSignature('receiveMessage(address,uint256)', _l2Target, _amount)
+      abi.encodeWithSignature('receiveMessage(address,address,uint256)', _l2Target, _user, _amount)
     );
 
     assertEq(bridgedUSDC.balanceOf(_l2Target), _userBalanceBefore + _amount);
@@ -112,7 +111,7 @@ contract Integration_Bridging is IntegrationBase {
       address(l2Adapter),
       _ZERO_VALUE,
       1_000_000,
-      abi.encodeWithSignature('receiveMessage(address,uint256)', _signerAd, _amount)
+      abi.encodeWithSignature('receiveMessage(address,address,uint256)', _signerAd, _signerAd, _amount)
     );
 
     assertEq(bridgedUSDC.balanceOf(_signerAd), _userBalanceBefore + _amount);
@@ -187,8 +186,6 @@ contract Integration_Migration is IntegrationBase {
   function setUp() public override {
     super.setUp();
 
-    _mintSupplyOnL2(optimism, OP_ALIASED_L1_MESSENGER, _amount);
-
     vm.selectFork(mainnet);
     // Adapter needs to be minter to burn
     vm.prank(MAINNET_USDC.masterMinter());
@@ -199,12 +196,14 @@ contract Integration_Migration is IntegrationBase {
    * @notice Test the migration to native usdc flow
    */
   function test_migrationToNativeUSDC() public {
+    _mintSupplyOnL2(optimism, OP_ALIASED_L1_MESSENGER, _amount);
+
     vm.selectFork(mainnet);
 
     vm.prank(_owner);
     l1Adapter.migrateToNative(_circle, _circle, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
 
-    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Upgrading));
+    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Upgrading));
     assertEq(l1Adapter.burnCaller(), _circle);
 
     vm.selectFork(optimism);
@@ -219,8 +218,9 @@ contract Integration_Migration is IntegrationBase {
 
     uint256 _burnAmount = bridgedUSDC.totalSupply();
 
-    assertEq(l2Adapter.isMessagingDisabled(), true);
+    assertEq(uint256(l2Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Deprecated));
     assertEq(l2Adapter.roleCaller(), _circle);
+    assertEq(bridgedUSDC.isMinter(address(l2Adapter)), false);
 
     vm.prank(_circle);
     l2Adapter.transferUSDCRoles(_circle);
@@ -238,7 +238,7 @@ contract Integration_Migration is IntegrationBase {
 
     assertEq(l1Adapter.burnAmount(), _burnAmount);
     assertEq(l1Adapter.USDC(), address(MAINNET_USDC));
-    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Deprecated));
+    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Deprecated));
 
     vm.prank(_circle);
     l1Adapter.burnLockedUSDC();
@@ -246,6 +246,139 @@ contract Integration_Migration is IntegrationBase {
     assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), 0);
     assertEq(l1Adapter.burnAmount(), 0);
     assertEq(l1Adapter.burnCaller(), address(0));
+  }
+
+  /**
+   * @notice Test the migration to native usdc flow with zero balance on L1
+   * @dev This is a very edge case and will only happen if the chain operator adds a second minter on L2
+   *      So now this adapter doesnt have the full backing supply locked in this contract
+   */
+  function test_migrationToNativeUSDCWithZeroBalanceOnL1() public {
+    vm.selectFork(optimism);
+    vm.prank(bridgedUSDC.masterMinter());
+    bridgedUSDC.configureMinter(_owner, type(uint256).max);
+    vm.prank(_owner);
+    bridgedUSDC.mint(_owner, _amount);
+
+    vm.selectFork(mainnet);
+
+    vm.prank(_owner);
+    l1Adapter.migrateToNative(_circle, _circle, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
+
+    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Upgrading));
+    assertEq(l1Adapter.burnCaller(), _circle);
+
+    vm.selectFork(optimism);
+    _relayL1ToL2Message(
+      OP_ALIASED_L1_MESSENGER,
+      address(l1Adapter),
+      address(l2Adapter),
+      _ZERO_VALUE,
+      _minGasLimitReceiveOnL2,
+      abi.encodeWithSignature('receiveMigrateToNative(address,uint32)', _circle, _minGasLimitSetBurnAmount)
+    );
+
+    uint256 _burnAmount = bridgedUSDC.totalSupply();
+
+    assertEq(uint256(l2Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Deprecated));
+    assertEq(l2Adapter.roleCaller(), _circle);
+    assertEq(bridgedUSDC.isMinter(address(l2Adapter)), false);
+
+    vm.prank(_circle);
+    l2Adapter.transferUSDCRoles(_circle);
+
+    assertEq(bridgedUSDC.owner(), _circle);
+
+    vm.selectFork(mainnet);
+    _relayL2ToL1Message(
+      address(l2Adapter),
+      address(l1Adapter),
+      _ZERO_VALUE,
+      _minGasLimitSetBurnAmount,
+      abi.encodeWithSignature('setBurnAmount(uint256)', _burnAmount)
+    );
+
+    assertEq(l1Adapter.burnAmount(), _burnAmount);
+    assertEq(l1Adapter.USDC(), address(MAINNET_USDC));
+    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Deprecated));
+
+    vm.prank(_circle);
+    l1Adapter.burnLockedUSDC();
+
+    assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), 0);
+    assertEq(l1Adapter.burnAmount(), 0);
+    assertEq(l1Adapter.burnCaller(), address(0));
+  }
+
+  /**
+   * @notice Test relay message after migration to native usdc
+   */
+  function test_relayMessageAfterMigrationToNativeUSDC() public {
+    vm.selectFork(mainnet);
+
+    uint256 _supply = 1_000_000;
+
+    vm.startPrank(MAINNET_USDC.masterMinter());
+    MAINNET_USDC.configureMinter(MAINNET_USDC.masterMinter(), _supply);
+    MAINNET_USDC.mint(_user, _supply);
+    vm.stopPrank();
+
+    vm.startPrank(_user);
+    MAINNET_USDC.approve(address(l1Adapter), _supply);
+    l1Adapter.sendMessage(_user, _supply, _MIN_GAS_LIMIT);
+    vm.stopPrank();
+
+    vm.prank(_owner);
+    l1Adapter.migrateToNative(_circle, _circle, _minGasLimitReceiveOnL2, _minGasLimitSetBurnAmount);
+
+    vm.selectFork(optimism);
+    _relayL1ToL2Message(
+      OP_ALIASED_L1_MESSENGER,
+      address(l1Adapter),
+      address(l2Adapter),
+      _ZERO_VALUE,
+      _minGasLimitReceiveOnL2,
+      abi.encodeWithSignature('receiveMigrateToNative(address,uint32)', _circle, _minGasLimitSetBurnAmount)
+    );
+
+    uint256 _burnAmount = bridgedUSDC.totalSupply();
+    assertEq(uint256(l2Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Deprecated));
+
+    vm.selectFork(mainnet);
+    _relayL2ToL1Message(
+      address(l2Adapter),
+      address(l1Adapter),
+      _ZERO_VALUE,
+      _minGasLimitSetBurnAmount,
+      abi.encodeWithSignature('setBurnAmount(uint256)', _burnAmount)
+    );
+
+    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Deprecated));
+
+    vm.selectFork(optimism);
+
+    vm.expectCall(
+      0x4200000000000000000000000000000000000007,
+      abi.encodeWithSignature(
+        'sendMessage(address,bytes,uint32)',
+        address(l1Adapter),
+        abi.encodeWithSignature('receiveMessage(address,address,uint256)', _user, _user, _amount),
+        150_000
+      )
+    );
+
+    uint256 _totalSupplyBefore = bridgedUSDC.totalSupply();
+
+    _relayL1ToL2Message(
+      OP_ALIASED_L1_MESSENGER,
+      address(l1Adapter),
+      address(l2Adapter),
+      _ZERO_VALUE,
+      1_000_000,
+      abi.encodeWithSignature('receiveMessage(address,address,uint256)', _user, _user, _amount)
+    );
+
+    assertEq(bridgedUSDC.totalSupply(), _totalSupplyBefore);
   }
 }
 
@@ -257,12 +390,12 @@ contract Integration_Integration_PermissionedFlows is IntegrationBase {
   function test_stopAndResumeMessaging() public {
     vm.selectFork(mainnet);
 
-    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Active));
+    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Active));
 
     vm.prank(_owner);
     l1Adapter.stopMessaging(_MIN_GAS_LIMIT);
 
-    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Paused));
+    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Paused));
 
     vm.selectFork(optimism);
     _relayL1ToL2Message(
@@ -274,14 +407,14 @@ contract Integration_Integration_PermissionedFlows is IntegrationBase {
       abi.encodeWithSignature('receiveStopMessaging()')
     );
 
-    assertEq(l2Adapter.isMessagingDisabled(), true);
+    assertEq(uint256(l2Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Paused));
 
     vm.selectFork(mainnet);
 
     vm.prank(_owner);
     l1Adapter.resumeMessaging(_MIN_GAS_LIMIT);
 
-    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IL1OpUSDCBridgeAdapter.Status.Active));
+    assertEq(uint256(l1Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Active));
 
     vm.selectFork(optimism);
 
@@ -294,7 +427,7 @@ contract Integration_Integration_PermissionedFlows is IntegrationBase {
       abi.encodeWithSignature('receiveResumeMessaging()')
     );
 
-    assertEq(l2Adapter.isMessagingDisabled(), false);
+    assertEq(uint256(l2Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Active));
   }
 
   /**
@@ -320,7 +453,7 @@ contract Integration_Integration_PermissionedFlows is IntegrationBase {
       address(l1Adapter),
       _ZERO_VALUE,
       _MIN_GAS_LIMIT,
-      abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _amount)
+      abi.encodeWithSignature('receiveMessage(address,address,uint256)', _user, _user, _amount)
     );
 
     assertEq(MAINNET_USDC.balanceOf(_user), 0);

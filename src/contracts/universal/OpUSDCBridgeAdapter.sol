@@ -20,6 +20,9 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, Ownable {
   address public immutable MESSENGER;
 
   /// @inheritdoc IOpUSDCBridgeAdapter
+  Status public messengerStatus;
+
+  /// @inheritdoc IOpUSDCBridgeAdapter
   mapping(address _user => mapping(uint256 _nonce => bool _used)) public userNonces;
 
   /// @inheritdoc IOpUSDCBridgeAdapter
@@ -75,9 +78,10 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, Ownable {
    * @notice Receive the message from the other chain and mint the bridged representation for the user
    * @dev This function should only be called when receiving a message to mint the bridged representation
    * @param _user The user to mint the bridged representation for
+   * @param _spender The address that provided the tokens
    * @param _amount The amount of tokens to mint
    */
-  function receiveMessage(address _user, uint256 _amount) external virtual;
+  function receiveMessage(address _user, address _spender, uint256 _amount) external virtual;
 
   /**
    * @notice Withdraws the blacklisted funds from the contract if they get unblacklisted

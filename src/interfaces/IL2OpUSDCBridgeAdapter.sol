@@ -55,11 +55,6 @@ interface IL2OpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
   ///////////////////////////////////////////////////////////////*/
-  /**
-   * @notice Fetches whether messaging is disabled
-   * @return _isMessagingDisabled Whether messaging is disabled
-   */
-  function isMessagingDisabled() external view returns (bool _isMessagingDisabled);
 
   /**
    * @notice Fetches the address of the role caller

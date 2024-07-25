@@ -14,7 +14,7 @@ contract ForTestOpUSDCBridgeAdapter is OpUSDCBridgeAdapter {
     address _owner
   ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _owner) {}
 
-  function receiveMessage(address _user, uint256 _amount) external override {}
+  function receiveMessage(address _user, address _spender, uint256 _amount) external override {}
 
   function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external override {}
 
@@ -90,7 +90,7 @@ contract ForTestOpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
    */
   function test_doNothing() public {
     // Execute
-    adapter.receiveMessage(address(0), 0);
+    adapter.receiveMessage(address(0), address(0), 0);
   }
 }
 
