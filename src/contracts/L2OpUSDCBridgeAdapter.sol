@@ -188,11 +188,10 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     // Ensure the deadline has not passed
     if (block.timestamp > _deadline) revert IOpUSDCBridgeAdapter_MessageExpired();
 
-    // Hash the message
-    bytes32 _messageHash =
-      keccak256(abi.encode(address(this), block.chainid, _to, _amount, _deadline, _minGasLimit, _nonce));
+    BridgeMessage memory _message =
+      BridgeMessage({to: _to, amount: _amount, deadline: _deadline, nonce: _nonce, minGasLimit: _minGasLimit});
 
-    _checkSignature(_signer, _messageHash, _signature);
+    _checkSignature(_signer, _hashMessageStruct(_message), _signature);
 
     // Mark the nonce as used
     userNonces[_signer][_nonce] = true;

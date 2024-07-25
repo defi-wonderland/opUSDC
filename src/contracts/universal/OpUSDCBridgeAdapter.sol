@@ -2,13 +2,19 @@
 pragma solidity 0.8.25;
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+
+import {EIP712} from '@openzeppelin/contracts/utils/cryptography/EIP712.sol';
 import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
 import {SignatureChecker} from '@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 
-abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, Ownable {
+abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, Ownable, EIP712 {
   using MessageHashUtils for bytes32;
   using SignatureChecker for address;
+
+  /// @notice The typehash for the bridge message
+  bytes32 public constant BRIDGE_MESSAGE_TYPEHASH =
+    keccak256('BridgeMessage(address to,uint256 amount,uint256 deadline,uint256 nonce,uint32 minGasLimit)');
 
   /// @inheritdoc IOpUSDCBridgeAdapter
   address public immutable USDC;
@@ -35,8 +41,13 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, Ownable {
    * @param _linkedAdapter The address of the linked adapter
    * @param _owner The address of the owner of the contract
    */
-  // solhint-disable-next-line no-unused-vars
-  constructor(address _usdc, address _messenger, address _linkedAdapter, address _owner) Ownable(_owner) {
+  constructor(
+    address _usdc,
+    address _messenger,
+    address _linkedAdapter,
+    // solhint-disable-next-line no-unused-vars
+    address _owner
+  ) Ownable(_owner) EIP712('OpUSDCBridgeAdapter', '1.0.0') {
     USDC = _usdc;
     MESSENGER = _messenger;
     LINKED_ADAPTER = _linkedAdapter;
@@ -104,8 +115,22 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, Ownable {
    * @param _signature the signature of the message
    */
   function _checkSignature(address _signer, bytes32 _messageHash, bytes memory _signature) internal view {
-    _messageHash = _messageHash.toEthSignedMessageHash();
+    // Uses the EIP712 typed data hash
+    _messageHash = _hashTypedDataV4(_messageHash);
 
     if (!_signer.isValidSignatureNow(_messageHash, _signature)) revert IOpUSDCBridgeAdapter_InvalidSignature();
+  }
+
+  /**
+   * @notice Hashes the bridge message struct
+   * @param _message The bridge message struct to hash
+   * @return _hash The hash of the bridge message struct
+   */
+  function _hashMessageStruct(BridgeMessage memory _message) internal pure returns (bytes32 _hash) {
+    _hash = keccak256(
+      abi.encode(
+        BRIDGE_MESSAGE_TYPEHASH, _message.to, _message.amount, _message.deadline, _message.nonce, _message.minGasLimit
+      )
+    );
   }
 }
