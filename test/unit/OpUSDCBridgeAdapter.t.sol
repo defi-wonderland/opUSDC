@@ -7,6 +7,7 @@ import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/Messa
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
 import {Test} from 'forge-std/Test.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
+import {SigUtils} from 'test/utils/SigUtils.sol';
 
 contract ForTestOpUSDCBridgeAdapter is OpUSDCBridgeAdapter {
   constructor(
@@ -15,7 +16,7 @@ contract ForTestOpUSDCBridgeAdapter is OpUSDCBridgeAdapter {
     address _linkedAdapter
   ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
 
-  function receiveMessage(address _user, uint256 _amount) external override {}
+  function receiveMessage(address _user, address _spender, uint256 _amount) external override {}
 
   function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external override {}
 
@@ -99,7 +100,7 @@ contract ForTestOpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
    */
   function test_doNothing() public {
     // Execute
-    adapter.receiveMessage(address(0), 0);
+    adapter.receiveMessage(address(0), address(0), 0);
   }
 }
 
@@ -148,10 +149,12 @@ contract OpUSDCBridgeAdapter_Unit_CheckSignature is Base {
   /**
    * @notice Check that the signature is valid
    */
-  function test_validSignature(bytes memory _message) public {
+  function test_validSignature(IOpUSDCBridgeAdapter.BridgeMessage memory _message) public {
+    SigUtils _sigUtils = new SigUtils(address(adapter));
+
     vm.startPrank(_signerAd);
-    bytes32 _hashedMessage = keccak256(abi.encodePacked(_message));
-    bytes32 _digest = MessageHashUtils.toEthSignedMessageHash(_hashedMessage);
+    bytes32 _hashedMessage = _sigUtils.getBridgeMessageHash(_message);
+    bytes32 _digest = _sigUtils.getTypedBridgeMessageHash(_message);
     (uint8 v, bytes32 r, bytes32 s) = vm.sign(_signerPk, _digest);
     bytes memory _signature = abi.encodePacked(r, s, v);
     vm.stopPrank();

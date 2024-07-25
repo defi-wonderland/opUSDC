@@ -17,8 +17,8 @@ contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
     address _linkedAdapter
   ) L2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
 
-  function forTest_setIsMessagingDisabled() external {
-    isMessagingDisabled = true;
+  function forTest_setMessengerStatus(Status _status) external {
+    messengerStatus = _status;
   }
 
   function forTest_setRoleCaller(address _roleCaller) external {
@@ -111,6 +111,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
     vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
     _mockAndExpect(_usdc, abi.encodeWithSignature('totalSupply()'), abi.encode(_burnAmount));
+    _mockAndExpect(_usdc, abi.encodeWithSignature('removeMinter(address)', adapter), abi.encode(true));
     _mockAndExpect(
       _messenger,
       abi.encodeWithSignature(
@@ -132,6 +133,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
     vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
     _mockAndExpect(_usdc, abi.encodeWithSignature('totalSupply()'), abi.encode(100));
+    _mockAndExpect(_usdc, abi.encodeWithSignature('removeMinter(address)', adapter), abi.encode(true));
     _mockAndExpect(
       _messenger,
       abi.encodeWithSignature(
@@ -146,7 +148,11 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
     // Execute
     vm.prank(_messenger);
     adapter.receiveMigrateToNative(_roleCaller, _setBurnAmountMinGasLimit);
-    assertEq(adapter.isMessagingDisabled(), true, 'Messaging should be disabled');
+    assertEq(
+      uint256(adapter.messengerStatus()),
+      uint256(IOpUSDCBridgeAdapter.Status.Deprecated),
+      'Messaging should be disabled'
+    );
     assertEq(adapter.roleCaller(), _roleCaller, 'Role caller should be set to the new owner');
   }
 
@@ -159,6 +165,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMigrateToNative is Base {
     vm.mockCall(_usdc, abi.encodeWithSignature('transferOwnership(address)', _roleCaller), abi.encode());
     vm.mockCall(_usdc, abi.encodeWithSignature('changeAdmin(address)', _roleCaller), abi.encode());
     vm.mockCall(_usdc, abi.encodeWithSignature('totalSupply()'), abi.encode(_burnAmount));
+    vm.mockCall(_usdc, abi.encodeWithSignature('removeMinter(address)', adapter), abi.encode(true));
     vm.mockCall(
       _messenger,
       abi.encodeWithSignature(
@@ -225,7 +232,11 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveStopMessaging is Base {
     vm.prank(_notMessenger);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
     adapter.receiveStopMessaging();
-    assertEq(adapter.isMessagingDisabled(), false, 'Messaging should not be disabled');
+    assertEq(
+      uint256(adapter.messengerStatus()),
+      uint256(IOpUSDCBridgeAdapter.Status.Active),
+      'Messaging should not be disabled'
+    );
   }
 
   /**
@@ -240,7 +251,25 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveStopMessaging is Base {
     vm.prank(_messenger);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
     adapter.receiveStopMessaging();
-    assertEq(adapter.isMessagingDisabled(), false, 'Messaging should not be disabled');
+    assertEq(
+      uint256(adapter.messengerStatus()),
+      uint256(IOpUSDCBridgeAdapter.Status.Active),
+      'Messaging should not be disabled'
+    );
+  }
+
+  /**
+   * @notice Check that function reverts if status is Deprecated
+   */
+  function test_revertIfDeprecated() external {
+    adapter.forTest_setMessengerStatus(IOpUSDCBridgeAdapter.Status.Deprecated);
+
+    _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+
+    // Execute
+    vm.prank(_messenger);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
+    adapter.receiveStopMessaging();
   }
 
   /**
@@ -252,7 +281,9 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveStopMessaging is Base {
     // Execute
     vm.prank(_messenger);
     adapter.receiveStopMessaging();
-    assertEq(adapter.isMessagingDisabled(), true, 'Messaging should be disabled');
+    assertEq(
+      uint256(adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Paused), 'Messaging should be disabled'
+    );
   }
 
   /**
@@ -302,15 +333,31 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveResumeMessaging is Base {
   }
 
   /**
-   * @notice Check that isMessagingDisabled is set to false
+   * @notice Check that function reverts if status is Deprecated
    */
-  function test_setIsMessagingDisabledToFalse() external {
+  function test_revertIfDeprecated() external {
+    adapter.forTest_setMessengerStatus(IOpUSDCBridgeAdapter.Status.Deprecated);
+
+    _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+
+    // Execute
+    vm.prank(_messenger);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_MessagingDisabled.selector);
+    adapter.receiveResumeMessaging();
+  }
+
+  /**
+   * @notice Check that messaging is enabled
+   */
+  function test_setMessengerStatusToActive() external {
     _mockAndExpect(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
 
     // Execute
     vm.prank(_messenger);
     adapter.receiveResumeMessaging();
-    assertEq(adapter.isMessagingDisabled(), false, 'Messaging should be disabled');
+    assertEq(
+      uint256(adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Active), 'Messaging should be enabled'
+    );
   }
 
   /**
@@ -360,9 +407,9 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessage is Base {
   /**
    * @notice Check that sending a message reverts if messaging is disabled
    */
-  function test_revertOnMessagingDisabled(address _to, uint256 _amount, uint32 _minGasLimit) external {
+  function test_revertOnMessagingPaused(address _to, uint256 _amount, uint32 _minGasLimit) external {
     vm.assume(_to != address(0));
-    adapter.forTest_setIsMessagingDisabled();
+    adapter.forTest_setMessengerStatus(IOpUSDCBridgeAdapter.Status.Paused);
     vm.mockCall(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(false));
     // Execute
     vm.prank(_user);
@@ -408,7 +455,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessage is Base {
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
-        abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount),
+        abi.encodeWithSignature('receiveMessage(address,address,uint256)', _to, _user, _amount),
         _minGasLimit
       ),
       abi.encode()
@@ -432,7 +479,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessage is Base {
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
-        abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount),
+        abi.encodeWithSignature('receiveMessage(address,address,uint256)', _to, _amount),
         _minGasLimit
       ),
       abi.encode()
@@ -490,7 +537,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     uint32 _minGasLimit
   ) external {
     vm.assume(_to != address(0));
-    adapter.forTest_setIsMessagingDisabled();
+    adapter.forTest_setMessengerStatus(IOpUSDCBridgeAdapter.Status.Paused);
 
     vm.mockCall(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(false));
 
@@ -573,7 +620,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
-        abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount),
+        abi.encodeWithSignature('receiveMessage(address,address,uint256)', _to, _signerAd, _amount),
         _minGasLimit
       ),
       abi.encode()
@@ -612,7 +659,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
       abi.encodeWithSignature(
         'sendMessage(address,bytes,uint32)',
         _linkedAdapter,
-        abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount),
+        abi.encodeWithSignature('receiveMessage(address,address,uint256)', _to, _amount),
         _minGasLimit
       ),
       abi.encode()
@@ -638,7 +685,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
     // Execute
     vm.prank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
-    adapter.receiveMessage(_user, _amount);
+    adapter.receiveMessage(_user, _user, _amount);
   }
 
   /**
@@ -653,7 +700,31 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
     // Execute
     vm.prank(_messenger);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
-    adapter.receiveMessage(_user, _amount);
+    adapter.receiveMessage(_user, _user, _amount);
+  }
+
+  /**
+   * @notice Check that the function returns the funds if the contract is deprecated
+   */
+  function test_refundSpenderAfterMigration(uint256 _amount) external {
+    adapter.forTest_setMessengerStatus(IOpUSDCBridgeAdapter.Status.Deprecated);
+    // Mock calls
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+
+    // Expected call
+    _mockAndExpect(
+      _messenger,
+      abi.encodeWithSignature(
+        'sendMessage(address,bytes,uint32)',
+        _linkedAdapter,
+        abi.encodeWithSignature('receiveMessage(address,address,uint256)', _user, _user, _amount),
+        150_000
+      ),
+      abi.encode()
+    );
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveMessage(_user, _user, _amount);
   }
 
   /**
@@ -667,7 +738,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 
     // Execute
     vm.prank(_messenger);
-    adapter.receiveMessage(_user, _amount);
+    adapter.receiveMessage(_user, _user, _amount);
   }
 
   /**
@@ -684,7 +755,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
     emit MessageReceived(_user, _amount, _messenger);
 
     vm.prank(_messenger);
-    adapter.receiveMessage(_user, _amount);
+    adapter.receiveMessage(_user, _user, _amount);
   }
 
   /**
@@ -700,7 +771,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
     vm.mockCallRevert(_usdc, abi.encodeWithSignature('mint(address,uint256)', _user, _amount), abi.encode(false));
     // Execute
     vm.prank(_messenger);
-    adapter.receiveMessage(_user, _amount);
+    adapter.receiveMessage(_user, _user, _amount);
 
     assertEq(adapter.userBlacklistedFunds(_user), _amount, 'Blacklisted funds should be set to the amount');
   }
@@ -723,7 +794,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
     emit MessageFailed(_user, _amount);
 
     vm.prank(_messenger);
-    adapter.receiveMessage(_user, _amount);
+    adapter.receiveMessage(_user, _user, _amount);
   }
 }
 
@@ -813,6 +884,17 @@ contract L2OpUSDCBridgeAdapter_Unit_CallUsdcTransaction is Base {
    */
   function test_revertIfTxIsChangeAdmin(bytes memory _data) external {
     _data = bytes.concat(bytes4(0x8f283970), _data);
+    // Execute
+    vm.prank(_owner);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_ForbiddenTransaction.selector);
+    adapter.callUsdcTransaction(_data);
+  }
+
+  /**
+   * @notice Check that the function reverts function selector is updateMasterMinter (0xaa20e1e4)
+   */
+  function test_revertIfTxIsUpdateMasterMinter(bytes memory _data) external {
+    _data = bytes.concat(bytes4(0xaa20e1e4), _data);
     // Execute
     vm.prank(_owner);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_ForbiddenTransaction.selector);
