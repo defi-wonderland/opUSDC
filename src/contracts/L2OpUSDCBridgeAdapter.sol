@@ -209,9 +209,9 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    */
   function receiveMessage(address _user, address _spender, uint256 _amount) external override onlyLinkedAdapter {
     if (messengerStatus == Status.Deprecated) {
+      uint32 _minGasLimit = 150_000;
       // Return the funds to the spender incase the target on L2 is a contract that can´t handle the funds on L1
       ICrossDomainMessenger(MESSENGER).sendMessage(
-       uint256 _minGasLimit = 150_000;
         LINKED_ADAPTER, abi.encodeCall(IOpUSDCBridgeAdapter.receiveMessage, (_spender, _spender, _amount)), _minGasLimit
       );
     } else {
