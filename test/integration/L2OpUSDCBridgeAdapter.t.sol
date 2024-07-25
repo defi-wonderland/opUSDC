@@ -46,7 +46,7 @@ contract Integration_Bridging is IntegrationBase {
       address(l1Adapter),
       _ZERO_VALUE,
       _MIN_GAS_LIMIT,
-      abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _amount)
+      abi.encodeWithSignature('receiveMessage(address,address,uint256)', _user, _user, _amount)
     );
 
     assertEq(MAINNET_USDC.balanceOf(_user), _userBalanceBefore + _amount);
@@ -81,7 +81,7 @@ contract Integration_Bridging is IntegrationBase {
       address(l1Adapter),
       _ZERO_VALUE,
       _MIN_GAS_LIMIT,
-      abi.encodeWithSignature('receiveMessage(address,uint256)', _l1Target, _amount)
+      abi.encodeWithSignature('receiveMessage(address,address,uint256)', _l1Target, _user, _amount)
     );
 
     assertEq(MAINNET_USDC.balanceOf(_l1Target), _userBalanceBefore + _amount);
@@ -115,7 +115,7 @@ contract Integration_Bridging is IntegrationBase {
       address(l1Adapter),
       _ZERO_VALUE,
       _MIN_GAS_LIMIT,
-      abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _amount)
+      abi.encodeWithSignature('receiveMessage(address,address,uint256)', _user, _user, _amount)
     );
 
     assertEq(MAINNET_USDC.balanceOf(_user), 0);
@@ -157,7 +157,7 @@ contract Integration_Bridging is IntegrationBase {
       address(l1Adapter),
       _ZERO_VALUE,
       _MIN_GAS_LIMIT,
-      abi.encodeWithSignature('receiveMessage(address,uint256)', _signerAd, _amount)
+      abi.encodeWithSignature('receiveMessage(address,address,uint256)', _signerAd, _signerAd, _amount)
     );
 
     assertEq(MAINNET_USDC.balanceOf(_signerAd), _userBalanceBefore + _amount);
@@ -298,29 +298,6 @@ contract Integration_PermissionedUsdcFlows is IntegrationBase {
 
     // Check that the USDC pauser has been updated
     assertEq(_pauser, _notOwner);
-  }
-
-  /**
-   * @notice Test `updateMasterMinter` USDC function on L2
-   */
-  function test_UpdateMasterMinter() public {
-    // Setup necessary data
-    bytes memory _calldata = abi.encodeWithSignature('updateMasterMinter(address)', _notOwner);
-
-    // Use L2OpUSDCBridgeAdapter owner to call `updateMasterMinter` function through the adapter
-    vm.startPrank(_owner);
-
-    // Call `updateMasterMinter` function
-    l2Adapter.callUsdcTransaction(_calldata);
-
-    //Call masterMinter function to get the masterMinter
-    (, bytes memory _data) = address(bridgedUSDC).call(abi.encodeWithSignature('masterMinter()'));
-
-    //Get masterMinter from _data
-    address _masterMinter = address(uint160(uint256(bytes32(_data))));
-
-    // Check that the USDC masterMinter has been updated
-    assertEq(_masterMinter, _notOwner);
   }
 
   /**

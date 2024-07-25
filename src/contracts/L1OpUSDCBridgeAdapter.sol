@@ -24,9 +24,6 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /// @inheritdoc IL1OpUSDCBridgeAdapter
   address public burnCaller;
 
-  /// @inheritdoc IL1OpUSDCBridgeAdapter
-  Status public messengerStatus;
-
   /**
    * @notice Modifier to check if the sender is the linked adapter through the messenger
    */
@@ -115,26 +112,22 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     // If the adapter is not deprecated the burn amount has not been set
     if (messengerStatus != Status.Deprecated) revert IOpUSDCBridgeAdapter_BurnAmountNotSet();
 
-    // Burn the USDC tokens
-    // NOTE: If in flight transactions fail due to user being blacklisted after migration
-    // The funds will just be trapped in this contract as its deprecated
-    // If the user is after unblacklisted, they will be able to withdraw their usdc
+    // NOTE: This is a very edge case and will only happen if the chain operator adds a second minter on L2
+    // So now this adapter doesnt have the full backing supply locked in this contract
+    // Incase the bridged usdc token has other minters and the supply sent is greater then what we have
+    // We need to burn the full amount stored in this contract
+    // This could also cause in-flight messages to fail because of the multiple supply sources
     uint256 _burnAmount = burnAmount;
+    uint256 _balanceOf = IUSDC(USDC).balanceOf(address(this));
+    _burnAmount = _burnAmount > _balanceOf ? _balanceOf : _burnAmount;
+
+    // Burn the USDC tokens
     if (_burnAmount != 0) {
-      // NOTE: This is a very edge case and will only happen if the chain operator adds a second minter on L2
-      // So now this adapter doesnt have the full backing supply locked in this contract
-      // Incase the bridged usdc token has other minters and the supply sent is greater then what we have
-      // We need to burn the full amount stored in this contract
-      // This could also cause in-flight messages to fail because of the multiple supply sources
-      uint256 _balanceOf = IUSDC(USDC).balanceOf(address(this));
-      _burnAmount = _burnAmount > _balanceOf ? _balanceOf : _burnAmount;
-
       IUSDC(USDC).burn(_burnAmount);
-
-      // Set the burn amount to 0
-      burnAmount = 0;
     }
 
+    // Set the burn amount to 0
+    burnAmount = 0;
     burnCaller = address(0);
     emit MigrationComplete(_burnAmount);
   }
@@ -205,15 +198,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     // Ensure messaging is enabled
     if (messengerStatus != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
-    // Transfer the tokens to the contract
-    IUSDC(USDC).safeTransferFrom(msg.sender, address(this), _amount);
-
-    // Send the message to the linked adapter
-    ICrossDomainMessenger(MESSENGER).sendMessage(
-      LINKED_ADAPTER, abi.encodeCall(IOpUSDCBridgeAdapter.receiveMessage, (_to, _amount)), _minGasLimit
-    );
-
-    emit MessageSent(msg.sender, _to, _amount, MESSENGER, _minGasLimit);
+    _sendMessage(msg.sender, _to, _amount, _minGasLimit);
   }
 
   /**
@@ -257,24 +242,18 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     // Mark the nonce as used
     userNonces[_signer][_nonce] = true;
 
-    // Transfer the tokens to the contract
-    IUSDC(USDC).safeTransferFrom(_signer, address(this), _amount);
-
-    // Send the message to the linked adapter
-    ICrossDomainMessenger(MESSENGER).sendMessage(
-      LINKED_ADAPTER, abi.encodeCall(IOpUSDCBridgeAdapter.receiveMessage, (_to, _amount)), _minGasLimit
-    );
-
-    emit MessageSent(_signer, _to, _amount, MESSENGER, _minGasLimit);
+    _sendMessage(_signer, _to, _amount, _minGasLimit);
   }
 
   /**
    * @notice Receive the message from the other chain and transfer the tokens to the user
-   * @dev This function should only be called when receiving a message to mint the bridged representation
-   * @param _user The user to mint the bridged representation for
-   * @param _amount The amount of tokens to mint
+   * @dev This function should only be called when receiving a message to transfer the tokens
+   * @param _user The user to transfer the tokens to
+   * @param _spender unused parameter on L1, added for maintainability
+   * @param _amount The amount of tokens to transfer
    */
-  function receiveMessage(address _user, uint256 _amount) external override onlyLinkedAdapter {
+  // solhint-disable-next-line no-unused-vars
+  function receiveMessage(address _user, address _spender, uint256 _amount) external override onlyLinkedAdapter {
     // Transfer the tokens to the user
     try this.attemptTransfer(_user, _amount) {
       emit MessageReceived(_user, _amount, MESSENGER);
@@ -309,5 +288,27 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   function attemptTransfer(address _to, uint256 _amount) external {
     if (msg.sender != address(this)) revert IOpUSDCBridgeAdapter_InvalidSender();
     IUSDC(USDC).safeTransfer(_to, _amount);
+  }
+
+  /*///////////////////////////////////////////////////////////////
+                        INTERNAL FUNCTIONS
+  ///////////////////////////////////////////////////////////////*/
+  /**
+   * @notice Send the message to the linked adapter
+   * @param _from address that originated the message
+   * @param _to target address on the destination chain
+   * @param _amount amount of tokens to be bridged
+   * @param _minGasLimit minimum gas limit for the other chain to execute the message
+   */
+  function _sendMessage(address _from, address _to, uint256 _amount, uint32 _minGasLimit) internal {
+    // Transfer the tokens to the contract
+    IUSDC(USDC).safeTransferFrom(_from, address(this), _amount);
+
+    // Send the message to the linked adapter
+    ICrossDomainMessenger(MESSENGER).sendMessage(
+      LINKED_ADAPTER, abi.encodeCall(IOpUSDCBridgeAdapter.receiveMessage, (_to, _from, _amount)), _minGasLimit
+    );
+
+    emit MessageSent(_from, _to, _amount, MESSENGER, _minGasLimit);
   }
 }

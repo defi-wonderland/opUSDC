@@ -18,6 +18,23 @@ interface IOpUSDCBridgeAdapter {
     uint32 minGasLimit;
   }
   /*///////////////////////////////////////////////////////////////
+                            ENUMS
+  ///////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice The status of an L1 Messenger
+   * @param Active The messenger is active
+   * @param Paused The messenger is paused
+   * @param Upgrading The messenger is upgrading
+   * @param Deprecated The messenger is deprecated
+   */
+  enum Status {
+    Active,
+    Paused,
+    Upgrading,
+    Deprecated
+  }
+  /*///////////////////////////////////////////////////////////////
                             EVENTS
   ///////////////////////////////////////////////////////////////*/
 
@@ -142,6 +159,11 @@ interface IOpUSDCBridgeAdapter {
    */
   error IOpUSDCBridgeAdapter_BlacklistedAddress();
 
+  /**
+   *  @notice Error when bridgedUSDC has already been migrated to native USDC
+   */
+  error IOpUSDCBridgeAdapter_Migrated();
+
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   ///////////////////////////////////////////////////////////////*/
@@ -177,9 +199,10 @@ interface IOpUSDCBridgeAdapter {
    * @notice Receive the message from the other chain and mint the bridged representation for the user
    * @dev This function should only be called when receiving a message to mint the bridged representation
    * @param _user The user to mint the bridged representation for
+   * @param _spender The address that provided the tokens
    * @param _amount The amount of tokens to mint
    */
-  function receiveMessage(address _user, uint256 _amount) external;
+  function receiveMessage(address _user, address _spender, uint256 _amount) external;
 
   /**
    * @notice Withdraws the blacklisted funds from the contract if they get unblacklisted
@@ -217,6 +240,12 @@ interface IOpUSDCBridgeAdapter {
    */
   // solhint-disable-next-line func-name-mixedcase
   function MESSENGER() external view returns (address _messenger);
+
+  /**
+   * @notice Fetches the status of the messenger
+   * @return _status The status of the messenger
+   */
+  function messengerStatus() external view returns (Status _status);
 
   /**
    * @notice Returns the nonce of a given user to avoid replay attacks
