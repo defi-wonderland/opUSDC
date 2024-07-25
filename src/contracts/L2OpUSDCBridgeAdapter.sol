@@ -211,7 +211,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     if (messengerStatus == Status.Deprecated) {
       // Return the funds to the spender incase the target on L2 is a contract that can´t handle the funds on L1
       ICrossDomainMessenger(MESSENGER).sendMessage(
-        LINKED_ADAPTER, abi.encodeCall(IOpUSDCBridgeAdapter.receiveMessage, (_spender, _spender, _amount)), 150_000
+       uint256 _minGasLimit = 150_000;
+        LINKED_ADAPTER, abi.encodeCall(IOpUSDCBridgeAdapter.receiveMessage, (_spender, _spender, _amount)), _minGasLimit
       );
     } else {
       // Mint the tokens to the user
