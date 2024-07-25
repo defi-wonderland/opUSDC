@@ -34,19 +34,6 @@ contract SigUtils {
   }
 
   /**
-   * @notice Hashes the bridge message struct
-   * @param _message The bridge message struct to hash
-   * @return _hash The hash of the bridge message struct
-   */
-  function getBridgeMessageHash(IOpUSDCBridgeAdapter.BridgeMessage memory _message) public pure returns (bytes32 _hash) {
-    _hash = keccak256(
-      abi.encode(
-        BRIDGE_MESSAGE_TYPEHASH, _message.to, _message.amount, _message.deadline, _message.nonce, _message.minGasLimit
-      )
-    );
-  }
-
-  /**
    * @notice Hashes the bridge message struct and returns the EIP712 hash
    * @param _message The bridge message struct to hash
    * @return _hash The hash of the bridge message struct
@@ -57,5 +44,19 @@ contract SigUtils {
     returns (bytes32 _hash)
   {
     _hash = keccak256(abi.encodePacked('\x19\x01', _DOMAIN_SEPARATOR, getBridgeMessageHash(_message)));
+  }
+
+  /**
+   * @notice Hashes the bridge message struct
+   * @param _message The bridge message struct to hash
+   * @return _hash The hash of the bridge message struct
+   */
+  // solhint-disable-next-line max-line-length
+  function getBridgeMessageHash(IOpUSDCBridgeAdapter.BridgeMessage memory _message) public pure returns (bytes32 _hash) {
+    _hash = keccak256(
+      abi.encode(
+        BRIDGE_MESSAGE_TYPEHASH, _message.to, _message.amount, _message.deadline, _message.nonce, _message.minGasLimit
+      )
+    );
   }
 }
