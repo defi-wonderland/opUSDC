@@ -86,10 +86,10 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     if (bytes4(_l2Deployments.usdcInitTxs[0]) == _INITIALIZE_SELECTOR) revert IL1OpUSDCFactory_NoInitializeTx();
 
     // Update the salt counter so the L2 factory is deployed with a different salt to a different address and get it
-    uint256 _currentNonce = ++deploymentsSaltCounter;
+    uint256 _currentNonce = deploymentsSaltCounter += 2;
 
     // Precalculate the l1 adapter proxy address
-    _l1Adapter = CrossChainDeployments.precalculateCreateAddress(address(this), _currentNonce + 1);
+    _l1Adapter = CrossChainDeployments.precalculateCreateAddress(address(this), _currentNonce);
 
     // Get the L1 USDC naming and decimals to ensure they are the same on the L2, guaranteeing the same standard
     IL2OpUSDCDeploy.USDCInitializeData memory _usdcInitializeData = IL2OpUSDCDeploy.USDCInitializeData(
