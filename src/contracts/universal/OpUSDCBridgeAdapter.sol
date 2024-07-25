@@ -20,6 +20,9 @@ abstract contract OpUSDCBridgeAdapter is UUPSUpgradeable, OwnableUpgradeable, IO
   /// @inheritdoc IOpUSDCBridgeAdapter
   address public immutable MESSENGER;
 
+  /// @notice Reserve 50 storage slots to be safe on future upgrades
+  uint256[50] internal __gap;
+
   /// @inheritdoc IOpUSDCBridgeAdapter
   mapping(address _user => mapping(uint256 _nonce => bool _used)) public userNonces;
 

@@ -2,6 +2,7 @@
 pragma solidity 0.8.25;
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {ERC1967Utils} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol';
 import {L2OpUSDCDeploy} from 'contracts/L2OpUSDCDeploy.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {Test} from 'forge-std/Test.sol';
@@ -44,7 +45,7 @@ contract Base is Test, Helpers {
   address internal _l2AdapterOwner = makeAddr('l2AdapterOwner');
   address internal _usdcImplAddr = makeAddr('usdcImpl');
   uint256 internal _usdcProxyDeploymentNonce = 1;
-  uint256 internal _l2AdapterDeploymentNonce = 2;
+  uint256 internal _l2AdapterDeploymentNonce = 3;
 
   address internal _dummyContract;
 
@@ -87,6 +88,8 @@ contract Base is Test, Helpers {
 }
 
 contract L2OpUSDCDeploy_Unit_Constructor is Base {
+  using ERC1967Utils for address;
+
   event USDCImplementationDeployed(address _l2UsdcImplementation);
   event USDCProxyDeployed(address _l2UsdcProxy);
   event L2AdapterDeployed(address _l2Adapter);
@@ -122,24 +125,24 @@ contract L2OpUSDCDeploy_Unit_Constructor is Base {
     // Calculate the usdc proxy address
     address _usdcProxy = _precalculateCreateAddress(address(factory), _usdcProxyDeploymentNonce);
 
-    // Calculate the l2 adapter address
-    address _l2Adapter = _precalculateCreateAddress(address(factory), _l2AdapterDeploymentNonce);
+    // Calculate the l2 adapter proxy address
+    address _l2AdapterProxy = _precalculateCreateAddress(address(factory), _l2AdapterDeploymentNonce);
 
     // Expect the adapter deployment event to be properly emitted
     vm.expectEmit(true, true, true, true);
-    emit L2AdapterDeployed(_l2Adapter);
+    emit L2AdapterDeployed(_l2AdapterProxy);
 
     // Execute
     vm.prank(_create2Deployer);
     new L2OpUSDCDeploy(_l1Adapter, _l2AdapterOwner, _usdcImplAddr, _usdcInitializeData, _emptyInitTxs);
 
     // Assert the adapter was deployed
-    assertGt(_l2Adapter.code.length, 0, 'L2 adapter was not deployed');
+    assertGt(_l2AdapterProxy.code.length, 0, 'L2 adapter was not deployed');
     // Check the constructor values were properly passed
-    assertEq(IOpUSDCBridgeAdapter(_l2Adapter).USDC(), _usdcProxy, 'USDC proxy was not set');
-    assertEq(IOpUSDCBridgeAdapter(_l2Adapter).MESSENGER(), _l2Messenger, 'L2 messenger was not set');
-    assertEq(IOpUSDCBridgeAdapter(_l2Adapter).LINKED_ADAPTER(), _l1Adapter, 'L1 factory was not set');
-    assertEq(Ownable(_l2Adapter).owner(), _l2AdapterOwner, 'L2 adapter owner was not set');
+    assertEq(IOpUSDCBridgeAdapter(_l2AdapterProxy).USDC(), _usdcProxy, 'USDC proxy was not set');
+    assertEq(IOpUSDCBridgeAdapter(_l2AdapterProxy).MESSENGER(), _l2Messenger, 'L2 messenger was not set');
+    assertEq(IOpUSDCBridgeAdapter(_l2AdapterProxy).LINKED_ADAPTER(), _l1Adapter, 'L1 factory was not set');
+    assertEq(Ownable(_l2AdapterProxy).owner(), _l2AdapterOwner, 'L2 adapter owner was not set');
   }
 
   /**

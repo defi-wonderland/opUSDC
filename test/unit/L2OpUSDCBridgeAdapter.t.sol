@@ -42,11 +42,12 @@ abstract contract Base is Helpers {
 
   address internal _user = makeAddr('user');
   address internal _owner = makeAddr('owner');
-  address internal _signerAd;
-  uint256 internal _signerPk;
   address internal _usdc = makeAddr('opUSDC');
   address internal _messenger = makeAddr('messenger');
   address internal _linkedAdapter = makeAddr('linkedAdapter');
+  address internal _adapterImpl;
+  address internal _signerAd;
+  uint256 internal _signerPk;
 
   event MigratingToNative(address _messenger, address _roleCaller);
   event MessageSent(address _user, address _to, uint256 _amount, address _messenger, uint32 _minGasLimit);
@@ -56,7 +57,7 @@ abstract contract Base is Helpers {
   function setUp() public virtual {
     (_signerAd, _signerPk) = makeAddrAndKey('signer');
 
-    address _adapterImpl = address(new ForTestL2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter));
+    _adapterImpl = address(new ForTestL2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter));
     adapter = ForTestL2OpUSDCBridgeAdapter(
       address(new ERC1967Proxy(_adapterImpl, abi.encodeCall(OpUSDCBridgeAdapter.initialize, _owner)))
     );
@@ -923,5 +924,22 @@ contract L2OpUSDCBridgeAdapter_Unit_CallUsdcTransaction is Base {
     // Execute
     vm.prank(_owner);
     adapter.callUsdcTransaction(_data);
+  }
+}
+
+contract L2OpUSDCBridgeAdapter_Unit_Initialize is Base {
+  /**
+   * @notice Check that the initialize function works as expected
+   * @dev Needs to be checked on the proxy since the initialize function is disabled on the implementation
+   */
+  function test_initialize(address _owner) public {
+    // Deploy a proxy contract setting the , and call the initialize function on it to set the owner
+    ForTestL2OpUSDCBridgeAdapter _newAdapter = ForTestL2OpUSDCBridgeAdapter(
+      address(new ERC1967Proxy(address(_adapterImpl), abi.encodeCall(OpUSDCBridgeAdapter.initialize, _owner)))
+    );
+
+    // Assert
+    assertEq(_newAdapter.owner(), _owner, 'Owner should be set to the provided address');
+    assertGt(address(_newAdapter.FALLBACK_PROXY_ADMIN()).code.length, 0, 'Fallback admin was not deployed');
   }
 }
