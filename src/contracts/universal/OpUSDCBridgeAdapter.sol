@@ -40,10 +40,6 @@ abstract contract OpUSDCBridgeAdapter is UUPSUpgradeable, OwnableUpgradeable, IO
     _disableInitializers();
   }
 
-  function initialize(address _owner) public initializer {
-    __Ownable_init(_owner);
-  }
-
   /*///////////////////////////////////////////////////////////////
                              MESSAGING
   ///////////////////////////////////////////////////////////////*/
@@ -99,6 +95,16 @@ abstract contract OpUSDCBridgeAdapter is UUPSUpgradeable, OwnableUpgradeable, IO
   }
 
   /**
+   * @notice Sets the owner of the contract
+   * @param _owner The address of the owner
+   * @dev This function needs only used during the deployment of the proxy contract, and it is disabled for the
+   * implementation contract
+   */
+  function initialize(address _owner) public virtual initializer {
+    __Ownable_init(_owner);
+  }
+
+  /**
    * @notice Check the signature of a message
    * @param _signer the address that signed the message
    * @param _messageHash the hash of the message that was signed
@@ -110,5 +116,8 @@ abstract contract OpUSDCBridgeAdapter is UUPSUpgradeable, OwnableUpgradeable, IO
     if (!_signer.isValidSignatureNow(_messageHash, _signature)) revert IOpUSDCBridgeAdapter_InvalidSignature();
   }
 
+  /**
+   * @notice Checks the caller is the owner to authorize the upgrade
+   */
   function _authorizeUpgrade(address) internal virtual override onlyOwner {}
 }
