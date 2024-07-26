@@ -62,11 +62,12 @@ contract L2OpUSDCBridgeAdapter_Unit_Constructor is Base {
   /**
    * @notice Check that the constructor works as expected
    */
-  function test_constructorParams() public view {
+  function test_immutables() public view {
     assertEq(adapter.USDC(), _usdc, 'USDC should be set to the provided address');
     assertEq(adapter.MESSENGER(), _messenger, 'Messenger should be set to the provided address');
     assertEq(adapter.LINKED_ADAPTER(), _linkedAdapter, 'Linked adapter should be set to the provided address');
     assertEq(adapter.owner(), _owner, 'Owner should be set to the provided address');
+    assertGt(address(adapter.FALLBACK_PROXY_ADMIN()).code.length, 0, 'Fallback proxy admin was not deployed');
   }
 }
 
@@ -493,11 +494,17 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
   /**
    * @notice Check that the function reverts if the address is zero
    */
-  function test_revertOnZeroAddress(uint256 _amount, uint32 _minGasLimit) external {
+  function test_revertOnZeroAddress(
+    uint256 _amount,
+    uint32 _minGasLimit,
+    bytes memory _signature,
+    uint256 _nonce,
+    uint256 _deadline
+  ) external {
     // Execute
     vm.prank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidAddress.selector);
-    adapter.sendMessage(address(0), _amount, _minGasLimit);
+    adapter.sendMessage(_signerAd, address(0), _amount, _signature, _nonce, _deadline, _minGasLimit);
   }
 
   /**
