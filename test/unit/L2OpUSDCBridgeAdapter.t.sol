@@ -794,11 +794,12 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 
 contract L2OpUSDCBridgeAdapter_Unit_WithdrawBlacklistedFunds is Base {
   event BlacklistedFundsWithdrawn(address _user, uint256 _amountWithdrawn);
+  event BlacklistedFundsSentBackToL1(address _spender, uint256 _amountSent);
+
   /**
    * @notice Check that the function expects the correct calls
    */
-
-  function test_expectedCalls(uint256 _amount, address _user, address _spender) external {
+  function test_expectedCallsIfNotDeprecated(uint256 _amount, address _user, address _spender) external {
     vm.assume(_amount > 0);
     vm.assume(_user != address(0));
     adapter.forTest_setUserBlacklistedFunds(_spender, _user, _amount);
@@ -814,7 +815,7 @@ contract L2OpUSDCBridgeAdapter_Unit_WithdrawBlacklistedFunds is Base {
   /**
    * @notice Check that the updates the state as expected
    */
-  function test_updateState(uint256 _amount, address _user, address _spender) external {
+  function test_updateStateIfNotDeprecated(uint256 _amount, address _user, address _spender) external {
     vm.assume(_amount > 0);
     vm.assume(_user != address(0));
     adapter.forTest_setUserBlacklistedFunds(_spender, _user, _amount);
@@ -829,7 +830,7 @@ contract L2OpUSDCBridgeAdapter_Unit_WithdrawBlacklistedFunds is Base {
     assertEq(adapter.blacklistedFundsDetails(_spender, _user), 0, 'User blacklisted funds should be updated');
   }
 
-  function test_emitsEvent(uint256 _amount, address _user, address _spender) external {
+  function test_emitsEventIfNotDeprecated(uint256 _amount, address _user, address _spender) external {
     vm.assume(_amount > 0);
     vm.assume(_user != address(0));
     adapter.forTest_setUserBlacklistedFunds(_spender, _user, _amount);
@@ -840,6 +841,87 @@ contract L2OpUSDCBridgeAdapter_Unit_WithdrawBlacklistedFunds is Base {
     // Expect events
     vm.expectEmit(true, true, true, true);
     emit BlacklistedFundsWithdrawn(_user, _amount);
+
+    // Execute
+    vm.prank(_user);
+    adapter.withdrawBlacklistedFunds(_spender, _user);
+  }
+
+  /**
+   * @notice Check that the function expects the correct calls
+   */
+  function test_expectedCallsIfDeprecated(uint256 _amount, address _user, address _spender) external {
+    adapter.forTest_setMessengerStatus(IOpUSDCBridgeAdapter.Status.Deprecated);
+    vm.assume(_amount > 0);
+    vm.assume(_spender != address(0));
+    adapter.forTest_setUserBlacklistedFunds(_spender, _user, _amount);
+
+    // Mock calls
+    _mockAndExpect(
+      _messenger,
+      abi.encodeWithSignature(
+        'sendMessage(address,bytes,uint32)',
+        _linkedAdapter,
+        abi.encodeWithSignature('receiveWithdrawBlacklistedFundsPostMigration(address,uint256)', _spender, _amount),
+        150_000
+      ),
+      abi.encode()
+    );
+
+    // Execute
+    vm.prank(_user);
+    adapter.withdrawBlacklistedFunds(_spender, _user);
+  }
+
+  /**
+   * @notice Check that the updates the state as expected
+   */
+  function test_updateStateIfDeprecated(uint256 _amount, address _user, address _spender) external {
+    adapter.forTest_setMessengerStatus(IOpUSDCBridgeAdapter.Status.Deprecated);
+    vm.assume(_amount > 0);
+    vm.assume(_spender != address(0));
+    adapter.forTest_setUserBlacklistedFunds(_spender, _user, _amount);
+
+    // Mock calls
+    _mockAndExpect(
+      _messenger,
+      abi.encodeWithSignature(
+        'sendMessage(address,bytes,uint32)',
+        _linkedAdapter,
+        abi.encodeWithSignature('receiveWithdrawBlacklistedFundsPostMigration(address,uint256)', _spender, _amount),
+        150_000
+      ),
+      abi.encode()
+    );
+
+    // Execute
+    vm.prank(_user);
+    adapter.withdrawBlacklistedFunds(_spender, _user);
+
+    assertEq(adapter.blacklistedFundsDetails(_spender, _user), 0, 'User blacklisted funds should be updated');
+  }
+
+  function test_emitsEventIfDeprecated(uint256 _amount, address _user, address _spender) external {
+    adapter.forTest_setMessengerStatus(IOpUSDCBridgeAdapter.Status.Deprecated);
+    vm.assume(_amount > 0);
+    vm.assume(_user != address(0));
+    adapter.forTest_setUserBlacklistedFunds(_spender, _user, _amount);
+
+    // Mock calls
+    _mockAndExpect(
+      _messenger,
+      abi.encodeWithSignature(
+        'sendMessage(address,bytes,uint32)',
+        _linkedAdapter,
+        abi.encodeWithSignature('receiveWithdrawBlacklistedFundsPostMigration(address,uint256)', _spender, _amount),
+        150_000
+      ),
+      abi.encode()
+    );
+
+    // Expect events
+    vm.expectEmit(true, true, true, true);
+    emit BlacklistedFundsSentBackToL1(_spender, _amount);
 
     // Execute
     vm.prank(_user);
