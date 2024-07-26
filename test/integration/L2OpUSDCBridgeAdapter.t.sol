@@ -14,10 +14,10 @@ contract dummyImplementation {
 }
 
 contract Integration_Bridging is IntegrationBase {
+  using stdStorage for StdStorage;
+
   string internal constant _NAME = 'L1OpUSDCBridgeAdapter';
   string internal constant _VERSION = '1.0.0';
-
-  using stdStorage for StdStorage;
 
   function setUp() public override {
     super.setUp();
