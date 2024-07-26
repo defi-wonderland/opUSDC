@@ -28,8 +28,8 @@ contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
     userNonces[_user][_nonce] = _used;
   }
 
-  function forTest_setUserBlacklistedFunds(address _user, uint256 _amount) external {
-    userBlacklistedFunds[_user] = _amount;
+  function forTest_setUserBlacklistedFunds(address _spender, address _user, uint256 _amount) external {
+    blacklistedFundsDetails[_spender][_user] = _amount;
   }
 }
 
@@ -670,7 +670,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
 }
 
 contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
-  event MessageFailed(address _user, uint256 _amount);
+  event MessageFailed(address _spender, address _user, uint256 _amount);
 
   /**
    * @notice Check that the function reverts if the sender is not the messenger
@@ -767,13 +767,13 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
     vm.prank(_messenger);
     adapter.receiveMessage(_user, _user, _amount);
 
-    assertEq(adapter.userBlacklistedFunds(_user), _amount, 'Blacklisted funds should be set to the amount');
+    assertEq(adapter.blacklistedFundsDetails(_user, _user), _amount, 'Blacklisted funds should be set to the amount');
   }
 
   /**
    * @notice Check that the event is emitted as expected
    */
-  function test_emitEventFail(uint256 _amount) external {
+  function test_emitEventFail(uint256 _amount, address _spender) external {
     vm.assume(_amount > 0);
 
     // Mock calls
@@ -785,10 +785,10 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 
     // Execute
     vm.expectEmit(true, true, true, true);
-    emit MessageFailed(_user, _amount);
+    emit MessageFailed(_spender, _user, _amount);
 
     vm.prank(_messenger);
-    adapter.receiveMessage(_user, _user, _amount);
+    adapter.receiveMessage(_user, _spender, _amount);
   }
 }
 
@@ -798,41 +798,41 @@ contract L2OpUSDCBridgeAdapter_Unit_WithdrawBlacklistedFunds is Base {
    * @notice Check that the function expects the correct calls
    */
 
-  function test_expectedCalls(uint256 _amount, address _user) external {
+  function test_expectedCalls(uint256 _amount, address _user, address _spender) external {
     vm.assume(_amount > 0);
     vm.assume(_user != address(0));
-    adapter.forTest_setUserBlacklistedFunds(_user, _amount);
+    adapter.forTest_setUserBlacklistedFunds(_spender, _user, _amount);
 
     // Mock calls
     _mockAndExpect(_usdc, abi.encodeWithSignature('mint(address,uint256)', _user, _amount), abi.encode(true));
 
     // Execute
     vm.prank(_user);
-    adapter.withdrawBlacklistedFunds(_user);
+    adapter.withdrawBlacklistedFunds(_spender, _user);
   }
 
   /**
    * @notice Check that the updates the state as expected
    */
-  function test_updateState(uint256 _amount, address _user) external {
+  function test_updateState(uint256 _amount, address _user, address _spender) external {
     vm.assume(_amount > 0);
     vm.assume(_user != address(0));
-    adapter.forTest_setUserBlacklistedFunds(_user, _amount);
+    adapter.forTest_setUserBlacklistedFunds(_spender, _user, _amount);
 
     // Mock calls
     vm.mockCall(_usdc, abi.encodeWithSignature('mint(address,uint256)', _user, _amount), abi.encode(true));
 
     // Execute
     vm.prank(_user);
-    adapter.withdrawBlacklistedFunds(_user);
+    adapter.withdrawBlacklistedFunds(_spender, _user);
 
-    assertEq(adapter.userBlacklistedFunds(_user), 0, 'User blacklisted funds should be updated');
+    assertEq(adapter.blacklistedFundsDetails(_spender, _user), 0, 'User blacklisted funds should be updated');
   }
 
-  function test_emitsEvent(uint256 _amount, address _user) external {
+  function test_emitsEvent(uint256 _amount, address _user, address _spender) external {
     vm.assume(_amount > 0);
     vm.assume(_user != address(0));
-    adapter.forTest_setUserBlacklistedFunds(_user, _amount);
+    adapter.forTest_setUserBlacklistedFunds(_spender, _user, _amount);
 
     // Mock calls
     vm.mockCall(_usdc, abi.encodeWithSignature('mint(address,uint256)', _user, _amount), abi.encode(true));
@@ -843,7 +843,7 @@ contract L2OpUSDCBridgeAdapter_Unit_WithdrawBlacklistedFunds is Base {
 
     // Execute
     vm.prank(_user);
-    adapter.withdrawBlacklistedFunds(_user);
+    adapter.withdrawBlacklistedFunds(_spender, _user);
   }
 }
 

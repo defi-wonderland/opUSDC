@@ -19,7 +19,7 @@ contract ForTestOpUSDCBridgeAdapter is OpUSDCBridgeAdapter {
 
   function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external override {}
 
-  function withdrawBlacklistedFunds(address _user) external override {}
+  function withdrawBlacklistedFunds(address _spender, address _user) external override {}
 
   function sendMessage(
     address _signer,

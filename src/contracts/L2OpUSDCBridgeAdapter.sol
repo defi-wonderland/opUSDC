@@ -202,6 +202,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /**
    * @notice Receive the message from the other chain and mint the bridged representation for the user
    * @dev This function should only be called when receiving a message to mint the bridged representation
+   * @dev If the mint fails the funds might be recovered by calling withdrawBlacklistedFunds
    * @param _user The user to mint the bridged representation for
    * @param _spender The address that provided the tokens
    * @param _amount The amount of tokens to mint
@@ -218,28 +219,36 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
       try IUSDC(USDC).mint(_user, _amount) {
         emit MessageReceived(_user, _amount, MESSENGER);
       } catch {
-        userBlacklistedFunds[_user] += _amount;
-        emit MessageFailed(_user, _amount);
+        blacklistedFundsDetails[_spender][_user] += _amount;
+        emit MessageFailed(_spender, _user, _amount);
       }
     }
   }
 
   /**
    * @notice Mints the blacklisted funds from the contract incase they get unblacklisted
+   * @dev returns the funds to the spender if the contract is deprecated
+   * @param _spender The address that provided the tokens
    * @param _user The user to withdraw the funds for
    */
-  function withdrawBlacklistedFunds(address _user) external override {
-    uint256 _amount = userBlacklistedFunds[_user];
-    userBlacklistedFunds[_user] = 0;
+  function withdrawBlacklistedFunds(address _spender, address _user) external override {
+    uint256 _amount = blacklistedFundsDetails[_spender][_user];
+    blacklistedFundsDetails[_spender][_user] = 0;
 
-    // NOTE: This will fail after migration as the adapter will no longer be a minter
-    // All funds need to be recovered from the contract before migration if applicable
-    // TODO: If migration has happend instead send a message back to L1 to recover the funds
-
-    // The check for if the user is blacklisted happens in USDC's contract
-    IUSDC(USDC).mint(_user, _amount);
-
-    emit BlacklistedFundsWithdrawn(_user, _amount);
+    if (messengerStatus != Status.Deprecated) {
+      // The check for if the user is blacklisted happens in USDC's contract
+      IUSDC(USDC).mint(_user, _amount);
+      emit BlacklistedFundsWithdrawn(_user, _amount);
+    } else {
+      uint32 _minGasLimit = 150_000;
+      // Send the message to the linked adapter
+      ICrossDomainMessenger(MESSENGER).sendMessage(
+        LINKED_ADAPTER,
+        abi.encodeCall(IL1OpUSDCBridgeAdapter.receiveWithdrawBlacklistedFundsPostMigration, (_spender, _amount)),
+        _minGasLimit
+      );
+      emit BlacklistedFundsSentBackToL1(_spender, _amount);
+    }
   }
 
   /*///////////////////////////////////////////////////////////////

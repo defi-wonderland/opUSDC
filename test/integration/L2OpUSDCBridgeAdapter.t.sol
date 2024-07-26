@@ -120,7 +120,7 @@ contract Integration_Bridging is IntegrationBase {
 
     assertEq(MAINNET_USDC.balanceOf(_user), 0);
     assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), _amount);
-    assertEq(l1Adapter.userBlacklistedFunds(_user), _amount);
+    assertEq(l1Adapter.blacklistedFundsDetails(_user, _user), _amount);
   }
 
   /**

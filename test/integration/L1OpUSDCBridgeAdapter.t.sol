@@ -462,9 +462,9 @@ contract Integration_Integration_PermissionedFlows is IntegrationBase {
     MAINNET_USDC.unBlacklist(_user);
 
     vm.prank(_user);
-    l1Adapter.withdrawBlacklistedFunds(_user);
+    l1Adapter.withdrawBlacklistedFunds(_user, _user);
 
     assertEq(MAINNET_USDC.balanceOf(_user), _amount);
-    assertEq(l1Adapter.userBlacklistedFunds(_user), 0);
+    assertEq(l1Adapter.blacklistedFundsDetails(_user, _user), 0);
   }
 }

@@ -2,21 +2,6 @@
 pragma solidity 0.8.25;
 
 interface IOpUSDCBridgeAdapter {
-  /**
-   * @notice The struct to hold the data for a bridge message with signature
-   * @param to The target address on the destination chain
-   * @param amount The amount of tokens to send
-   * @param deadline The deadline for the message to be executed
-   * @param nonce The nonce of the user
-   * @param minGasLimit The minimum gas limit for the message to be executed
-   */
-  struct BridgeMessage {
-    address to;
-    uint256 amount;
-    uint256 deadline;
-    uint256 nonce;
-    uint32 minGasLimit;
-  }
   /*///////////////////////////////////////////////////////////////
                             ENUMS
   ///////////////////////////////////////////////////////////////*/
@@ -34,6 +19,26 @@ interface IOpUSDCBridgeAdapter {
     Upgrading,
     Deprecated
   }
+
+  /*///////////////////////////////////////////////////////////////
+                          STRUCTS
+  ///////////////////////////////////////////////////////////////*/
+  /**
+   * @notice The struct to hold the data for a bridge message with signature
+   * @param to The target address on the destination chain
+   * @param amount The amount of tokens to send
+   * @param deadline The deadline for the message to be executed
+   * @param nonce The nonce of the user
+   * @param minGasLimit The minimum gas limit for the message to be executed
+   */
+  struct BridgeMessage {
+    address to;
+    uint256 amount;
+    uint256 deadline;
+    uint256 nonce;
+    uint32 minGasLimit;
+  }
+
   /*///////////////////////////////////////////////////////////////
                             EVENTS
   ///////////////////////////////////////////////////////////////*/
@@ -79,10 +84,11 @@ interface IOpUSDCBridgeAdapter {
 
   /**
    * @notice Emitted when a message fails
+   * @param _spender The address that provided the tokens
    * @param _user The user that the message failed for
    * @param _amount The amount of tokens that were added to the blacklisted funds
    */
-  event MessageFailed(address _user, uint256 _amount);
+  event MessageFailed(address _spender, address _user, uint256 _amount);
 
   /**
    * @notice Emitted when the blacklisted funds are withdrawn
@@ -90,6 +96,13 @@ interface IOpUSDCBridgeAdapter {
    * @param _amountWithdrawn The amount of tokens that were withdrawn
    */
   event BlacklistedFundsWithdrawn(address _user, uint256 _amountWithdrawn);
+
+  /**
+   * @notice Emitted when the blacklisted funds are sent back to L1
+   * @param _spender The address that provided the tokens
+   * @param _amountSent The amount of tokens that were withdrawn
+   */
+  event BlacklistedFundsSentBackToL1(address _spender, uint256 _amountSent);
 
   /*///////////////////////////////////////////////////////////////
                             ERRORS
@@ -160,9 +173,9 @@ interface IOpUSDCBridgeAdapter {
   error IOpUSDCBridgeAdapter_BlacklistedAddress();
 
   /**
-   *  @notice Error when bridgedUSDC has already been migrated to native USDC
+   *  @notice Error when bridgedUSDC has not been migrated yet to native USDC
    */
-  error IOpUSDCBridgeAdapter_Migrated();
+  error IOpUSDCBridgeAdapter_NotMigrated();
 
   /*///////////////////////////////////////////////////////////////
                             LOGIC
@@ -206,9 +219,10 @@ interface IOpUSDCBridgeAdapter {
 
   /**
    * @notice Withdraws the blacklisted funds from the contract if they get unblacklisted
+   * @param _spender The address that provided the tokens
    * @param _user The user to withdraw the funds for
    */
-  function withdrawBlacklistedFunds(address _user) external;
+  function withdrawBlacklistedFunds(address _spender, address _user) external;
 
   /**
    * @notice Cancels a signature by setting the nonce as used
@@ -257,8 +271,9 @@ interface IOpUSDCBridgeAdapter {
 
   /**
    * @notice Returns the amount of funds locked that got blacklisted for a specific user
+   * @param _spender The address that provided the tokens
    * @param _user The user to check for
    * @return _amount The amount of funds locked from blacklisted messages
    */
-  function userBlacklistedFunds(address _user) external view returns (uint256 _amount);
+  function blacklistedFundsDetails(address _spender, address _user) external view returns (uint256 _amount);
 }
