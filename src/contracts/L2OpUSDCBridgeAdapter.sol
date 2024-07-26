@@ -63,6 +63,20 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
   /* solhint-enable no-unused-vars */
 
+  /**
+   * @notice Sets the owner of the contract
+   * @param _owner The address of the owner
+   * @dev This function needs only used during the deployment of the proxy contract, and it is disabled for the
+   * implementation contract
+   */
+  function initialize(address _owner) external virtual override initializer {
+    __Ownable_init(_owner);
+    string memory _name = 'L1OpUSDCBridgeAdapter';
+    string memory _version = '1.0.0';
+    __EIP712_init(_name, _version);
+    FALLBACK_PROXY_ADMIN = new FallbackProxyAdmin(USDC);
+  }
+
   /*///////////////////////////////////////////////////////////////
                               MIGRATION
   ///////////////////////////////////////////////////////////////*/
@@ -272,19 +286,6 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     }
 
     emit USDCFunctionSent(_selector);
-  }
-
-  /**
-   * @notice Sets the owner of the contract and deploys the `FallbackProxyAdmin` contract
-   * @param _owner The address of the owner
-   * @dev This function needs only used during the deployment of the proxy contract, and it is disabled for the
-   * implementation contract
-   * @dev The `FallbackProxyAdmin` contract is deployed since it can't be deployed on the constructor, otherwise, the
-   * owner would be set to the implementation contract address instead of the proxy one
-   */
-  function initialize(address _owner) public virtual override initializer {
-    super.initialize(_owner);
-    FALLBACK_PROXY_ADMIN = new FallbackProxyAdmin(USDC);
   }
 
   /*///////////////////////////////////////////////////////////////

@@ -115,42 +115,12 @@ contract OpUSDCBridgeAdapter_Unit_CancelSignature is Base {
   }
 }
 
-contract OpUSDCBridgeAdapter_Unit_Initialize is Base {
-  error InvalidInitialization();
-
-  /**
-   * @notice Check that the initialize function works as expected
-   * @dev Needs to be checked on the proxy since the initialize function is disabled on the implementation
-   */
-  function test_initialize(address _owner) public {
-    // Deploy a proxy contract setting the , and call the initialize function on it to set the owner
-    ForTestOpUSDCBridgeAdapter _newAdapter = ForTestOpUSDCBridgeAdapter(
-      address(new ERC1967Proxy(address(_adapterImpl), abi.encodeCall(OpUSDCBridgeAdapter.initialize, _owner)))
-    );
-
-    // Assert
-    assertEq(_newAdapter.owner(), _owner, 'Owner should be set to the provided address');
-  }
-
-  /**
-   * @notice Check that the initialize function reverts if it was already called
-   */
-  function test_revertIfAlreadyInitialize(address _sender, address _owner) public {
-    // Expect revert with `InvalidInitialization` error
-    vm.expectRevert(InvalidInitialization.selector);
-
-    // Execute
-    vm.prank(_sender);
-    adapter.initialize(_owner);
-  }
-}
-
 contract OpUSDCBridgeAdapter_Unit_CheckSignature is Base {
   /**
    * @notice Check that the signature is valid
    */
   function test_validSignature(IOpUSDCBridgeAdapter.BridgeMessage memory _message) public {
-    SigUtils _sigUtils = new SigUtils(address(adapter));
+    SigUtils _sigUtils = new SigUtils(address(adapter), '', '');
 
     vm.startPrank(_signerAd);
     bytes32 _hashedMessage = _sigUtils.getBridgeMessageHash(_message);

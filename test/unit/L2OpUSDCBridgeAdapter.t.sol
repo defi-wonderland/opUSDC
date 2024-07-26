@@ -35,6 +35,8 @@ contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
 }
 
 abstract contract Base is Helpers {
+  string internal constant _NAME = 'L1OpUSDCBridgeAdapter';
+  string internal constant _VERSION = '1.0.0';
   bytes4 internal constant _UPGRADE_TO_SELECTOR = 0x3659cfe6;
   bytes4 internal constant _UPGRADE_TO_AND_CALL_SELECTOR = 0x4f1ef286;
 
@@ -583,8 +585,9 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     vm.assume(_deadline > 0);
     vm.warp(_deadline - 1);
     (address _notSignerAd, uint256 _notSignerPk) = makeAddrAndKey('notSigner');
-    bytes memory _signature =
-      _generateSignature(_to, _amount, _deadline, _minGasLimit, _nonce, _notSignerAd, _notSignerPk, address(adapter));
+    bytes memory _signature = _generateSignature(
+      _NAME, _VERSION, _to, _amount, _deadline, _minGasLimit, _nonce, _notSignerAd, _notSignerPk, address(adapter)
+    );
     vm.mockCall(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(false));
     // Execute
     vm.prank(_user);
@@ -605,8 +608,9 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     vm.assume(_to != address(0));
     vm.assume(_deadline > 0);
     vm.warp(_deadline - 1);
-    bytes memory _signature =
-      _generateSignature(_to, _amount, _deadline, _minGasLimit, _nonce, _signerAd, _signerPk, address(adapter));
+    bytes memory _signature = _generateSignature(
+      _NAME, _VERSION, _to, _amount, _deadline, _minGasLimit, _nonce, _signerAd, _signerPk, address(adapter)
+    );
 
     _mockAndExpect(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(false));
     _mockAndExpect(
@@ -644,8 +648,9 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     vm.assume(_to != address(0));
     vm.assume(_deadline > 0);
     vm.warp(_deadline - 1);
-    bytes memory _signature =
-      _generateSignature(_to, _amount, _deadline, _minGasLimit, _nonce, _signerAd, _signerPk, address(adapter));
+    bytes memory _signature = _generateSignature(
+      _NAME, _VERSION, _to, _amount, _deadline, _minGasLimit, _nonce, _signerAd, _signerPk, address(adapter)
+    );
 
     vm.mockCall(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(false));
     vm.mockCall(

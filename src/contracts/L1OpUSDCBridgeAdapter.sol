@@ -47,6 +47,19 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     address _linkedAdapter
   ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
 
+  /**
+   * @notice Sets the owner of the contract
+   * @param _owner The address of the owner
+   * @dev This function needs only used during the deployment of the proxy contract, and it is disabled for the
+   * implementation contract
+   */
+  function initialize(address _owner) external virtual override initializer {
+    __Ownable_init(_owner);
+    string memory _name = 'L1OpUSDCBridgeAdapter';
+    string memory _version = '1.0.0';
+    __EIP712_init(_name, _version);
+  }
+
   /*///////////////////////////////////////////////////////////////
                               MIGRATION
   ///////////////////////////////////////////////////////////////*/

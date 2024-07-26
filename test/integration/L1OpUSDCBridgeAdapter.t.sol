@@ -5,6 +5,9 @@ import {IntegrationBase} from './IntegrationBase.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 
 contract Integration_Bridging is IntegrationBase {
+  string internal constant _NAME = 'L1OpUSDCBridgeAdapter';
+  string internal constant _VERSION = '1.0.0';
+
   /**
    * @notice Test the bridging process from L1 -> L2
    */
@@ -92,7 +95,16 @@ contract Integration_Bridging is IntegrationBase {
     MAINNET_USDC.approve(address(l1Adapter), _amount);
     uint256 _deadline = block.timestamp + 1 days;
     bytes memory _signature = _generateSignature(
-      _signerAd, _amount, _deadline, _MIN_GAS_LIMIT, _USER_NONCE, _signerAd, _signerPk, address(l1Adapter)
+      _NAME,
+      _VERSION,
+      _signerAd,
+      _amount,
+      _deadline,
+      _MIN_GAS_LIMIT,
+      _USER_NONCE,
+      _signerAd,
+      _signerPk,
+      address(l1Adapter)
     );
 
     // Different address can execute the message
@@ -136,7 +148,7 @@ contract Integration_Bridging is IntegrationBase {
     // Changing to `to` param to _user but we call it with _signerAd
     uint256 _deadline = block.timestamp + 1 days;
     bytes memory _signature = _generateSignature(
-      _user, _amount, _deadline, _MIN_GAS_LIMIT, _USER_NONCE, _signerAd, _signerPk, address(l1Adapter)
+      _NAME, _VERSION, _user, _amount, _deadline, _MIN_GAS_LIMIT, _USER_NONCE, _signerAd, _signerPk, address(l1Adapter)
     );
 
     // Cancel the signature
@@ -167,7 +179,7 @@ contract Integration_Bridging is IntegrationBase {
     // Changing to `to` param to _user but we call it with _signerAd
     uint256 _deadline = block.timestamp + 1 days;
     bytes memory _signature = _generateSignature(
-      _user, _amount, _deadline, _MIN_GAS_LIMIT, _USER_NONCE, _signerAd, _signerPk, address(l1Adapter)
+      _NAME, _VERSION, _user, _amount, _deadline, _MIN_GAS_LIMIT, _USER_NONCE, _signerAd, _signerPk, address(l1Adapter)
     );
 
     // Different address can execute the message

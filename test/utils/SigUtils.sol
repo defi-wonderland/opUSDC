@@ -21,9 +21,7 @@ contract SigUtils {
   string private _nameFallback;
   string private _versionFallback;
 
-  constructor(address _adapter) {
-    string memory _name = 'OpUSDCBridgeAdapter';
-    string memory _version = '1.0.0';
+  constructor(address _adapter, string memory _name, string memory _version) {
     _NAME = _name.toShortStringWithFallback(_nameFallback);
     _VERSION = _version.toShortStringWithFallback(_versionFallback);
 
