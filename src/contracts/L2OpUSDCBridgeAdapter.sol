@@ -79,9 +79,6 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     messengerStatus = Status.Deprecated;
     roleCaller = _roleCaller;
 
-    // We need to do totalSupply + blacklistedFunds
-    // Because on `receiveMessage` mint would fail causing the totalSupply to not increase
-    // But the native token is still locked on L1
     uint256 _burnAmount = IUSDC(USDC).totalSupply();
 
     // Remove the L2 Adapter as a minter
@@ -219,7 +216,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
         emit MessageReceived(_user, _amount, MESSENGER);
       } catch {
         userBlacklistedFunds[_user] += _amount;
-        emit MessageFailed(_user, _amount);
+        emit MessageFailed(_user, _amount, MESSENGER);
       }
     }
   }
@@ -233,8 +230,9 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     userBlacklistedFunds[_user] = 0;
 
     // NOTE: This will fail after migration as the adapter will no longer be a minter
-    // All funds need to be recovered from the contract before migration if applicable
-    // TODO: If migration has happend instead send a message back to L1 to recover the funds
+    // All funds need to be recovered from the contract before migration
+    // After migration happens if there are still funds stuck in the contract
+    // we need to have centralized recovery manually
 
     // The check for if the user is blacklisted happens in USDC's contract
     IUSDC(USDC).mint(_user, _amount);
