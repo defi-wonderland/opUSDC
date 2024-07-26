@@ -1121,6 +1121,89 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
   }
 }
 
+contract L1OpUSDCBridgeAdapter_Unit_receiveWithdrawBlacklistedFundsPostMigration is Base {
+  /**
+   * @notice Check that the function reverts if the sender is not the messenger
+   */
+  function test_revertIfNotMessenger(address _spender, uint256 _amount) external {
+    // Execute
+    vm.prank(_user);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
+    adapter.receiveWithdrawBlacklistedFundsPostMigration(_spender, _amount);
+  }
+
+  /**
+   * @notice Check that the function reverts if the linked adapter didn't send the message
+   */
+  function test_revertIfLinkedAdapterDidntSendTheMessage(
+    address _spender,
+    uint256 _amount,
+    address _messageSender
+  ) external {
+    vm.assume(_messageSender != _linkedAdapter);
+    // Mock calls
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_messageSender));
+
+    // Execute
+    vm.prank(_messenger);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
+    adapter.receiveWithdrawBlacklistedFundsPostMigration(_spender, _amount);
+  }
+
+  /**
+   * @notice Check that the function reverts if adapter is deprecated.
+   */
+  function test_revertOnAdapterNotDeprecated(address _spender, uint256 _amount, uint256 _status) external {
+    vm.assume(_spender != address(0));
+
+    _status = bound(_status, 0, uint256(type(IOpUSDCBridgeAdapter.Status).max) - 1);
+    vm.assume(_status != uint256(IOpUSDCBridgeAdapter.Status.Deprecated));
+    adapter.forTest_setMessengerStatus(IOpUSDCBridgeAdapter.Status(_status));
+
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    // Execute
+    vm.prank(_messenger);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_NotMigrated.selector);
+    adapter.receiveWithdrawBlacklistedFundsPostMigration(_spender, _amount);
+  }
+
+  /**
+   * @notice Check that the function expects the correct calls
+   */
+  function test_expectedCall(address _spender, uint256 _amount) external {
+    vm.assume(_spender != address(0));
+    adapter.forTest_setMessengerStatus(IOpUSDCBridgeAdapter.Status.Deprecated);
+
+    // Mock calls
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    _mockAndExpect(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _spender, _amount), abi.encode(true));
+
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveWithdrawBlacklistedFundsPostMigration(_spender, _amount);
+  }
+
+  /**
+   * @notice Check that the event is emitted as expected
+   */
+  function test_emitEvent(address _spender, uint256 _amount) external {
+    vm.assume(_spender != address(0));
+    adapter.forTest_setMessengerStatus(IOpUSDCBridgeAdapter.Status.Deprecated);
+
+    // Mock calls
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+    _mockAndExpect(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _spender, _amount), abi.encode(true));
+
+    // Expect events
+    vm.expectEmit(true, true, true, true);
+    emit MessageReceived(_spender, _amount, _messenger);
+
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveWithdrawBlacklistedFundsPostMigration(_spender, _amount);
+  }
+}
+
 contract L1OpUSDCBridgeAdapter_Unit_WithdrawBlacklistedFunds is Base {
   event BlacklistedFundsWithdrawn(address _user, uint256 _amountWithdrawn);
 

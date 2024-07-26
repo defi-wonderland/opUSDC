@@ -275,6 +275,8 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     if (messengerStatus != Status.Deprecated) revert IOpUSDCBridgeAdapter_NotMigrated();
 
     IUSDC(USDC).safeTransfer(_spender, _amount);
+
+    emit MessageReceived(_spender, _amount, MESSENGER);
   }
 
   /**
