@@ -32,12 +32,12 @@ contract ForTestOpUSDCBridgeAdapter is OpUSDCBridgeAdapter {
     uint32 _minGasLimit
   ) external override {}
 
-  function forTest_checkSignature(address _signer, bytes32 _messageHash, bytes memory _signature) public view {
-    _checkSignature(_signer, _messageHash, _signature);
-  }
-
   function forTest_authorizeUpgrade(address _newAdapter) public {
     _authorizeUpgrade(_newAdapter);
+  }
+
+  function forTest_checkSignature(address _signer, bytes32 _messageHash, bytes memory _signature) public view {
+    _checkSignature(_signer, _messageHash, _signature);
   }
 }
 

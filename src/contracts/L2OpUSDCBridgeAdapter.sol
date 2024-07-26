@@ -32,6 +32,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   bytes4 internal constant _UPDATE_MASTER_MINTER_SELECTOR = 0xaa20e1e4;
 
   /// @inheritdoc IL2OpUSDCBridgeAdapter
+  // solhint-disable-next-line var-name-mixedcase
   FallbackProxyAdmin public FALLBACK_PROXY_ADMIN;
 
   /// @inheritdoc IL2OpUSDCBridgeAdapter

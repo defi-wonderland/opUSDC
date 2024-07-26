@@ -117,6 +117,11 @@ abstract contract OpUSDCBridgeAdapter is UUPSUpgradeable, OwnableUpgradeable, EI
   }
 
   /**
+   * @notice Checks the caller is the owner to authorize the upgrade
+   */
+  function _authorizeUpgrade(address) internal virtual override onlyOwner {}
+
+  /**
    * @notice Check the signature of a message
    * @param _signer the address that signed the message
    * @param _messageHash the hash of the message that was signed
@@ -128,11 +133,6 @@ abstract contract OpUSDCBridgeAdapter is UUPSUpgradeable, OwnableUpgradeable, EI
 
     if (!_signer.isValidSignatureNow(_messageHash, _signature)) revert IOpUSDCBridgeAdapter_InvalidSignature();
   }
-
-  /**
-   * @notice Checks the caller is the owner to authorize the upgrade
-   */
-  function _authorizeUpgrade(address) internal virtual override onlyOwner {}
 
   /**
    * @notice Hashes the bridge message struct
