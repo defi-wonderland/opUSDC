@@ -224,7 +224,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
 
   /**
    * @notice Mints the blacklisted funds from the contract incase they get unblacklisted
-   * @dev returns the funds to the spender if the contract is deprecated
+   * @dev Returns the funds to the spender through a message to L1 if the contract is deprecated 
    * @param _spender The address that provided the tokens
    * @param _user The user to withdraw the funds for
    */
