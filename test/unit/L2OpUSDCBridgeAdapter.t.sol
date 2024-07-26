@@ -670,7 +670,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
 }
 
 contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
-  event MessageFailed(address _spender, address _user, uint256 _amount);
+  event MessageFailed(address _spender, address _user, uint256 _amount, address _messenger);
 
   /**
    * @notice Check that the function reverts if the sender is not the messenger
@@ -785,7 +785,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 
     // Execute
     vm.expectEmit(true, true, true, true);
-    emit MessageFailed(_spender, _user, _amount);
+    emit MessageFailed(_spender, _user, _amount, _messenger);
 
     vm.prank(_messenger);
     adapter.receiveMessage(_user, _spender, _amount);

@@ -259,7 +259,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
       emit MessageReceived(_user, _amount, MESSENGER);
     } catch {
       blacklistedFundsDetails[_spender][_user] += _amount;
-      emit MessageFailed(_spender, _user, _amount);
+      emit MessageFailed(_spender, _user, _amount, MESSENGER);
     }
   }
 
