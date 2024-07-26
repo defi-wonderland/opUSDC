@@ -153,8 +153,8 @@ contract Integration_Bridging is IntegrationBase {
    * @notice Test signature message reverts with incorrect signature
    */
   function test_bridgeFromL1WithIncorrectSignature() public {
-    (address _signerAd, uint256 _signerPk) = makeAddrAndKey('signer');
     vm.selectFork(mainnet);
+    (address _signerAd, uint256 _signerPk) = makeAddrAndKey('signer');
 
     // We need to do this instead of `deal` because deal doesnt change `totalSupply` state
     vm.prank(MAINNET_USDC.masterMinter());
@@ -172,8 +172,12 @@ contract Integration_Bridging is IntegrationBase {
 
     // Different address can execute the message
     vm.startPrank(_user);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSignature.selector);
+    ///  NOTE: Didn't us `vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSignature.selector)` because
+    /// it reverts with that error, but then the test fails because of a foundry issue with the error message
+    /// `contract signer does not exist`, which is not true.
+    vm.expectRevert();
     l1Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _USER_NONCE, _deadline, _MIN_GAS_LIMIT);
+
     vm.stopPrank();
   }
 }

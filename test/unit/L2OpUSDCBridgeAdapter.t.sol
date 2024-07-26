@@ -1015,6 +1015,8 @@ contract L2OpUSDCBridgeAdapter_Unit_Initialize is Base {
    * @dev Needs to be checked on the proxy since the initialize function is disabled on the implementation
    */
   function test_initialize(address _owner) public {
+    vm.assume(_owner != address(0));
+
     // Deploy a proxy contract setting the , and call the initialize function on it to set the owner
     ForTestL2OpUSDCBridgeAdapter _newAdapter = ForTestL2OpUSDCBridgeAdapter(
       address(new ERC1967Proxy(address(_adapterImpl), abi.encodeCall(OpUSDCBridgeAdapter.initialize, _owner)))
