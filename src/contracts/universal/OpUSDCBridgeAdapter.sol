@@ -26,7 +26,7 @@ abstract contract OpUSDCBridgeAdapter is UUPSUpgradeable, OwnableUpgradeable, EI
   address public immutable MESSENGER;
 
   /// @notice Reserve 50 storage slots to be safe on future upgrades
-  uint256[50] internal __gap;
+  uint256[50] private __gap;
 
   /// @inheritdoc IOpUSDCBridgeAdapter
   Status public messengerStatus;

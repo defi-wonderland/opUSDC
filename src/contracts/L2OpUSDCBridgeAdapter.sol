@@ -38,6 +38,9 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /// @inheritdoc IL2OpUSDCBridgeAdapter
   address public roleCaller;
 
+  /// @notice Reserve 50 more storage slots to be safe on future upgrades
+  uint256[50] private __gap;
+
   /**
    * @notice Modifier to check if the sender is the linked adapter through the messenger
    */
