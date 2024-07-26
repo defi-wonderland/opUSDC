@@ -230,9 +230,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     userBlacklistedFunds[_user] = 0;
 
     // NOTE: This will fail after migration as the adapter will no longer be a minter
-    // All funds need to be recovered from the contract before migration
-    // After migration happens if there are still funds stuck in the contract
-    // we need to have centralized recovery manually
+    // All funds need to be recovered from the contract before migration if applicable
+    // TODO: If migration has happend instead send a message back to L1 to recover the funds
 
     // The check for if the user is blacklisted happens in USDC's contract
     IUSDC(USDC).mint(_user, _amount);
