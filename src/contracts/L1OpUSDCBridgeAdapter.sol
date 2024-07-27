@@ -266,14 +266,12 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
 
   /**
    * @notice Withdraws the blacklisted funds from L2 once the adapter is deprecated
-   * @dev If the `_spender` is blacklisted the transfer will fail
+   * @dev If the _spender is still blacklisted, the chain operator will be forced to
+   *      replay this message
    * @param _spender The user that initialy provided the tokens
    * @param _amount The amount of tokens to withdraw
    */
-  function receiveWithdrawBlacklistedFundsPostMigration(
-    address _spender,
-    uint256 _amount
-  ) external onlyLinkedAdapter {
+  function receiveWithdrawBlacklistedFundsPostMigration(address _spender, uint256 _amount) external onlyLinkedAdapter {
     if (messengerStatus != Status.Deprecated) revert IOpUSDCBridgeAdapter_NotMigrated();
 
     IUSDC(USDC).safeTransfer(_spender, _amount);
