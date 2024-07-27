@@ -212,6 +212,8 @@ interface IOpUSDCBridgeAdapter {
   /**
    * @notice Receive the message from the other chain and mint the bridged representation for the user
    * @dev This function should only be called when receiving a message to mint the bridged representation
+   * @dev If the mint fails the funds might be recovered by calling withdrawBlacklistedFunds if the user
+   *      is ever unblacklisted
    * @param _user The user to mint the bridged representation for
    * @param _spender The address that provided the tokens
    * @param _amount The amount of tokens to mint
@@ -274,7 +276,7 @@ interface IOpUSDCBridgeAdapter {
    * @notice Returns the amount of funds locked that got blacklisted for a specific user
    * @param _spender The address that provided the tokens
    * @param _user The user to check for
-   * @return _amount The amount of funds locked from blacklisted messages
+   * @return _blacklistedAmount The amount of funds locked from blacklisted messages
    */
-  function blacklistedFundsDetails(address _spender, address _user) external view returns (uint256 _amount);
+  function blacklistedFundsDetails(address _spender, address _user) external view returns (uint256 _blacklistedAmount);
 }

@@ -246,12 +246,13 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   }
 
   /**
-   * @notice Receive the message from the other chain and transfer the tokens to the user
-   * @dev This function should only be called when receiving a message to transfer the tokens
-   * @dev If the transfer fails the funds might be recovered by calling withdrawBlacklistedFunds
-   * @param _user The user to transfer the tokens to
-   * @param _spender unused parameter on L1, added for maintainability
-   * @param _amount The amount of tokens to transfer
+   * @notice Receive the message from the other chain and mint the bridged representation for the user
+   * @dev This function should only be called when receiving a message to mint the bridged representation
+   * @dev If the mint fails the funds might be recovered by calling withdrawBlacklistedFunds if the user
+   *      is ever unblacklisted
+   * @param _user The user to mint the bridged representation for
+   * @param _spender The address that provided the tokens
+   * @param _amount The amount of tokens to mint
    */
   function receiveMessage(address _user, address _spender, uint256 _amount) external override onlyLinkedAdapter {
     // Transfer the tokens to the user

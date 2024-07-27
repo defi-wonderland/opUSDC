@@ -199,7 +199,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /**
    * @notice Receive the message from the other chain and mint the bridged representation for the user
    * @dev This function should only be called when receiving a message to mint the bridged representation
-   * @dev If the mint fails the funds might be recovered by calling withdrawBlacklistedFunds if the user is ever unblacklisted
+   * @dev If the mint fails the funds might be recovered by calling withdrawBlacklistedFunds if the user
+   *      is ever unblacklisted
    * @param _user The user to mint the bridged representation for
    * @param _spender The address that provided the tokens
    * @param _amount The amount of tokens to mint
@@ -224,7 +225,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
 
   /**
    * @notice Mints the blacklisted funds from the contract incase they get unblacklisted
-   * @dev Returns the funds to the spender through a message to L1 if the contract is deprecated 
+   * @dev Returns the funds to the spender through a message to L1 if the contract is deprecated
    * @param _spender The address that provided the tokens
    * @param _user The user to withdraw the funds for
    */
