@@ -176,6 +176,110 @@ contract Integration_Bridging is IntegrationBase {
     l1Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _USER_NONCE, _deadline, _MIN_GAS_LIMIT);
     vm.stopPrank();
   }
+
+  function test_recoverBlacklistedFundsAfterMigration() public {
+    // Blacklist `_user` on L2
+    vm.selectFork(optimism);
+    vm.prank(bridgedUSDC.blacklister());
+    bridgedUSDC.blacklist(_user);
+
+    // Create address for the spender
+    address _spender = makeAddr('spender');
+
+    // Select mainnet fork
+    vm.selectFork(mainnet);
+
+    // Mint mainnet USDC to the spender
+    vm.prank(MAINNET_USDC.masterMinter());
+    MAINNET_USDC.mint(_spender, _amount);
+
+    // Approve the L1 adapter to spend the USDC
+    vm.prank(_spender);
+    MAINNET_USDC.approve(address(l1Adapter), _amount);
+
+    // Spender send USDC to the User on L2
+    vm.prank(_spender);
+    l1Adapter.sendMessage(_user, _amount, _MIN_GAS_LIMIT);
+
+    // Check that the USDC are correctly sent to the user
+    assertEq(MAINNET_USDC.balanceOf(_spender), 0);
+
+    // Relay the message to L2
+    vm.selectFork(optimism);
+    _relayL1ToL2Message(
+      OP_ALIASED_L1_MESSENGER,
+      address(l1Adapter),
+      address(l2Adapter),
+      _ZERO_VALUE,
+      1_000_000,
+      abi.encodeWithSignature('receiveMessage(address,address,uint256)', _user, _spender, _amount)
+    );
+
+    // Check that the blacklisted funds are correctly computed
+    assertEq(l2Adapter.blacklistedFundsDetails(_spender, _user), _amount);
+
+    // Migration to native USDC
+    {
+      address _roleCaller = makeAddr('circle');
+      address _burnCaller = makeAddr('circle');
+      uint32 _minGasLimitReceiveOnL2 = 1_000_000;
+      uint32 _minGasLimitSetBurnAmount = 1_000_000;
+
+      vm.selectFork(mainnet);
+      vm.prank(_owner);
+      l1Adapter.migrateToNative(_roleCaller, _burnCaller, _MIN_GAS_LIMIT, _MIN_GAS_LIMIT);
+
+      //This is necessary to set the messenger status to deprecated on L1
+      vm.selectFork(optimism);
+      _relayL1ToL2Message(
+        OP_ALIASED_L1_MESSENGER,
+        address(l1Adapter),
+        address(l2Adapter),
+        _ZERO_VALUE,
+        _minGasLimitReceiveOnL2,
+        abi.encodeWithSignature('receiveMigrateToNative(address,uint32)', _roleCaller, _minGasLimitSetBurnAmount)
+      );
+
+      assertEq(uint256(l2Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Deprecated));
+
+      uint256 _burnAmount = bridgedUSDC.totalSupply();
+
+      //This is necessary to set the messenger status to deprecated on L1
+      vm.selectFork(mainnet);
+      _relayL2ToL1Message(
+        address(l2Adapter),
+        address(l1Adapter),
+        _ZERO_VALUE,
+        _minGasLimitSetBurnAmount,
+        abi.encodeWithSignature('setBurnAmount(uint256)', _burnAmount)
+      );
+
+      assertEq(uint256(l1Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Deprecated));
+    }
+
+    // Check that any user can call the withdrawBlacklistedFunds function
+    address _anyUser = makeAddr('anyUser');
+    vm.selectFork(optimism);
+    vm.prank(_anyUser);
+    l2Adapter.withdrawBlacklistedFunds(_spender, _user);
+
+    // Check that the blacklisted funds are correctly removed
+    assertEq(l2Adapter.blacklistedFundsDetails(_spender, _user), 0);
+
+    // Check that funds are returned to the spender if is not blacklisted
+    vm.selectFork(mainnet);
+    assertEq(MAINNET_USDC.isBlacklisted(_spender), false);
+    _relayL2ToL1Message(
+      address(l2Adapter),
+      address(l1Adapter),
+      _ZERO_VALUE,
+      _MIN_GAS_LIMIT,
+      abi.encodeWithSignature('receiveWithdrawBlacklistedFundsPostMigration(address,uint256)', _spender, _amount)
+    );
+
+    // Check that the funds are correctly returned to the spender
+    assertEq(MAINNET_USDC.balanceOf(_spender), _amount);
+  }
 }
 
 contract Integration_Migration is IntegrationBase {
