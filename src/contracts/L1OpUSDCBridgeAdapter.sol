@@ -273,7 +273,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   function receiveWithdrawBlacklistedFundsPostMigration(
     address _spender,
     uint256 _amount
-  ) external override onlyLinkedAdapter {
+  ) external onlyLinkedAdapter {
     if (messengerStatus != Status.Deprecated) revert IOpUSDCBridgeAdapter_NotMigrated();
 
     IUSDC(USDC).safeTransfer(_spender, _amount);
