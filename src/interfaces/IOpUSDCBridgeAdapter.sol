@@ -23,6 +23,7 @@ interface IOpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
                           STRUCTS
   ///////////////////////////////////////////////////////////////*/
+
   /**
    * @notice The struct to hold the data for a bridge message with signature
    * @param to The target address on the destination chain
@@ -108,6 +109,7 @@ interface IOpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
                             ERRORS
   ///////////////////////////////////////////////////////////////*/
+
   /**
    * @notice Error when burnLockedUSDC is called before a burn amount is set
    */
@@ -181,6 +183,7 @@ interface IOpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   ///////////////////////////////////////////////////////////////*/
+
   /**
    * @notice Send tokens to other chain through the linked adapter
    * @param _to The target address on the destination chain
