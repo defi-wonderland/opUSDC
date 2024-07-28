@@ -79,9 +79,6 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     messengerStatus = Status.Deprecated;
     roleCaller = _roleCaller;
 
-    // We need to do totalSupply + blacklistedFunds
-    // Because on `receiveMessage` mint would fail causing the totalSupply to not increase
-    // But the native token is still locked on L1
     uint256 _burnAmount = IUSDC(USDC).totalSupply();
 
     // Remove the L2 Adapter as a minter
@@ -219,7 +216,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
         emit MessageReceived(_user, _amount, MESSENGER);
       } catch {
         userBlacklistedFunds[_user] += _amount;
-        emit MessageFailed(_user, _amount);
+        emit MessageFailed(_user, _amount, MESSENGER);
       }
     }
   }

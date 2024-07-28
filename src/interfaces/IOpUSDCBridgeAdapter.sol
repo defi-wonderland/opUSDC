@@ -81,8 +81,9 @@ interface IOpUSDCBridgeAdapter {
    * @notice Emitted when a message fails
    * @param _user The user that the message failed for
    * @param _amount The amount of tokens that were added to the blacklisted funds
+   * @param _messenger The address of the messenger that the message failed for
    */
-  event MessageFailed(address _user, uint256 _amount);
+  event MessageFailed(address _user, uint256 _amount, address _messenger);
 
   /**
    * @notice Emitted when the blacklisted funds are withdrawn
