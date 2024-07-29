@@ -20,6 +20,10 @@ interface IOpUSDCBridgeAdapter {
     Deprecated
   }
 
+  /*///////////////////////////////////////////////////////////////
+                          STRUCTS
+  ///////////////////////////////////////////////////////////////*/
+
   /**
    * @notice The struct to hold the data for a bridge message with signature
    * @param to The target address on the destination chain
@@ -58,11 +62,12 @@ interface IOpUSDCBridgeAdapter {
 
   /**
    * @notice Emitted when a message as recieved
+   * @param _spender The address that provided the tokens
    * @param _user The user that recieved the message
    * @param _amount The amount of tokens recieved
    * @param _messenger The address of the messenger contract that was recieved through
    */
-  event MessageReceived(address _user, uint256 _amount, address _messenger);
+  event MessageReceived(address _spender, address _user, uint256 _amount, address _messenger);
 
   /**
    * @notice Emitted when messaging is resumed
@@ -81,11 +86,12 @@ interface IOpUSDCBridgeAdapter {
 
   /**
    * @notice Emitted when a message fails
+   * @param _spender The address that provided the tokens
    * @param _user The user that the message failed for
    * @param _amount The amount of tokens that were added to the blacklisted funds
    * @param _messenger The address of the messenger that the message failed for
    */
-  event MessageFailed(address _user, uint256 _amount, address _messenger);
+  event MessageFailed(address _spender, address _user, uint256 _amount, address _messenger);
 
   /**
    * @notice Emitted when the blacklisted funds are withdrawn
@@ -94,9 +100,17 @@ interface IOpUSDCBridgeAdapter {
    */
   event BlacklistedFundsWithdrawn(address _user, uint256 _amountWithdrawn);
 
+  /**
+   * @notice Emitted when the blacklisted funds are sent back to L1
+   * @param _spender The address that provided the tokens
+   * @param _amountSent The amount of tokens that were withdrawn
+   */
+  event BlacklistedFundsSentBackToL1(address _spender, uint256 _amountSent);
+
   /*///////////////////////////////////////////////////////////////
                             ERRORS
   ///////////////////////////////////////////////////////////////*/
+
   /**
    * @notice Error when burnLockedUSDC is called before a burn amount is set
    */
@@ -163,13 +177,14 @@ interface IOpUSDCBridgeAdapter {
   error IOpUSDCBridgeAdapter_BlacklistedAddress();
 
   /**
-   *  @notice Error when bridgedUSDC has already been migrated to native USDC
+   *  @notice Error when bridgedUSDC has not been migrated yet to native USDC
    */
-  error IOpUSDCBridgeAdapter_Migrated();
+  error IOpUSDCBridgeAdapter_NotMigrated();
 
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   ///////////////////////////////////////////////////////////////*/
+
   /**
    * @notice Send tokens to other chain through the linked adapter
    * @param _to The target address on the destination chain
@@ -199,19 +214,20 @@ interface IOpUSDCBridgeAdapter {
   ) external;
 
   /**
-   * @notice Receive the message from the other chain and mint the bridged representation for the user
-   * @dev This function should only be called when receiving a message to mint the bridged representation
-   * @param _user The user to mint the bridged representation for
+   * @notice Receive the message from the other chain and mint or transfer tokens to the user
+   * @dev This function should only be called when receiving a message to mint or transfer tokens
+   * @param _user The user to mint or transfer the tokens for
    * @param _spender The address that provided the tokens
-   * @param _amount The amount of tokens to mint
+   * @param _amount The amount of tokens to transfer or mint
    */
   function receiveMessage(address _user, address _spender, uint256 _amount) external;
 
   /**
    * @notice Withdraws the blacklisted funds from the contract if they get unblacklisted
+   * @param _spender The address that provided the tokens
    * @param _user The user to withdraw the funds for
    */
-  function withdrawBlacklistedFunds(address _user) external;
+  function withdrawBlacklistedFunds(address _spender, address _user) external;
 
   /**
    * @notice Cancels a signature by setting the nonce as used
@@ -260,8 +276,9 @@ interface IOpUSDCBridgeAdapter {
 
   /**
    * @notice Returns the amount of funds locked that got blacklisted for a specific user
+   * @param _spender The address that provided the tokens
    * @param _user The user to check for
-   * @return _amount The amount of funds locked from blacklisted messages
+   * @return _blacklistedAmount The amount of funds locked from blacklisted messages
    */
-  function userBlacklistedFunds(address _user) external view returns (uint256 _amount);
+  function blacklistedFundsDetails(address _spender, address _user) external view returns (uint256 _blacklistedAmount);
 }

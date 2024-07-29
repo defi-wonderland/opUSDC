@@ -17,6 +17,7 @@ interface IL2OpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   ///////////////////////////////////////////////////////////////*/
+
   /**
    * @notice Initiates the process to migrate the bridged USDC to native USDC
    * @dev Full migration cant finish until L1 receives the message for setting the burn amount
