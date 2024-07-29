@@ -214,13 +214,11 @@ interface IOpUSDCBridgeAdapter {
   ) external;
 
   /**
-   * @notice Receive the message from the other chain and mint the bridged representation for the user
-   * @dev This function should only be called when receiving a message to mint the bridged representation
-   * @dev If the mint fails the funds might be recovered by calling withdrawBlacklistedFunds if the user
-   *      is ever unblacklisted
-   * @param _user The user to mint the bridged representation for
+   * @notice Receive the message from the other chain and mint or transfer tokens to the user
+   * @dev This function should only be called when receiving a message to mint or transfer tokens
+   * @param _user The user to mint or transfer the tokens for
    * @param _spender The address that provided the tokens
-   * @param _amount The amount of tokens to mint
+   * @param _amount The amount of tokens to transfer or mint
    */
   function receiveMessage(address _user, address _spender, uint256 _amount) external;
 
