@@ -1,8 +1,10 @@
 pragma solidity ^0.8.25;
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
+import {OpUSDCBridgeAdapter} from 'src/contracts/universal/OpUSDCBridgeAdapter.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
 contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
@@ -12,9 +14,8 @@ contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
   constructor(
     address _usdc,
     address _messenger,
-    address _linkedAdapter,
-    address _owner
-  ) L2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _owner) {}
+    address _linkedAdapter
+  ) L2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
 
   function forTest_setMessengerStatus(Status _status) external {
     messengerStatus = _status;
@@ -34,6 +35,8 @@ contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
 }
 
 abstract contract Base is Helpers {
+  string internal constant _NAME = 'L1OpUSDCBridgeAdapter';
+  string internal constant _VERSION = '1.0.0';
   bytes4 internal constant _UPGRADE_TO_SELECTOR = 0x3659cfe6;
   bytes4 internal constant _UPGRADE_TO_AND_CALL_SELECTOR = 0x4f1ef286;
 
@@ -41,11 +44,12 @@ abstract contract Base is Helpers {
 
   address internal _user = makeAddr('user');
   address internal _owner = makeAddr('owner');
-  address internal _signerAd;
-  uint256 internal _signerPk;
   address internal _usdc = makeAddr('opUSDC');
   address internal _messenger = makeAddr('messenger');
   address internal _linkedAdapter = makeAddr('linkedAdapter');
+  address internal _adapterImpl;
+  address internal _signerAd;
+  uint256 internal _signerPk;
 
   event MigratingToNative(address _messenger, address _roleCaller);
   event MessageSent(address _user, address _to, uint256 _amount, address _messenger, uint32 _minGasLimit);
@@ -54,7 +58,11 @@ abstract contract Base is Helpers {
 
   function setUp() public virtual {
     (_signerAd, _signerPk) = makeAddrAndKey('signer');
-    adapter = new ForTestL2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _owner);
+
+    _adapterImpl = address(new ForTestL2OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter));
+    adapter = ForTestL2OpUSDCBridgeAdapter(
+      address(new ERC1967Proxy(_adapterImpl, abi.encodeCall(OpUSDCBridgeAdapter.initialize, _owner)))
+    );
   }
 }
 
@@ -584,8 +592,9 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     vm.assume(_deadline > 0);
     vm.warp(_deadline - 1);
     (address _notSignerAd, uint256 _notSignerPk) = makeAddrAndKey('notSigner');
-    bytes memory _signature =
-      _generateSignature(_to, _amount, _deadline, _minGasLimit, _nonce, _notSignerAd, _notSignerPk, address(adapter));
+    bytes memory _signature = _generateSignature(
+      _NAME, _VERSION, _to, _amount, _deadline, _minGasLimit, _nonce, _notSignerAd, _notSignerPk, address(adapter)
+    );
     vm.mockCall(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(false));
     // Execute
     vm.prank(_user);
@@ -606,8 +615,9 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     vm.assume(_to != address(0));
     vm.assume(_deadline > 0);
     vm.warp(_deadline - 1);
-    bytes memory _signature =
-      _generateSignature(_to, _amount, _deadline, _minGasLimit, _nonce, _signerAd, _signerPk, address(adapter));
+    bytes memory _signature = _generateSignature(
+      _NAME, _VERSION, _to, _amount, _deadline, _minGasLimit, _nonce, _signerAd, _signerPk, address(adapter)
+    );
 
     _mockAndExpect(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(false));
     _mockAndExpect(
@@ -645,8 +655,9 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     vm.assume(_to != address(0));
     vm.assume(_deadline > 0);
     vm.warp(_deadline - 1);
-    bytes memory _signature =
-      _generateSignature(_to, _amount, _deadline, _minGasLimit, _nonce, _signerAd, _signerPk, address(adapter));
+    bytes memory _signature = _generateSignature(
+      _NAME, _VERSION, _to, _amount, _deadline, _minGasLimit, _nonce, _signerAd, _signerPk, address(adapter)
+    );
 
     vm.mockCall(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(false));
     vm.mockCall(
@@ -1089,5 +1100,24 @@ contract L2OpUSDCBridgeAdapter_Unit_CallUsdcTransaction is Base {
     // Execute
     vm.prank(_owner);
     adapter.callUsdcTransaction(_data);
+  }
+}
+
+contract L2OpUSDCBridgeAdapter_Unit_Initialize is Base {
+  /**
+   * @notice Check that the initialize function works as expected
+   * @dev Needs to be checked on the proxy since the initialize function is disabled on the implementation
+   */
+  function test_initialize(address _owner) public {
+    vm.assume(_owner != address(0));
+
+    // Deploy a proxy contract setting the , and call the initialize function on it to set the owner
+    ForTestL2OpUSDCBridgeAdapter _newAdapter = ForTestL2OpUSDCBridgeAdapter(
+      address(new ERC1967Proxy(address(_adapterImpl), abi.encodeCall(OpUSDCBridgeAdapter.initialize, _owner)))
+    );
+
+    // Assert
+    assertEq(_newAdapter.owner(), _owner, 'Owner should be set to the provided address');
+    assertGt(address(_newAdapter.FALLBACK_PROXY_ADMIN()).code.length, 0, 'Fallback admin was not deployed');
   }
 }

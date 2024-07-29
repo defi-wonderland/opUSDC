@@ -1,17 +1,19 @@
 pragma solidity ^0.8.25;
 
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
+import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
+import {OpUSDCBridgeAdapter} from 'src/contracts/universal/OpUSDCBridgeAdapter.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
 
 contract ForTestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
   constructor(
     address _usdc,
     address _messenger,
-    address _linkedAdapter,
-    address _owner
-  ) L1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _owner) {}
+    address _linkedAdapter
+  ) L1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
 
   function forTest_setBurnAmount(uint256 _amount) external {
     burnAmount = _amount;
@@ -35,15 +37,19 @@ contract ForTestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
 }
 
 abstract contract Base is Helpers {
+  string internal constant _NAME = 'L1OpUSDCBridgeAdapter';
+  string internal constant _VERSION = '1.0.0';
+
   ForTestL1OpUSDCBridgeAdapter public adapter;
 
   bytes32 internal _salt = bytes32('1');
   address internal _user = makeAddr('user');
   address internal _owner = makeAddr('owner');
-  address internal _signerAd;
-  uint256 internal _signerPk;
   address internal _usdc = makeAddr('opUSDC');
   address internal _linkedAdapter = makeAddr('linkedAdapter');
+  address internal _adapterImpl;
+  address internal _signerAd;
+  uint256 internal _signerPk;
 
   // cant fuzz this because of foundry's VM
   address internal _messenger = makeAddr('messenger');
@@ -58,7 +64,10 @@ abstract contract Base is Helpers {
     (_signerAd, _signerPk) = makeAddrAndKey('signer');
     vm.etch(_messenger, 'xDomainMessageSender');
 
-    adapter = new ForTestL1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _owner);
+    _adapterImpl = address(new ForTestL1OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter));
+    adapter = ForTestL1OpUSDCBridgeAdapter(
+      address(new ERC1967Proxy(_adapterImpl, abi.encodeCall(OpUSDCBridgeAdapter.initialize, _owner)))
+    );
   }
 }
 
@@ -71,6 +80,38 @@ contract L1OpUSDCBridgeAdapter_Unit_Constructor is Base {
     assertEq(adapter.LINKED_ADAPTER(), _linkedAdapter, 'Linked adapter should be set to the provided address');
     assertEq(adapter.MESSENGER(), _messenger, 'Messenger should be set to the provided address');
     assertEq(adapter.owner(), _owner, 'Owner should be set to the provided address');
+  }
+}
+
+contract L1OpUSDCBridgeAdapter_Unit_Initialize is Base {
+  error InvalidInitialization();
+
+  /**
+   * @notice Check that the initialize function works as expected
+   * @dev Needs to be checked on the proxy since the initialize function is disabled on the implementation
+   */
+  function test_initialize(address _owner) public {
+    vm.assume(_owner != address(0));
+
+    // Deploy a proxy contract setting the , and call the initialize function on it to set the owner
+    ForTestL1OpUSDCBridgeAdapter _newAdapter = ForTestL1OpUSDCBridgeAdapter(
+      address(new ERC1967Proxy(address(_adapterImpl), abi.encodeCall(OpUSDCBridgeAdapter.initialize, _owner)))
+    );
+
+    // Assert
+    assertEq(_newAdapter.owner(), _owner, 'Owner should be set to the provided address');
+  }
+
+  /**
+   * @notice Check that the initialize function reverts if it was already called
+   */
+  function test_revertIfAlreadyInitialize(address _sender, address _owner) public {
+    // Expect revert with `InvalidInitialization` error
+    vm.expectRevert(InvalidInitialization.selector);
+
+    // Execute
+    vm.prank(_sender);
+    adapter.initialize(_owner);
   }
 }
 
@@ -915,8 +956,9 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     vm.assume(_deadline > 0);
     vm.warp(_deadline - 1);
     (address _notSignerAd, uint256 _notSignerPk) = makeAddrAndKey('notSigner');
-    bytes memory _signature =
-      _generateSignature(_to, _amount, _deadline, _minGasLimit, _nonce, _notSignerAd, _notSignerPk, address(adapter));
+    bytes memory _signature = _generateSignature(
+      _NAME, _VERSION, _to, _amount, _deadline, _minGasLimit, _nonce, _notSignerAd, _notSignerPk, address(adapter)
+    );
 
     vm.mockCall(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(false));
 
@@ -939,8 +981,9 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     vm.assume(_to != address(0));
     vm.assume(_deadline > 0);
     vm.warp(_deadline - 1);
-    bytes memory _signature =
-      _generateSignature(_to, _amount, _deadline, _minGasLimit, _nonce, _signerAd, _signerPk, address(adapter));
+    bytes memory _signature = _generateSignature(
+      _NAME, _VERSION, _to, _amount, _deadline, _minGasLimit, _nonce, _signerAd, _signerPk, address(adapter)
+    );
 
     _mockAndExpect(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(false));
     _mockAndExpect(
@@ -977,8 +1020,9 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
     vm.assume(_to != address(0));
     vm.assume(_deadline > 0);
     vm.warp(_deadline - 1);
-    bytes memory _signature =
-      _generateSignature(_to, _amount, _deadline, _minGasLimit, _nonce, _signerAd, _signerPk, address(adapter));
+    bytes memory _signature = _generateSignature(
+      _NAME, _VERSION, _to, _amount, _deadline, _minGasLimit, _nonce, _signerAd, _signerPk, address(adapter)
+    );
 
     vm.mockCall(_usdc, abi.encodeWithSignature('isBlacklisted(address)', _to), abi.encode(false));
     vm.mockCall(

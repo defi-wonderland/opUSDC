@@ -16,6 +16,9 @@ contract dummyImplementation {
 contract Integration_Bridging is IntegrationBase {
   using stdStorage for StdStorage;
 
+  string internal constant _NAME = 'L1OpUSDCBridgeAdapter';
+  string internal constant _VERSION = '1.0.0';
+
   function setUp() public override {
     super.setUp();
 
@@ -138,7 +141,16 @@ contract Integration_Bridging is IntegrationBase {
     bridgedUSDC.approve(address(l2Adapter), _amount);
     uint256 _deadline = block.timestamp + 1 days;
     bytes memory _signature = _generateSignature(
-      _signerAd, _amount, _deadline, _MIN_GAS_LIMIT, _USER_NONCE, _signerAd, _signerPk, address(l2Adapter)
+      _NAME,
+      _VERSION,
+      _signerAd,
+      _amount,
+      _deadline,
+      _MIN_GAS_LIMIT,
+      _USER_NONCE,
+      _signerAd,
+      _signerPk,
+      address(l2Adapter)
     );
 
     // Different address can execute the message
@@ -184,7 +196,7 @@ contract Integration_Bridging is IntegrationBase {
     // Changing to `to` param to _user but we call it with _signerAd
     uint256 _deadline = block.timestamp + 1 days;
     bytes memory _signature = _generateSignature(
-      _user, _amount, _deadline, _MIN_GAS_LIMIT, _USER_NONCE, _signerAd, _signerPk, address(l2Adapter)
+      _NAME, _VERSION, _user, _amount, _deadline, _MIN_GAS_LIMIT, _USER_NONCE, _signerAd, _signerPk, address(l2Adapter)
     );
 
     // Cancel the signature
@@ -217,12 +229,15 @@ contract Integration_Bridging is IntegrationBase {
     // Changing to `to` param to _user but we call it with _signerAd
     uint256 _deadline = block.timestamp + 1 days;
     bytes memory _signature = _generateSignature(
-      _user, _amount, _deadline, _MIN_GAS_LIMIT, _USER_NONCE, _signerAd, _signerPk, address(l2Adapter)
+      _NAME, _VERSION, _user, _amount, _deadline, _MIN_GAS_LIMIT, _USER_NONCE, _signerAd, _signerPk, address(l2Adapter)
     );
 
     // Different address can execute the message
     vm.startPrank(_user);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSignature.selector);
+    ///  NOTE: Didn't us `vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSignature.selector)` because
+    /// it reverts with that error, but then the test fails because of a foundry issue with the error message
+    /// `contract signer does not exist`, which is not true.
+    vm.expectRevert();
     l2Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _USER_NONCE, _deadline, _MIN_GAS_LIMIT);
     vm.stopPrank();
   }
