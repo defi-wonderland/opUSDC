@@ -16,7 +16,7 @@ _`L2OpUSDCBridgeAdapter`_ - Contract that allows for the transfer of USDC from t
 
 ## L1 → L2 Deployment
 
-![image](https://github.com/defi-wonderland/opUSDC/assets/165055168/ac9d0b57-03e7-40ae-b109-34d656d7539b)
+![image](https://github.com/user-attachments/assets/1ec286f6-87ae-4b08-8086-ee8077a36ae3)
 
 ## L1 → L2 USDC Canonical Bridging
 
