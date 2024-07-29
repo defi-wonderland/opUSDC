@@ -24,11 +24,13 @@ contract Integration_Factories is IntegrationBase {
     _l2Deployments.usdcInitTxs[0] = abi.encodeWithSignature('initializeV2(string)', 'Bridged USDC (Optimism)');
 
     // Deploy the contracts
+    uint256 _deploymentsSaltCounter = l1Factory.deploymentsSaltCounter();
     vm.prank(_user);
     (address _l1Adapter, address _l2Factory, address _l2Adapter) =
       l1Factory.deploy(address(OPTIMISM_L1_MESSENGER), _owner, 'Optimism', _l2Deployments);
 
     // Check the adapter was properly deployed on L1
+    assertEq(l1Factory.deploymentsSaltCounter(), _deploymentsSaltCounter + 2);
     assertEq(IOpUSDCBridgeAdapter(_l1Adapter).USDC(), address(MAINNET_USDC), '1');
     assertEq(IOpUSDCBridgeAdapter(_l1Adapter).MESSENGER(), address(OPTIMISM_L1_MESSENGER), '2');
     assertEq(IOpUSDCBridgeAdapter(_l1Adapter).LINKED_ADAPTER(), _l2Adapter, '3');
