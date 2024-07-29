@@ -9,7 +9,6 @@ import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {IL2OpUSDCDeploy, L2OpUSDCDeploy} from 'contracts/L2OpUSDCDeploy.sol';
 import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
-import {CrossChainDeployments} from 'libraries/CrossChainDeployments.sol';
 import {Create2Deployer} from 'test/invariants/fuzz/Create2Deployer.sol';
 import {MockBridge} from 'test/invariants/fuzz/MockBridge.sol';
 import {MockPortal} from 'test/invariants/fuzz/MockPortal.sol';

@@ -50,15 +50,15 @@ contract MockBridge is ITestCrossDomainMessenger {
     return _currentXDomSender;
   }
 
-  function OTHER_MESSENGER() external pure returns (address) {
-    return address(0);
-  }
-
   function PORTAL() external view returns (address) {
     return _portal;
   }
 
   function portal() external view returns (address) {
     return _portal;
+  }
+
+  function OTHER_MESSENGER() external pure returns (address) {
+    return address(0);
   }
 }

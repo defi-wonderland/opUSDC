@@ -4,11 +4,9 @@ pragma solidity 0.8.25;
 import {SetupOpUSDC} from './SetupOpUSDC.sol';
 import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
 import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
-import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {SigUtils} from 'test/utils/SigUtils.sol';
-import {USDC_IMPLEMENTATION_CREATION_CODE} from 'test/utils/USDCImplementationCreationCode.sol';
 
 //solhint-disable custom-errors
 //solhint-disable ordering
