@@ -18,6 +18,8 @@ import {USDC_IMPLEMENTATION_CREATION_CODE} from 'test/utils/USDCImplementationCr
 // solhint-disable
 contract SetupOpUSDC is EchidnaTest {
   string public constant CHAIN_NAME = 'Optimism';
+  string internal constant _NAME = 'OpUSDCBridgeAdapter';
+  string internal constant _VERSION = '1.0.0';
 
   IUSDC usdcMainnet;
   IUSDC usdcBridged;
@@ -62,6 +64,7 @@ contract SetupOpUSDC is EchidnaTest {
     uint256 size = USDC_IMPLEMENTATION_CREATION_CODE.length;
     bytes memory _usdcBytecode = USDC_IMPLEMENTATION_CREATION_CODE;
 
+    // Deploy USDC on "mainnet"
     assembly {
       targetAddress := create(0, add(_usdcBytecode, 0x20), size) // Skip the 32 bytes encoded length.
     }
@@ -87,7 +90,7 @@ contract SetupOpUSDC is EchidnaTest {
     mockMessenger.setPortalAddress(address(mockPortal));
 
     // owner is this contract, as managed in the _agents handler
-    _l2Deployments = IL1OpUSDCFactory.L2Deployments(address(this), usdcBridgedImplementation, 3_000_000, usdcInitTxns);
+    _l2Deployments = IL1OpUSDCFactory.L2Deployments(address(this), usdcBridgedImplementation, 9_000_000, usdcInitTxns);
 
     (address _l1Adapter, address _l2Factory, address _l2Adapter) =
       factory.deploy(address(mockMessenger), address(this), CHAIN_NAME, _l2Deployments);
@@ -99,18 +102,11 @@ contract SetupOpUSDC is EchidnaTest {
 
   // Send a (mock) message to the L2 messenger to deploy the L2 factory and the L2 adapter (which deploys usdc L2 too)
   function _l2Setup(IL1OpUSDCFactory.L2Deployments memory _l2Deployments) internal {
-    bytes memory _USDC_IMPLEMENTATION_CREATION_CODE = USDC_IMPLEMENTATION_CREATION_CODE;
-    bytes32 _saltForCreation = _salt;
-    address impl;
-    assembly {
-      impl :=
-        create2(
-          0, add(_USDC_IMPLEMENTATION_CREATION_CODE, 0x20), mload(_USDC_IMPLEMENTATION_CREATION_CODE), _saltForCreation
-        )
-    }
-
     IL2OpUSDCDeploy.USDCInitializeData memory usdcInitializeData = IL2OpUSDCDeploy.USDCInitializeData(
-      factory.USDC_NAME(), factory.USDC_SYMBOL(), usdcMainnet.currency(), usdcMainnet.decimals()
+      string.concat(factory.USDC_NAME(), ' ', '(', CHAIN_NAME, ')'),
+      factory.USDC_SYMBOL(),
+      usdcMainnet.currency(),
+      usdcMainnet.decimals()
     );
 
     bytes memory _l2factoryConstructorArgs = abi.encode(
@@ -129,10 +125,8 @@ contract SetupOpUSDC is EchidnaTest {
       address(factory),
       factory.L2_CREATE2_DEPLOYER(),
       0,
-      3_000_000,
-      abi.encodeWithSignature(
-        'deploy(uint256,bytes32,bytes)', 0, factory.deploymentsSaltCounter() + 1, _l2FactoryInitCode
-      )
+      9_000_000,
+      abi.encodeWithSignature('deploy(uint256,bytes32,bytes)', 0, factory.deploymentsSaltCounter(), _l2FactoryInitCode)
     );
 
     usdcBridged = IUSDC(l2Adapter.USDC());

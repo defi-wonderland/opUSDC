@@ -58,7 +58,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    */
   function initialize(address _owner) external virtual override initializer {
     __Ownable_init(_owner);
-    string memory _name = 'L1OpUSDCBridgeAdapter';
+    string memory _name = 'OpUSDCBridgeAdapter';
     string memory _version = '1.0.0';
     __EIP712_init(_name, _version);
   }

@@ -7,6 +7,7 @@ import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
 import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
+import {SigUtils} from 'test/utils/SigUtils.sol';
 import {USDC_IMPLEMENTATION_CREATION_CODE} from 'test/utils/USDCImplementationCreationCode.sol';
 
 //solhint-disable custom-errors
@@ -890,9 +891,18 @@ contract OpUsdcTest is SetupOpUSDC {
     uint256 _signerPk,
     address _adapter
   ) internal returns (bytes memory _signature) {
-    bytes32 _digest = keccak256(abi.encode(_adapter, block.chainid, _to, _amount, _deadline, _minGasLimit, _nonce))
-      .toEthSignedMessageHash();
+    IOpUSDCBridgeAdapter.BridgeMessage memory _message = IOpUSDCBridgeAdapter.BridgeMessage({
+      to: _to,
+      amount: _amount,
+      deadline: _deadline,
+      nonce: _nonce,
+      minGasLimit: uint32(_minGasLimit)
+    });
+
+    SigUtils _sigUtils = new SigUtils(_adapter, _NAME, _VERSION);
+
     hevm.prank(_signerAd);
+    bytes32 _digest = SigUtils(_sigUtils).getTypedBridgeMessageHash(_message);
     (uint8 v, bytes32 r, bytes32 s) = hevm.sign(_signerPk, _digest);
     _signature = abi.encodePacked(r, s, v);
   }
