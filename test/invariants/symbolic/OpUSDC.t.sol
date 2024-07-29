@@ -2,22 +2,21 @@
 pragma solidity 0.8.25;
 
 import {HalmosTest} from '../AdvancedTestsUtils.sol';
-
-import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
+import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
 import {IL1OpUSDCBridgeAdapter, L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {L2OpUSDCDeploy} from 'contracts/L2OpUSDCDeploy.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
+import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
+import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
-import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementationCreationCode.sol';
 import {Create2Deployer} from 'test/invariants/fuzz/Create2Deployer.sol';
+import {USDC_IMPLEMENTATION_CREATION_CODE} from 'test/utils/USDCImplementationCreationCode.sol';
 import {ITestCrossDomainMessenger} from 'test/utils/interfaces/ITestCrossDomainMessenger.sol';
 
 // solhint-disable
 contract OpUsdcTest_SymbTest is HalmosTest {
-  using MessageHashUtils for bytes32;
-
   IUSDC usdcMainnet;
   IUSDC usdcBridged;
 
@@ -28,6 +27,7 @@ contract OpUsdcTest_SymbTest is HalmosTest {
   L2OpUSDCDeploy internal l2Factory;
 
   MockBridge internal mockMessenger;
+  MockPortal internal mockPortal;
   Create2Deployer internal create2Deployer;
 
   address owner = address(bytes20(keccak256('owner')));
@@ -40,6 +40,12 @@ contract OpUsdcTest_SymbTest is HalmosTest {
 
     // Deploy mock messenger
     mockMessenger = new MockBridge();
+
+    // Deploy mock portal
+    mockPortal = new MockPortal();
+
+    // Set portal in messenger
+    mockMessenger.setPortalAddress(address(mockPortal));
 
     // Deploy l1 factory
     address targetAddress;
@@ -83,11 +89,20 @@ contract OpUsdcTest_SymbTest is HalmosTest {
     // Halmos deploy at address + 1, starting at 0xaaaa0000
 
     // Deploy l1 adapter
-    l1Adapter = new L1OpUSDCBridgeAdapter(
-      address(usdcMainnet), address(mockMessenger), address(uint160(targetAddress2) + 3), owner
+    address _l1AdapterImp = address(
+      new L1OpUSDCBridgeAdapter(address(usdcMainnet), address(mockMessenger), address(uint160(targetAddress2) + 3))
     );
 
-    l2Adapter = new L2OpUSDCBridgeAdapter(address(usdcBridged), address(mockMessenger), address(l1Adapter), owner);
+    address _l2AdapterImp =
+      address(new L2OpUSDCBridgeAdapter(address(usdcBridged), address(mockMessenger), address(l1Adapter)));
+
+    l1Adapter = L1OpUSDCBridgeAdapter(
+      address(new ERC1967Proxy(_l1AdapterImp, abi.encodeCall(L1OpUSDCBridgeAdapter.initialize, owner)))
+    );
+
+    l2Adapter = L2OpUSDCBridgeAdapter(
+      address(new ERC1967Proxy(_l2AdapterImp, abi.encodeCall(L2OpUSDCBridgeAdapter.initialize, owner)))
+    );
 
     // usdc l2 init txs
     usdcBridged.changeAdmin(address(l2Adapter.FALLBACK_PROXY_ADMIN()));
@@ -266,7 +281,7 @@ contract OpUsdcTest_SymbTest is HalmosTest {
     vm.startPrank(owner);
     try l1Adapter.migrateToNative(roleCaller, burnCaller, 0, 0) {
       assert(l1Adapter.burnCaller() == burnCaller);
-      assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading);
+      assert(l1Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Upgrading);
     } catch {
       assert(false);
     }
@@ -275,7 +290,7 @@ contract OpUsdcTest_SymbTest is HalmosTest {
     try l1Adapter.migrateToNative(newRoleCaller, newBurnCaller, 0, 0) {
       // Postcondition
       assert(l1Adapter.burnCaller() == newBurnCaller);
-      assert(l1Adapter.messengerStatus() == IL1OpUSDCBridgeAdapter.Status.Upgrading);
+      assert(l1Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Upgrading);
     } catch {
       assert(false);
     }
@@ -304,7 +319,7 @@ contract OpUsdcTest_SymbTest is HalmosTest {
     vm.prank(l1Adapter.MESSENGER());
 
     // Action
-    try l1Adapter.receiveMessage(dest, amt) {
+    try l1Adapter.receiveMessage(dest, dest, amt) {
       // Postcondition
       assert(usdcMainnet.balanceOf(dest) == _destBalanceBefore + amt);
       assert(usdcMainnet.balanceOf(address(l1Adapter)) == _l1AdapterBalanceBefore - amt);
@@ -341,7 +356,7 @@ contract OpUsdcTest_SymbTest is HalmosTest {
     vm.startPrank(address(mockMessenger));
 
     // Action
-    try l1Adapter.receiveMessage(address(1), 0) {
+    try l1Adapter.receiveMessage(address(1), address(1), 0) {
       // Postcondition
       assert(senderOtherChain == address(l2Adapter));
     } catch {
@@ -397,6 +412,7 @@ contract MockBridge is ITestCrossDomainMessenger {
   uint256 public messageNonce;
   address public l1Adapter;
 
+  address internal _portal;
   address internal _currentXDomSender;
   bool internal _bridgeStopped;
 
@@ -441,5 +457,29 @@ contract MockBridge is ITestCrossDomainMessenger {
 
   function setDomainMessageSender(address _sender) external {
     _currentXDomSender = _sender;
+  }
+
+  function setPortalAddress(address _newPortal) external {
+    _portal = _newPortal;
+  }
+
+  function PORTAL() external view returns (address) {
+    return _portal;
+  }
+
+  function portal() external view returns (address) {
+    return _portal;
+  }
+}
+
+contract MockPortal is IOptimismPortal {
+  function depositTransaction(
+    address _to,
+    uint256 _value,
+    uint64 _gasLimit,
+    bool _isCreation,
+    bytes memory _data
+  ) external payable override {
+    // do nothing
   }
 }
