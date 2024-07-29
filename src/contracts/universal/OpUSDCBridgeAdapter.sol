@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
-
-import {EIP712} from '@openzeppelin/contracts/utils/cryptography/EIP712.sol';
+import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
+import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
+import {EIP712Upgradeable} from '@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol';
 import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
 import {SignatureChecker} from '@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 
-abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, Ownable, EIP712 {
+abstract contract OpUSDCBridgeAdapter is UUPSUpgradeable, OwnableUpgradeable, EIP712Upgradeable, IOpUSDCBridgeAdapter {
   using MessageHashUtils for bytes32;
   using SignatureChecker for address;
 
@@ -25,6 +25,9 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, Ownable, EIP712 {
   /// @inheritdoc IOpUSDCBridgeAdapter
   address public immutable MESSENGER;
 
+  /// @notice Reserve 50 storage slots to be safe on future upgrades
+  uint256[50] private __gap;
+
   /// @inheritdoc IOpUSDCBridgeAdapter
   Status public messengerStatus;
 
@@ -39,19 +42,20 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, Ownable, EIP712 {
    * @param _usdc The address of the USDC Contract to be used by the adapter
    * @param _messenger The address of the messenger contract
    * @param _linkedAdapter The address of the linked adapter
-   * @param _owner The address of the owner of the contract
    */
-  constructor(
-    address _usdc,
-    address _messenger,
-    address _linkedAdapter,
-    // solhint-disable-next-line no-unused-vars
-    address _owner
-  ) Ownable(_owner) EIP712('OpUSDCBridgeAdapter', '1.0.0') {
+  // solhint-disable-next-line no-unused-vars
+  constructor(address _usdc, address _messenger, address _linkedAdapter) {
     USDC = _usdc;
     MESSENGER = _messenger;
     LINKED_ADAPTER = _linkedAdapter;
+    _disableInitializers();
   }
+
+  /**
+   * @notice Initialize the contract
+   * @param _owner The owner of the contract
+   */
+  function initialize(address _owner) external virtual initializer {}
 
   /*///////////////////////////////////////////////////////////////
                              MESSAGING
@@ -109,13 +113,18 @@ abstract contract OpUSDCBridgeAdapter is IOpUSDCBridgeAdapter, Ownable, EIP712 {
   }
 
   /**
+   * @notice Checks the caller is the owner to authorize the upgrade
+   */
+  function _authorizeUpgrade(address) internal virtual override onlyOwner {}
+
+  /**
    * @notice Check the signature of a message
    * @param _signer the address that signed the message
    * @param _messageHash the hash of the message that was signed
    * @param _signature the signature of the message
    */
   function _checkSignature(address _signer, bytes32 _messageHash, bytes memory _signature) internal view {
-    // Uses the EIP712 typed data hash
+    // Uses the EIP712Upgradeable typed data hash
     _messageHash = _hashTypedDataV4(_messageHash);
 
     if (!_signer.isValidSignatureNow(_messageHash, _signature)) revert IOpUSDCBridgeAdapter_InvalidSignature();

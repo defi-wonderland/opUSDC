@@ -145,7 +145,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
     factory.deploy(_l1Messenger, _l1AdapterOwner, _chainName, _l2Deployments);
 
     // Assert
-    assertEq(factory.deploymentsSaltCounter(), _saltBefore + 1, 'Invalid salt counter');
+    assertEq(factory.deploymentsSaltCounter(), _saltBefore + 2, 'Invalid salt counter');
   }
 
   /**
@@ -153,11 +153,11 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
    * @dev Assuming the `L1OpUSDCBridgeAdapter` sets the immutables correctly to check we are passing the right values
    */
   function test_deployL1Adapter() public {
-    bytes32 _salt = bytes32(factory.deploymentsSaltCounter() + 1);
+    bytes32 _salt = bytes32(factory.deploymentsSaltCounter() + 2);
 
     // Calculate the L1 Adapter address
     uint256 _factoryNonce = vm.getNonce(address(factory));
-    address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce);
+    address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce + 1);
 
     // Calculate the l2 factory address
     bytes memory _l2FactoryCArgs = abi.encode(
@@ -172,7 +172,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
       factory.forTest_precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), factory.L2_CREATE2_DEPLOYER());
 
     // Calculate the L2 adapter address
-    address _l2Adapter = factory.forTest_precalculateCreateAddress(_l2Factory, 2);
+    address _l2Adapter = factory.forTest_precalculateCreateAddress(_l2Factory, 3);
 
     // Mock all the `deploy` function calls
     _mockDeployCalls();
@@ -257,14 +257,14 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
    */
   function test_sendFactoryDeploymentMessage() public {
     uint256 _zeroValue = 0;
-    bytes32 _salt = bytes32(factory.deploymentsSaltCounter() + 1);
+    bytes32 _salt = bytes32(factory.deploymentsSaltCounter() + 2);
 
     // Mock all the `deploy` function calls
     _mockDeployCalls();
 
     // Precalculate the L1 adapter address
     uint256 _factoryNonce = vm.getNonce(address(factory));
-    address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce);
+    address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce + 1);
 
     // Get the L2 factory deployment tx
     bytes memory _l2FactoryCArgs = abi.encode(
@@ -300,11 +300,11 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
    * @notice Check the `L1AdapterDeployed` event is properly emitted
    */
   function test_emitEvent() public {
-    bytes32 _salt = bytes32(factory.deploymentsSaltCounter() + 1);
+    bytes32 _salt = bytes32(factory.deploymentsSaltCounter() + 2);
 
     // Calculate the L1 Adapter address
     uint256 _factoryNonce = vm.getNonce(address(factory));
-    address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce);
+    address _l1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce + 1);
 
     // Calculate the l2 factory address
     bytes memory _l2FactoryCArgs = abi.encode(
@@ -319,7 +319,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
       factory.forTest_precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), factory.L2_CREATE2_DEPLOYER());
 
     // Calculate the L2 adapter address
-    address _l2Adapter = factory.forTest_precalculateCreateAddress(_l2Factory, 2);
+    address _l2Adapter = factory.forTest_precalculateCreateAddress(_l2Factory, 3);
 
     // Mock all the `deploy` function calls
     _mockDeployCalls();
@@ -337,11 +337,11 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
    * @notice Check the returned addresses are the expected ones
    */
   function test_returnAdapters() public {
-    bytes32 _salt = bytes32(factory.deploymentsSaltCounter() + 1);
+    bytes32 _salt = bytes32(factory.deploymentsSaltCounter() + 2);
 
     // Calculate the L1 Adapter address
     uint256 _factoryNonce = vm.getNonce(address(factory));
-    address _expectedL1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce);
+    address _expectedL1Adapter = factory.forTest_precalculateCreateAddress(address(factory), _factoryNonce + 1);
 
     // Calculate the l2 factory address
     bytes memory _l2FactoryCArgs = abi.encode(
@@ -356,7 +356,7 @@ contract L1OpUSDCFactory_Unit_Deploy is Base {
       factory.forTest_precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), factory.L2_CREATE2_DEPLOYER());
 
     // Calculate the L2 adapter address
-    address _expectedL2Adapter = factory.forTest_precalculateCreateAddress(_expectedL2Factory, 2);
+    address _expectedL2Adapter = factory.forTest_precalculateCreateAddress(_expectedL2Factory, 3);
 
     // Mock all the `deploy` function calls
     _mockDeployCalls();

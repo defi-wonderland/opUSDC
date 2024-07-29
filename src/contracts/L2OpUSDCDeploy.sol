@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
+import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {USDC_PROXY_CREATION_CODE} from 'contracts/utils/USDCProxyCreationCode.sol';
 import {IL2OpUSDCDeploy} from 'interfaces/IL2OpUSDCDeploy.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
+import {OpUSDCBridgeAdapter} from 'src/contracts/universal/OpUSDCBridgeAdapter.sol';
 
 /**
  * @title L2OpUSDCDeploy
@@ -37,13 +39,13 @@ contract L2OpUSDCDeploy is IL2OpUSDCDeploy {
     // Deploy USDC proxy
     bytes memory _usdcProxyCArgs = abi.encode(_usdcImplAddr);
     bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);
-    (address _usdcProxy) = _deployCreate(_usdcProxyInitCode);
+    address _usdcProxy = _deployCreate(_usdcProxyInitCode);
     emit USDCProxyDeployed(_usdcProxy);
 
-    // Deploy L2 Adapter
-    bytes memory _l2AdapterCArgs = abi.encode(_usdcProxy, _L2_MESSENGER, _l1Adapter, _l2AdapterOwner);
-    bytes memory _l2AdapterInitCode = bytes.concat(type(L2OpUSDCBridgeAdapter).creationCode, _l2AdapterCArgs);
-    (address _l2Adapter) = _deployCreate(_l2AdapterInitCode);
+    // Deploy L2 Adapter implementation and proxy, initializing it with the owner
+    address _l2AdapterImpl = address(new L2OpUSDCBridgeAdapter(_usdcProxy, _L2_MESSENGER, _l1Adapter));
+    address _l2Adapter =
+      address(new ERC1967Proxy(_l2AdapterImpl, abi.encodeCall(OpUSDCBridgeAdapter.initialize, _l2AdapterOwner)));
     emit L2AdapterDeployed(_l2Adapter);
 
     // Deploy the FallbackProxyAdmin internally in the L2 Adapter to keep it unique

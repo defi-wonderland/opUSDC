@@ -24,6 +24,9 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /// @inheritdoc IL1OpUSDCBridgeAdapter
   address public burnCaller;
 
+  /// @notice Reserve 50 more storage slots to be safe on future upgrades
+  uint256[50] private __gap;
+
   /**
    * @notice Modifier to check if the sender is the linked adapter through the messenger
    */
@@ -39,15 +42,26 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @param _usdc The address of the USDC Contract to be used by the adapter
    * @param _messenger The address of the L1 messenger
    * @param _linkedAdapter The address of the linked adapter
-   * @param _owner The address of the owner of the contract
    * @dev The constructor is only used to initialize the OpUSDCBridgeAdapter immutable variables
    */
   constructor(
     address _usdc,
     address _messenger,
-    address _linkedAdapter,
-    address _owner
-  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _owner) {}
+    address _linkedAdapter
+  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
+
+  /**
+   * @notice Sets the owner of the contract
+   * @param _owner The address of the owner
+   * @dev This function needs only used during the deployment of the proxy contract, and it is disabled for the
+   * implementation contract
+   */
+  function initialize(address _owner) external virtual override initializer {
+    __Ownable_init(_owner);
+    string memory _name = 'L1OpUSDCBridgeAdapter';
+    string memory _version = '1.0.0';
+    __EIP712_init(_name, _version);
+  }
 
   /*///////////////////////////////////////////////////////////////
                               MIGRATION

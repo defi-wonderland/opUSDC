@@ -24,6 +24,8 @@ contract Helpers is Test {
   }
 
   function _generateSignature(
+    string memory _name,
+    string memory _version,
     address _to,
     uint256 _amount,
     uint256 _deadline,
@@ -41,7 +43,7 @@ contract Helpers is Test {
       minGasLimit: uint32(_minGasLimit)
     });
 
-    SigUtils _sigUtils = new SigUtils(_adapter);
+    SigUtils _sigUtils = new SigUtils(_adapter, _name, _version);
 
     vm.startPrank(_signerAd);
     bytes32 _digest = SigUtils(_sigUtils).getTypedBridgeMessageHash(_message);
