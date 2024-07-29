@@ -69,8 +69,6 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /**
    * @notice Sets the owner of the contract
    * @param _owner The address of the owner
-   * @dev This function needs only used during the deployment of the proxy contract, and it is disabled for the
-   * implementation contract
    */
   function initialize(address _owner) external virtual override initializer {
     __Ownable_init(_owner);

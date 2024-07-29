@@ -186,6 +186,14 @@ interface IOpUSDCBridgeAdapter {
   ///////////////////////////////////////////////////////////////*/
 
   /**
+   * @notice Initialize the contract
+   * @param _owner The owner of the contract
+   * @dev This function needs only used during the deployment of the proxy contract, and it is disabled for the
+   * implementation contract
+   */
+  function initialize(address _owner) external;
+
+  /**
    * @notice Send tokens to other chain through the linked adapter
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
