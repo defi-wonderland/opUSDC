@@ -35,7 +35,7 @@ abstract contract OpUSDCBridgeAdapter is UUPSUpgradeable, OwnableUpgradeable, EI
   mapping(address _user => mapping(uint256 _nonce => bool _used)) public userNonces;
 
   /// @inheritdoc IOpUSDCBridgeAdapter
-  mapping(address _user => uint256 _blacklistedAmount) public userBlacklistedFunds;
+  mapping(address _spender => mapping(address _user => uint256 _blacklistedAmount)) public blacklistedFundsDetails;
 
   /**
    * @notice Construct the OpUSDCBridgeAdapter contract
@@ -90,19 +90,20 @@ abstract contract OpUSDCBridgeAdapter is UUPSUpgradeable, OwnableUpgradeable, EI
   ) external virtual;
 
   /**
-   * @notice Receive the message from the other chain and mint the bridged representation for the user
-   * @dev This function should only be called when receiving a message to mint the bridged representation
-   * @param _user The user to mint the bridged representation for
+   * @notice Receive the message from the other chain and mint or transfer tokens to the user
+   * @dev This function should only be called when receiving a message to mint or transfer tokens
+   * @param _user The user to mint or transfer the tokens for
    * @param _spender The address that provided the tokens
-   * @param _amount The amount of tokens to mint
+   * @param _amount The amount of tokens to transfer or mint
    */
   function receiveMessage(address _user, address _spender, uint256 _amount) external virtual;
 
   /**
    * @notice Withdraws the blacklisted funds from the contract if they get unblacklisted
+   * @param _spender The address that provided the tokens
    * @param _user The user to withdraw the funds for
    */
-  function withdrawBlacklistedFunds(address _user) external virtual;
+  function withdrawBlacklistedFunds(address _spender, address _user) external virtual;
 
   /**
    * @notice Cancels a signature by setting the nonce as used

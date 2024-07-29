@@ -260,30 +260,46 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   }
 
   /**
-   * @notice Receive the message from the other chain and transfer the tokens to the user
-   * @dev This function should only be called when receiving a message to transfer the tokens
+   * @notice Receive the message from the other chain and transfer tokens to the user
+   * @dev This function should only be called when receiving a message to transfer tokens
+   * @dev If the transfer fails the funds might be recovered by calling withdrawBlacklistedFunds
    * @param _user The user to transfer the tokens to
-   * @param _spender unused parameter on L1, added for maintainability
+   * @param _spender The address that provided the tokens
    * @param _amount The amount of tokens to transfer
    */
-  // solhint-disable-next-line no-unused-vars
   function receiveMessage(address _user, address _spender, uint256 _amount) external override onlyLinkedAdapter {
     // Transfer the tokens to the user
     try this.attemptTransfer(_user, _amount) {
-      emit MessageReceived(_user, _amount, MESSENGER);
+      emit MessageReceived(_spender, _user, _amount, MESSENGER);
     } catch {
-      userBlacklistedFunds[_user] += _amount;
-      emit MessageFailed(_user, _amount, MESSENGER);
+      blacklistedFundsDetails[_spender][_user] += _amount;
+      emit MessageFailed(_spender, _user, _amount, MESSENGER);
     }
   }
 
   /**
+   * @notice Receives a message from L2 if the adapter is deprecated and a user is withdrawing blacklisted funds
+   * @dev If the _spender is still blacklisted, the user will be forced to replay this message
+   * @param _spender The user that initialy provided the tokens
+   * @param _amount The amount of tokens to withdraw
+   */
+  function receiveWithdrawBlacklistedFundsPostMigration(address _spender, uint256 _amount) external onlyLinkedAdapter {
+    if (messengerStatus != Status.Deprecated) revert IOpUSDCBridgeAdapter_NotMigrated();
+
+    // If the spender is still blacklisted, the user will be forced to replay this message
+    IUSDC(USDC).safeTransfer(_spender, _amount);
+
+    emit BlacklistedFundsWithdrawn(_spender, _amount);
+  }
+
+  /**
    * @notice Withdraws the blacklisted funds from the contract incase they get unblacklisted
+   * @param _spender The address that provided the tokens
    * @param _user The user to withdraw the funds for
    */
-  function withdrawBlacklistedFunds(address _user) external override {
-    uint256 _amount = userBlacklistedFunds[_user];
-    userBlacklistedFunds[_user] = 0;
+  function withdrawBlacklistedFunds(address _spender, address _user) external override {
+    uint256 _amount = blacklistedFundsDetails[_spender][_user];
+    blacklistedFundsDetails[_spender][_user] = 0;
 
     // The check for if the user is blacklisted happens in USDC's contract
     IUSDC(USDC).safeTransfer(_user, _amount);
