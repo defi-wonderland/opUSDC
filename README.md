@@ -24,7 +24,8 @@ _`L2OpUSDCBridgeAdapter`_ - Contract that allows for the transfer of USDC from t
 
 ## Migrating from Bridged USDC to Native USDC
 
-![image](https://github.com/defi-wonderland/opUSDC/assets/165055168/17aebc4a-709f-4084-ab83-000e299a70bd)
+![image](https://github.com/user-attachments/assets/ee032828-41eb-41f8-bb23-5ec7eaf9bcf9)
+
 
 ## Setup
 
