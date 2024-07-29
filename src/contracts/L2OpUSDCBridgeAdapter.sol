@@ -42,16 +42,6 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   uint256[50] private __gap;
 
   /**
-   * @notice Modifier to check if the sender is the linked adapter through the messenger
-   */
-  modifier onlyLinkedAdapter() {
-    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != LINKED_ADAPTER) {
-      revert IOpUSDCBridgeAdapter_InvalidSender();
-    }
-    _;
-  }
-
-  /**
    * @notice Construct the OpUSDCBridgeAdapter contract
    * @param _usdc The address of the USDC Contract to be used by the adapter
    * @param _messenger The address of the messenger contract
