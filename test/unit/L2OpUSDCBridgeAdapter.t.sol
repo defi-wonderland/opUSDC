@@ -49,7 +49,7 @@ abstract contract Base is Helpers {
 
   event MigratingToNative(address _messenger, address _roleCaller);
   event MessageSent(address _user, address _to, uint256 _amount, address _messenger, uint32 _minGasLimit);
-  event MessageReceived(address _user, uint256 _amount, address _messenger);
+  event MessageReceived(address _spender, address _user, uint256 _amount, address _messenger);
   event USDCFunctionSent(bytes4 _functionSignature);
 
   function setUp() public virtual {
@@ -753,7 +753,7 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 
     // Execute
     vm.expectEmit(true, true, true, true);
-    emit MessageReceived(_user, _amount, _messenger);
+    emit MessageReceived(_user, _user, _amount, _messenger);
 
     vm.prank(_messenger);
     adapter.receiveMessage(_user, _user, _amount);

@@ -257,7 +257,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   function receiveMessage(address _user, address _spender, uint256 _amount) external override onlyLinkedAdapter {
     // Transfer the tokens to the user
     try this.attemptTransfer(_user, _amount) {
-      emit MessageReceived(_user, _amount, MESSENGER);
+      emit MessageReceived(_spender, _user, _amount, MESSENGER);
     } catch {
       blacklistedFundsDetails[_spender][_user] += _amount;
       emit MessageFailed(_spender, _user, _amount, MESSENGER);
@@ -274,9 +274,10 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   function receiveWithdrawBlacklistedFundsPostMigration(address _spender, uint256 _amount) external onlyLinkedAdapter {
     if (messengerStatus != Status.Deprecated) revert IOpUSDCBridgeAdapter_NotMigrated();
 
+    // If the spender is still blacklisted, the chain operator will be forced to replay this message
     IUSDC(USDC).safeTransfer(_spender, _amount);
 
-    emit MessageReceived(_spender, _amount, MESSENGER);
+    emit BlacklistedFundsWithdrawn(_spender, _amount);
   }
 
   /**

@@ -62,11 +62,12 @@ interface IOpUSDCBridgeAdapter {
 
   /**
    * @notice Emitted when a message as recieved
+   * @param _spender The address that provided the tokens
    * @param _user The user that recieved the message
    * @param _amount The amount of tokens recieved
    * @param _messenger The address of the messenger contract that was recieved through
    */
-  event MessageReceived(address _user, uint256 _amount, address _messenger);
+  event MessageReceived(address _spender, address _user, uint256 _amount, address _messenger);
 
   /**
    * @notice Emitted when messaging is resumed

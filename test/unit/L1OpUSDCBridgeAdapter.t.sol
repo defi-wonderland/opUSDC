@@ -52,7 +52,7 @@ abstract contract Base is Helpers {
   event BurnAmountSet(uint256 _burnAmount);
   event MigrationComplete(uint256 _burnedAmount);
   event MessageSent(address _user, address _to, uint256 _amount, address _messenger, uint32 _minGasLimit);
-  event MessageReceived(address _user, uint256 _amount, address _messenger);
+  event MessageReceived(address _spender, address _user, uint256 _amount, address _messenger);
 
   function setUp() public virtual {
     (_signerAd, _signerPk) = makeAddrAndKey('signer');
@@ -1058,7 +1058,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 
     // Execute
     vm.expectEmit(true, true, true, true);
-    emit MessageReceived(_user, _amount, _messenger);
+    emit MessageReceived(_user, _user, _amount, _messenger);
 
     vm.prank(_messenger);
     adapter.receiveMessage(_user, _user, _amount);
@@ -1121,7 +1121,9 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
   }
 }
 
-contract L1OpUSDCBridgeAdapter_Unit_receiveWithdrawBlacklistedFundsPostMigration is Base {
+contract L1OpUSDCBridgeAdapter_Unit_ReceiveWithdrawBlacklistedFundsPostMigration is Base {
+  event BlacklistedFundsWithdrawn(address _user, uint256 _amountWithdrawn);
+
   /**
    * @notice Check that the function reverts if the sender is not the messenger
    */
@@ -1196,7 +1198,7 @@ contract L1OpUSDCBridgeAdapter_Unit_receiveWithdrawBlacklistedFundsPostMigration
 
     // Expect events
     vm.expectEmit(true, true, true, true);
-    emit MessageReceived(_spender, _amount, _messenger);
+    emit BlacklistedFundsWithdrawn(_spender, _amount);
 
     // Execute
     vm.prank(_messenger);

@@ -215,7 +215,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     } else {
       // Mint the tokens to the user
       try IUSDC(USDC).mint(_user, _amount) {
-        emit MessageReceived(_user, _amount, MESSENGER);
+        emit MessageReceived(_spender, _user, _amount, MESSENGER);
       } catch {
         blacklistedFundsDetails[_spender][_user] += _amount;
         emit MessageFailed(_spender, _user, _amount, MESSENGER);
