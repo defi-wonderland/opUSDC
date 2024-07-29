@@ -7,6 +7,7 @@ import {ITestCrossDomainMessenger} from 'test/utils/interfaces/ITestCrossDomainM
 contract MockBridge is ITestCrossDomainMessenger {
   uint256 public messageNonce;
   address internal _currentXDomSender;
+  address internal _portal;
   bool internal _paused;
 
   function sendMessage(address _target, bytes calldata _message, uint32) external {
@@ -41,6 +42,10 @@ contract MockBridge is ITestCrossDomainMessenger {
     _currentXDomSender = _sender;
   }
 
+  function setPortalAddress(address _newPortal) external {
+    _portal = _newPortal;
+  }
+
   function xDomainMessageSender() external view returns (address) {
     return _currentXDomSender;
   }
@@ -49,11 +54,11 @@ contract MockBridge is ITestCrossDomainMessenger {
     return address(0);
   }
 
-  function portal() external pure returns (address _portal) {
-    return address(0);
+  function PORTAL() external view returns (address) {
+    return _portal;
   }
 
-  function PORTAL() external pure returns (address _portal) {
-    return address(0);
+  function portal() external view returns (address) {
+    return _portal;
   }
 }

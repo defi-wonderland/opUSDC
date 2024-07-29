@@ -6,13 +6,13 @@ import {EchidnaTest} from '../AdvancedTestsUtils.sol';
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCFactory, L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
-import {L2OpUSDCDeploy} from 'contracts/L2OpUSDCDeploy.sol';
+import {IL2OpUSDCDeploy, L2OpUSDCDeploy} from 'contracts/L2OpUSDCDeploy.sol';
 import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
-import {IL2OpUSDCDeploy} from 'interfaces/IL2OpUSDCDeploy.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 import {CrossChainDeployments} from 'libraries/CrossChainDeployments.sol';
 import {Create2Deployer} from 'test/invariants/fuzz/Create2Deployer.sol';
 import {MockBridge} from 'test/invariants/fuzz/MockBridge.sol';
+import {MockPortal} from 'test/invariants/fuzz/MockPortal.sol';
 import {USDC_IMPLEMENTATION_CREATION_CODE} from 'test/utils/USDCImplementationCreationCode.sol';
 
 // solhint-disable
@@ -23,8 +23,7 @@ contract SetupOpUSDC is EchidnaTest {
   IUSDC usdcBridged;
 
   bytes32 internal _salt = keccak256(abi.encode(address(this)));
-  address internal usdcBridgedImplementation =
-    CrossChainDeployments.precalculateCreate2Address(_salt, keccak256(USDC_IMPLEMENTATION_CREATION_CODE), address(this));
+  address internal usdcBridgedImplementation;
 
   L1OpUSDCBridgeAdapter internal l1Adapter;
   L1OpUSDCFactory internal factory;
@@ -33,6 +32,7 @@ contract SetupOpUSDC is EchidnaTest {
   L2OpUSDCDeploy internal l2Factory;
 
   MockBridge internal mockMessenger;
+  MockPortal internal mockPortal;
   Create2Deployer internal create2Deployer;
 
   address internal _usdcMinter = address(uint160(uint256(keccak256('usdc.minter'))));
@@ -58,6 +58,7 @@ contract SetupOpUSDC is EchidnaTest {
   // Deploy: USDC L1, factory L1, L1 adapter
   function _mainnetSetup() internal returns (IL1OpUSDCFactory.L2Deployments memory _l2Deployments) {
     address targetAddress;
+
     uint256 size = USDC_IMPLEMENTATION_CREATION_CODE.length;
     bytes memory _usdcBytecode = USDC_IMPLEMENTATION_CREATION_CODE;
 
@@ -74,7 +75,16 @@ contract SetupOpUSDC is EchidnaTest {
 
     factory = new L1OpUSDCFactory(address(usdcMainnet));
 
+    //Deploy USDC implementation on L2
+    assembly {
+      targetAddress := create(0, add(_usdcBytecode, 0x20), size) // Skip the 32 bytes encoded length.
+    }
+
+    usdcBridgedImplementation = targetAddress;
+
     mockMessenger = MockBridge(0x4200000000000000000000000000000000000007);
+    mockPortal = new MockPortal();
+    mockMessenger.setPortalAddress(address(mockPortal));
 
     // owner is this contract, as managed in the _agents handler
     _l2Deployments = IL1OpUSDCFactory.L2Deployments(address(this), usdcBridgedImplementation, 3_000_000, usdcInitTxns);
@@ -98,8 +108,6 @@ contract SetupOpUSDC is EchidnaTest {
           0, add(_USDC_IMPLEMENTATION_CREATION_CODE, 0x20), mload(_USDC_IMPLEMENTATION_CREATION_CODE), _saltForCreation
         )
     }
-
-    require(impl == usdcBridgedImplementation, 'Implementation address mismatch');
 
     IL2OpUSDCDeploy.USDCInitializeData memory usdcInitializeData = IL2OpUSDCDeploy.USDCInitializeData(
       factory.USDC_NAME(), factory.USDC_SYMBOL(), usdcMainnet.currency(), usdcMainnet.decimals()
