@@ -7,13 +7,13 @@ opUSDC allows for an efficient and modular solution for expanding USDC across th
 
 ## Contracts
 
-_`L1OpUSDCFactory.sol`_ - Factory contract to deploy and setup the `L1OpUSDCBridgeAdapter` contract on L1. Precalculates the addresses of the L2 deployments and triggers their deployment. Setup the L1 adapter and the L2 adapter.
+_`L1OpUSDCFactory.sol`_ - Factory contract to deploy and setup the `L1OpUSDCBridgeAdapter` contract on L1. Precalculates the addresses of the L2 deployments and triggers their deployment, by sending a transaction to L2.
 
-_`L2OpUSDCDeploy.sol`_ - Deployer contract deployed from the L1 factory through a cross-chain deployment for deploying the L2 USDC implementation, proxy, and `L2OpUSDCBridgeAdapter` contract, all at once on the `deploy()` function.
+_`L2OpUSDCDeploy.sol`_ - One time use deployer contract deployed from the L1 factory through a cross-chain deployment. Used as a utility contract for deploying the L2 USDC Proxy, and `L2OpUSDCBridgeAdapter` contract, all at once in its constructor.
 
 _`L1OpUSDCBridgeAdapter`_ - Contract that allows for the transfer of USDC from Ethereum Mainnet to a specific OP-chain. Locks USDC on Ethereum Mainnet and sends a message to the other chain to mint the equivalent amount of USDC. Receives messages from the other chain and unlocks USDC on the Ethereum Mainnet. Controls the message flow between layers. Supports the requirements for the Bridged USDC to be migrated to Native USDC, should the chain operator and Circle want to.
 
-_`L2OpUSDCBridgeAdapter`_ - Contract that allows for the transfer of USDC from the a specific OP-chain to Ethereum Mainnet. Burns USDC on the other chain and sends a message to Ethereum Mainnet to unlock the equivalent amount of USDC. Receives messages from Ethereum Mainnet and mints USDC on the the other chain. Allows contract owner to execute arbitrary functions on the Bridged USDC contract.
+_`L2OpUSDCBridgeAdapter`_ - Contract that allows for the transfer of USDC from the a specific OP-chain to Ethereum Mainnet. Burns USDC on the L2 and sends a message to Ethereum Mainnet to unlock the equivalent amount of USDC. Receives messages from Ethereum Mainnet and mints USDC. Allows chain operator to execute arbitrary functions on the Bridged USDC contract, as if he was the owner of the contract.
 
 ## L1 → L2 Deployment
 ![image](https://github.com/defi-wonderland/opUSDC/assets/165055168/ac9d0b57-03e7-40ae-b109-34d656d7539b)
