@@ -32,10 +32,14 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   bytes4 internal constant _UPDATE_MASTER_MINTER_SELECTOR = 0xaa20e1e4;
 
   /// @inheritdoc IL2OpUSDCBridgeAdapter
-  FallbackProxyAdmin public immutable FALLBACK_PROXY_ADMIN;
+  // solhint-disable-next-line var-name-mixedcase
+  FallbackProxyAdmin public FALLBACK_PROXY_ADMIN;
 
   /// @inheritdoc IL2OpUSDCBridgeAdapter
   address public roleCaller;
+
+  /// @notice Reserve 50 more storage slots to be safe on future upgrades
+  uint256[50] private __gap;
 
   /**
    * @notice Modifier to check if the sender is the linked adapter through the messenger
@@ -58,12 +62,23 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   constructor(
     address _usdc,
     address _messenger,
-    address _linkedAdapter,
-    address _owner
-  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _owner) {
-    FALLBACK_PROXY_ADMIN = new FallbackProxyAdmin(_usdc);
-  }
+    address _linkedAdapter
+  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
   /* solhint-enable no-unused-vars */
+
+  /**
+   * @notice Sets the owner of the contract
+   * @param _owner The address of the owner
+   * @dev This function needs only used during the deployment of the proxy contract, and it is disabled for the
+   * implementation contract
+   */
+  function initialize(address _owner) external virtual override initializer {
+    __Ownable_init(_owner);
+    string memory _name = 'L1OpUSDCBridgeAdapter';
+    string memory _version = '1.0.0';
+    __EIP712_init(_name, _version);
+    FALLBACK_PROXY_ADMIN = new FallbackProxyAdmin(USDC);
+  }
 
   /*///////////////////////////////////////////////////////////////
                               MIGRATION

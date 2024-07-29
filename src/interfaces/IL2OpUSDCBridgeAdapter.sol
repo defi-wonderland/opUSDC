@@ -68,6 +68,8 @@ interface IL2OpUSDCBridgeAdapter {
    * such as mint and burn between others. Because of this, the FallbackProxyAdmin contract is used as a middleware,
    * being controlled by the L2OpUSDCBridgeAdapter contract and allowing to call the admin functions through it while
    * also being able to call the fallback function of the USDC proxy.
+   * @dev Declared with immutable notation even though it is not defined on the constructor because it is set on the
+   * `initialize` function which replicates the behavior of the constructor.
    */
   // solhint-disable-next-line func-name-mixedcase
   function FALLBACK_PROXY_ADMIN() external view returns (FallbackProxyAdmin _fallbackProxyAdmin);
