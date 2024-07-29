@@ -262,8 +262,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /**
    * @notice Receive the message from the other chain and mint the bridged representation for the user
    * @dev This function should only be called when receiving a message to mint the bridged representation
-   * @dev If the mint fails the funds might be recovered by calling withdrawBlacklistedFunds if the user
-   *      is ever unblacklisted
+   * @dev If the mint fails the funds might be recovered by calling withdrawBlacklistedFunds
    * @param _user The user to mint the bridged representation for
    * @param _spender The address that provided the tokens
    * @param _amount The amount of tokens to mint
@@ -279,15 +278,15 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   }
 
   /**
-   * @notice Receives a message from L2 if the adapter is deprecated are a user is withdrawing blacklisted funds
-   * @dev If the _spender is still blacklisted, the chain operator will be forced to replay this message
+   * @notice Receives a message from L2 if the adapter is deprecated and a user is withdrawing blacklisted funds
+   * @dev If the _spender is still blacklisted, the user will be forced to replay this message
    * @param _spender The user that initialy provided the tokens
    * @param _amount The amount of tokens to withdraw
    */
   function receiveWithdrawBlacklistedFundsPostMigration(address _spender, uint256 _amount) external onlyLinkedAdapter {
     if (messengerStatus != Status.Deprecated) revert IOpUSDCBridgeAdapter_NotMigrated();
 
-    // If the spender is still blacklisted, the chain operator will be forced to replay this message
+    // If the spender is still blacklisted, the user will be forced to replay this message
     IUSDC(USDC).safeTransfer(_spender, _amount);
 
     emit BlacklistedFundsWithdrawn(_spender, _amount);

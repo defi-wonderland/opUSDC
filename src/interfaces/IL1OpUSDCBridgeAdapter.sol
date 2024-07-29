@@ -66,9 +66,8 @@ interface IL1OpUSDCBridgeAdapter {
   function resumeMessaging(uint32 _minGasLimit) external;
 
   /**
-   * @notice Withdraws the blacklisted funds from L2 once the adapter is deprecated
-   * @dev If the _spender is still blacklisted, the chain operator will be forced to
-   *      replay this message
+   * @notice Receives a message from L2 if the adapter is deprecated and a user is withdrawing blacklisted funds
+   * @dev If the _spender is still blacklisted, the user will be forced to replay this message
    * @param _spender The user that initialy provided the tokens
    * @param _amount The amount of tokens to withdraw
    */
