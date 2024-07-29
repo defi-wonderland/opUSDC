@@ -4,7 +4,7 @@
 | User who bridges tokens should receive them on the destination chain                                        | High level          | 2   | [X]  | [x]  |
 | Assuming the adapter is the only minter the amount locked in L1 should always equal the amount minted on L2 | High level          | 3   | [X]  | [x]  |
 | Both messenger's state or if they can send messages should match                                            | Valid state         | 4   | depr | depr |
-| user nonce should be monotonically increasing                                                               | Variable transition | 5   | [X]  | :(   |
+| user nonce should be monotonically increasing                                                               | Variable transition | 5   | depr | depr |
 | burn locked only if deprecated                                                                              | Unit test           | 6   | [X]  | [X]  |
 | paused only via stop messaging                                                                              | State transition    | 7   | [X]  |      |
 | resumed only via resume messaging                                                                           | State transition    | 8   | [X]  |      |
