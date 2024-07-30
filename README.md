@@ -24,7 +24,7 @@ _`L2OpUSDCBridgeAdapter`_ - Contract that allows for the transfer of USDC from t
 
 ## Migrating from Bridged USDC to Native USDC
 
-![image](https://github.com/user-attachments/assets/ee032828-41eb-41f8-bb23-5ec7eaf9bcf9)
+![image](https://github.com/user-attachments/assets/291aae4c-e9fb-43a5-a11d-71bb3fc78311)
 
 
 ## Setup
