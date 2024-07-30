@@ -75,7 +75,7 @@ contract SetupOpUSDC is EchidnaTest {
 
     factory = new L1OpUSDCFactory(address(usdcMainnet));
 
-    //Deploy USDC implementation on L2
+    // Deploy USDC implementation on L2
     assembly {
       targetAddress := create(0, add(_usdcBytecode, 0x20), size) // Skip the 32 bytes encoded length.
     }
