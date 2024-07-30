@@ -494,6 +494,33 @@ contract OpUsdcTest is SetupOpUSDC {
         || l1Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Upgrading
         || l1Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Deprecated
     );
+    assert(
+      l2Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Active
+        || l2Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Paused
+        || l2Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Deprecated
+    );
+  }
+
+  /// @custom:property-id 19
+  /// @custom:property Adapters can't be initialized twice
+  function fuzz_l1AdapterInitialization(address _newOwner) public {
+    // Action
+    try l1Adapter.initialize(_newOwner) {
+      // Postcondition
+      assert(false);
+    } catch {
+      assert(l1Adapter.owner() != address(0));
+    }
+  }
+
+  function fuzz_l2AdapterInitialization(address _newOwner) public {
+    // Action
+    try l2Adapter.initialize(_newOwner) {
+      // Postcondition
+      assert(false);
+    } catch {
+      assert(l1Adapter.owner() != address(0));
+    }
   }
 
   /////////////////////////////////////////////////////////////////////

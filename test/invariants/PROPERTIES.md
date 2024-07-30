@@ -19,6 +19,7 @@
 | USDC proxy admin and token ownership rights can only be transferred during the migration to native flow     | High level          | 17  | [X]  |      |
 | Status should either be active, paused, upgrading or deprecated                                             | Valid state         | 18  | [X]  |      |
 | All addresses precomputed in the factory match the deployed addresses / L1 nonce == L2 factory nonce        | Variable transition |     | depr | depr | 
+| Adapters can't be initialized twice                                                                         | State transition    | 19  | []   |      |
 
 []      planed to implement and still to do
 [x]     implemented and tested
