@@ -7,6 +7,7 @@ import {EIP712Upgradeable} from '@openzeppelin/contracts-upgradeable/utils/crypt
 import {MessageHashUtils} from '@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol';
 import {SignatureChecker} from '@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
+import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 
 abstract contract OpUSDCBridgeAdapter is UUPSUpgradeable, OwnableUpgradeable, EIP712Upgradeable, IOpUSDCBridgeAdapter {
   using MessageHashUtils for bytes32;
@@ -36,6 +37,16 @@ abstract contract OpUSDCBridgeAdapter is UUPSUpgradeable, OwnableUpgradeable, EI
 
   /// @inheritdoc IOpUSDCBridgeAdapter
   mapping(address _spender => mapping(address _user => uint256 _blacklistedAmount)) public blacklistedFundsDetails;
+
+  /**
+   * @notice Modifier to check if the sender is the linked adapter through the messenger
+   */
+  modifier onlyLinkedAdapter() {
+    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != LINKED_ADAPTER) {
+      revert IOpUSDCBridgeAdapter_InvalidSender();
+    }
+    _;
+  }
 
   /**
    * @notice Construct the OpUSDCBridgeAdapter contract
