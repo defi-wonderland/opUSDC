@@ -658,8 +658,10 @@ contract OpUsdcTest is SetupOpUSDC {
       _payload = abi.encodeCall(l1Adapter.burnLockedUSDC, ());
     } else if (_selectorIndex == 6) {
       _payload = abi.encodeCall(l1Adapter.stopMessaging, (_uint32A));
-    } else {
+    } else if (_selectorIndex == 7) {
       _payload = abi.encodeCall(l1Adapter.resumeMessaging, (_uint32A));
+    } else {
+      _payload = abi.encodeCall(l1Adapter.receiveWithdrawBlacklistedFundsPostMigration, (_addressA, _uintA));
     }
 
     hevm.prank(_currentCaller);
@@ -713,7 +715,7 @@ contract OpUsdcTest is SetupOpUSDC {
     uint256 _uintA,
     uint8 _uint8A
   ) public agentOrDeployer {
-    _selectorIndex = _selectorIndex % 12;
+    _selectorIndex = _selectorIndex % 14;
 
     if (_selectorIndex == 0) {
       usdcMainnet.mint(_addressA, _uintA);
@@ -740,6 +742,10 @@ contract OpUsdcTest is SetupOpUSDC {
       usdcMainnet.approve(_addressA, _uintA);
     } else if (_selectorIndex == 11) {
       usdcMainnet.transferFrom(_addressA, _addressB, _uintA);
+    } else if (_selectorIndex == 12) {
+      usdcMainnet.blacklist(_addressA);
+    } else if (_selectorIndex == 13) {
+      usdcMainnet.unBlacklist(_addressA);
     }
   }
 
@@ -753,7 +759,7 @@ contract OpUsdcTest is SetupOpUSDC {
     uint256 _uintA,
     uint8 _uint8A
   ) public agentOrDeployer {
-    _selectorIndex = _selectorIndex % 12;
+    _selectorIndex = _selectorIndex % 14;
 
     if (_selectorIndex == 0) {
       usdcBridged.mint(_addressA, _uintA);
@@ -780,6 +786,10 @@ contract OpUsdcTest is SetupOpUSDC {
       usdcBridged.approve(_addressA, _uintA);
     } else if (_selectorIndex == 11) {
       usdcBridged.transferFrom(_addressA, _addressB, _uintA);
+    } else if (_selectorIndex == 12) {
+      usdcBridged.blacklist(_addressA);
+    } else if (_selectorIndex == 13) {
+      usdcBridged.unBlacklist(_addressA);
     }
   }
 
