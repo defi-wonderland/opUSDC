@@ -17,8 +17,6 @@ import {USDC_IMPLEMENTATION_CREATION_CODE} from 'test/utils/USDCImplementationCr
 // solhint-disable
 contract SetupOpUSDC is EchidnaTest {
   string public constant CHAIN_NAME = 'Optimism';
-  string internal constant _NAME = 'OpUSDCBridgeAdapter';
-  string internal constant _VERSION = '1.0.0';
 
   IUSDC usdcMainnet;
   IUSDC usdcBridged;
