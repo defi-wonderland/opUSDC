@@ -3,7 +3,7 @@ pragma solidity 0.8.25;
 
 import {HalmosTest} from '../AdvancedTestsUtils.sol';
 import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol';
-import {IL1OpUSDCBridgeAdapter, L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
+import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
 import {L2OpUSDCDeploy} from 'contracts/L2OpUSDCDeploy.sol';
@@ -90,15 +90,15 @@ contract OpUsdcTest_SymbTest is HalmosTest {
 
     // Deploy l1 adapter
     address _l1AdapterImp = address(
-      new L1OpUSDCBridgeAdapter(address(usdcMainnet), address(mockMessenger), address(uint160(targetAddress2) + 3))
+      new L1OpUSDCBridgeAdapter(address(usdcMainnet), address(mockMessenger), address(uint160(targetAddress2) + 5))
     );
-
-    address _l2AdapterImp =
-      address(new L2OpUSDCBridgeAdapter(address(usdcBridged), address(mockMessenger), address(l1Adapter)));
 
     l1Adapter = L1OpUSDCBridgeAdapter(
       address(new ERC1967Proxy(_l1AdapterImp, abi.encodeCall(L1OpUSDCBridgeAdapter.initialize, owner)))
     );
+
+    address _l2AdapterImp =
+      address(new L2OpUSDCBridgeAdapter(address(usdcBridged), address(mockMessenger), address(l1Adapter)));
 
     l2Adapter = L2OpUSDCBridgeAdapter(
       address(new ERC1967Proxy(_l2AdapterImp, abi.encodeCall(L2OpUSDCBridgeAdapter.initialize, owner)))
