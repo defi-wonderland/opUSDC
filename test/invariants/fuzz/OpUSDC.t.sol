@@ -545,6 +545,8 @@ contract FuzzOpUsdc is SetupOpUSDC {
     }
   }
 
+  /// @custom:property-id 20
+  /// @custom:property Refunds from l2 to l1 should only be possible if the l2 adapter is deprecated
   function fuzz_receiveWithdrawBlacklistedFundsPostMigrationOnlyIfDeprecated(address _to, uint256 _amount) public {
     // Precondition
     require(_to != address(0) && _to != address(usdcMainnet) && _to != address(usdcBridged));
@@ -576,6 +578,23 @@ contract FuzzOpUsdc is SetupOpUSDC {
     } catch {
       assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
       assert(l1Adapter.messengerStatus() != IOpUSDCBridgeAdapter.Status.Deprecated);
+    }
+  }
+
+  function fuzz_withdrawBlacklistedFundsOnlyIfNotBlacklisted(address _spender, address _user) public {
+    // Precondition
+    require(
+      _user != address(0) && _user != address(usdcMainnet) && _user != address(usdcBridged)
+        && _user != address(l1Adapter)
+    );
+    require(usdcMainnet.isBlacklisted(address(l1Adapter)) == false);
+
+    try l1Adapter.withdrawBlacklistedFunds(_spender, _user) {
+      // Postcondition
+      assert(!usdcMainnet.isBlacklisted(_user));
+      assert(l1Adapter.blacklistedFundsDetails(_spender, _user) == 0);
+    } catch {
+      assert(usdcMainnet.balanceOf(_user) == 0);
     }
   }
 

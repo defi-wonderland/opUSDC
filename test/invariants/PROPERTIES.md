@@ -20,6 +20,7 @@
 | Status should either be active, paused, upgrading or deprecated                                             | Valid state         | 18  | [X]  |      |
 | All addresses precomputed in the factory match the deployed addresses / L1 nonce == L2 factory nonce        | Variable transition |     | depr | depr | 
 | Adapters can't be initialized twice                                                                         | State transition    | 19  | [X]  |      |
+| Refunds from l2 to l1 should only be possible if the l2 adapter is deprecated                               | State transition    | 20  | [X]  |      |
 
 []      planed to implement and still to do
 [x]     implemented and tested
