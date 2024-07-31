@@ -692,7 +692,7 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
 contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
   event ReplayedFundsSentBackToL1(address _spender, uint256 _amount);
 
-  event MessageFailed(address indexed _spender, address indexed _user, uint256 _amount, address _messenger);
+  event MessageFailed(address indexed _spender, address indexed _user, uint256 _amount, address indexed _messenger);
 
   /**
    * @notice Check that the function reverts if the sender is not the messenger
