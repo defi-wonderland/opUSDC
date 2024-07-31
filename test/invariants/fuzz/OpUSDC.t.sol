@@ -48,6 +48,10 @@ contract OpUsdcTest is SetupOpUSDC {
     // Precondition
     require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
 
+    require(usdcMainnet.isBlacklisted(_to) == false);
+    require(usdcMainnet.isBlacklisted(address(l1Adapter)) == false);
+    require(usdcMainnet.isBlacklisted(_currentCaller) == false);
+
     _amount = _boundAmountToMint(_to, _amount);
 
     _dealAndApproveUSDC(_currentCaller, _amount);
@@ -83,11 +87,14 @@ contract OpUsdcTest is SetupOpUSDC {
     // Precondition
     require(_privateKey != 0);
     require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
+    require(usdcMainnet.isBlacklisted(_to) == false);
+    require(usdcMainnet.isBlacklisted(address(l1Adapter)) == false);
 
     _amount = _boundAmountToMint(_to, _amount);
 
     // create valid signature
     address _signer = hevm.addr(_privateKey);
+    require(usdcMainnet.isBlacklisted(_signer) == false);
     uint256 _deadline = block.timestamp + 1 days;
     bytes memory _signature =
       _generateSignature(_to, _amount, _deadline, _minGasLimit, _nonce, _signer, _privateKey, address(l1Adapter));
@@ -119,6 +126,8 @@ contract OpUsdcTest is SetupOpUSDC {
   function fuzz_noMessageIfNotActiveL2(address _to, uint256 _amount, uint32 _minGasLimit) public agentOrDeployer {
     // Preconditions
     require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
+    require(usdcMainnet.isBlacklisted(_to) == false);
+    require(usdcMainnet.isBlacklisted(_currentCaller) == false);
 
     _amount = _boundAmountToMint(_to, _amount);
 
@@ -157,10 +166,12 @@ contract OpUsdcTest is SetupOpUSDC {
     // Preconditions
     require(_privateKey != 0);
     require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
+    require(usdcMainnet.isBlacklisted(_to) == false);
 
     _amount = _boundAmountToMint(_to, _amount);
 
     address _signer = hevm.addr(_privateKey);
+    require(usdcMainnet.isBlacklisted(_signer) == false);
     uint256 _deadline = block.timestamp + 1 days;
     bytes memory _signature =
       _generateSignature(_to, _amount, _deadline, _minGasLimit, _nonce, _signer, _privateKey, address(l2Adapter));
@@ -193,6 +204,7 @@ contract OpUsdcTest is SetupOpUSDC {
     usdcMainnet.configureMinter(address(l1Adapter), type(uint256).max);
 
     require(l1Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Deprecated);
+    require(usdcMainnet.isBlacklisted(address(l1Adapter)) == false);
 
     uint256 _currentBalance = usdcMainnet.balanceOf(address(l1Adapter));
     uint256 _burnAmount = l1Adapter.burnAmount();
@@ -289,7 +301,7 @@ contract OpUsdcTest is SetupOpUSDC {
   /// @custom:property Upgrading state only via migrate to native, should be callable multiple times (msg fails)
   function fuzz_migrateToNativeMultipleCall(address _burnCaller, address _roleCaller) public {
     // Precondition
-    // Insure we haven't started the migration or we only initiated/is pending in the bridge
+    // Ensure we haven't started the migration or we only initiated/is pending in the bridge
     require(
       l1Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Active
         || l1Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Upgrading
@@ -320,6 +332,7 @@ contract OpUsdcTest is SetupOpUSDC {
     // Precondition
     require(_to != address(0) && _to != address(usdcMainnet) && _to != address(usdcBridged));
     require(l1Adapter.messengerStatus() != IOpUSDCBridgeAdapter.Status.Active);
+    require(usdcMainnet.isBlacklisted(address(l1Adapter)) == false);
 
     _amount = _boundAmountToMint(_to, _amount);
 
@@ -332,15 +345,22 @@ contract OpUsdcTest is SetupOpUSDC {
 
     // cache balance
     uint256 _toBalanceBefore = usdcMainnet.balanceOf(_to);
+    uint256 _toBlackListedBalanceBefore = l1Adapter.blacklistedFundsDetails(_spender, _to);
 
     hevm.prank(l1Adapter.MESSENGER());
     // Action
     try l1Adapter.receiveMessage(_to, _spender, _amount) {
       // Postcondition
-      if (_to == address(l1Adapter)) assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
-      else assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
+
+      if (usdcMainnet.isBlacklisted(_to)) {
+        assert(l1Adapter.blacklistedFundsDetails(_spender, _to) == _toBlackListedBalanceBefore + _amount);
+      } else {
+        if (_to == address(l1Adapter)) assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
+        else assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
+      }
     } catch {
       assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
+      assert(l1Adapter.blacklistedFundsDetails(_spender, _to) == _toBlackListedBalanceBefore);
     }
   }
 
@@ -445,7 +465,7 @@ contract OpUsdcTest is SetupOpUSDC {
     usdcInitTxns[2] = USDCInitTxs.INITIALIZEV2_2;
 
     IL1OpUSDCFactory.L2Deployments memory _l2Deployments =
-      IL1OpUSDCFactory.L2Deployments(address(this), usdcBridgedImplementation, 3_000_000, usdcInitTxns);
+      IL1OpUSDCFactory.L2Deployments(address(this), usdcBridgedImplementation, 9_000_000, usdcInitTxns);
 
     try factory.deploy(address(mockMessenger), _currentCaller, CHAIN_NAME, _l2Deployments) returns (
       address, address _l2Factory, address _l2Adapter
@@ -468,9 +488,9 @@ contract OpUsdcTest is SetupOpUSDC {
   function fuzz_onlyMigrateToNativeForOwnershipTransfer(address _newOwner) public {
     address _roleCaller = l2Adapter.roleCaller();
     // Precondition
-    //Insure the adapter has received the migration to native message
+    //Ensure the adapter has received the migration to native message
     require(_roleCaller != address(0));
-    //Insura that the new owner is not the zero address, transfer ownership to the zero address is not allowed
+    //Ensure that the new owner is not the zero address, transfer ownership to the zero address is not allowed
     require(
       _newOwner != address(0) && _newOwner != usdcBridged.owner() && l2Adapter.roleCaller() != usdcBridged.admin()
     );
