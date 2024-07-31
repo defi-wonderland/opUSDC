@@ -12,7 +12,7 @@ import {SigUtils} from 'test/utils/SigUtils.sol';
 //solhint-disable ordering
 //solhint-disable reason-string
 //solhint-disable max-line-length
-contract OpUsdcTest is SetupOpUSDC {
+contract FuzzOpUsdc is SetupOpUSDC {
   using MessageHashUtils for bytes32;
   /////////////////////////////////////////////////////////////////////
   //                         Ghost variables                         //
