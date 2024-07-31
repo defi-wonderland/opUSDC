@@ -688,6 +688,8 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
 }
 
 contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
+  event ReplayedFundsSentBackToL1(address _spender, uint256 _amount);
+
   event MessageFailed(address _spender, address _user, uint256 _amount, address _messenger);
 
   /**
@@ -737,6 +739,23 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
     // Execute
     vm.prank(_messenger);
     adapter.receiveMessage(_user, _user, _amount);
+  }
+
+  /**
+   * @notice Check that the function emits the event as expected
+   */
+  function test_emitReplayedEvent(address _spender, uint256 _amount) external {
+    adapter.forTest_setMessengerStatus(IOpUSDCBridgeAdapter.Status.Deprecated);
+    // Mock calls
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+
+    // Expect event to be emitted
+    vm.expectEmit(true, true, true, true);
+    emit ReplayedFundsSentBackToL1(_spender, _amount);
+
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveMessage(_user, _spender, _amount);
   }
 
   /**

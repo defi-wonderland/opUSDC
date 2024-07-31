@@ -216,6 +216,8 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
       ICrossDomainMessenger(MESSENGER).sendMessage(
         LINKED_ADAPTER, abi.encodeCall(IOpUSDCBridgeAdapter.receiveMessage, (_spender, _spender, _amount)), _minGasLimit
       );
+
+      emit ReplayedFundsSentBackToL1(_spender, _amount);
     } else {
       // Mint the tokens to the user
       try IUSDC(USDC).mint(_user, _amount) {
