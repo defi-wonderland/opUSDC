@@ -35,7 +35,7 @@ contract ForTestL2OpUSDCBridgeAdapter is L2OpUSDCBridgeAdapter {
 }
 
 abstract contract Base is Helpers {
-  string internal constant _NAME = 'L1OpUSDCBridgeAdapter';
+  string internal constant _NAME = 'OpUSDCBridgeAdapter';
   string internal constant _VERSION = '1.0.0';
   bytes4 internal constant _UPGRADE_TO_SELECTOR = 0x3659cfe6;
   bytes4 internal constant _UPGRADE_TO_AND_CALL_SELECTOR = 0x4f1ef286;
