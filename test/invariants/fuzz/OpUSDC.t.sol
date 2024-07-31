@@ -355,6 +355,8 @@ contract FuzzOpUsdc is SetupOpUSDC {
       if (usdcMainnet.isBlacklisted(_to)) {
         assert(l1Adapter.blacklistedFundsDetails(_spender, _to) == _toBlackListedBalanceBefore + _amount);
       } else {
+        // If the destination address is the same that the l1 adapter, the balance should remain the same
+        // since the tokens are being locked in the adapter (aka self-transfer).
         if (_to == address(l1Adapter)) assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
         else assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
       }
@@ -565,7 +567,11 @@ contract FuzzOpUsdc is SetupOpUSDC {
     // Action
     try l1Adapter.receiveWithdrawBlacklistedFundsPostMigration(_to, _amount) {
       // Postcondition
-      assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
+      if (_to == address(l1Adapter)) {
+        assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
+      } else {
+        assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore + _amount);
+      }
       assert(l1Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Deprecated);
     } catch {
       assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
