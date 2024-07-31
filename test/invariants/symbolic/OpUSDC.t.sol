@@ -194,28 +194,7 @@ contract OpUsdcTest_SymbTest is HalmosTest {
   /// @custom:property-id 5
   /// @custom:property Nonce should increase monotonically for each user
   /// @custom:property-not-tested
-  // -- Halmos generates a false negative, due to isValidSignatureCall
-  // function check_nonceMonotonicallyIncreases(uint256 numberMessages, address dest, uint256 amt) public {
-  //   // Precondition
-  //   (address sender, uint256 privateKey) = makeAddrAndKey('sender');
-
-  //   vm.assume(sender != address(0) && dest != address(0) && amt > 0);
-
-  //   uint256 nonceBefore = l1Adapter.userNonce(sender);
-
-  //   bytes32 digest =
-  //     keccak256(abi.encode(l1Adapter, block.chainid, dest, amt, nonceBefore + 1)).toEthSignedMessageHash();
-  //   (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
-  //   bytes memory signature = abi.encodePacked(r, s, v);
-
-  //   // Action
-  //   for (uint256 i = 0; i < numberMessages; i++) {
-  //     l1Adapter.sendMessage(sender, dest, amt, signature, block.timestamp + 1000, 0);
-  //   }
-
-  //   // Postcondition
-  //   assert(l1Adapter.userNonce(sender) == nonceBefore + numberMessages);
-  // }
+  /// @dev test in commit history -- Halmos generates a false negative, due to isValidSignatureCall
 
   /// @custom:property-id 6
   /// @custom:property burn locked only if deprecated
@@ -331,21 +310,7 @@ contract OpUsdcTest_SymbTest is HalmosTest {
   /// @custom:property-id 13
   /// @custom:property Bridged USDC Proxy should only be upgradeable through the L2 Adapter
   /// @custom:property-not-tested
-  // -- extcodehash representation has an unexpected behavior, seems to behave as a symbolic value (this make a isContract check fail in the OZ Address)
-  // function check_usdceProxyOnlyUpgradeableThroughL2Adapter(address caller) public {
-  //   // Precondition
-  //   address newImplementation = address(new MockBridge());
-
-  //   vm.startPrank(caller);
-
-  //   // Action
-  //   try FallbackProxyAdmin(l2Adapter.FALLBACK_PROXY_ADMIN()).upgradeTo(newImplementation) {
-  //     // Postcondition
-  //     assert(caller == address(l2Adapter));
-  //   } catch {
-  //     assert(caller != address(l2Adapter));
-  //   }
-  // }
+  /// @dev test in commit history -- extcodehash representation has an unexpected behavior, seems to behave as a symbolic value (this make a isContract check fail in the OZ Address)
 
   /// @custom:property-id 14
   /// @custom:property Incoming successful messages should only come from the linked adapter's
@@ -370,29 +335,37 @@ contract OpUsdcTest_SymbTest is HalmosTest {
   /// @custom:property-id 16
   /// @custom:property Protocols deployed on one L2 should never have a matching address with a protocol on a different L2
   /// @custom:property-not-tested
-  // -- Test fails, most likely due to the create computation (trace says addresses are different tho, but not symbolic?)
-  // function check_uniqueAddresses() public {
-  //   // Precondition
-  //   mockMessenger.stopMessageRelay();
+  /// @dev test in commit history -- Test fails, most likely due to the create computation (trace says addresses are different tho, but not symbolic?)
 
-  //   bytes[] memory usdcInitTxns = new bytes[](3);
-  //   usdcInitTxns[0] = USDCInitTxs.INITIALIZEV2;
-  //   usdcInitTxns[1] = USDCInitTxs.INITIALIZEV2_1;
-  //   usdcInitTxns[2] = USDCInitTxs.INITIALIZEV2_2;
+  /// @custom:property-id 19
+  /// @custom:property Adapter cannot be initialized twice
+  function check_adapterInitOnce(address caller) public {
+    address _newOwner = svm.createAddress('newOwner');
 
-  //   IL1OpUSDCFactory.L2Deployments memory _l2Deployments = IL1OpUSDCFactory.L2Deployments(address(123), USDC_IMPLEMENTATION_CREATION_CODE, usdcInitTxns, 3_000_000);
-  //   (address _l1Adapter, address _l2Factory, address _l2Adapter) = factory.deploy(address(mockMessenger), address(123), _l2Deployments);
+    // l1 adapter
+    // Precondition
+    vm.prank(caller);
 
-  //   // Action
-  //   try factory.deploy(address(mockMessenger), address(123), _l2Deployments) returns (address _secondL1Adapter, address _secondL2Factory, address _secondL2Adapter) {
-  //     // Postcondition
-  //     assert(_l1Adapter == _secondL1Adapter);
-  //     assert(_l2Factory != _secondL2Factory);
-  //     assert(_l2Adapter != _secondL2Adapter);
-  //   } catch {
-  //     assert(false); // Can never revert
-  //   }
-  // }
+    // Action
+    try l1Adapter.initialize(_newOwner) {
+      // Postcondition
+      assert(false); // cannot happen
+    } catch {
+      assert(true);
+    }
+
+    // l2 adapter
+    // Precondition
+    vm.prank(caller);
+
+    // Action
+    try l2Adapter.initialize(_newOwner) {
+      // Postcondition
+      assert(false); // cannot happen
+    } catch {
+      assert(true);
+    }
+  }
 
   /// @dev Mint arbitrary amount of USDC on mainnet to dest
   function _mainnetMint(address dest, uint256 amt) internal {
