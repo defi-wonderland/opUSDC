@@ -14,6 +14,13 @@ interface IL2OpUSDCBridgeAdapter {
    */
   event USDCFunctionSent(bytes4 _functionSignature);
 
+  /**
+   * @notice Emitted when a `receiveMessage` call message is replayed after the adapter was deprecated
+   * @param _spender The address that provided the tokens
+   * @param _amount The amount of USDC sent back to L1
+   */
+  event ReplayedFundsSentBackToL1(address _spender, uint256 _amount);
+
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   ///////////////////////////////////////////////////////////////*/
