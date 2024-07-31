@@ -58,7 +58,9 @@ interface IOpUSDCBridgeAdapter {
    * @param _messenger The address of the messenger contract that was sent through
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  event MessageSent(address _user, address _to, uint256 _amount, address _messenger, uint32 _minGasLimit);
+  event MessageSent(
+    address indexed _user, address indexed _to, uint256 _amount, address indexed _messenger, uint32 _minGasLimit
+  );
 
   /**
    * @notice Emitted when a message as recieved
@@ -67,7 +69,7 @@ interface IOpUSDCBridgeAdapter {
    * @param _amount The amount of tokens recieved
    * @param _messenger The address of the messenger contract that was recieved through
    */
-  event MessageReceived(address _spender, address _user, uint256 _amount, address _messenger);
+  event MessageReceived(address indexed _spender, address indexed _user, uint256 _amount, address indexed _messenger);
 
   /**
    * @notice Emitted when messaging is resumed
@@ -91,21 +93,21 @@ interface IOpUSDCBridgeAdapter {
    * @param _amount The amount of tokens that were added to the blacklisted funds
    * @param _messenger The address of the messenger that the message failed for
    */
-  event MessageFailed(address _spender, address _user, uint256 _amount, address _messenger);
+  event MessageFailed(address indexed _spender, address indexed _user, uint256 _amount, address indexed _messenger);
 
   /**
    * @notice Emitted when the blacklisted funds are withdrawn
    * @param _user The user that the funds were withdrawn for
    * @param _amountWithdrawn The amount of tokens that were withdrawn
    */
-  event BlacklistedFundsWithdrawn(address _user, uint256 _amountWithdrawn);
+  event BlacklistedFundsWithdrawn(address indexed _user, uint256 _amountWithdrawn);
 
   /**
    * @notice Emitted when the blacklisted funds are sent back to L1
    * @param _spender The address that provided the tokens
    * @param _amountSent The amount of tokens that were withdrawn
    */
-  event BlacklistedFundsSentBackToL1(address _spender, uint256 _amountSent);
+  event BlacklistedFundsSentBackToL1(address indexed _spender, uint256 _amountSent);
 
   /*///////////////////////////////////////////////////////////////
                             ERRORS

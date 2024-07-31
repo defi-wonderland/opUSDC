@@ -57,8 +57,10 @@ abstract contract Base is Helpers {
   event MigratingToNative(address _messenger, address _newOwner);
   event BurnAmountSet(uint256 _burnAmount);
   event MigrationComplete(uint256 _burnedAmount);
-  event MessageSent(address _user, address _to, uint256 _amount, address _messenger, uint32 _minGasLimit);
-  event MessageReceived(address _spender, address _user, uint256 _amount, address _messenger);
+  event MessageSent(
+    address indexed _user, address indexed _to, uint256 _amount, address indexed _messenger, uint32 _minGasLimit
+  );
+  event MessageReceived(address indexed _spender, address indexed _user, uint256 _amount, address indexed _messenger);
 
   function setUp() public virtual {
     (_signerAd, _signerPk) = makeAddrAndKey('signer');
@@ -1051,7 +1053,7 @@ contract L1OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
 }
 
 contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
-  event MessageFailed(address _spender, address _user, uint256 _amount, address _messenger);
+  event MessageFailed(address indexed _spender, address indexed _user, uint256 _amount, address indexed _messenger);
 
   /**
    * @notice Check that the function reverts if the sender is not the messenger
@@ -1166,7 +1168,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 }
 
 contract L1OpUSDCBridgeAdapter_Unit_ReceiveWithdrawBlacklistedFundsPostMigration is Base {
-  event BlacklistedFundsWithdrawn(address _user, uint256 _amountWithdrawn);
+  event BlacklistedFundsWithdrawn(address indexed _user, uint256 _amountWithdrawn);
 
   /**
    * @notice Check that the function reverts if the sender is not the messenger
@@ -1251,7 +1253,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveWithdrawBlacklistedFundsPostMigration
 }
 
 contract L1OpUSDCBridgeAdapter_Unit_WithdrawBlacklistedFunds is Base {
-  event BlacklistedFundsWithdrawn(address _user, uint256 _amountWithdrawn);
+  event BlacklistedFundsWithdrawn(address indexed _user, uint256 _amountWithdrawn);
 
   /**
    * @notice Check that the function expects the correct calls
@@ -1287,7 +1289,7 @@ contract L1OpUSDCBridgeAdapter_Unit_WithdrawBlacklistedFunds is Base {
     assertEq(adapter.blacklistedFundsDetails(_spender, _user), 0, 'User blacklisted funds should be updated');
   }
 
-  function test_emitsEvent(uint256 _amount, address _user, address _spender) external {
+  function test_emitEvent(uint256 _amount, address _user, address _spender) external {
     vm.assume(_amount > 0);
     vm.assume(_user != address(0));
     adapter.forTest_setUserBlacklistedFunds(_spender, _user, _amount);
