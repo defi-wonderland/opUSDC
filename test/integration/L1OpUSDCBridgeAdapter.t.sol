@@ -5,7 +5,7 @@ import {IntegrationBase} from './IntegrationBase.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 
 contract Integration_Bridging is IntegrationBase {
-  string internal constant _NAME = 'L1OpUSDCBridgeAdapter';
+  string internal constant _NAME = 'OpUSDCBridgeAdapter';
   string internal constant _VERSION = '1.0.0';
 
   /**
