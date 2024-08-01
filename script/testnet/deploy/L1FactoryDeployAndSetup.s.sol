@@ -7,7 +7,7 @@ import {console} from 'forge-std/Test.sol';
 import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 
 contract L1FactoryDeployAndSetup is Script {
-  address public constant USDC = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238;
+  address public constant USDC = 0xF3dD0c89cf78C46A4150238e8A50285e1f4b5407;
   address public deployer = vm.rememberKey(vm.envUint('SEPOLIA_PK'));
 
   function run() public {
