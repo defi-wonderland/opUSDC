@@ -60,7 +60,7 @@ interface IL1OpUSDCBridgeAdapter {
   /**
    * @notice Resume messaging on the messenger
    * @dev Only callable by the owner
-   * @dev Cant resume deprecated messengers
+   * @dev Can't resume deprecated messengers
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function resumeMessaging(uint32 _minGasLimit) external;
@@ -68,7 +68,7 @@ interface IL1OpUSDCBridgeAdapter {
   /**
    * @notice Receives a message from L2 if the adapter is deprecated and a user is withdrawing blacklisted funds
    * @dev If the _spender is still blacklisted, the user will be forced to replay this message
-   * @param _spender The user that initialy provided the tokens
+   * @param _spender The user that initially provided the tokens
    * @param _amount The amount of tokens to withdraw
    */
   function receiveWithdrawBlacklistedFundsPostMigration(address _spender, uint256 _amount) external;

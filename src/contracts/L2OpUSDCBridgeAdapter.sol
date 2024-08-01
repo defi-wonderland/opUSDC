@@ -76,7 +76,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
 
   /**
    * @notice Initiates the process to migrate the bridged USDC to native USDC
-   * @dev Full migration cant finish until L1 receives the message for setting the burn amount
+   * @dev Full migration can't finish until L1 receives the message for setting the burn amount
    * @param _roleCaller The address that will be allowed to transfer the USDC roles
    * @param _setBurnAmountMinGasLimit Minimum gas limit that the setBurnAmount message can be executed on L1
    */
@@ -142,7 +142,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   ///////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Send tokens to other chain through the linked adapter
+   * @notice Send tokens to another chain through the linked adapter
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
    * @param _minGasLimit Minimum gas limit that the message can be executed with
@@ -159,7 +159,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   }
 
   /**
-   * @notice Send signer tokens to other chain through the linked adapter
+   * @notice Send signer tokens to another chain through the linked adapter
    * @param _signer The address of the user sending the message
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
@@ -212,10 +212,12 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   function receiveMessage(address _user, address _spender, uint256 _amount) external override onlyLinkedAdapter {
     if (messengerStatus == Status.Deprecated) {
       uint32 _minGasLimit = 150_000;
-      // Return the funds to the spender incase the target on L2 is a contract that can´t handle the funds on L1
+      // Return the funds to the spender in case the target on L2 is a contract that can´t handle the funds on L1
       ICrossDomainMessenger(MESSENGER).sendMessage(
         LINKED_ADAPTER, abi.encodeCall(IOpUSDCBridgeAdapter.receiveMessage, (_spender, _spender, _amount)), _minGasLimit
       );
+
+      emit ReplayedFundsSentBackToL1(_spender, _amount);
     } else {
       // Mint the tokens to the user
       try IUSDC(USDC).mint(_user, _amount) {
@@ -228,7 +230,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   }
 
   /**
-   * @notice Mints the blacklisted funds from the contract incase they get unblacklisted
+   * @notice Mints the blacklisted funds from the contract in case they get unblacklisted
    * @dev Returns the funds to the spender through a message to L1 if the contract is deprecated
    * @param _spender The address that provided the tokens
    * @param _user The user to withdraw the funds for
