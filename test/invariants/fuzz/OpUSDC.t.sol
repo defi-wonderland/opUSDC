@@ -602,6 +602,25 @@ contract FuzzOpUsdc is SetupOpUSDC {
     }
   }
 
+  function fuzz_withdrawBlacklistedFundsOnL2(address _spender, address _user) public {
+    // Precondition
+    require(_user != address(0) && _user != address(usdcBridged) && _user != address(l2Adapter));
+
+    uint256 _userBalanceBefore = usdcBridged.balanceOf(_user);
+    uint256 _userBlacklistedFundsBefore = l2Adapter.blacklistedFundsDetails(_spender, _user);
+
+    try l2Adapter.withdrawBlacklistedFunds(_spender, _user) {
+      // Postcondition
+      if (l2Adapter.messengerStatus() != IOpUSDCBridgeAdapter.Status.Deprecated) {
+        assert(!usdcBridged.isBlacklisted(_user));
+        assert(usdcBridged.balanceOf(_user) == _userBalanceBefore + _userBlacklistedFundsBefore);
+      }
+      assert(l2Adapter.blacklistedFundsDetails(_spender, _user) == 0);
+    } catch {
+      assert(usdcBridged.balanceOf(_user) == _userBalanceBefore);
+    }
+  }
+
   /////////////////////////////////////////////////////////////////////
   //                Expose target contract selectors                 //
   /////////////////////////////////////////////////////////////////////
