@@ -51,7 +51,7 @@ abstract contract Base is Helpers {
   address internal _signerAd;
   uint256 internal _signerPk;
 
-  // cant fuzz this because of foundry's VM
+  // can't fuzz this because of foundry's VM
   address internal _messenger = makeAddr('messenger');
 
   event MigratingToNative(address _messenger, address _newOwner);

@@ -21,13 +21,20 @@ interface IL2OpUSDCBridgeAdapter {
    */
   event ReplayedFundsSentBackToL1(address _spender, uint256 _amount);
 
+  /**
+   * @notice Emitted when the blacklisted funds are sent back to L1
+   * @param _spender The address that provided the tokens
+   * @param _amountSent The amount of tokens that were withdrawn
+   */
+  event BlacklistedFundsSentBackToL1(address indexed _spender, uint256 _amountSent);
+
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   ///////////////////////////////////////////////////////////////*/
 
   /**
    * @notice Initiates the process to migrate the bridged USDC to native USDC
-   * @dev Full migration cant finish until L1 receives the message for setting the burn amount
+   * @dev Full migration can't finish until L1 receives the message for setting the burn amount
    * @param _roleCaller The address that will be allowed to transfer the USDC roles
    * @param _setBurnAmountMinGasLimit Minimum gas limit that the setBurnAmount message can be executed on L1
    */
@@ -35,7 +42,7 @@ interface IL2OpUSDCBridgeAdapter {
 
   /**
    * @notice Transfer the USDC roles to the new owner
-   * @param _owner The address to transfer ownerships to
+   * @param _owner The address to transfer ownership to
    * @dev Can only be called by the role caller set in the migration process
    */
   function transferUSDCRoles(address _owner) external;
@@ -51,7 +58,7 @@ interface IL2OpUSDCBridgeAdapter {
   function receiveResumeMessaging() external;
 
   /**
-   * @notice Call with abitrary calldata on USDC contract.
+   * @notice Call with arbitrary calldata on USDC contract.
    * @dev can't execute the following list of transactions:
    *  • transferOwnership (0xf2fde38b)
    *  • changeAdmin (0x8f283970)

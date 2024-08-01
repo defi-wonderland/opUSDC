@@ -82,7 +82,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     L2Deployments calldata _l2Deployments
   ) external returns (address _l1Adapter, address _l2Factory, address _l2Adapter) {
     // Checks that the first init tx selector is not equal to the `initialize()` function since  we manually
-    // construct this function on the L2 factory contract
+    // Construct this function on the L2 factory contract
     if (bytes4(_l2Deployments.usdcInitTxs[0]) == _INITIALIZE_SELECTOR) revert IL1OpUSDCFactory_NoInitializeTx();
 
     // Update the salt counter so the L2 factory is deployed with a different salt to a different address and get it

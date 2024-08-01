@@ -63,11 +63,11 @@ interface IOpUSDCBridgeAdapter {
   );
 
   /**
-   * @notice Emitted when a message as recieved
+   * @notice Emitted when a message as received
    * @param _spender The address that provided the tokens
-   * @param _user The user that recieved the message
-   * @param _amount The amount of tokens recieved
-   * @param _messenger The address of the messenger contract that was recieved through
+   * @param _user The user that received the message
+   * @param _amount The amount of tokens received
+   * @param _messenger The address of the messenger contract that was received through
    */
   event MessageReceived(address indexed _spender, address indexed _user, uint256 _amount, address indexed _messenger);
 
@@ -101,13 +101,6 @@ interface IOpUSDCBridgeAdapter {
    * @param _amountWithdrawn The amount of tokens that were withdrawn
    */
   event BlacklistedFundsWithdrawn(address indexed _user, uint256 _amountWithdrawn);
-
-  /**
-   * @notice Emitted when the blacklisted funds are sent back to L1
-   * @param _spender The address that provided the tokens
-   * @param _amountSent The amount of tokens that were withdrawn
-   */
-  event BlacklistedFundsSentBackToL1(address indexed _spender, uint256 _amountSent);
 
   /*///////////////////////////////////////////////////////////////
                             ERRORS
@@ -196,7 +189,7 @@ interface IOpUSDCBridgeAdapter {
   function initialize(address _owner) external;
 
   /**
-   * @notice Send tokens to other chain through the linked adapter
+   * @notice Send tokens to another chain through the linked adapter
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
    * @param _minGasLimit Minimum gas limit that the message can be executed with
@@ -204,7 +197,7 @@ interface IOpUSDCBridgeAdapter {
   function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external;
 
   /**
-   * @notice Send signer tokens to other chain through the linked adapter
+   * @notice Send signer tokens to another chain through the linked adapter
    * @param _signer The address of the user sending the message
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send

@@ -71,7 +71,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     uint32 _minGasLimitReceiveOnL2,
     uint32 _minGasLimitSetBurnAmount
   ) external onlyOwner {
-    // Leave this flow open to resend upgrading flow incase message fails on L2
+    // Leave this flow open to resend upgrading flow in case message fails on L2
     // Circle's USDC implementation of `transferOwnership` reverts on address(0)
     if (_roleCaller == address(0) || _burnCaller == address(0)) revert IOpUSDCBridgeAdapter_InvalidAddress();
 
@@ -118,7 +118,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
 
     // NOTE: This is a very edge case and will only happen if the chain operator adds a second minter on L2
     // So now this adapter doesnt have the full backing supply locked in this contract
-    // Incase the bridged usdc token has other minters and the supply sent is greater then what we have
+    // in case the bridged usdc token has other minters and the supply sent is greater then what we have
     // We need to burn the full amount stored in this contract
     // This could also cause in-flight messages to fail because of the multiple supply sources
     uint256 _burnAmount = burnAmount;
@@ -147,7 +147,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    */
   function stopMessaging(uint32 _minGasLimit) external onlyOwner {
     // Ensure messaging is enabled
-    // If its paused we still leave this function open to be called incase the message fails on L2
+    // If its paused we still leave this function open to be called in case the message fails on L2
     if (messengerStatus != Status.Active && messengerStatus != Status.Paused) {
       revert IOpUSDCBridgeAdapter_MessagingDisabled();
     }
@@ -164,12 +164,12 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /**
    * @notice Resume messaging on the messenger
    * @dev Only callable by the owner
-   * @dev Cant resume deprecated or upgrading messengers
+   * @dev Can't resume deprecated or upgrading messengers
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function resumeMessaging(uint32 _minGasLimit) external onlyOwner {
     // Ensure messaging is disabled
-    // If its active we still leave this function open to be called incase the message fails on L2
+    // If its active we still leave this function open to be called in case the message fails on L2
     if (messengerStatus != Status.Paused && messengerStatus != Status.Active) {
       revert IOpUSDCBridgeAdapter_MessagingEnabled();
     }
@@ -188,7 +188,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   ///////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Send tokens to other chain through the linked adapter
+   * @notice Send tokens to another chain through the linked adapter
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
    * @param _minGasLimit Minimum gas limit that the message can be executed with
@@ -206,7 +206,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   }
 
   /**
-   * @notice Send signer tokens to other chain through the linked adapter
+   * @notice Send signer tokens to another chain through the linked adapter
    * @param _signer The address of the user sending the message
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
@@ -270,7 +270,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   /**
    * @notice Receives a message from L2 if the adapter is deprecated and a user is withdrawing blacklisted funds
    * @dev If the _spender is still blacklisted, the user will be forced to replay this message
-   * @param _spender The user that initialy provided the tokens
+   * @param _spender The user that initially provided the tokens
    * @param _amount The amount of tokens to withdraw
    */
   function receiveWithdrawBlacklistedFundsPostMigration(address _spender, uint256 _amount) external onlyLinkedAdapter {
@@ -283,7 +283,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   }
 
   /**
-   * @notice Withdraws the blacklisted funds from the contract incase they get unblacklisted
+   * @notice Withdraws the blacklisted funds from the contract in case they get unblacklisted
    * @param _spender The address that provided the tokens
    * @param _user The user to withdraw the funds for
    */
