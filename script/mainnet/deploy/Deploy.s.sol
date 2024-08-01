@@ -11,7 +11,7 @@ contract Deploy is Script {
   IL1OpUSDCFactory public immutable L1_FACTORY = IL1OpUSDCFactory(vm.envAddress('L1_FACTORY_MAINNET'));
   address public immutable BRIDGED_USDC_IMPLEMENTATION = vm.envAddress('BRIDGED_USDC_IMPLEMENTATION');
   address public immutable L1_MESSENGER = vm.envAddress('CUSTOM_L1_MESSENGER');
-  string public CHAIN_NAME = vm.envString('CHAIN_NAME');
+  string public chainName = vm.envString('CHAIN_NAME');
   address public owner = vm.rememberKey(vm.envUint('MAINNET_PK'));
 
   function run() public {
@@ -33,7 +33,7 @@ contract Deploy is Script {
 
     // Deploy the L2 contracts
     (address _l1Adapter, address _l2Factory, address _l2Adapter) =
-      L1_FACTORY.deploy(L1_MESSENGER, owner, CHAIN_NAME, _l2Deployments);
+      L1_FACTORY.deploy(L1_MESSENGER, owner, chainName, _l2Deployments);
     vm.stopBroadcast();
 
     /// NOTE: Hardcode the `L1_ADAPTER_BASE` and `L2_ADAPTER_BASE` addresses inside the `.env` file
