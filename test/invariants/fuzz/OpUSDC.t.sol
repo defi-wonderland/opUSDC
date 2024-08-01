@@ -370,8 +370,14 @@ contract FuzzOpUsdc is SetupOpUSDC {
   /// @custom:property Can receive USDC even if the state is not active
   function fuzz_receiveMessageIfNotActiveL2(address _to, address _spender, uint256 _amount) public agentOrDeployer {
     // Precondition
-    require(_to != address(0) && _to != address(usdcMainnet) && _to != address(usdcBridged));
-    require(_spender != address(0) && _spender != address(usdcMainnet) && _spender != address(usdcBridged));
+    require(
+      _to != address(0) && _to != address(usdcMainnet) && _to != address(usdcBridged) && _to != address(l2Adapter)
+        && _to != address(l1Adapter)
+    );
+    require(
+      _spender != address(0) && _spender != address(usdcMainnet) && _spender != address(usdcBridged)
+        && _spender != address(l2Adapter) && _spender != address(l1Adapter)
+    );
     require(l2Adapter.messengerStatus() != IOpUSDCBridgeAdapter.Status.Active);
 
     _amount = clamp(_amount, 0, (2 ^ 255 - 1) - usdcBridged.balanceOf(_to) - _amount);
