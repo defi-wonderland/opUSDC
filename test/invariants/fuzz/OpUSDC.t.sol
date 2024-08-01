@@ -371,23 +371,61 @@ contract FuzzOpUsdc is SetupOpUSDC {
   function fuzz_receiveMessageIfNotActiveL2(address _to, address _spender, uint256 _amount) public agentOrDeployer {
     // Precondition
     require(_to != address(0) && _to != address(usdcMainnet) && _to != address(usdcBridged));
+    require(_spender != address(0) && _spender != address(usdcMainnet) && _spender != address(usdcBridged));
     require(l2Adapter.messengerStatus() != IOpUSDCBridgeAdapter.Status.Active);
 
-    _amount = clamp(_amount, 0, usdcBridged.balanceOf(_to) - 2 ** 255 - 1 - _amount);
+    _amount = clamp(_amount, 0, (2 ^ 255 - 1) - usdcBridged.balanceOf(_to) - _amount);
+
+    // provided enough usdc on l1
+    hevm.prank(_usdcMinter);
+    usdcMainnet.mint(address(l1Adapter), _amount);
 
     // Set L1 Adapter as sender
     mockMessenger.setDomainMessageSender(address(l1Adapter));
 
     // cache balance
-    uint256 _toBalanceBefore = usdcBridged.balanceOf(_to);
+    uint256 _l2BalanceBefore = usdcBridged.balanceOf(_to);
+    uint256 _l1BalanceBefore = usdcMainnet.balanceOf(_to);
+    uint256 _l2SpenderBalanceBefore = usdcBridged.balanceOf(_spender);
+    uint256 _l1SpenderBalanceBefore = usdcMainnet.balanceOf(_spender);
+
+    uint256 _toBlackListedBalanceBefore = l2Adapter.blacklistedFundsDetails(_spender, _to);
 
     hevm.prank(l2Adapter.MESSENGER());
     // Action
     try l2Adapter.receiveMessage(_to, _spender, _amount) {
       // Postcondition
-      assert(usdcBridged.balanceOf(_to) == _toBalanceBefore + _amount);
+      if (l2Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Deprecated) {
+        // deprecated -> fund sent back to l1
+
+        if (_to == _spender) {
+          assert(usdcMainnet.balanceOf(_to) == _l1BalanceBefore + _amount);
+        } else {
+          assert(usdcMainnet.balanceOf(_spender) == _l1SpenderBalanceBefore + _amount);
+          assert(usdcMainnet.balanceOf(_to) == _l1BalanceBefore);
+        }
+
+        assert(usdcBridged.balanceOf(_to) == _l2BalanceBefore);
+        assert(usdcBridged.balanceOf(_spender) == _l2SpenderBalanceBefore);
+      } else {
+        // Paused or Upgrading -> mint
+        assert(usdcBridged.balanceOf(_to) == _l2BalanceBefore + _amount);
+        assert(usdcMainnet.balanceOf(_to) == _l1BalanceBefore);
+
+        if (_spender != _to) {
+          assert(usdcBridged.balanceOf(_spender) == _l2SpenderBalanceBefore);
+        } else {
+          assert(usdcBridged.balanceOf(_spender) == _l2SpenderBalanceBefore + _amount);
+        }
+      }
     } catch {
-      assert(usdcBridged.balanceOf(_to) == _toBalanceBefore);
+      // revert if paused/upgrading and mint fails (blacklisted)
+      assert(
+        l2Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Paused
+          || l2Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Upgrading
+      );
+      assert(usdcMainnet.isBlacklisted(_to));
+      assert(l2Adapter.blacklistedFundsDetails(_spender, _to) == _toBlackListedBalanceBefore + _amount);
     }
   }
 
