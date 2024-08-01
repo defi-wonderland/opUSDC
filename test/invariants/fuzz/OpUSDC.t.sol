@@ -589,12 +589,16 @@ contract FuzzOpUsdc is SetupOpUSDC {
     );
     require(usdcMainnet.isBlacklisted(address(l1Adapter)) == false);
 
+    uint256 _userBalanceBefore = usdcMainnet.balanceOf(_user);
+    uint256 _userBlacklistedFundsBefore = l1Adapter.blacklistedFundsDetails(_spender, _user);
+
     try l1Adapter.withdrawBlacklistedFunds(_spender, _user) {
       // Postcondition
       assert(!usdcMainnet.isBlacklisted(_user));
       assert(l1Adapter.blacklistedFundsDetails(_spender, _user) == 0);
+      assert(usdcMainnet.balanceOf(_user) == _userBalanceBefore + _userBlacklistedFundsBefore);
     } catch {
-      assert(usdcMainnet.balanceOf(_user) == 0);
+      assert(usdcMainnet.balanceOf(_user) == _userBalanceBefore);
     }
   }
 
