@@ -301,9 +301,9 @@ contract FuzzOpUsdc is SetupOpUSDC {
   function fuzz_migrateToNativeMultipleCall(address _burnCaller, address _roleCaller) public {
     // Precondition
     // Ensure we haven't started the migration or we only initiated/is pending in the bridge
+    IOpUSDCBridgeAdapter.Status _currentStatus = l1Adapter.messengerStatus();
     require(
-      l1Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Active
-        || l1Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Upgrading
+      _currentStatus == IOpUSDCBridgeAdapter.Status.Active || _currentStatus == IOpUSDCBridgeAdapter.Status.Upgrading
     );
 
     require(_burnCaller != address(0) && _roleCaller != address(0));
@@ -316,17 +316,21 @@ contract FuzzOpUsdc is SetupOpUSDC {
     // 11
     try l1Adapter.migrateToNative(_burnCaller, _roleCaller, 0, 0) {
       assert(l1Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Upgrading);
-    } catch {}
-
-    // try calling a second time
-    try l1Adapter.migrateToNative(_burnCaller, _roleCaller, 0, 0) {
-      assert(l1Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Upgrading);
+      assert(l2Adapter.messengerStatus() != IOpUSDCBridgeAdapter.Status.Deprecated);
     } catch {
-      assert(false);
+      assert(l1Adapter.messengerStatus() == _currentStatus);
     }
 
     // resume messaging for other tests
     mockMessenger.resumeMessaging();
+
+    // try calling a second time
+    try l1Adapter.migrateToNative(_burnCaller, _roleCaller, 0, 0) {
+      assert(l1Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Deprecated);
+      assert(l2Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Deprecated);
+    } catch {
+      assert(false);
+    }
   }
 
   /// @custom:property-id 12
