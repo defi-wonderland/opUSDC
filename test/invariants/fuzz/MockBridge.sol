@@ -38,6 +38,10 @@ contract MockBridge is ITestCrossDomainMessenger {
     _paused = true;
   }
 
+  function resumeMessaging() external {
+    _paused = false;
+  }
+
   function setDomainMessageSender(address _sender) external {
     _currentXDomSender = _sender;
   }

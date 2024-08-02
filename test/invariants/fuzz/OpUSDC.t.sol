@@ -319,10 +319,14 @@ contract FuzzOpUsdc is SetupOpUSDC {
     } catch {}
 
     // try calling a second time
-    try l1Adapter.migrateToNative(_burnCaller, _roleCaller, 0, 0) {}
-    catch {
+    try l1Adapter.migrateToNative(_burnCaller, _roleCaller, 0, 0) {
+      assert(l1Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Upgrading);
+    } catch {
       assert(false);
     }
+
+    // resume messaging for other tests
+    mockMessenger.resumeMessaging();
   }
 
   /// @custom:property-id 12
@@ -483,7 +487,7 @@ contract FuzzOpUsdc is SetupOpUSDC {
   /// @custom:property-id 14
   /// @custom:property Incoming successful messages should only come from the linked adapter's
   function fuzz_l2LinkedAdapterIncommingMessages(uint8 _selectorIndex, uint256 _amount, address _address) public {
-    _selectorIndex = _selectorIndex % 3;
+    _selectorIndex = _selectorIndex % 4;
 
     if (_selectorIndex == 0) {
       hevm.prank(l2Adapter.MESSENGER());
@@ -497,12 +501,15 @@ contract FuzzOpUsdc is SetupOpUSDC {
       }
     } else if (_selectorIndex == 1) {
       require(l1Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Upgrading);
+
+      mockMessenger.pauseMessaging();
       hevm.prank(l2Adapter.MESSENGER());
       try l2Adapter.receiveMigrateToNative(_address, 0) {
         assert(mockMessenger.xDomainMessageSender() == address(l1Adapter));
       } catch {
         assert(mockMessenger.xDomainMessageSender() != address(l1Adapter));
       }
+      mockMessenger.resumeMessaging();
     } else if (_selectorIndex == 2) {
       hevm.prank(l2Adapter.MESSENGER());
       try l2Adapter.receiveStopMessaging() {
