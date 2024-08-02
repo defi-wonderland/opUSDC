@@ -818,7 +818,7 @@ contract FuzzOpUsdc is SetupOpUSDC {
     uint32 _uint32A,
     uint32 _uint32B
   ) public agentOrDeployer {
-    _selectorIndex = _selectorIndex % 8;
+    _selectorIndex = _selectorIndex % 9;
     bytes memory _payload;
 
     if (_selectorIndex == 0) {
