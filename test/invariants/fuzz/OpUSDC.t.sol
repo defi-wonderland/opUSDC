@@ -378,6 +378,7 @@ contract FuzzOpUsdc is SetupOpUSDC {
         && _spender != address(l2Adapter) && _spender != address(l1Adapter)
     );
     require(l2Adapter.messengerStatus() != IOpUSDCBridgeAdapter.Status.Active);
+    require(!usdcMainnet.isBlacklisted(_spender)); // Avoid reverting when funds sent back to l1 (as test mock bridge is atomic)
 
     _amount = clamp(_amount, 0, (2 ^ 255 - 1) - usdcBridged.balanceOf(_to) - _amount);
 
@@ -402,7 +403,6 @@ contract FuzzOpUsdc is SetupOpUSDC {
       // Postcondition
       if (l2Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Deprecated) {
         // deprecated -> fund sent back to l1
-
         if (_to == _spender) {
           assert(usdcMainnet.balanceOf(_to) == _l1BalanceBefore + _amount);
         } else {
@@ -424,12 +424,13 @@ contract FuzzOpUsdc is SetupOpUSDC {
         }
       }
     } catch {
-      // revert if paused/upgrading and mint fails (blacklisted)
+      // revert on l2 if paused/upgrading and mint fails (blacklisted)
       assert(
         l2Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Paused
           || l2Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Upgrading
       );
-      assert(usdcMainnet.isBlacklisted(_to));
+
+      assert(usdcBridged.isBlacklisted(_to));
       assert(l2Adapter.blacklistedFundsDetails(_spender, _to) == _toBlackListedBalanceBefore + _amount);
     }
   }
