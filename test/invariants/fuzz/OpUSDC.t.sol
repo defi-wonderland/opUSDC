@@ -43,7 +43,7 @@ contract FuzzOpUsdc is SetupOpUSDC {
   /// @custom:property-id 1
   /// @custom:property New messages should not be sent if the state is not active
   /// @custom:property-id 2
-  /// @custom:property User who bridges tokens should receive them on the destination chain
+  /// @custom:property Non blacklisted addresses are enabled to send and receive tokens through the bridge
   function fuzz_noMessageIfNotActiveL1(address _to, uint256 _amount, uint32 _minGasLimit) public agentOrDeployer {
     // Precondition
     require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
@@ -52,7 +52,7 @@ contract FuzzOpUsdc is SetupOpUSDC {
     require(usdcMainnet.isBlacklisted(address(l1Adapter)) == false);
     require(usdcMainnet.isBlacklisted(_currentCaller) == false);
 
-    _amount = _boundAmountToMint(_to, _amount);
+    _amount = _boundAmountToBridge(_to, _amount);
 
     _dealAndApproveUSDC(_currentCaller, _amount);
 
@@ -76,7 +76,7 @@ contract FuzzOpUsdc is SetupOpUSDC {
   /// @custom:property-id 1
   /// @custom:property New messages should not be sent if the state is not active
   /// @custom:property-id 2
-  /// @custom:property User who bridges tokens should receive them on the destination chain
+  /// @custom:property Non blacklisted addresses are enabled to send and receive tokens through the bridge
   function fuzz_noSignedMessageIfNotActiveL1(
     address _to,
     uint256 _privateKey,
@@ -90,7 +90,7 @@ contract FuzzOpUsdc is SetupOpUSDC {
     require(usdcMainnet.isBlacklisted(_to) == false);
     require(usdcMainnet.isBlacklisted(address(l1Adapter)) == false);
 
-    _amount = _boundAmountToMint(_to, _amount);
+    _amount = _boundAmountToBridge(_to, _amount);
 
     // create valid signature
     address _signer = hevm.addr(_privateKey);
@@ -122,14 +122,14 @@ contract FuzzOpUsdc is SetupOpUSDC {
   /// @custom:property-id 1
   /// @custom:property New messages should not be sent if the state is not active
   /// @custom:property-id 2
-  /// @custom:property User who bridges tokens should receive them on the destination chain
+  /// @custom:property Non blacklisted addresses are enabled to send and receive tokens through the bridge
   function fuzz_noMessageIfNotActiveL2(address _to, uint256 _amount, uint32 _minGasLimit) public agentOrDeployer {
     // Preconditions
     require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
     require(usdcMainnet.isBlacklisted(_to) == false);
     require(usdcMainnet.isBlacklisted(_currentCaller) == false);
 
-    _amount = _boundAmountToMint(_to, _amount);
+    _amount = _boundAmountToBridge(_to, _amount);
 
     _dealAndApproveBridgedUSDC(_currentCaller, _amount, _minGasLimit);
 
@@ -155,7 +155,7 @@ contract FuzzOpUsdc is SetupOpUSDC {
   /// @custom:property-id 1
   /// @custom:property New messages should not be sent if the state is not active
   /// @custom:property-id 2
-  /// @custom:property User who bridges tokens should receive them on the destination chain
+  /// @custom:property Non blacklisted addresses are enabled to send and receive tokens through the bridge
   function fuzz_noSignedMessageIfNotActiveL2(
     address _to,
     uint256 _privateKey,
@@ -168,7 +168,7 @@ contract FuzzOpUsdc is SetupOpUSDC {
     require(!(_to == address(0) || _to == address(usdcMainnet) || _to == address(usdcBridged)));
     require(usdcMainnet.isBlacklisted(_to) == false);
 
-    _amount = _boundAmountToMint(_to, _amount);
+    _amount = _boundAmountToBridge(_to, _amount);
 
     address _signer = hevm.addr(_privateKey);
     require(usdcMainnet.isBlacklisted(_signer) == false);
@@ -203,7 +203,6 @@ contract FuzzOpUsdc is SetupOpUSDC {
     hevm.prank(usdcMainnet.masterMinter());
     usdcMainnet.configureMinter(address(l1Adapter), type(uint256).max);
 
-    require(l1Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Deprecated);
     require(usdcMainnet.isBlacklisted(address(l1Adapter)) == false);
 
     uint256 _currentBalance = usdcMainnet.balanceOf(address(l1Adapter));
@@ -216,7 +215,7 @@ contract FuzzOpUsdc is SetupOpUSDC {
       assert(l1Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Deprecated);
       assert(usdcMainnet.balanceOf(address(l1Adapter)) == _expectedBalance);
     } catch {
-      assert(false);
+      assert(l1Adapter.messengerStatus() != IOpUSDCBridgeAdapter.Status.Deprecated);
     }
   }
 
@@ -334,7 +333,7 @@ contract FuzzOpUsdc is SetupOpUSDC {
     require(l1Adapter.messengerStatus() != IOpUSDCBridgeAdapter.Status.Active);
     require(usdcMainnet.isBlacklisted(address(l1Adapter)) == false);
 
-    _amount = _boundAmountToMint(_to, _amount);
+    _amount = _boundAmountToBridge(_to, _amount);
 
     // provided enough usdc on l1
     hevm.prank(_usdcMinter);
@@ -453,21 +452,30 @@ contract FuzzOpUsdc is SetupOpUSDC {
   /// @custom:property Incoming successful messages should only come from the linked adapter's
   function fuzz_l1LinkedAdapterIncommingMessages(uint8 _selectorIndex, uint256 _amount, address _address) public {
     _selectorIndex = _selectorIndex % 2;
-    hevm.prank(l1Adapter.MESSENGER());
     if (_selectorIndex == 0) {
       require(usdcMainnet.balanceOf(address(l1Adapter)) >= _amount);
+      hevm.prank(l1Adapter.MESSENGER());
       try l1Adapter.receiveMessage(_address, _address, _amount) {
         // Mint tokens to L1 adapter to keep the balance consistent
         hevm.prank(_usdcMinter);
         usdcMainnet.mint(address(l1Adapter), _amount);
         assert(mockMessenger.xDomainMessageSender() == address(l2Adapter));
-      } catch {}
+      } catch {
+        assert(mockMessenger.xDomainMessageSender() != address(l2Adapter));
+      }
     } else {
-      try l1Adapter.setBurnAmount(usdcBridged.totalSupply()) {
+      uint256 _currentSupply = usdcBridged.totalSupply();
+      hevm.prank(l1Adapter.MESSENGER());
+      try l1Adapter.setBurnAmount(_currentSupply) {
         // This will deprecate the adapter
         _ghost_hasBeenDeprecatedBefore = true;
         assert(mockMessenger.xDomainMessageSender() == address(l2Adapter));
-      } catch {}
+      } catch {
+        assert(
+          mockMessenger.xDomainMessageSender() != address(l2Adapter)
+            || l1Adapter.messengerStatus() != IOpUSDCBridgeAdapter.Status.Upgrading
+        );
+      }
     }
   }
 
@@ -476,27 +484,44 @@ contract FuzzOpUsdc is SetupOpUSDC {
   function fuzz_l2LinkedAdapterIncommingMessages(uint8 _selectorIndex, uint256 _amount, address _address) public {
     _selectorIndex = _selectorIndex % 3;
 
-    hevm.prank(l2Adapter.MESSENGER());
     if (_selectorIndex == 0) {
+      hevm.prank(l2Adapter.MESSENGER());
       try l2Adapter.receiveMessage(_address, _address, _amount) {
         // Mint tokens to L1 adapter to keep the balance consistent
         hevm.prank(_usdcMinter);
         usdcMainnet.mint(address(l1Adapter), _amount);
         assert(mockMessenger.xDomainMessageSender() == address(l1Adapter));
-      } catch {}
+      } catch {
+        assert(mockMessenger.xDomainMessageSender() != address(l1Adapter));
+      }
     } else if (_selectorIndex == 1) {
       require(l1Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Upgrading);
+      hevm.prank(l2Adapter.MESSENGER());
       try l2Adapter.receiveMigrateToNative(_address, 0) {
         assert(mockMessenger.xDomainMessageSender() == address(l1Adapter));
-      } catch {}
+      } catch {
+        assert(mockMessenger.xDomainMessageSender() != address(l1Adapter));
+      }
     } else if (_selectorIndex == 2) {
+      hevm.prank(l2Adapter.MESSENGER());
       try l2Adapter.receiveStopMessaging() {
         assert(mockMessenger.xDomainMessageSender() == address(l1Adapter));
-      } catch {}
+      } catch {
+        assert(
+          mockMessenger.xDomainMessageSender() != address(l1Adapter)
+            || l2Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Deprecated
+        );
+      }
     } else {
+      hevm.prank(l2Adapter.MESSENGER());
       try l2Adapter.receiveResumeMessaging() {
         assert(mockMessenger.xDomainMessageSender() == address(l1Adapter));
-      } catch {}
+      } catch {
+        assert(
+          mockMessenger.xDomainMessageSender() != address(l1Adapter)
+            || l2Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Deprecated
+        );
+      }
     }
   }
 
@@ -597,7 +622,7 @@ contract FuzzOpUsdc is SetupOpUSDC {
     require(usdcMainnet.isBlacklisted(_to) == false);
     require(usdcMainnet.isBlacklisted(address(l1Adapter)) == false);
 
-    _amount = _boundAmountToMint(_to, _amount);
+    _amount = _boundAmountToBridge(_to, _amount);
 
     // provided enough usdc on l1
     hevm.prank(_usdcMinter);
@@ -693,7 +718,7 @@ contract FuzzOpUsdc is SetupOpUSDC {
 
     if (_selectorIndex == 0) {
       // Do not revert on the transferFrom call
-      _uintA = _boundAmountToMint(_currentCaller, _uintA);
+      _uintA = _boundAmountToBridge(_currentCaller, _uintA);
       hevm.prank(_usdcMinter);
       usdcMainnet.mint(_currentCaller, _uintA);
 
@@ -1020,7 +1045,7 @@ contract FuzzOpUsdc is SetupOpUSDC {
   }
 
   // TODO: review this and use different approach if the message is trigger by l1Adapter or l2Adapter
-  function _boundAmountToMint(address _to, uint256 _amount) internal view returns (uint256) {
+  function _boundAmountToBridge(address _to, uint256 _amount) internal view returns (uint256) {
     uint256 _maxBalance = max(
       max(usdcMainnet.balanceOf(_to), usdcBridged.balanceOf(_to)),
       max(usdcMainnet.balanceOf(address(l1Adapter)), usdcBridged.balanceOf(address(l2Adapter)))

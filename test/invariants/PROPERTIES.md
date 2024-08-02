@@ -1,7 +1,7 @@
 | Properties                                                                                                  | Type                | Id  | Fuzz | Symb |
 | ----------------------------------------------------------------------------------------------------------- | ------------------- | --- | ---- | ---- |
 | New messages should not be sent if the state is not active                                                  | Unit test           | 1   | [X]  | [x]  |
-| User who bridges tokens should receive them on the destination chain                                        | High level          | 2   | [X]  | [x]  |
+| Non blacklisted addresses are enabled to send and receive tokens through the bridge                         | High level          | 2   | [X]  | [x]  |
 | Assuming the adapter is the only minter the amount locked in L1 should always equal the amount minted on L2 | High level          | 3   | [X]  | [x]  |
 | Both messenger's state or if they can send messages should match                                            | Valid state         | 4   | depr | depr |
 | user nonce should be monotonically increasing                                                               | Variable transition | 5   | depr | depr |
