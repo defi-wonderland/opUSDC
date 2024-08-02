@@ -52,8 +52,10 @@ abstract contract Base is Helpers {
   uint256 internal _signerPk;
 
   event MigratingToNative(address _messenger, address _roleCaller);
-  event MessageSent(address _user, address _to, uint256 _amount, address _messenger, uint32 _minGasLimit);
-  event MessageReceived(address _spender, address _user, uint256 _amount, address _messenger);
+  event MessageSent(
+    address indexed _user, address indexed _to, uint256 _amount, address indexed _messenger, uint32 _minGasLimit
+  );
+  event MessageReceived(address indexed _spender, address indexed _user, uint256 _amount, address indexed _messenger);
   event USDCFunctionSent(bytes4 _functionSignature);
 
   function setUp() public virtual {
@@ -688,7 +690,9 @@ contract L2OpUSDCBridgeAdapter_Unit_SendMessageWithSignature is Base {
 }
 
 contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
-  event MessageFailed(address _spender, address _user, uint256 _amount, address _messenger);
+  event ReplayedFundsSentBackToL1(address _spender, uint256 _amount);
+
+  event MessageFailed(address indexed _spender, address indexed _user, uint256 _amount, address indexed _messenger);
 
   /**
    * @notice Check that the function reverts if the sender is not the messenger
@@ -737,6 +741,23 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
     // Execute
     vm.prank(_messenger);
     adapter.receiveMessage(_user, _user, _amount);
+  }
+
+  /**
+   * @notice Check that the function emits the event as expected
+   */
+  function test_emitReplayedEvent(address _spender, uint256 _amount) external {
+    adapter.forTest_setMessengerStatus(IOpUSDCBridgeAdapter.Status.Deprecated);
+    // Mock calls
+    vm.mockCall(_messenger, abi.encodeWithSignature('xDomainMessageSender()'), abi.encode(_linkedAdapter));
+
+    // Expect event to be emitted
+    vm.expectEmit(true, true, true, true);
+    emit ReplayedFundsSentBackToL1(_spender, _amount);
+
+    // Execute
+    vm.prank(_messenger);
+    adapter.receiveMessage(_user, _spender, _amount);
   }
 
   /**
@@ -811,8 +832,8 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 }
 
 contract L2OpUSDCBridgeAdapter_Unit_WithdrawBlacklistedFunds is Base {
-  event BlacklistedFundsWithdrawn(address _user, uint256 _amountWithdrawn);
-  event BlacklistedFundsSentBackToL1(address _spender, uint256 _amountSent);
+  event BlacklistedFundsWithdrawn(address indexed _user, uint256 _amountWithdrawn);
+  event BlacklistedFundsSentBackToL1(address indexed _spender, uint256 _amountSent);
 
   /**
    * @notice Check that the function expects the correct calls
