@@ -487,14 +487,19 @@ contract FuzzOpUsdc is SetupOpUSDC {
   /// @custom:property-id 14
   /// @custom:property Incoming successful messages should only come from the linked adapter's
   function fuzz_l2LinkedAdapterIncommingMessages(uint8 _selectorIndex, uint256 _amount, address _address) public {
+    require(l2Adapter.messengerStatus() != IOpUSDCBridgeAdapter.Status.Active);
+
     _selectorIndex = _selectorIndex % 4;
 
     if (_selectorIndex == 0) {
+      // Mint tokens to L1 adapter to keep the balance consistent
+      require(_address != address(0)); // avoid sending to 0
+
+      hevm.prank(_usdcMinter);
+      usdcMainnet.mint(address(l1Adapter), _amount);
+
       hevm.prank(l2Adapter.MESSENGER());
       try l2Adapter.receiveMessage(_address, _address, _amount) {
-        // Mint tokens to L1 adapter to keep the balance consistent
-        hevm.prank(_usdcMinter);
-        usdcMainnet.mint(address(l1Adapter), _amount);
         assert(mockMessenger.xDomainMessageSender() == address(l1Adapter));
       } catch {
         assert(mockMessenger.xDomainMessageSender() != address(l1Adapter));
