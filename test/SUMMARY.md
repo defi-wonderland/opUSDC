@@ -18,7 +18,7 @@ Current coverage is 100% of the branches for the 7 contracts, across 121 tests (
 ## Integration Tests
 The integration tests are implemented by switching between 3 different forks: mainnet, Optimism and Base. Crosschain messaging is achieved via the ICrossDomainMessenger contracts already deployed on the 3 chains (see IntegrationBase.sol).
 
-The setup deploys the factory on mainnet, then proceed to deploy the L1 adapters and L2 factories and adapters on both Optimism and Base. Initial tests are conducted to both insure deployment addresses never collide if there are multiple deployments on a given chain, as well as to ensure correct deployment on the multiple chains.
+The setup deploys the factory on mainnet, then proceed to deploy the L1 adapters and L2 factories and adapters on both Optimism and Base. Initial tests are conducted to both ensure deployment addresses never collide if there are multiple deployments on a given chain, as well as to ensure correct deployment on the multiple chains.
 
 The rest of the integration tests are then conducted from/to mainnet to/from optimism only (given the reassurance of the functional equivalece based on the initial setup tests).
 

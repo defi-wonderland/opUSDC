@@ -255,7 +255,7 @@ contract OpUsdcTest_SymbTest is HalmosTest {
       burnCaller != address(0) && newBurnCaller != address(0) && roleCaller != address(0) && newRoleCaller != address(0)
     );
 
-    mockMessenger.stopMessageRelay(); // Insure we don't trigger the whole migration as the mock bridge is atomic
+    mockMessenger.stopMessageRelay(); // Ensure we don't trigger the whole migration as the mock bridge is atomic
 
     vm.startPrank(owner);
     try l1Adapter.migrateToNative(roleCaller, burnCaller, 0, 0) {
