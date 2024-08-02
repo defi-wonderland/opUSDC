@@ -22,7 +22,7 @@
 | Adapters can't be initialized twice                                                                         | State transition    | 19  | [X]  |      |
 | Refunds from l2 to l1 should only be possible if the l2 adapter is deprecated                               | State transition    | 20  | [X]  |      |
 
-[]      planed to implement and still to do
-[x]     implemented and tested
-:(      implemented but judged as incorrect (tool limitation, etc)
-empty   not implemented and will not be (design, etc)
+[] planed to implement and still to do
+[x] implemented and tested
+:( implemented but judged as incorrect (tool limitation, etc)
+empty not implemented and will not be (design, etc)
