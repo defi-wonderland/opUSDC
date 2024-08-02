@@ -502,7 +502,7 @@ contract FuzzOpUsdc is SetupOpUSDC {
     } else if (_selectorIndex == 1) {
       require(l1Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Upgrading);
 
-      mockMessenger.pauseMessaging();
+      mockMessenger.pauseMessaging(); // avoid setting the xdom sender during the sendMsg call back to l1
       hevm.prank(l2Adapter.MESSENGER());
       try l2Adapter.receiveMigrateToNative(_address, 0) {
         assert(mockMessenger.xDomainMessageSender() == address(l1Adapter));
