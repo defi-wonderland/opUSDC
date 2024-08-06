@@ -27,10 +27,10 @@ interface IL1OpUSDCFactory {
   /**
    * @notice Emitted when the `L1OpUSDCBridgeAdapter` is deployed
    * @param _l1Adapter The address of the L1 adapter
-   * @param _l2Factory The address of the L2 factory where L2 contract will be deployed
-   * @param _l2Adapter The address of the L2 adapter where L2 contract will be deployed
+   * @param _l2Deploy The address of the L2 deployer contract
+   * @param _l2Adapter The address of the L2 adapter
    */
-  event ProtocolDeployed(address _l1Adapter, address _l2Factory, address _l2Adapter);
+  event ProtocolDeployed(address _l1Adapter, address _l2Deploy, address _l2Adapter);
 
   /*///////////////////////////////////////////////////////////////
                             ERRORS
@@ -53,7 +53,7 @@ interface IL1OpUSDCFactory {
    * @param _chainName The name of the L2 Op chain
    * @param _l2Deployments The deployments data for the L2 adapter, and the L2 USDC contracts
    * @return _l1Adapter The address of the L1 adapter
-   * @return _l2Factory The address of the L2 factory
+   * @return _l2Deploy The address of the L2 deployer contract
    * @return _l2Adapter The address of the L2 adapter
    * @dev It can fail on L2 due to a gas miscalculation, but in that case the tx can be replayed. It only deploys 1 L2
    * factory per L2 deployments, to make sure the nonce is being tracked correctly while precalculating addresses
@@ -77,7 +77,7 @@ interface IL1OpUSDCFactory {
     address _l1AdapterOwner,
     string calldata _chainName,
     L2Deployments calldata _l2Deployments
-  ) external returns (address _l1Adapter, address _l2Factory, address _l2Adapter);
+  ) external returns (address _l1Adapter, address _l2Deploy, address _l2Adapter);
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
