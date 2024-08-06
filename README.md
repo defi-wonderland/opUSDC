@@ -81,6 +81,74 @@ In order to check your current code coverage, run:
 yarn coverage
 ```
 
+## Deploying
+
+In order to deploy the opUSDC procotol for your op-chain, you will need to fill out these variables in the `.env` file:
+
+```python
+# The factory contract address on L1
+L1_FACTORY_MAINNET=
+# The bridged USDC implementation address on L2
+BRIDGED_USDC_IMPLEMENTATION=
+# The address of your CrossDomainMessenger on L1
+L1_MESSENGER=
+# The name of your chain
+CHAIN_NAME=
+# The private key that will sign the transactions on L1
+MAINNET_PK=
+# Ethereum RPC URL
+MAINNET_RPC=
+```
+
+After all these variables are set, navigate to the `script/mainnet/Deploy.s.sol` file and edit the following lines with your desired configuration, we add a sanity check that will revert if you forget to change this value:
+```solidity
+    // NOTE: We have these hardcoded to default values, if used in product you will need to change them
+
+    bytes[] memory _usdcInitTxs = new bytes[](3);
+    
+    _usdcInitTxs[0] = USDCInitTxs.INITIALIZEV2;
+    _usdcInitTxs[1] = USDCInitTxs.INITIALIZEV2_1;
+    _usdcInitTxs[2] = USDCInitTxs.INITIALIZEV2_2;
+
+    // Sanity check to ensure the caller of this script changed this value to the proper naming
+    assert(keccak256(_usdcInitTxs[0]) != keccak256(USDCInitTxs.INITIALIZEV2));
+```
+
+Then run this command to test:
+```bash
+yarn script:deploy
+```
+
+And when you are ready to deploy to mainnet, run:
+```bash
+yarn script:deploy:broadcast
+```
+
+## Migrating to Native USDC
+> ⚠️ Migrating to native USDC is a manual process that requires communication with circle, this section assumes both parties are ready to migrate to native USDC.
+
+In order to migrate to native USDC, you will need to fill out these variables in the `.env` file:
+```python
+# The address of the L1 opUSDC bridge adapter
+L1_ADAPTER=
+# The private key of the transaction signer, should be the owner of the L1 Adapter
+MAINNET_OWNER_PK=
+# The address of the role caller, should be provided by circle
+ROLE_CALLER=
+# The address of the burn caller, should be provided by circle
+BURN_CALLER
+```
+
+After all these variables are set, run this command to test:
+```bash
+yarn script:migrate
+```
+
+And when you are ready to migrate to native USDC, run:
+```bash
+yarn script:migrate:broadcast
+```
+
 ## Licensing
 
 The primary license for the boilerplate is MIT, see [`LICENSE`](https://github.com/defi-wonderland/opUSDC/blob/main/LICENSE)
