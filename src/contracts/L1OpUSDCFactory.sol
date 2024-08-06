@@ -56,7 +56,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
    * @param _chainName The name of the L2 Op chain
    * @param _l2Deployments The deployments data for the L2 adapter, and the L2 USDC contracts
    * @return _l1Adapter The address of the L1 adapter
-   * @return _l2Factory The address of the L2 factory
+   * @return _l2Deploy The address of the L2 deployer contract
    * @return _l2Adapter The address of the L2 adapter
    * @dev It can fail on L2 due to a gas miscalculation, but in that case the tx can be replayed. It only deploys 1 L2
    * factory per L2 deployments, to make sure the nonce is being tracked correctly while precalculating addresses
@@ -80,7 +80,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     address _l1AdapterOwner,
     string calldata _chainName,
     L2Deployments calldata _l2Deployments
-  ) external returns (address _l1Adapter, address _l2Factory, address _l2Adapter) {
+  ) external returns (address _l1Adapter, address _l2Deploy, address _l2Adapter) {
     // Checks that the first init tx selector is not equal to the `initialize()` function since  we manually
     // Construct this function on the L2 factory contract
     if (bytes4(_l2Deployments.usdcInitTxs[0]) == _INITIALIZE_SELECTOR) revert IL1OpUSDCFactory_NoInitializeTx();
@@ -98,7 +98,7 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     // Use the nonce as salt to ensure always a different salt since the nonce is always increasing
     bytes32 _salt = bytes32(_currentNonce);
     // Get the L2 factory init code and precalculate its address
-    bytes memory _l2FactoryCArgs = abi.encode(
+    bytes memory _l2DeployCArgs = abi.encode(
       _l1Adapter,
       _l2Deployments.l2AdapterOwner,
       _l2Deployments.usdcImplAddr,
@@ -107,17 +107,17 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     );
 
     // Send the L2 factory deployment tx
-    _l2Factory = CrossChainDeployments.deployL2Factory(
-      _l2FactoryCArgs, _salt, _l1Messenger, L2_CREATE2_DEPLOYER, _l2Deployments.minGasLimitDeploy
+    _l2Deploy = CrossChainDeployments.deployL2Factory(
+      _l2DeployCArgs, _salt, _l1Messenger, L2_CREATE2_DEPLOYER, _l2Deployments.minGasLimitDeploy
     );
 
     // Precalculate the L2 adapter address
-    _l2Adapter = CrossChainDeployments.precalculateCreateAddress(_l2Factory, _L2_ADAPTER_DEPLOYMENT_NONCE);
+    _l2Adapter = CrossChainDeployments.precalculateCreateAddress(_l2Deploy, _L2_ADAPTER_DEPLOYMENT_NONCE);
 
     // Deploy L1 Adapter implementation and proxy, initializing it with the owner
     address _l1AdapterImpl = address(new L1OpUSDCBridgeAdapter(address(USDC), _l1Messenger, _l2Adapter));
     new ERC1967Proxy(_l1AdapterImpl, abi.encodeCall(OpUSDCBridgeAdapter.initialize, _l1AdapterOwner));
 
-    emit ProtocolDeployed(_l1Adapter, _l2Factory, _l2Adapter);
+    emit ProtocolDeployed(_l1Adapter, _l2Deploy, _l2Adapter);
   }
 }
