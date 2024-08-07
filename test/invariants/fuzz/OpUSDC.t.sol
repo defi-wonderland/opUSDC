@@ -352,7 +352,7 @@ contract FuzzOpUsdc is SetupOpUSDC {
 
     // cache balance
     uint256 _toBalanceBefore = usdcMainnet.balanceOf(_to);
-    uint256 _toBlackListedBalanceBefore = l1Adapter.blacklistedFundsDetails(_spender, _to);
+    uint256 _toBlackListedBalanceBefore = l1Adapter.lockedFundsDetails(_spender, _to);
 
     hevm.prank(l1Adapter.MESSENGER());
     // Action
@@ -360,7 +360,7 @@ contract FuzzOpUsdc is SetupOpUSDC {
       // Postcondition
 
       if (usdcMainnet.isBlacklisted(_to)) {
-        assert(l1Adapter.blacklistedFundsDetails(_spender, _to) == _toBlackListedBalanceBefore + _amount);
+        assert(l1Adapter.lockedFundsDetails(_spender, _to) == _toBlackListedBalanceBefore + _amount);
       } else {
         // If the destination address is the same that the l1 adapter, the balance should remain the same
         // since the tokens are being locked in the adapter (aka self-transfer).
@@ -369,7 +369,7 @@ contract FuzzOpUsdc is SetupOpUSDC {
       }
     } catch {
       assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
-      assert(l1Adapter.blacklistedFundsDetails(_spender, _to) == _toBlackListedBalanceBefore);
+      assert(l1Adapter.lockedFundsDetails(_spender, _to) == _toBlackListedBalanceBefore);
     }
   }
 
@@ -403,7 +403,7 @@ contract FuzzOpUsdc is SetupOpUSDC {
     uint256 _l2SpenderBalanceBefore = usdcBridged.balanceOf(_spender);
     uint256 _l1SpenderBalanceBefore = usdcMainnet.balanceOf(_spender);
 
-    uint256 _toBlackListedBalanceBefore = l2Adapter.blacklistedFundsDetails(_spender, _to);
+    uint256 _toBlackListedBalanceBefore = l2Adapter.lockedFundsDetails(_spender, _to);
 
     hevm.prank(l2Adapter.MESSENGER());
     // Action
@@ -439,7 +439,7 @@ contract FuzzOpUsdc is SetupOpUSDC {
       );
 
       assert(usdcBridged.isBlacklisted(_to));
-      assert(l2Adapter.blacklistedFundsDetails(_spender, _to) == _toBlackListedBalanceBefore + _amount);
+      assert(l2Adapter.lockedFundsDetails(_spender, _to) == _toBlackListedBalanceBefore + _amount);
     }
   }
 
@@ -633,7 +633,7 @@ contract FuzzOpUsdc is SetupOpUSDC {
 
   /// @custom:property-id 20
   /// @custom:property Refunds from l2 to l1 should only be possible if the l2 adapter is deprecated
-  function fuzz_receiveWithdrawBlacklistedFundsPostMigrationOnlyIfDeprecated(address _to, uint256 _amount) public {
+  function fuzz_receiveWithdrawLockedFundsPostMigrationOnlyIfDeprecated(address _to, uint256 _amount) public {
     // Precondition
     require(_to != address(0) && _to != address(usdcMainnet) && _to != address(usdcBridged));
     require(usdcMainnet.isBlacklisted(_to) == false);
@@ -653,7 +653,7 @@ contract FuzzOpUsdc is SetupOpUSDC {
 
     hevm.prank(l1Adapter.MESSENGER());
     // Action
-    try l1Adapter.receiveWithdrawBlacklistedFundsPostMigration(_to, _amount) {
+    try l1Adapter.receiveWithdrawLockedFundsPostMigration(_to, _amount) {
       // Postcondition
       if (_to == address(l1Adapter)) {
         assert(usdcMainnet.balanceOf(_to) == _toBalanceBefore);
@@ -667,7 +667,7 @@ contract FuzzOpUsdc is SetupOpUSDC {
     }
   }
 
-  function fuzz_withdrawBlacklistedFundsOnlyIfNotBlacklisted(address _spender, address _user) public {
+  function fuzz_withdrawLockedFundsOnlyIfNotBlacklisted(address _spender, address _user) public {
     // Precondition
     require(
       _user != address(0) && _user != address(usdcMainnet) && _user != address(usdcBridged)
@@ -676,32 +676,32 @@ contract FuzzOpUsdc is SetupOpUSDC {
     require(usdcMainnet.isBlacklisted(address(l1Adapter)) == false);
 
     uint256 _userBalanceBefore = usdcMainnet.balanceOf(_user);
-    uint256 _userBlacklistedFundsBefore = l1Adapter.blacklistedFundsDetails(_spender, _user);
+    uint256 _userBlacklistedFundsBefore = l1Adapter.lockedFundsDetails(_spender, _user);
 
-    try l1Adapter.withdrawBlacklistedFunds(_spender, _user) {
+    try l1Adapter.withdrawLockedFunds(_spender, _user) {
       // Postcondition
       assert(!usdcMainnet.isBlacklisted(_user));
-      assert(l1Adapter.blacklistedFundsDetails(_spender, _user) == 0);
+      assert(l1Adapter.lockedFundsDetails(_spender, _user) == 0);
       assert(usdcMainnet.balanceOf(_user) == _userBalanceBefore + _userBlacklistedFundsBefore);
     } catch {
       assert(usdcMainnet.balanceOf(_user) == _userBalanceBefore);
     }
   }
 
-  function fuzz_withdrawBlacklistedFundsOnL2(address _spender, address _user) public {
+  function fuzz_withdrawLockedFundsOnL2(address _spender, address _user) public {
     // Precondition
     require(_user != address(0) && _user != address(usdcBridged) && _user != address(l2Adapter));
 
     uint256 _userBalanceBefore = usdcBridged.balanceOf(_user);
-    uint256 _userBlacklistedFundsBefore = l2Adapter.blacklistedFundsDetails(_spender, _user);
+    uint256 _userBlacklistedFundsBefore = l2Adapter.lockedFundsDetails(_spender, _user);
 
-    try l2Adapter.withdrawBlacklistedFunds(_spender, _user) {
+    try l2Adapter.withdrawLockedFunds(_spender, _user) {
       // Postcondition
       if (l2Adapter.messengerStatus() != IOpUSDCBridgeAdapter.Status.Deprecated) {
         assert(!usdcBridged.isBlacklisted(_user));
         assert(usdcBridged.balanceOf(_user) == _userBalanceBefore + _userBlacklistedFundsBefore);
       }
-      assert(l2Adapter.blacklistedFundsDetails(_spender, _user) == 0);
+      assert(l2Adapter.lockedFundsDetails(_spender, _user) == 0);
     } catch {
       assert(usdcBridged.balanceOf(_user) == _userBalanceBefore);
     }
@@ -845,7 +845,7 @@ contract FuzzOpUsdc is SetupOpUSDC {
     } else if (_selectorIndex == 7) {
       _payload = abi.encodeCall(l1Adapter.resumeMessaging, (_uint32A));
     } else {
-      _payload = abi.encodeCall(l1Adapter.receiveWithdrawBlacklistedFundsPostMigration, (_addressA, _uintA));
+      _payload = abi.encodeCall(l1Adapter.receiveWithdrawLockedFundsPostMigration, (_addressA, _uintA));
     }
 
     hevm.prank(_currentCaller);

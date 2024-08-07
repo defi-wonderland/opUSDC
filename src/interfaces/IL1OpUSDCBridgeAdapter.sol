@@ -71,7 +71,7 @@ interface IL1OpUSDCBridgeAdapter {
    * @param _spender The user that initially provided the tokens
    * @param _amount The amount of tokens to withdraw
    */
-  function receiveWithdrawBlacklistedFundsPostMigration(address _spender, uint256 _amount) external;
+  function receiveWithdrawLockedFundsPostMigration(address _spender, uint256 _amount) external;
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES

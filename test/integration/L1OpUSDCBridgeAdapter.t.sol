@@ -231,8 +231,8 @@ contract Integration_Bridging is IntegrationBase {
       abi.encodeWithSignature('receiveMessage(address,address,uint256)', _user, _spender, _amount)
     );
 
-    // Check that the blacklisted funds are correctly computed
-    assertEq(l2Adapter.blacklistedFundsDetails(_spender, _user), _amount);
+    // Check that the locked funds are correctly computed
+    assertEq(l2Adapter.lockedFundsDetails(_spender, _user), _amount);
 
     // Migration to native USDC
     {
@@ -273,14 +273,14 @@ contract Integration_Bridging is IntegrationBase {
       assertEq(uint256(l1Adapter.messengerStatus()), uint256(IOpUSDCBridgeAdapter.Status.Deprecated));
     }
 
-    // Check that any user can call the withdrawBlacklistedFunds function
+    // Check that any user can call the withdrawLockedFunds function
     address _anyUser = makeAddr('anyUser');
     vm.selectFork(optimism);
     vm.prank(_anyUser);
-    l2Adapter.withdrawBlacklistedFunds(_spender, _user);
+    l2Adapter.withdrawLockedFunds(_spender, _user);
 
     // Check that the blacklisted funds are correctly removed
-    assertEq(l2Adapter.blacklistedFundsDetails(_spender, _user), 0);
+    assertEq(l2Adapter.lockedFundsDetails(_spender, _user), 0);
 
     // Check that funds are returned to the spender if is not blacklisted
     vm.selectFork(mainnet);
@@ -290,7 +290,7 @@ contract Integration_Bridging is IntegrationBase {
       address(l1Adapter),
       _ZERO_VALUE,
       _MIN_GAS_LIMIT,
-      abi.encodeWithSignature('receiveWithdrawBlacklistedFundsPostMigration(address,uint256)', _spender, _amount)
+      abi.encodeWithSignature('receiveWithdrawLockedFundsPostMigration(address,uint256)', _spender, _amount)
     );
 
     // Check that the funds are correctly returned to the spender
@@ -582,9 +582,9 @@ contract Integration_Integration_PermissionedFlows is IntegrationBase {
     MAINNET_USDC.unBlacklist(_user);
 
     vm.prank(_user);
-    l1Adapter.withdrawBlacklistedFunds(_user, _user);
+    l1Adapter.withdrawLockedFunds(_user, _user);
 
     assertEq(MAINNET_USDC.balanceOf(_user), _amount);
-    assertEq(l1Adapter.blacklistedFundsDetails(_user, _user), 0);
+    assertEq(l1Adapter.lockedFundsDetails(_user, _user), 0);
   }
 }
