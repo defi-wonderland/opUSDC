@@ -27,7 +27,7 @@ library CrossChainDeployments {
    * @param _messenger The address of the L1 messenger
    * @param _create2Deployer The address of the L2 create2 deployer
    * @param _minGasLimit The minimum gas limit that the message can be executed with
-   * @return _l2Factory The address of the L2 factory
+   * @return _l2Deploy The address of the L2 factory
    */
   function deployL2Factory(
     bytes memory _args,
@@ -35,11 +35,11 @@ library CrossChainDeployments {
     address _messenger,
     address _create2Deployer,
     uint32 _minGasLimit
-  ) external returns (address _l2Factory) {
-    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCDeploy).creationCode, _args);
-    _l2Factory = precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), _create2Deployer);
+  ) external returns (address _l2Deploy) {
+    bytes memory _l2DeployInitCode = bytes.concat(type(L2OpUSDCDeploy).creationCode, _args);
+    _l2Deploy = precalculateCreate2Address(_salt, keccak256(_l2DeployInitCode), _create2Deployer);
 
-    bytes memory _l2FactoryDeploymentsTx = abi.encodeCall(ICreate2Deployer.deploy, (_VALUE, _salt, _l2FactoryInitCode));
+    bytes memory _l2DeploymentsTx = abi.encodeCall(ICreate2Deployer.deploy, (_VALUE, _salt, _l2DeployInitCode));
 
     address _portal;
 
@@ -51,7 +51,7 @@ library CrossChainDeployments {
     }
 
     IOptimismPortal(_portal).depositTransaction(
-      _create2Deployer, _VALUE, _minGasLimit, _IS_CONTRACT_CREATION, _l2FactoryDeploymentsTx
+      _create2Deployer, _VALUE, _minGasLimit, _IS_CONTRACT_CREATION, _l2DeploymentsTx
     );
   }
 

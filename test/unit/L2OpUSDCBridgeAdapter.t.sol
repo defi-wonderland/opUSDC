@@ -832,8 +832,8 @@ contract L2OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 }
 
 contract L2OpUSDCBridgeAdapter_Unit_WithdrawBlacklistedFunds is Base {
-  event BlacklistedFundsWithdrawn(address indexed _user, uint256 _amountWithdrawn);
-  event BlacklistedFundsSentBackToL1(address indexed _spender, uint256 _amountSent);
+  event LockedFundsWithdrawn(address indexed _user, uint256 _amountWithdrawn);
+  event LockedFundsSentBackToL1(address indexed _spender, uint256 _amountSent);
 
   /**
    * @notice Check that the function expects the correct calls
@@ -879,7 +879,7 @@ contract L2OpUSDCBridgeAdapter_Unit_WithdrawBlacklistedFunds is Base {
 
     // Expect events
     vm.expectEmit(true, true, true, true);
-    emit BlacklistedFundsWithdrawn(_user, _amount);
+    emit LockedFundsWithdrawn(_user, _amount);
 
     // Execute
     vm.prank(_user);
@@ -960,7 +960,7 @@ contract L2OpUSDCBridgeAdapter_Unit_WithdrawBlacklistedFunds is Base {
 
     // Expect events
     vm.expectEmit(true, true, true, true);
-    emit BlacklistedFundsSentBackToL1(_spender, _amount);
+    emit LockedFundsSentBackToL1(_spender, _amount);
 
     // Execute
     vm.prank(_user);

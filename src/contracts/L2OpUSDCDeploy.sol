@@ -39,11 +39,16 @@ contract L2OpUSDCDeploy is IL2OpUSDCDeploy {
     // Deploy USDC proxy
     bytes memory _usdcProxyCArgs = abi.encode(_usdcImplAddr);
     bytes memory _usdcProxyInitCode = bytes.concat(USDC_PROXY_CREATION_CODE, _usdcProxyCArgs);
+
+    // 1st nonce
     address _usdcProxy = _deployCreate(_usdcProxyInitCode);
     emit USDCProxyDeployed(_usdcProxy);
 
     // Deploy L2 Adapter implementation and proxy, initializing it with the owner
+    // 2nd nonce
     address _l2AdapterImpl = address(new L2OpUSDCBridgeAdapter(_usdcProxy, _L2_MESSENGER, _l1Adapter));
+
+    // 3rd nonce
     address _l2Adapter =
       address(new ERC1967Proxy(_l2AdapterImpl, abi.encodeCall(OpUSDCBridgeAdapter.initialize, _l2AdapterOwner)));
     emit L2AdapterDeployed(_l2Adapter);

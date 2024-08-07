@@ -1168,7 +1168,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 }
 
 contract L1OpUSDCBridgeAdapter_Unit_ReceiveWithdrawBlacklistedFundsPostMigration is Base {
-  event BlacklistedFundsWithdrawn(address indexed _user, uint256 _amountWithdrawn);
+  event LockedFundsWithdrawn(address indexed _user, uint256 _amountWithdrawn);
 
   /**
    * @notice Check that the function reverts if the sender is not the messenger
@@ -1244,7 +1244,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveWithdrawBlacklistedFundsPostMigration
 
     // Expect events
     vm.expectEmit(true, true, true, true);
-    emit BlacklistedFundsWithdrawn(_spender, _amount);
+    emit LockedFundsWithdrawn(_spender, _amount);
 
     // Execute
     vm.prank(_messenger);
@@ -1253,7 +1253,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveWithdrawBlacklistedFundsPostMigration
 }
 
 contract L1OpUSDCBridgeAdapter_Unit_WithdrawBlacklistedFunds is Base {
-  event BlacklistedFundsWithdrawn(address indexed _user, uint256 _amountWithdrawn);
+  event LockedFundsWithdrawn(address indexed _user, uint256 _amountWithdrawn);
 
   /**
    * @notice Check that the function expects the correct calls
@@ -1299,7 +1299,7 @@ contract L1OpUSDCBridgeAdapter_Unit_WithdrawBlacklistedFunds is Base {
 
     // Expect events
     vm.expectEmit(true, true, true, true);
-    emit BlacklistedFundsWithdrawn(_user, _amount);
+    emit LockedFundsWithdrawn(_user, _amount);
 
     // Execute
     vm.prank(_user);

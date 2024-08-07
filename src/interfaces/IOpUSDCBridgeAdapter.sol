@@ -96,11 +96,18 @@ interface IOpUSDCBridgeAdapter {
   event MessageFailed(address indexed _spender, address indexed _user, uint256 _amount, address indexed _messenger);
 
   /**
-   * @notice Emitted when the blacklisted funds are withdrawn
+   * @notice Emitted when the any previously locked funds are withdrawn outside of the traditional bridging flows
    * @param _user The user that the funds were withdrawn for
    * @param _amountWithdrawn The amount of tokens that were withdrawn
    */
-  event BlacklistedFundsWithdrawn(address indexed _user, uint256 _amountWithdrawn);
+  event LockedFundsWithdrawn(address indexed _user, uint256 _amountWithdrawn);
+
+  /**
+   * @notice Emitted when a nonce is canceled
+   * @param _caller The caller
+   * @param _nonce The nonce that was canceled
+   */
+  event NonceCanceled(address _caller, uint256 _nonce);
 
   /*///////////////////////////////////////////////////////////////
                             ERRORS

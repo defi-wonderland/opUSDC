@@ -105,6 +105,8 @@ contract ForTestOpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
 }
 
 contract OpUSDCBridgeAdapter_Unit_CancelSignature is Base {
+  event NonceCanceled(address _caller, uint256 _nonce);
+
   function test_setNonceAsUsed(address _caller, uint256 _nonce) public {
     // Execute
     vm.prank(_caller);
@@ -112,6 +114,17 @@ contract OpUSDCBridgeAdapter_Unit_CancelSignature is Base {
 
     // Assert
     assertEq(adapter.userNonces(_caller, _nonce), true, 'Nonce should be set as used');
+  }
+
+  /**
+   * @notice Checks that the correct event is emitted
+   */
+  function test_emitsEvent(address _caller, uint256 _nonce) public {
+    vm.expectEmit(true, true, true, true);
+    emit NonceCanceled(_caller, _nonce);
+    // Execute
+    vm.prank(_caller);
+    adapter.cancelSignature(_nonce);
   }
 }
 

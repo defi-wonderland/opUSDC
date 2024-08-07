@@ -26,9 +26,6 @@ abstract contract OpUSDCBridgeAdapter is UUPSUpgradeable, OwnableUpgradeable, EI
   /// @inheritdoc IOpUSDCBridgeAdapter
   address public immutable MESSENGER;
 
-  /// @notice Reserve 50 storage slots to be safe on future upgrades
-  uint256[50] private __gap;
-
   /// @inheritdoc IOpUSDCBridgeAdapter
   Status public messengerStatus;
 
@@ -37,6 +34,9 @@ abstract contract OpUSDCBridgeAdapter is UUPSUpgradeable, OwnableUpgradeable, EI
 
   /// @inheritdoc IOpUSDCBridgeAdapter
   mapping(address _spender => mapping(address _user => uint256 _blacklistedAmount)) public blacklistedFundsDetails;
+
+  /// @notice Reserve 50 storage slots to be safe on future upgrades
+  uint256[50] private __gap;
 
   /**
    * @notice Modifier to check if the sender is the linked adapter through the messenger
@@ -122,6 +122,8 @@ abstract contract OpUSDCBridgeAdapter is UUPSUpgradeable, OwnableUpgradeable, EI
    */
   function cancelSignature(uint256 _nonce) external {
     userNonces[msg.sender][_nonce] = true;
+
+    emit NonceCanceled(msg.sender, _nonce);
   }
 
   /**
