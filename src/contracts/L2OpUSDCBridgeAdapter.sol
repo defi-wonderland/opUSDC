@@ -242,7 +242,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     if (messengerStatus != Status.Deprecated) {
       // The check for if the user is blacklisted happens in USDC's contract
       IUSDC(USDC).mint(_user, _amount);
-      emit BlacklistedFundsWithdrawn(_user, _amount);
+      emit LockedFundsWithdrawn(_user, _amount);
     } else {
       uint32 _minGasLimit = 150_000;
       // Send the message to the linked adapter
@@ -251,7 +251,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
         abi.encodeCall(IL1OpUSDCBridgeAdapter.receiveWithdrawBlacklistedFundsPostMigration, (_spender, _amount)),
         _minGasLimit
       );
-      emit BlacklistedFundsSentBackToL1(_spender, _amount);
+      emit LockedFundsSentBackToL1(_spender, _amount);
     }
   }
 
