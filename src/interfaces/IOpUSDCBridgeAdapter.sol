@@ -233,11 +233,11 @@ interface IOpUSDCBridgeAdapter {
   function receiveMessage(address _user, address _spender, uint256 _amount) external;
 
   /**
-   * @notice Withdraws the blacklisted funds from the contract if they get unblacklisted
+   * @notice Withdraws the locked funds from the contract if they get unlocked
    * @param _spender The address that provided the tokens
    * @param _user The user to withdraw the funds for
    */
-  function withdrawBlacklistedFunds(address _spender, address _user) external;
+  function withdrawLockedFunds(address _spender, address _user) external;
 
   /**
    * @notice Cancels a signature by setting the nonce as used
@@ -285,10 +285,10 @@ interface IOpUSDCBridgeAdapter {
   function userNonces(address _user, uint256 _nonce) external view returns (bool _used);
 
   /**
-   * @notice Returns the amount of funds locked that got blacklisted for a specific user
+   * @notice Returns the amount of funds locked that got locked for a specific user
    * @param _spender The address that provided the tokens
    * @param _user The user to check for
-   * @return _blacklistedAmount The amount of funds locked from blacklisted messages
+   * @return _lockedAmount The amount of funds locked from locked messages
    */
-  function blacklistedFundsDetails(address _spender, address _user) external view returns (uint256 _blacklistedAmount);
+  function lockedFundsDetails(address _spender, address _user) external view returns (uint256 _lockedAmount);
 }

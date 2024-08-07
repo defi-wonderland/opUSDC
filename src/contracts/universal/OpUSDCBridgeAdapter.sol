@@ -33,7 +33,7 @@ abstract contract OpUSDCBridgeAdapter is UUPSUpgradeable, OwnableUpgradeable, EI
   mapping(address _user => mapping(uint256 _nonce => bool _used)) public userNonces;
 
   /// @inheritdoc IOpUSDCBridgeAdapter
-  mapping(address _spender => mapping(address _user => uint256 _blacklistedAmount)) public blacklistedFundsDetails;
+  mapping(address _spender => mapping(address _user => uint256 _lockedAmount)) public lockedFundsDetails;
 
   /// @notice Reserve 50 storage slots to be safe on future upgrades
   uint256[50] private __gap;
@@ -110,11 +110,11 @@ abstract contract OpUSDCBridgeAdapter is UUPSUpgradeable, OwnableUpgradeable, EI
   function receiveMessage(address _user, address _spender, uint256 _amount) external virtual;
 
   /**
-   * @notice Withdraws the blacklisted funds from the contract if they get unblacklisted
+   * @notice Withdraws the locked funds from the contract if they get unlocked
    * @param _spender The address that provided the tokens
    * @param _user The user to withdraw the funds for
    */
-  function withdrawBlacklistedFunds(address _spender, address _user) external virtual;
+  function withdrawLockedFunds(address _spender, address _user) external virtual;
 
   /**
    * @notice Cancels a signature by setting the nonce as used

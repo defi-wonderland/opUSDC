@@ -31,8 +31,8 @@ contract ForTestL1OpUSDCBridgeAdapter is L1OpUSDCBridgeAdapter {
     userNonces[_user][_nonce] = _used;
   }
 
-  function forTest_setUserBlacklistedFunds(address _spender, address _user, uint256 _amount) external {
-    blacklistedFundsDetails[_spender][_user] = _amount;
+  function forTest_setUserLockedFunds(address _spender, address _user, uint256 _amount) external {
+    lockedFundsDetails[_spender][_user] = _amount;
   }
 }
 
@@ -1125,7 +1125,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
     vm.prank(_messenger);
     adapter.receiveMessage(_user, _user, _amount);
 
-    assertEq(adapter.blacklistedFundsDetails(_user, _user), _amount, 'User blacklisted funds should be incremented');
+    assertEq(adapter.lockedFundsDetails(_user, _user), _amount, 'User blacklisted funds should be incremented');
   }
 
   /**
@@ -1144,7 +1144,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveMessage is Base {
     vm.prank(_messenger);
     adapter.receiveMessage(_user, _user, _amount);
 
-    assertEq(adapter.blacklistedFundsDetails(_user, _user), _amount, 'User blacklisted funds should be incremented');
+    assertEq(adapter.lockedFundsDetails(_user, _user), _amount, 'User blacklisted funds should be incremented');
   }
 
   /**
@@ -1177,7 +1177,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveWithdrawBlacklistedFundsPostMigration
     // Execute
     vm.prank(_user);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
-    adapter.receiveWithdrawBlacklistedFundsPostMigration(_spender, _amount);
+    adapter.receiveWithdrawLockedFundsPostMigration(_spender, _amount);
   }
 
   /**
@@ -1195,7 +1195,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveWithdrawBlacklistedFundsPostMigration
     // Execute
     vm.prank(_messenger);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSender.selector);
-    adapter.receiveWithdrawBlacklistedFundsPostMigration(_spender, _amount);
+    adapter.receiveWithdrawLockedFundsPostMigration(_spender, _amount);
   }
 
   /**
@@ -1212,7 +1212,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveWithdrawBlacklistedFundsPostMigration
     // Execute
     vm.prank(_messenger);
     vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_NotMigrated.selector);
-    adapter.receiveWithdrawBlacklistedFundsPostMigration(_spender, _amount);
+    adapter.receiveWithdrawLockedFundsPostMigration(_spender, _amount);
   }
 
   /**
@@ -1228,7 +1228,7 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveWithdrawBlacklistedFundsPostMigration
 
     // Execute
     vm.prank(_messenger);
-    adapter.receiveWithdrawBlacklistedFundsPostMigration(_spender, _amount);
+    adapter.receiveWithdrawLockedFundsPostMigration(_spender, _amount);
   }
 
   /**
@@ -1248,11 +1248,11 @@ contract L1OpUSDCBridgeAdapter_Unit_ReceiveWithdrawBlacklistedFundsPostMigration
 
     // Execute
     vm.prank(_messenger);
-    adapter.receiveWithdrawBlacklistedFundsPostMigration(_spender, _amount);
+    adapter.receiveWithdrawLockedFundsPostMigration(_spender, _amount);
   }
 }
 
-contract L1OpUSDCBridgeAdapter_Unit_WithdrawBlacklistedFunds is Base {
+contract L1OpUSDCBridgeAdapter_Unit_WithdrawLockedFunds is Base {
   event LockedFundsWithdrawn(address indexed _user, uint256 _amountWithdrawn);
 
   /**
@@ -1261,14 +1261,14 @@ contract L1OpUSDCBridgeAdapter_Unit_WithdrawBlacklistedFunds is Base {
   function test_expectedCalls(uint256 _amount, address _user, address _spender) external {
     vm.assume(_amount > 0);
     vm.assume(_user != address(0));
-    adapter.forTest_setUserBlacklistedFunds(_spender, _user, _amount);
+    adapter.forTest_setUserLockedFunds(_spender, _user, _amount);
 
     // Mock calls
     _mockAndExpect(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _user, _amount), abi.encode(true));
 
     // Execute
     vm.prank(_user);
-    adapter.withdrawBlacklistedFunds(_spender, _user);
+    adapter.withdrawLockedFunds(_spender, _user);
   }
 
   /**
@@ -1277,22 +1277,22 @@ contract L1OpUSDCBridgeAdapter_Unit_WithdrawBlacklistedFunds is Base {
   function test_updateState(uint256 _amount, address _user, address _spender) external {
     vm.assume(_amount > 0);
     vm.assume(_user != address(0));
-    adapter.forTest_setUserBlacklistedFunds(_spender, _user, _amount);
+    adapter.forTest_setUserLockedFunds(_spender, _user, _amount);
 
     // Mock calls
     vm.mockCall(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _user, _amount), abi.encode(true));
 
     // Execute
     vm.prank(_user);
-    adapter.withdrawBlacklistedFunds(_spender, _user);
+    adapter.withdrawLockedFunds(_spender, _user);
 
-    assertEq(adapter.blacklistedFundsDetails(_spender, _user), 0, 'User blacklisted funds should be updated');
+    assertEq(adapter.lockedFundsDetails(_spender, _user), 0, 'User blacklisted funds should be updated');
   }
 
   function test_emitEvent(uint256 _amount, address _user, address _spender) external {
     vm.assume(_amount > 0);
     vm.assume(_user != address(0));
-    adapter.forTest_setUserBlacklistedFunds(_spender, _user, _amount);
+    adapter.forTest_setUserLockedFunds(_spender, _user, _amount);
 
     // Mock calls
     vm.mockCall(_usdc, abi.encodeWithSignature('transfer(address,uint256)', _user, _amount), abi.encode(true));
@@ -1303,7 +1303,7 @@ contract L1OpUSDCBridgeAdapter_Unit_WithdrawBlacklistedFunds is Base {
 
     // Execute
     vm.prank(_user);
-    adapter.withdrawBlacklistedFunds(_spender, _user);
+    adapter.withdrawLockedFunds(_spender, _user);
   }
 }
 

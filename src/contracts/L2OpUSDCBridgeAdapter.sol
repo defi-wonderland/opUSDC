@@ -223,21 +223,22 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
       try IUSDC(USDC).mint(_user, _amount) {
         emit MessageReceived(_spender, _user, _amount, MESSENGER);
       } catch {
-        blacklistedFundsDetails[_spender][_user] += _amount;
+        // If the mint fails, the user could be locked for multiple reasons such as blacklist or usdc being paused
+        lockedFundsDetails[_spender][_user] += _amount;
         emit MessageFailed(_spender, _user, _amount, MESSENGER);
       }
     }
   }
 
   /**
-   * @notice Mints the blacklisted funds from the contract in case they get unblacklisted
+   * @notice Mints the locked funds from the contract in case they get unlocked
    * @dev Returns the funds to the spender through a message to L1 if the contract is deprecated
    * @param _spender The address that provided the tokens
    * @param _user The user to withdraw the funds for
    */
-  function withdrawBlacklistedFunds(address _spender, address _user) external override {
-    uint256 _amount = blacklistedFundsDetails[_spender][_user];
-    blacklistedFundsDetails[_spender][_user] = 0;
+  function withdrawLockedFunds(address _spender, address _user) external override {
+    uint256 _amount = lockedFundsDetails[_spender][_user];
+    lockedFundsDetails[_spender][_user] = 0;
 
     if (messengerStatus != Status.Deprecated) {
       // The check for if the user is blacklisted happens in USDC's contract
@@ -248,7 +249,7 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
       // Send the message to the linked adapter
       ICrossDomainMessenger(MESSENGER).sendMessage(
         LINKED_ADAPTER,
-        abi.encodeCall(IL1OpUSDCBridgeAdapter.receiveWithdrawBlacklistedFundsPostMigration, (_spender, _amount)),
+        abi.encodeCall(IL1OpUSDCBridgeAdapter.receiveWithdrawLockedFundsPostMigration, (_spender, _amount)),
         _minGasLimit
       );
       emit LockedFundsSentBackToL1(_spender, _amount);
