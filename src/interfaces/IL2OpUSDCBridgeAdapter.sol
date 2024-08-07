@@ -22,11 +22,11 @@ interface IL2OpUSDCBridgeAdapter {
   event ReplayedFundsSentBackToL1(address _spender, uint256 _amount);
 
   /**
-   * @notice Emitted when the blacklisted funds are sent back to L1
+   * @notice Emitted when the locked funds are sent back to L1
    * @param _spender The address that provided the tokens
    * @param _amountSent The amount of tokens that were withdrawn
    */
-  event BlacklistedFundsSentBackToL1(address indexed _spender, uint256 _amountSent);
+  event LockedFundsSentBackToL1(address indexed _spender, uint256 _amountSent);
 
   /*///////////////////////////////////////////////////////////////
                             LOGIC

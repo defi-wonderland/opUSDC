@@ -279,7 +279,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     // If the spender is still blacklisted, the user will be forced to replay this message
     IUSDC(USDC).safeTransfer(_spender, _amount);
 
-    emit BlacklistedFundsWithdrawn(_spender, _amount);
+    emit LockedFundsWithdrawn(_spender, _amount);
   }
 
   /**
@@ -294,7 +294,7 @@ contract L1OpUSDCBridgeAdapter is IL1OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     // The check for if the user is blacklisted happens in USDC's contract
     IUSDC(USDC).safeTransfer(_user, _amount);
 
-    emit BlacklistedFundsWithdrawn(_user, _amount);
+    emit LockedFundsWithdrawn(_user, _amount);
   }
 
   /**
