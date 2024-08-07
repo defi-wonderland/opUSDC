@@ -19,10 +19,15 @@ contract Deploy is Script {
     vm.startBroadcast(owner);
 
     // NOTE: We have these hardcoded to default values, if used in product you will need to change them
+
     bytes[] memory _usdcInitTxs = new bytes[](3);
+
     _usdcInitTxs[0] = USDCInitTxs.INITIALIZEV2;
     _usdcInitTxs[1] = USDCInitTxs.INITIALIZEV2_1;
     _usdcInitTxs[2] = USDCInitTxs.INITIALIZEV2_2;
+
+    // Sanity check to ensure the caller of this script changed this value to the proper naming
+    assert(keccak256(_usdcInitTxs[0]) != keccak256(USDCInitTxs.INITIALIZEV2));
 
     IL1OpUSDCFactory.L2Deployments memory _l2Deployments = IL1OpUSDCFactory.L2Deployments({
       l2AdapterOwner: owner,
