@@ -102,6 +102,13 @@ interface IOpUSDCBridgeAdapter {
    */
   event BlacklistedFundsWithdrawn(address indexed _user, uint256 _amountWithdrawn);
 
+  /**
+   * @notice Emitted when a nonce is canceled
+   * @param _caller The caller
+   * @param _nonce The nonce that was canceled
+   */
+  event NonceCanceled(address _caller, uint256 _nonce);
+
   /*///////////////////////////////////////////////////////////////
                             ERRORS
   ///////////////////////////////////////////////////////////////*/
