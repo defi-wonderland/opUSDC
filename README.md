@@ -149,6 +149,18 @@ And when you are ready to migrate to native USDC, run:
 yarn script:migrate:broadcast
 ```
 
+### What will circle need at migration?
+
+#### 1. Circle will need the metadata from the original deployment of the USDC implementation that was used
+  
+To do this you will need to go back to the `stablecoin-evm` github repo that the implementation was deployed from inorder to extract the raw metadata from the compiled files you can run a command like this
+
+```bash
+cat out/example.sol/example.json | jq -jr '.rawMetadata' > example.metadata.json
+```
+
+You will need to do this for both the token contract and any external libraries that get deployed with it, at the time of writing this these are `FiatTokenV2_2` and `SignatureChecker` but these are subject to change in the future.
+
 ## Licensing
 
 The primary license for the boilerplate is MIT, see [`LICENSE`](https://github.com/defi-wonderland/opUSDC/blob/main/LICENSE)
