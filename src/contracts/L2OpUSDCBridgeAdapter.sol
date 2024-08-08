@@ -4,7 +4,9 @@ pragma solidity 0.8.25;
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import {OpUSDCBridgeAdapter} from 'contracts/universal/OpUSDCBridgeAdapter.sol';
 import {FallbackProxyAdmin} from 'contracts/utils/FallbackProxyAdmin.sol';
+import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 import {IL2OpUSDCBridgeAdapter} from 'interfaces/IL2OpUSDCBridgeAdapter.sol';
+import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
 
@@ -26,25 +28,18 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   bytes4 internal constant _UPGRADE_TO_SELECTOR = 0x3659cfe6;
   ///@notice `upgradeToAndCall(address,bytes)` USDC function selector
   bytes4 internal constant _UPGRADE_TO_AND_CALL_SELECTOR = 0x4f1ef286;
+  ///@notice `updateMasterMinter(address)` USDC function selector
+  bytes4 internal constant _UPDATE_MASTER_MINTER_SELECTOR = 0xaa20e1e4;
 
   /// @inheritdoc IL2OpUSDCBridgeAdapter
-  FallbackProxyAdmin public immutable FALLBACK_PROXY_ADMIN;
-
-  /// @inheritdoc IL2OpUSDCBridgeAdapter
-  bool public isMessagingDisabled;
+  // solhint-disable-next-line var-name-mixedcase
+  FallbackProxyAdmin public FALLBACK_PROXY_ADMIN;
 
   /// @inheritdoc IL2OpUSDCBridgeAdapter
   address public roleCaller;
 
-  /**
-   * @notice Modifier to check if the sender is the linked adapter through the messenger
-   */
-  modifier onlyLinkedAdapter() {
-    if (msg.sender != MESSENGER || ICrossDomainMessenger(MESSENGER).xDomainMessageSender() != LINKED_ADAPTER) {
-      revert IOpUSDCBridgeAdapter_InvalidSender();
-    }
-    _;
-  }
+  /// @notice Reserve 50 more storage slots to be safe on future upgrades
+  uint256[50] private __gap;
 
   /**
    * @notice Construct the OpUSDCBridgeAdapter contract
@@ -57,12 +52,23 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   constructor(
     address _usdc,
     address _messenger,
-    address _linkedAdapter,
-    address _owner
-  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter, _owner) {
-    FALLBACK_PROXY_ADMIN = new FallbackProxyAdmin(_usdc);
-  }
+    address _linkedAdapter
+  ) OpUSDCBridgeAdapter(_usdc, _messenger, _linkedAdapter) {}
   /* solhint-enable no-unused-vars */
+
+  /**
+   * @notice Sets the owner of the contract
+   * @param _owner The address of the owner
+   * @dev This function needs only used during the deployment of the proxy contract, and it is disabled for the
+   * implementation contract
+   */
+  function initialize(address _owner) external virtual override initializer {
+    __Ownable_init(_owner);
+    string memory _name = 'OpUSDCBridgeAdapter';
+    string memory _version = '1.0.0';
+    __EIP712_init(_name, _version);
+    FALLBACK_PROXY_ADMIN = new FallbackProxyAdmin(USDC);
+  }
 
   /*///////////////////////////////////////////////////////////////
                               MIGRATION
@@ -70,18 +76,21 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
 
   /**
    * @notice Initiates the process to migrate the bridged USDC to native USDC
-   * @dev Full migration cant finish until L1 receives the message for setting the burn amount
+   * @dev Full migration can't finish until L1 receives the message for setting the burn amount
    * @param _roleCaller The address that will be allowed to transfer the USDC roles
    * @param _setBurnAmountMinGasLimit Minimum gas limit that the setBurnAmount message can be executed on L1
    */
   function receiveMigrateToNative(address _roleCaller, uint32 _setBurnAmountMinGasLimit) external onlyLinkedAdapter {
-    isMessagingDisabled = true;
+    messengerStatus = Status.Deprecated;
     roleCaller = _roleCaller;
 
     uint256 _burnAmount = IUSDC(USDC).totalSupply();
 
+    // Remove the L2 Adapter as a minter
+    IUSDC(USDC).removeMinter(address(this));
+
     ICrossDomainMessenger(MESSENGER).sendMessage(
-      LINKED_ADAPTER, abi.encodeWithSignature('setBurnAmount(uint256)', _burnAmount), _setBurnAmountMinGasLimit
+      LINKED_ADAPTER, abi.encodeCall(IL1OpUSDCBridgeAdapter.setBurnAmount, (_burnAmount)), _setBurnAmountMinGasLimit
     );
 
     emit MigratingToNative(MESSENGER, _roleCaller);
@@ -110,7 +119,9 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @notice Receive the stop messaging message from the linked adapter and stop outgoing messages
    */
   function receiveStopMessaging() external onlyLinkedAdapter {
-    isMessagingDisabled = true;
+    if (messengerStatus == Status.Deprecated) revert IOpUSDCBridgeAdapter_MessagingDisabled();
+
+    messengerStatus = Status.Paused;
 
     emit MessagingStopped(MESSENGER);
   }
@@ -119,8 +130,9 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
    * @notice Resume messaging after it was stopped
    */
   function receiveResumeMessaging() external onlyLinkedAdapter {
-    // NOTE: This is safe because this message can only be received when messaging is not deprecated on the L1 messenger
-    isMessagingDisabled = false;
+    if (messengerStatus == Status.Deprecated) revert IOpUSDCBridgeAdapter_MessagingDisabled();
+
+    messengerStatus = Status.Active;
 
     emit MessagingResumed(MESSENGER);
   }
@@ -130,34 +142,29 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
   ///////////////////////////////////////////////////////////////*/
 
   /**
-   * @notice Send tokens to other chain through the linked adapter
+   * @notice Send tokens to another chain through the linked adapter
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external override {
+    if (_to == address(0)) revert IOpUSDCBridgeAdapter_InvalidAddress();
+    // Ensure the address is not blacklisted
+    if (IUSDC(USDC).isBlacklisted(_to)) revert IOpUSDCBridgeAdapter_BlacklistedAddress();
+
     // Ensure messaging is enabled
-    if (isMessagingDisabled) revert IOpUSDCBridgeAdapter_MessagingDisabled();
+    if (messengerStatus != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
 
-    IUSDC(USDC).safeTransferFrom(msg.sender, address(this), _amount);
-
-    // Burn the tokens
-    IUSDC(USDC).burn(_amount);
-
-    // Send the message to the linked adapter
-    ICrossDomainMessenger(MESSENGER).sendMessage(
-      LINKED_ADAPTER, abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount), _minGasLimit
-    );
-
-    emit MessageSent(msg.sender, _to, _amount, MESSENGER, _minGasLimit);
+    _sendMessage(msg.sender, _to, _amount, _minGasLimit);
   }
 
   /**
-   * @notice Send signer tokens to other chain through the linked adapter
+   * @notice Send signer tokens to another chain through the linked adapter
    * @param _signer The address of the user sending the message
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
    * @param _signature The signature of the user
+   * @param _nonce The nonce of the user
    * @param _deadline The deadline for the message to be executed
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
@@ -166,44 +173,87 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     address _to,
     uint256 _amount,
     bytes calldata _signature,
+    uint256 _nonce,
     uint256 _deadline,
     uint32 _minGasLimit
   ) external override {
+    if (_to == address(0)) revert IOpUSDCBridgeAdapter_InvalidAddress();
+    // Ensure the address is not blacklisted
+    if (IUSDC(USDC).isBlacklisted(_to)) revert IOpUSDCBridgeAdapter_BlacklistedAddress();
+
     // Ensure messaging is enabled
-    if (isMessagingDisabled) revert IOpUSDCBridgeAdapter_MessagingDisabled();
+    if (messengerStatus != Status.Active) revert IOpUSDCBridgeAdapter_MessagingDisabled();
+
+    // Ensure the nonce has not already been used
+    if (userNonces[_signer][_nonce]) revert IOpUSDCBridgeAdapter_InvalidNonce();
 
     // Ensure the deadline has not passed
     if (block.timestamp > _deadline) revert IOpUSDCBridgeAdapter_MessageExpired();
 
-    // Hash the message
-    bytes32 _messageHash =
-      keccak256(abi.encode(address(this), block.chainid, _to, _amount, _deadline, userNonce[_signer]++));
+    BridgeMessage memory _message =
+      BridgeMessage({to: _to, amount: _amount, deadline: _deadline, nonce: _nonce, minGasLimit: _minGasLimit});
 
-    _checkSignature(_signer, _messageHash, _signature);
+    _checkSignature(_signer, _hashMessageStruct(_message), _signature);
 
-    IUSDC(USDC).safeTransferFrom(_signer, address(this), _amount);
+    // Mark the nonce as used
+    userNonces[_signer][_nonce] = true;
 
-    // Burn the tokens
-    IUSDC(USDC).burn(_amount);
-
-    // Send the message to the linked adapter
-    ICrossDomainMessenger(MESSENGER).sendMessage(
-      LINKED_ADAPTER, abi.encodeWithSignature('receiveMessage(address,uint256)', _to, _amount), _minGasLimit
-    );
-
-    emit MessageSent(_signer, _to, _amount, MESSENGER, _minGasLimit);
+    _sendMessage(_signer, _to, _amount, _minGasLimit);
   }
 
   /**
    * @notice Receive the message from the other chain and mint the bridged representation for the user
    * @dev This function should only be called when receiving a message to mint the bridged representation
+   * @dev If the mint fails the funds might be recovered by calling withdrawLockedFunds
    * @param _user The user to mint the bridged representation for
+   * @param _spender The address that provided the tokens
    * @param _amount The amount of tokens to mint
    */
-  function receiveMessage(address _user, uint256 _amount) external override onlyLinkedAdapter {
-    // Mint the tokens to the user
-    IUSDC(USDC).mint(_user, _amount);
-    emit MessageReceived(_user, _amount, MESSENGER);
+  function receiveMessage(address _user, address _spender, uint256 _amount) external override onlyLinkedAdapter {
+    if (messengerStatus == Status.Deprecated) {
+      uint32 _minGasLimit = 150_000;
+      // Return the funds to the spender in case the target on L2 is a contract that can´t handle the funds on L1
+      ICrossDomainMessenger(MESSENGER).sendMessage(
+        LINKED_ADAPTER, abi.encodeCall(IOpUSDCBridgeAdapter.receiveMessage, (_spender, _spender, _amount)), _minGasLimit
+      );
+
+      emit ReplayedFundsSentBackToL1(_spender, _amount);
+    } else {
+      // Mint the tokens to the user
+      try IUSDC(USDC).mint(_user, _amount) {
+        emit MessageReceived(_spender, _user, _amount, MESSENGER);
+      } catch {
+        // If the mint fails, the user could be locked for multiple reasons such as blacklist or usdc being paused
+        lockedFundsDetails[_spender][_user] += _amount;
+        emit MessageFailed(_spender, _user, _amount, MESSENGER);
+      }
+    }
+  }
+
+  /**
+   * @notice Mints the locked funds from the contract in case they get unlocked
+   * @dev Returns the funds to the spender through a message to L1 if the contract is deprecated
+   * @param _spender The address that provided the tokens
+   * @param _user The user to withdraw the funds for
+   */
+  function withdrawLockedFunds(address _spender, address _user) external override {
+    uint256 _amount = lockedFundsDetails[_spender][_user];
+    lockedFundsDetails[_spender][_user] = 0;
+
+    if (messengerStatus != Status.Deprecated) {
+      // The check for if the user is blacklisted happens in USDC's contract
+      IUSDC(USDC).mint(_user, _amount);
+      emit LockedFundsWithdrawn(_user, _amount);
+    } else {
+      uint32 _minGasLimit = 150_000;
+      // Send the message to the linked adapter
+      ICrossDomainMessenger(MESSENGER).sendMessage(
+        LINKED_ADAPTER,
+        abi.encodeCall(IL1OpUSDCBridgeAdapter.receiveWithdrawLockedFundsPostMigration, (_spender, _amount)),
+        _minGasLimit
+      );
+      emit LockedFundsSentBackToL1(_spender, _amount);
+    }
   }
 
   /*///////////////////////////////////////////////////////////////
@@ -222,7 +272,10 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     bytes4 _selector = bytes4(_data);
     bool _success;
 
-    if (_selector == _TRANSFER_OWNERSHIP_SELECTOR || _selector == _CHANGE_ADMIN_SELECTOR) {
+    if (
+      _selector == _TRANSFER_OWNERSHIP_SELECTOR || _selector == _CHANGE_ADMIN_SELECTOR
+        || _selector == _UPDATE_MASTER_MINTER_SELECTOR
+    ) {
       revert IOpUSDCBridgeAdapter_ForbiddenTransaction();
     } else if (_selector == _UPGRADE_TO_SELECTOR || _selector == _UPGRADE_TO_AND_CALL_SELECTOR) {
       (_success,) = address(FALLBACK_PROXY_ADMIN).call(_data);
@@ -235,5 +288,29 @@ contract L2OpUSDCBridgeAdapter is IL2OpUSDCBridgeAdapter, OpUSDCBridgeAdapter {
     }
 
     emit USDCFunctionSent(_selector);
+  }
+
+  /*///////////////////////////////////////////////////////////////
+                        INTERNAL FUNCTIONS
+  ///////////////////////////////////////////////////////////////*/
+  /**
+   * @notice Send the message to the linked adapter
+   * @param _from address that originated the message
+   * @param _to target address on the destination chain
+   * @param _amount amount of tokens to be bridged
+   * @param _minGasLimit minimum gas limit for the other chain to execute the message
+   */
+  function _sendMessage(address _from, address _to, uint256 _amount, uint32 _minGasLimit) internal {
+    IUSDC(USDC).safeTransferFrom(_from, address(this), _amount);
+
+    // Burn the tokens
+    IUSDC(USDC).burn(_amount);
+
+    // Send the message to the linked adapter
+    ICrossDomainMessenger(MESSENGER).sendMessage(
+      LINKED_ADAPTER, abi.encodeCall(IOpUSDCBridgeAdapter.receiveMessage, (_to, _from, _amount)), _minGasLimit
+    );
+
+    emit MessageSent(_from, _to, _amount, MESSENGER, _minGasLimit);
   }
 }

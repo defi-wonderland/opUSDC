@@ -1,10 +1,10 @@
 | Properties                                                                                                  | Type                | Id  | Fuzz | Symb |
 | ----------------------------------------------------------------------------------------------------------- | ------------------- | --- | ---- | ---- |
 | New messages should not be sent if the state is not active                                                  | Unit test           | 1   | [X]  | [x]  |
-| User who bridges tokens should receive them on the destination chain                                        | High level          | 2   | [X]  | [x]  |
+| Non blacklisted addresses are enabled to send and receive tokens through the bridge                         | High level          | 2   | [X]  | [x]  |
 | Assuming the adapter is the only minter the amount locked in L1 should always equal the amount minted on L2 | High level          | 3   | [X]  | [x]  |
 | Both messenger's state or if they can send messages should match                                            | Valid state         | 4   | depr | depr |
-| user nonce should be monotonically increasing                                                               | Variable transition | 5   | [X]  | :(   |
+| user nonce should be monotonically increasing                                                               | Variable transition | 5   | depr | depr |
 | burn locked only if deprecated                                                                              | Unit test           | 6   | [X]  | [X]  |
 | paused only via stop messaging                                                                              | State transition    | 7   | [X]  |      |
 | resumed only via resume messaging                                                                           | State transition    | 8   | [X]  |      |
@@ -19,8 +19,10 @@
 | USDC proxy admin and token ownership rights can only be transferred during the migration to native flow     | High level          | 17  | [X]  |      |
 | Status should either be active, paused, upgrading or deprecated                                             | Valid state         | 18  | [X]  |      |
 | All addresses precomputed in the factory match the deployed addresses / L1 nonce == L2 factory nonce        | Variable transition |     | depr | depr | 
+| Adapters can't be initialized twice                                                                         | State transition    | 19  | [X]  |      |
+| Refunds from l2 to l1 should only be possible if the l2 adapter is deprecated                               | State transition    | 20  | [X]  |      |
 
-[]      planed to implement and still to do
-[x]     implemented and tested
-:(      implemented but judged as incorrect (tool limitation, etc)
-empty   not implemented and will not be (design, etc)
+[] planed to implement and still to do
+[x] implemented and tested
+:( implemented but judged as incorrect (tool limitation, etc)
+empty not implemented and will not be (design, etc)

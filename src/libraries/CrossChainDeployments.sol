@@ -1,8 +1,9 @@
 pragma solidity 0.8.25;
 
-import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
+import {L2OpUSDCDeploy} from 'contracts/L2OpUSDCDeploy.sol';
 import {ICreate2Deployer} from 'interfaces/external/ICreate2Deployer.sol';
 import {ICrossDomainMessenger} from 'interfaces/external/ICrossDomainMessenger.sol';
+import {IOptimismPortal} from 'interfaces/external/IOptimismPortal.sol';
 
 /**
  * @title CrossChainDeployments
@@ -13,6 +14,12 @@ library CrossChainDeployments {
   /// @notice RLP encoding deployer length prefix for calculating the address of a contract deployed through `CREATE`
   bytes1 internal constant _LEN = bytes1(0x94);
 
+  /// @notice The status of if the transaction is a contract creation
+  bool internal constant _IS_CONTRACT_CREATION = false;
+
+  /// @notice The msg.value sent with the transaction
+  uint256 internal constant _VALUE = 0;
+
   /**
    * @notice Deploys the L2 factory contract through the L1 messenger
    * @param _args The initialization arguments for the L2 factory
@@ -20,7 +27,7 @@ library CrossChainDeployments {
    * @param _messenger The address of the L1 messenger
    * @param _create2Deployer The address of the L2 create2 deployer
    * @param _minGasLimit The minimum gas limit that the message can be executed with
-   * @return _l2Factory The address of the L2 factory
+   * @return _l2Deploy The address of the L2 factory
    */
   function deployL2Factory(
     bytes memory _args,
@@ -28,13 +35,24 @@ library CrossChainDeployments {
     address _messenger,
     address _create2Deployer,
     uint32 _minGasLimit
-  ) external returns (address _l2Factory) {
-    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _args);
-    _l2Factory = precalculateCreate2Address(_salt, keccak256(_l2FactoryInitCode), _create2Deployer);
+  ) external returns (address _l2Deploy) {
+    bytes memory _l2DeployInitCode = bytes.concat(type(L2OpUSDCDeploy).creationCode, _args);
+    _l2Deploy = precalculateCreate2Address(_salt, keccak256(_l2DeployInitCode), _create2Deployer);
 
-    bytes memory _l2FactoryDeploymentsTx =
-      abi.encodeWithSelector(ICreate2Deployer.deploy.selector, 0, _salt, _l2FactoryInitCode);
-    ICrossDomainMessenger(_messenger).sendMessage(_create2Deployer, _l2FactoryDeploymentsTx, _minGasLimit);
+    bytes memory _l2DeploymentsTx = abi.encodeCall(ICreate2Deployer.deploy, (_VALUE, _salt, _l2DeployInitCode));
+
+    address _portal;
+
+    // Some messengers are still using the legacy `portal` function so we need to handle this case
+    try ICrossDomainMessenger(_messenger).portal() returns (address _p) {
+      _portal = _p;
+    } catch {
+      _portal = ICrossDomainMessenger(_messenger).PORTAL();
+    }
+
+    IOptimismPortal(_portal).depositTransaction(
+      _create2Deployer, _VALUE, _minGasLimit, _IS_CONTRACT_CREATION, _l2DeploymentsTx
+    );
   }
 
   /**
@@ -56,7 +74,7 @@ library CrossChainDeployments {
       mstore(_ptr, _deployer)
       let _start := add(_ptr, 0x0b)
       mstore8(_start, 0xff)
-      _precalculatedAddress := keccak256(_start, 85)
+      _precalculatedAddress := and(keccak256(_start, 85), 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
     }
   }
 
