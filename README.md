@@ -153,7 +153,7 @@ yarn script:migrate:broadcast
 
 #### 1. Circle will need the metadata from the original deployment of the USDC implementation that was used
   
-To do this you will need to go back to the `stablecoin-evm` github repo that the implementation was deployed from inorder to extract the raw metadata from the compiled files you can run a command like this
+To do this you will need to go back to the `stablecoin-evm` github repo that the implementation was deployed from in order to extract the raw metadata from the compiled files you can run a command like this
 
 ```bash
 cat out/example.sol/example.json | jq -jr '.rawMetadata' > example.metadata.json
