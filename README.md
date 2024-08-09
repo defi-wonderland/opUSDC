@@ -1,8 +1,13 @@
-# opUSDC
+# Bridged USDC Standard for the OP Stack
 
 > ⚠️ This code has not been audited yet and is not production ready at this time, tread with caution.
 
-opUSDC allows for an efficient and modular solution to expand USDC across the optimism super chain ecosystem. Utilizing the cross-chain messaging of the canonical bridge the adapter allows for easy access to USDC liquidity across all op chains.
+USDC is one of the most bridged assets across the crypto ecosystem, and USDC is often bridged to new chains prior to any action from Circle. This can create a challenge when Bridged USDC achieves substantial marketshare, but Native USDC is preferred by the ecosystem, leading to fragmentation between multiple representations of USDC. Circle introduced the (Bridged USDC Standard)[https://www.circle.com/blog/bridged-usdc-standard] to ensure that chains can easily deploy a form of USDC that is capable of being upgraded in-place by Circle to Native USDC, if and when appropriate, and prevent the fragmentation problem.
+
+Bridged USDC Standard for the OP Stack allows for an efficient and modular solution for expanding the Bridged USDC Standard across the Superchain ecosystem. Utilizing the cross chain messaging of the canonical OP Stack bridge the adapter allows for easy access to Bridged USDC liquidity across OP Stack chains.
+
+Chain operators can use the Bridged USDC Standard for the OP Stack to get Bridged USDC on their OP Stack chain while also providing the optionality for Circle to seamlessly upgrade Bridged USDC to Native USDC and retain existing supply, holders, and app integrations. 
+
 
 ## Contracts
 
