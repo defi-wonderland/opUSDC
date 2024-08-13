@@ -31,7 +31,7 @@ _`L2OpUSDCBridgeAdapter`_ - Contract that allows for the transfer of USDC from t
 
 
 ## Security
-Bridged USDC Standard for the OP Stack has undergone audits from [Spearbit](https://spearbit.com/). The audit report is available [here](./audits/spearbit.pdf).
+Bridged USDC Standard for the OP Stack has undergone audits from [Spearbit](https://spearbit.com/) and is recommended for production use. The audit report is available [here](./audits/spearbit.pdf).
 
 ## Setup
 
