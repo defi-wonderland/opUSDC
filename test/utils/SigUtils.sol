@@ -36,15 +36,13 @@ contract SigUtils {
    * @param _message The bridge message struct to hash
    * @return _hash The hash of the bridge message struct
    */
-  /* solhint-disable */
-  function getTypedBridgeMessageHash(IOpUSDCBridgeAdapter.BridgeMessage memory _message)
-    public
-    view
-    returns (bytes32 _hash)
-  {
+  // forgefmt: disable-start
+  function getTypedBridgeMessageHash(
+    IOpUSDCBridgeAdapter.BridgeMessage memory _message
+  ) public view returns (bytes32 _hash) {
     _hash = keccak256(abi.encodePacked('\x19\x01', _DOMAIN_SEPARATOR, getBridgeMessageHash(_message)));
   }
-  /* solhint-enable */
+  // forgefmt: disable-end
 
   /**
    * @notice Hashes the bridge message struct
