@@ -36,7 +36,7 @@ contract SigUtils {
    * @param _message The bridge message struct to hash
    * @return _hash The hash of the bridge message struct
    */
-  // solhint-disable
+  /* solhint-disable */
   function getTypedBridgeMessageHash(IOpUSDCBridgeAdapter.BridgeMessage memory _message)
     public
     view
@@ -44,7 +44,7 @@ contract SigUtils {
   {
     _hash = keccak256(abi.encodePacked('\x19\x01', _DOMAIN_SEPARATOR, getBridgeMessageHash(_message)));
   }
-  // solhint-enable
+  /* solhint-enable */
 
   /**
    * @notice Hashes the bridge message struct
