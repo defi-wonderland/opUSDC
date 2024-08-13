@@ -3,6 +3,44 @@ pragma solidity 0.8.25;
 
 interface IOpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
+                            ENUMS
+  ///////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice The status of an L1 Messenger
+   * @param Active The messenger is active
+   * @param Paused The messenger is paused
+   * @param Upgrading The messenger is upgrading
+   * @param Deprecated The messenger is deprecated
+   */
+  enum Status {
+    Active,
+    Paused,
+    Upgrading,
+    Deprecated
+  }
+
+  /*///////////////////////////////////////////////////////////////
+                          STRUCTS
+  ///////////////////////////////////////////////////////////////*/
+
+  /**
+   * @notice The struct to hold the data for a bridge message with signature
+   * @param to The target address on the destination chain
+   * @param amount The amount of tokens to send
+   * @param deadline The deadline for the message to be executed
+   * @param nonce The nonce of the user
+   * @param minGasLimit The minimum gas limit for the message to be executed
+   */
+  struct BridgeMessage {
+    address to;
+    uint256 amount;
+    uint256 deadline;
+    uint256 nonce;
+    uint32 minGasLimit;
+  }
+
+  /*///////////////////////////////////////////////////////////////
                             EVENTS
   ///////////////////////////////////////////////////////////////*/
 
@@ -20,15 +58,18 @@ interface IOpUSDCBridgeAdapter {
    * @param _messenger The address of the messenger contract that was sent through
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
-  event MessageSent(address _user, address _to, uint256 _amount, address _messenger, uint32 _minGasLimit);
+  event MessageSent(
+    address indexed _user, address indexed _to, uint256 _amount, address indexed _messenger, uint32 _minGasLimit
+  );
 
   /**
-   * @notice Emitted when a message as recieved
-   * @param _user The user that recieved the message
-   * @param _amount The amount of tokens recieved
-   * @param _messenger The address of the messenger contract that was recieved through
+   * @notice Emitted when a message as received
+   * @param _spender The address that provided the tokens
+   * @param _user The user that received the message
+   * @param _amount The amount of tokens received
+   * @param _messenger The address of the messenger contract that was received through
    */
-  event MessageReceived(address _user, uint256 _amount, address _messenger);
+  event MessageReceived(address indexed _spender, address indexed _user, uint256 _amount, address indexed _messenger);
 
   /**
    * @notice Emitted when messaging is resumed
@@ -45,9 +86,33 @@ interface IOpUSDCBridgeAdapter {
    */
   event MigratingToNative(address _messenger, address _caller);
 
+  /**
+   * @notice Emitted when a message fails
+   * @param _spender The address that provided the tokens
+   * @param _user The user that the message failed for
+   * @param _amount The amount of tokens that were added to the blacklisted funds
+   * @param _messenger The address of the messenger that the message failed for
+   */
+  event MessageFailed(address indexed _spender, address indexed _user, uint256 _amount, address indexed _messenger);
+
+  /**
+   * @notice Emitted when the any previously locked funds are withdrawn outside of the traditional bridging flows
+   * @param _user The user that the funds were withdrawn for
+   * @param _amountWithdrawn The amount of tokens that were withdrawn
+   */
+  event LockedFundsWithdrawn(address indexed _user, uint256 _amountWithdrawn);
+
+  /**
+   * @notice Emitted when a nonce is canceled
+   * @param _caller The caller
+   * @param _nonce The nonce that was canceled
+   */
+  event NonceCanceled(address _caller, uint256 _nonce);
+
   /*///////////////////////////////////////////////////////////////
                             ERRORS
   ///////////////////////////////////////////////////////////////*/
+
   /**
    * @notice Error when burnLockedUSDC is called before a burn amount is set
    */
@@ -89,6 +154,11 @@ interface IOpUSDCBridgeAdapter {
   error IOpUSDCBridgeAdapter_InvalidSender();
 
   /**
+   * @notice Error when the nonce is already used for the given signature
+   */
+  error IOpUSDCBridgeAdapter_InvalidNonce();
+
+  /**
    * @notice Error when the signature is invalid
    */
   error IOpUSDCBridgeAdapter_InvalidSignature();
@@ -103,11 +173,30 @@ interface IOpUSDCBridgeAdapter {
    */
   error IOpUSDCBridgeAdapter_NotUpgrading();
 
+  /**
+   * @notice Error when the address is blacklisted
+   */
+  error IOpUSDCBridgeAdapter_BlacklistedAddress();
+
+  /**
+   *  @notice Error when bridgedUSDC has not been migrated yet to native USDC
+   */
+  error IOpUSDCBridgeAdapter_NotMigrated();
+
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   ///////////////////////////////////////////////////////////////*/
+
   /**
-   * @notice Send tokens to other chain through the linked adapter
+   * @notice Initialize the contract
+   * @param _owner The owner of the contract
+   * @dev This function needs only used during the deployment of the proxy contract, and it is disabled for the
+   * implementation contract
+   */
+  function initialize(address _owner) external;
+
+  /**
+   * @notice Send tokens to another chain through the linked adapter
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
    * @param _minGasLimit Minimum gas limit that the message can be executed with
@@ -115,11 +204,12 @@ interface IOpUSDCBridgeAdapter {
   function sendMessage(address _to, uint256 _amount, uint32 _minGasLimit) external;
 
   /**
-   * @notice Send signer tokens to other chain through the linked adapter
+   * @notice Send signer tokens to another chain through the linked adapter
    * @param _signer The address of the user sending the message
    * @param _to The target address on the destination chain
    * @param _amount The amount of tokens to send
    * @param _signature The signature of the user
+   * @param _nonce The nonce of the user
    * @param _deadline The deadline for the message to be executed
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
@@ -128,17 +218,32 @@ interface IOpUSDCBridgeAdapter {
     address _to,
     uint256 _amount,
     bytes calldata _signature,
+    uint256 _nonce,
     uint256 _deadline,
     uint32 _minGasLimit
   ) external;
 
   /**
-   * @notice Receive the message from the other chain and mint the bridged representation for the user
-   * @dev This function should only be called when receiving a message to mint the bridged representation
-   * @param _user The user to mint the bridged representation for
-   * @param _amount The amount of tokens to mint
+   * @notice Receive the message from the other chain and mint or transfer tokens to the user
+   * @dev This function should only be called when receiving a message to mint or transfer tokens
+   * @param _user The user to mint or transfer the tokens for
+   * @param _spender The address that provided the tokens
+   * @param _amount The amount of tokens to transfer or mint
    */
-  function receiveMessage(address _user, uint256 _amount) external;
+  function receiveMessage(address _user, address _spender, uint256 _amount) external;
+
+  /**
+   * @notice Withdraws the locked funds from the contract if they get unlocked
+   * @param _spender The address that provided the tokens
+   * @param _user The user to withdraw the funds for
+   */
+  function withdrawLockedFunds(address _spender, address _user) external;
+
+  /**
+   * @notice Cancels a signature by setting the nonce as used
+   * @param _nonce The nonce of the signature to cancel
+   */
+  function cancelSignature(uint256 _nonce) external;
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
@@ -166,9 +271,24 @@ interface IOpUSDCBridgeAdapter {
   function MESSENGER() external view returns (address _messenger);
 
   /**
-   * @notice Returns the nonce of a given user to avoid replay attacks
-   * @param _user The user to fetch the nonce for
-   * @return _nonce The nonce of the user
+   * @notice Fetches the status of the messenger
+   * @return _status The status of the messenger
    */
-  function userNonce(address _user) external view returns (uint256 _nonce);
+  function messengerStatus() external view returns (Status _status);
+
+  /**
+   * @notice Returns the nonce of a given user to avoid replay attacks
+   * @param _user The user to check for
+   * @param _nonce The nonce to check for
+   * @return _used If the nonce has been used
+   */
+  function userNonces(address _user, uint256 _nonce) external view returns (bool _used);
+
+  /**
+   * @notice Returns the amount of funds locked that got locked for a specific user
+   * @param _spender The address that provided the tokens
+   * @param _user The user to check for
+   * @return _lockedAmount The amount of funds locked from locked messages
+   */
+  function lockedFundsDetails(address _spender, address _user) external view returns (uint256 _lockedAmount);
 }

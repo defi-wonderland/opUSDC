@@ -4,16 +4,14 @@ pragma solidity 0.8.25;
 import {L1OpUSDCBridgeAdapter} from 'contracts/L1OpUSDCBridgeAdapter.sol';
 import {IL1OpUSDCFactory, L1OpUSDCFactory} from 'contracts/L1OpUSDCFactory.sol';
 import {L2OpUSDCBridgeAdapter} from 'contracts/L2OpUSDCBridgeAdapter.sol';
-import {L2OpUSDCFactory} from 'contracts/L2OpUSDCFactory.sol';
+import {L2OpUSDCDeploy} from 'contracts/L2OpUSDCDeploy.sol';
 import {USDCInitTxs} from 'contracts/utils/USDCInitTxs.sol';
-
 import {StdStorage, stdStorage} from 'forge-std/StdStorage.sol';
-import {IL2OpUSDCFactory} from 'interfaces/IL2OpUSDCFactory.sol';
+import {IL2OpUSDCDeploy} from 'interfaces/IL2OpUSDCDeploy.sol';
 import {IUSDC} from 'interfaces/external/IUSDC.sol';
-
-import {USDC_IMPLEMENTATION_CREATION_CODE} from 'script/utils/USDCImplementationCreationCode.sol';
 import {AddressAliasHelper} from 'test/utils/AddressAliasHelper.sol';
 import {Helpers} from 'test/utils/Helpers.sol';
+import {USDC_IMPLEMENTATION_CREATION_CODE} from 'test/utils/USDCImplementationCreationCode.sol';
 import {ITestCrossDomainMessenger} from 'test/utils/interfaces/ITestCrossDomainMessenger.sol';
 
 contract IntegrationBase is Helpers {
@@ -40,6 +38,8 @@ contract IntegrationBase is Helpers {
   uint32 internal constant _MIN_GAS_LIMIT = 1_000_000;
   // The extra gas buffer added to the minimum gas limit for the relayMessage function
   uint64 internal constant _SEQUENCER_GAS_OVERHEAD = 700_000;
+  uint256 internal constant _USER_NONCE = 1;
+  string public constant CHAIN_NAME = 'Test';
 
   /// @notice Value used for the L2 sender storage slot in both the OptimismPortal and the
   ///         CrossDomainMessenger contracts before an actual sender is set. This value is
@@ -66,10 +66,10 @@ contract IntegrationBase is Helpers {
   // OpUSDC Protocol
   L1OpUSDCBridgeAdapter public l1Adapter;
   L1OpUSDCFactory public l1Factory;
-  L2OpUSDCFactory public l2Factory;
+  L2OpUSDCDeploy public l2Factory;
   L2OpUSDCBridgeAdapter public l2Adapter;
   IUSDC public bridgedUSDC;
-  IL2OpUSDCFactory.USDCInitializeData public usdcInitializeData;
+  IL2OpUSDCDeploy.USDCInitializeData public usdcInitializeData;
   IL1OpUSDCFactory.L2Deployments public l2Deployments;
 
   function setUp() public virtual {
@@ -79,26 +79,33 @@ contract IntegrationBase is Helpers {
 
     l1Factory = new L1OpUSDCFactory(address(MAINNET_USDC));
 
+    vm.selectFork(optimism);
+    address _usdcImplAddr;
+    bytes memory _USDC_IMPLEMENTATION_CREATION_CODE = USDC_IMPLEMENTATION_CREATION_CODE;
+    assembly {
+      _usdcImplAddr :=
+        create(0, add(_USDC_IMPLEMENTATION_CREATION_CODE, 0x20), mload(_USDC_IMPLEMENTATION_CREATION_CODE))
+    }
+
     // Define the initialization transactions
     usdcInitTxns[0] = USDCInitTxs.INITIALIZEV2;
     usdcInitTxns[1] = USDCInitTxs.INITIALIZEV2_1;
     usdcInitTxns[2] = USDCInitTxs.INITIALIZEV2_2;
     // Define the L2 deployments data
-    l2Deployments =
-      IL1OpUSDCFactory.L2Deployments(_owner, USDC_IMPLEMENTATION_CREATION_CODE, usdcInitTxns, MIN_GAS_LIMIT_DEPLOY);
+    l2Deployments = IL1OpUSDCFactory.L2Deployments(_owner, _usdcImplAddr, MIN_GAS_LIMIT_DEPLOY, usdcInitTxns);
 
     vm.selectFork(mainnet);
 
     vm.prank(_owner);
     (address _l1Adapter, address _l2Factory, address _l2Adapter) =
-      l1Factory.deploy(address(OPTIMISM_L1_MESSENGER), _owner, l2Deployments);
+      l1Factory.deploy(address(OPTIMISM_L1_MESSENGER), _owner, CHAIN_NAME, l2Deployments);
 
     l1Adapter = L1OpUSDCBridgeAdapter(_l1Adapter);
 
     // Get salt and initialize data for l2 deployments
     bytes32 _salt = bytes32(l1Factory.deploymentsSaltCounter());
-    usdcInitializeData = IL2OpUSDCFactory.USDCInitializeData(
-      l1Factory.USDC_NAME(), l1Factory.USDC_SYMBOL(), MAINNET_USDC.currency(), MAINNET_USDC.decimals()
+    usdcInitializeData = IL2OpUSDCDeploy.USDCInitializeData(
+      'Bridged USDC (Test)', l1Factory.USDC_SYMBOL(), MAINNET_USDC.currency(), MAINNET_USDC.decimals()
     );
 
     // Give max minting power to the master minter
@@ -111,7 +118,7 @@ contract IntegrationBase is Helpers {
 
     l2Adapter = L2OpUSDCBridgeAdapter(_l2Adapter);
     bridgedUSDC = IUSDC(l2Adapter.USDC());
-    l2Factory = L2OpUSDCFactory(_l2Factory);
+    l2Factory = L2OpUSDCDeploy(_l2Factory);
 
     // Make foundry know these two address exist on both forks
     vm.makePersistent(address(l1Adapter));
@@ -125,17 +132,17 @@ contract IntegrationBase is Helpers {
     address _aliasedL1Messenger,
     bytes32 _salt,
     address _l1Adapter,
-    IL2OpUSDCFactory.USDCInitializeData memory _usdcInitializeData,
+    IL2OpUSDCDeploy.USDCInitializeData memory _usdcInitializeData,
     IL1OpUSDCFactory.L2Deployments memory _l2Deployments
   ) internal {
     bytes memory _l2FactoryCArgs = abi.encode(
       _l1Adapter,
       _l2Deployments.l2AdapterOwner,
-      _l2Deployments.usdcImplementationInitCode,
+      _l2Deployments.usdcImplAddr,
       _usdcInitializeData,
       _l2Deployments.usdcInitTxs
     );
-    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCFactory).creationCode, _l2FactoryCArgs);
+    bytes memory _l2FactoryInitCode = bytes.concat(type(L2OpUSDCDeploy).creationCode, _l2FactoryCArgs);
 
     _relayL1ToL2Message(
       _aliasedL1Messenger,
@@ -169,7 +176,7 @@ contract IntegrationBase is Helpers {
       address(l2Adapter),
       _ZERO_VALUE,
       _minGasLimitMint,
-      abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _supply)
+      abi.encodeWithSignature('receiveMessage(address,address,uint256)', _user, _user, _supply)
     );
   }
 

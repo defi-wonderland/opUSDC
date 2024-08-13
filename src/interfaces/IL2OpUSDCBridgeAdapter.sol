@@ -14,12 +14,27 @@ interface IL2OpUSDCBridgeAdapter {
    */
   event USDCFunctionSent(bytes4 _functionSignature);
 
+  /**
+   * @notice Emitted when a `receiveMessage` call message is replayed after the adapter was deprecated
+   * @param _spender The address that provided the tokens
+   * @param _amount The amount of USDC sent back to L1
+   */
+  event ReplayedFundsSentBackToL1(address _spender, uint256 _amount);
+
+  /**
+   * @notice Emitted when the locked funds are sent back to L1
+   * @param _spender The address that provided the tokens
+   * @param _amountSent The amount of tokens that were withdrawn
+   */
+  event LockedFundsSentBackToL1(address indexed _spender, uint256 _amountSent);
+
   /*///////////////////////////////////////////////////////////////
                             LOGIC
   ///////////////////////////////////////////////////////////////*/
+
   /**
    * @notice Initiates the process to migrate the bridged USDC to native USDC
-   * @dev Full migration cant finish until L1 receives the message for setting the burn amount
+   * @dev Full migration can't finish until L1 receives the message for setting the burn amount
    * @param _roleCaller The address that will be allowed to transfer the USDC roles
    * @param _setBurnAmountMinGasLimit Minimum gas limit that the setBurnAmount message can be executed on L1
    */
@@ -27,7 +42,7 @@ interface IL2OpUSDCBridgeAdapter {
 
   /**
    * @notice Transfer the USDC roles to the new owner
-   * @param _owner The address to transfer ownerships to
+   * @param _owner The address to transfer ownership to
    * @dev Can only be called by the role caller set in the migration process
    */
   function transferUSDCRoles(address _owner) external;
@@ -43,7 +58,7 @@ interface IL2OpUSDCBridgeAdapter {
   function receiveResumeMessaging() external;
 
   /**
-   * @notice Call with abitrary calldata on USDC contract.
+   * @notice Call with arbitrary calldata on USDC contract.
    * @dev can't execute the following list of transactions:
    *  • transferOwnership (0xf2fde38b)
    *  • changeAdmin (0x8f283970)
@@ -55,11 +70,6 @@ interface IL2OpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
   ///////////////////////////////////////////////////////////////*/
-  /**
-   * @notice Fetches whether messaging is disabled
-   * @return _isMessagingDisabled Whether messaging is disabled
-   */
-  function isMessagingDisabled() external view returns (bool _isMessagingDisabled);
 
   /**
    * @notice Fetches the address of the role caller
@@ -73,6 +83,8 @@ interface IL2OpUSDCBridgeAdapter {
    * such as mint and burn between others. Because of this, the FallbackProxyAdmin contract is used as a middleware,
    * being controlled by the L2OpUSDCBridgeAdapter contract and allowing to call the admin functions through it while
    * also being able to call the fallback function of the USDC proxy.
+   * @dev Declared with immutable notation even though it is not defined on the constructor because it is set on the
+   * `initialize` function which replicates the behavior of the constructor.
    */
   // solhint-disable-next-line func-name-mixedcase
   function FALLBACK_PROXY_ADMIN() external view returns (FallbackProxyAdmin _fallbackProxyAdmin);

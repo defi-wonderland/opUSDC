@@ -3,24 +3,6 @@ pragma solidity 0.8.25;
 
 interface IL1OpUSDCBridgeAdapter {
   /*///////////////////////////////////////////////////////////////
-                            ENUMS
-  ///////////////////////////////////////////////////////////////*/
-
-  /**
-   * @notice The status of an L1 Messenger
-   * @param Active The messenger is active
-   * @param Paused The messenger is paused
-   * @param Upgrading The messenger is upgrading
-   * @param Deprecated The messenger is deprecated
-   */
-  enum Status {
-    Active,
-    Paused,
-    Upgrading,
-    Deprecated
-  }
-
-  /*///////////////////////////////////////////////////////////////
                             EVENTS
   ///////////////////////////////////////////////////////////////*/
 
@@ -32,8 +14,9 @@ interface IL1OpUSDCBridgeAdapter {
 
   /**
    * @notice Emitted when the migration process is complete
+   * @param _burnedAmount The amount of USDC tokens that were burned
    */
-  event MigrationComplete();
+  event MigrationComplete(uint256 _burnedAmount);
 
   /*///////////////////////////////////////////////////////////////
                             LOGIC
@@ -77,10 +60,18 @@ interface IL1OpUSDCBridgeAdapter {
   /**
    * @notice Resume messaging on the messenger
    * @dev Only callable by the owner
-   * @dev Cant resume deprecated messengers
+   * @dev Can't resume deprecated messengers
    * @param _minGasLimit Minimum gas limit that the message can be executed with
    */
   function resumeMessaging(uint32 _minGasLimit) external;
+
+  /**
+   * @notice Receives a message from L2 if the adapter is deprecated and a user is withdrawing locked funds
+   * @dev If the _spender is still locked, the user will be forced to replay this message
+   * @param _spender The user that initially provided the tokens
+   * @param _amount The amount of tokens to withdraw
+   */
+  function receiveWithdrawLockedFundsPostMigration(address _spender, uint256 _amount) external;
 
   /*///////////////////////////////////////////////////////////////
                             VARIABLES
@@ -97,10 +88,4 @@ interface IL1OpUSDCBridgeAdapter {
    * @return _burnCaller The address of the burn caller
    */
   function burnCaller() external view returns (address _burnCaller);
-
-  /**
-   * @notice Fetches the status of the messenger
-   * @return _status The status of the messenger
-   */
-  function messengerStatus() external view returns (Status _status);
 }

@@ -16,6 +16,9 @@ contract dummyImplementation {
 contract Integration_Bridging is IntegrationBase {
   using stdStorage for StdStorage;
 
+  string internal constant _NAME = 'OpUSDCBridgeAdapter';
+  string internal constant _VERSION = '1.0.0';
+
   function setUp() public override {
     super.setUp();
 
@@ -46,7 +49,7 @@ contract Integration_Bridging is IntegrationBase {
       address(l1Adapter),
       _ZERO_VALUE,
       _MIN_GAS_LIMIT,
-      abi.encodeWithSignature('receiveMessage(address,uint256)', _user, _amount)
+      abi.encodeWithSignature('receiveMessage(address,address,uint256)', _user, _user, _amount)
     );
 
     assertEq(MAINNET_USDC.balanceOf(_user), _userBalanceBefore + _amount);
@@ -81,11 +84,46 @@ contract Integration_Bridging is IntegrationBase {
       address(l1Adapter),
       _ZERO_VALUE,
       _MIN_GAS_LIMIT,
-      abi.encodeWithSignature('receiveMessage(address,uint256)', _l1Target, _amount)
+      abi.encodeWithSignature('receiveMessage(address,address,uint256)', _l1Target, _user, _amount)
     );
 
     assertEq(MAINNET_USDC.balanceOf(_l1Target), _userBalanceBefore + _amount);
     assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), 0);
+  }
+
+  /**
+   * @notice Test bridging with a user who is blacklisted on L1
+   */
+  function test_bridgingWithBlacklistedUser() public {
+    vm.selectFork(mainnet);
+    vm.prank(MAINNET_USDC.blacklister());
+    MAINNET_USDC.blacklist(_user);
+
+    vm.selectFork(optimism);
+    // Mint to increment total supply of bridgedUSDC and balance of _user
+    vm.prank(address(l2Adapter));
+    bridgedUSDC.mint(_user, _amount);
+
+    vm.startPrank(_user);
+    bridgedUSDC.approve(address(l2Adapter), _amount);
+    l2Adapter.sendMessage(_user, _amount, _MIN_GAS_LIMIT);
+    vm.stopPrank();
+
+    assertEq(bridgedUSDC.balanceOf(_user), 0);
+    assertEq(bridgedUSDC.balanceOf(address(l2Adapter)), 0);
+
+    vm.selectFork(mainnet);
+    _relayL2ToL1Message(
+      address(l2Adapter),
+      address(l1Adapter),
+      _ZERO_VALUE,
+      _MIN_GAS_LIMIT,
+      abi.encodeWithSignature('receiveMessage(address,address,uint256)', _user, _user, _amount)
+    );
+
+    assertEq(MAINNET_USDC.balanceOf(_user), 0);
+    assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), _amount);
+    assertEq(l1Adapter.lockedFundsDetails(_user, _user), _amount);
   }
 
   /**
@@ -102,13 +140,22 @@ contract Integration_Bridging is IntegrationBase {
     vm.prank(_signerAd);
     bridgedUSDC.approve(address(l2Adapter), _amount);
     uint256 _deadline = block.timestamp + 1 days;
-    uint256 _nonce = vm.getNonce(_signerAd);
-    bytes memory _signature =
-      _generateSignature(_signerAd, _amount, _deadline, _nonce, _signerAd, _signerPk, address(l2Adapter));
+    bytes memory _signature = _generateSignature(
+      _NAME,
+      _VERSION,
+      _signerAd,
+      _amount,
+      _deadline,
+      _MIN_GAS_LIMIT,
+      _USER_NONCE,
+      _signerAd,
+      _signerPk,
+      address(l2Adapter)
+    );
 
     // Different address can execute the message
     vm.prank(_user);
-    l2Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _MIN_GAS_LIMIT);
+    l2Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _USER_NONCE, _deadline, _MIN_GAS_LIMIT);
 
     assertEq(bridgedUSDC.balanceOf(_signerAd), 0);
     assertEq(bridgedUSDC.balanceOf(_user), _amount);
@@ -122,11 +169,44 @@ contract Integration_Bridging is IntegrationBase {
       address(l1Adapter),
       _ZERO_VALUE,
       _MIN_GAS_LIMIT,
-      abi.encodeWithSignature('receiveMessage(address,uint256)', _signerAd, _amount)
+      abi.encodeWithSignature('receiveMessage(address,address,uint256)', _signerAd, _signerAd, _amount)
     );
 
     assertEq(MAINNET_USDC.balanceOf(_signerAd), _userBalanceBefore + _amount);
     assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), 0);
+  }
+
+  /**
+   * @notice Test signature message reverts with a signature that was canceled by disabling the nonce
+   */
+  function test_bridgeFromL2WithCanceledSignature() public {
+    (address _signerAd, uint256 _signerPk) = makeAddrAndKey('signer');
+    vm.selectFork(optimism);
+
+    // Mint to increment total supply of bridgedUSDC and balance of _user
+    vm.startPrank(address(l2Adapter));
+    bridgedUSDC.mint(_signerAd, _amount);
+    bridgedUSDC.mint(_user, _amount);
+    vm.stopPrank();
+
+    // Give allowance to the adapter
+    vm.prank(_signerAd);
+    bridgedUSDC.approve(address(l2Adapter), _amount);
+
+    // Changing to `to` param to _user but we call it with _signerAd
+    uint256 _deadline = block.timestamp + 1 days;
+    bytes memory _signature = _generateSignature(
+      _NAME, _VERSION, _user, _amount, _deadline, _MIN_GAS_LIMIT, _USER_NONCE, _signerAd, _signerPk, address(l2Adapter)
+    );
+
+    // Cancel the signature
+    vm.prank(_signerAd);
+    l2Adapter.cancelSignature(_USER_NONCE);
+
+    // Different address will execute the message, and it should revert because the nonce is disabled
+    vm.startPrank(_user);
+    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidNonce.selector);
+    l2Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _USER_NONCE, _deadline, _MIN_GAS_LIMIT);
   }
 
   /**
@@ -142,19 +222,23 @@ contract Integration_Bridging is IntegrationBase {
     bridgedUSDC.mint(_user, _amount);
     vm.stopPrank();
 
+    // Give allowance to the adapter
     vm.prank(_signerAd);
     bridgedUSDC.approve(address(l2Adapter), _amount);
-    uint256 _deadline = block.timestamp + 1 days;
-    uint256 _nonce = vm.getNonce(_signerAd);
 
     // Changing to `to` param to _user but we call it with _signerAd
-    bytes memory _signature =
-      _generateSignature(_user, _amount, _deadline, _nonce, _signerAd, _signerPk, address(l2Adapter));
+    uint256 _deadline = block.timestamp + 1 days;
+    bytes memory _signature = _generateSignature(
+      _NAME, _VERSION, _user, _amount, _deadline, _MIN_GAS_LIMIT, _USER_NONCE, _signerAd, _signerPk, address(l2Adapter)
+    );
 
     // Different address can execute the message
     vm.startPrank(_user);
-    vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSignature.selector);
-    l2Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _deadline, _MIN_GAS_LIMIT);
+    ///  NOTE: Didn't us `vm.expectRevert(IOpUSDCBridgeAdapter.IOpUSDCBridgeAdapter_InvalidSignature.selector)` because
+    /// it reverts with that error, but then the test fails because of a foundry issue with the error message
+    /// `contract signer does not exist`, which is not true.
+    vm.expectRevert();
+    l2Adapter.sendMessage(_signerAd, _signerAd, _amount, _signature, _USER_NONCE, _deadline, _MIN_GAS_LIMIT);
     vm.stopPrank();
   }
 }
@@ -229,29 +313,6 @@ contract Integration_PermissionedUsdcFlows is IntegrationBase {
 
     // Check that the USDC pauser has been updated
     assertEq(_pauser, _notOwner);
-  }
-
-  /**
-   * @notice Test `updateMasterMinter` USDC function on L2
-   */
-  function test_UpdateMasterMinter() public {
-    // Setup necessary data
-    bytes memory _calldata = abi.encodeWithSignature('updateMasterMinter(address)', _notOwner);
-
-    // Use L2OpUSDCBridgeAdapter owner to call `updateMasterMinter` function through the adapter
-    vm.startPrank(_owner);
-
-    // Call `updateMasterMinter` function
-    l2Adapter.callUsdcTransaction(_calldata);
-
-    //Call masterMinter function to get the masterMinter
-    (, bytes memory _data) = address(bridgedUSDC).call(abi.encodeWithSignature('masterMinter()'));
-
-    //Get masterMinter from _data
-    address _masterMinter = address(uint160(uint256(bytes32(_data))));
-
-    // Check that the USDC masterMinter has been updated
-    assertEq(_masterMinter, _notOwner);
   }
 
   /**

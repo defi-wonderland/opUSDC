@@ -55,6 +55,29 @@ interface IUSDC is IERC20 {
   ) external;
 
   /**
+   * @notice Initialize v2
+   * @param _newName   New token name
+   */
+  // solhint-disable-next-line func-name-mixedcase
+  function initializeV2(string calldata _newName) external;
+
+  /**
+   * @notice Initialize v2.1
+   * @param _lostAndFound  The address to which the locked funds are sent
+   */
+  // solhint-disable-next-line func-name-mixedcase
+  function initializeV2_1(address _lostAndFound) external;
+
+  /**
+   * @notice Initialize v2.2
+   * @param _accountsToBlacklist   A list of accounts to migrate from the old blacklist
+   * @param _newSymbol             New token symbol
+   * data structure to the new blacklist data structure.
+   */
+  // solhint-disable-next-line func-name-mixedcase
+  function initializeV2_2(address[] calldata _accountsToBlacklist, string calldata _newSymbol) external;
+
+  /**
    * @dev Function to add/update a new minter
    * @param _minter The address of the minter
    * @param _minterAllowedAmount The minting amount allowed for the minter
@@ -63,10 +86,29 @@ interface IUSDC is IERC20 {
   function configureMinter(address _minter, uint256 _minterAllowedAmount) external returns (bool _result);
 
   /**
+   * @notice Removes a minter.
+   * @param _minter The address of the minter to remove.
+   * @return _result True if the operation was successful.
+   */
+  function removeMinter(address _minter) external returns (bool _result);
+
+  /**
    * @notice Updates the master minter address.
    * @param _newMasterMinter The address of the new master minter.
    */
   function updateMasterMinter(address _newMasterMinter) external;
+
+  /**
+   * @notice Adds account to blacklist
+   * @param _account The address to blacklist
+   */
+  function blacklist(address _account) external;
+
+  /**
+   * @notice Removes account from blacklist.
+   * @param _account The address to remove from the blacklist.
+   */
+  function unBlacklist(address _account) external;
 
   /**
    * @notice Function to upgrade the usdc proxy to a new implementation
@@ -144,6 +186,13 @@ interface IUSDC is IERC20 {
    * @return _blacklister Address of the current blacklister
    */
   function blacklister() external view returns (address _blacklister);
+
+  /**
+   * @notice Checks if account is blacklisted
+   * @param _account The address to check
+   * @return _result True if the account is blacklisted, false if not
+   */
+  function isBlacklisted(address _account) external view returns (bool _result);
 
   /**
    * @notice Returns the address of the current admin
