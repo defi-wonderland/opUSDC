@@ -19,7 +19,7 @@ _`L2OpUSDCBridgeAdapter`_ - Contract that allows for the transfer of USDC from t
 
 ## L1 → L2 Deployment
 
-![image](https://github.com/user-attachments/assets/1ec286f6-87ae-4b08-8086-ee8077a36ae3)
+![image](https://github.com/user-attachments/assets/cc88f1df-f699-490d-aaa9-e4d2e02f28a9)
 
 ## L1 → L2 USDC Canonical Bridging
 
