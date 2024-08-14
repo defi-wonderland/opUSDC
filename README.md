@@ -8,7 +8,7 @@ Chain operators can use the Bridged USDC Standard for the OP Stack to get Bridge
 
 
 ## Contracts
- :exclamation: `L1OpUSDCFactory.sol` has been deployed to `0x7dB8637A5fd20BbDab1176BdF49C943A96F2E9c6`.
+> :exclamation: `L1OpUSDCFactory.sol` has been deployed to `0x7dB8637A5fd20BbDab1176BdF49C943A96F2E9c6`.
  
 _`L1OpUSDCFactory.sol`_ - Factory contract to deploy and setup the `L1OpUSDCBridgeAdapter` contract on L1. Precalculates the addresses of the L2 deployments and triggers their deployment, by sending a transaction to L2.
 
