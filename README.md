@@ -94,7 +94,7 @@ In order to deploy the opUSDC procotol for your OP Stack chain, you will need to
 
 ```python
 # The factory contract address on L1
-L1_FACTORY_MAINNET=
+L1_FACTORY_MAINNET=0x7dB8637A5fd20BbDab1176BdF49C943A96F2E9c6
 # The bridged USDC implementation address on L2
 BRIDGED_USDC_IMPLEMENTATION=
 # The address of your CrossDomainMessenger on L1
