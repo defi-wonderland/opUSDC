@@ -10,12 +10,13 @@ Chain operators can use the Bridged USDC Standard for the OP Stack to get Bridge
 ## Contracts
 
 _`L1OpUSDCFactory.sol`_ - Factory contract to deploy and setup the `L1OpUSDCBridgeAdapter` contract on L1. Precalculates the addresses of the L2 deployments and triggers their deployment, by sending a transaction to L2.
+:exclamation: The L1 factory has been deployed to `0x7dB8637A5fd20BbDab1176BdF49C943A96F2E9c6` 
 
 _`L2OpUSDCDeploy.sol`_ - One time use deployer contract deployed from the L1 factory through a cross-chain deployment. Used as a utility contract for deploying the L2 USDC Proxy, and `L2OpUSDCBridgeAdapter` contract, all at once in its constructor.
 
-_`L1OpUSDCBridgeAdapter`_ - Contract that allows for the transfer of USDC from Ethereum Mainnet to a specific OP-chain. Locks USDC on Ethereum Mainnet and sends a message to the other chain to mint the equivalent amount of USDC. Receives messages from the other chain and unlocks USDC on the Ethereum Mainnet. Controls the message flow between layers. Supports the requirements for the Bridged USDC to be migrated to Native USDC should the chain operator and Circle want to.
+_`L1OpUSDCBridgeAdapter`_ - Contract that allows for the transfer of USDC from Ethereum Mainnet to a specific OP Stack chain. Locks USDC on Ethereum Mainnet and sends a message to the other chain to mint the equivalent amount of USDC. Receives messages from the other chain and unlocks USDC on the Ethereum Mainnet. Controls the message flow between layers. Supports the requirements for the Bridged USDC to be migrated to Native USDC should the chain operator and Circle want to.
 
-_`L2OpUSDCBridgeAdapter`_ - Contract that allows for the transfer of USDC from the specific OP-chain to Ethereum Mainnet. Burns USDC on the L2 and sends a message to Ethereum Mainnet to unlock the equivalent amount of USDC. Receives messages from Ethereum Mainnet and mints USDC. Allows chain operator to execute arbitrary functions on the Bridged USDC contract as if they were the owner of the contract.
+_`L2OpUSDCBridgeAdapter`_ - Contract that allows for the transfer of USDC from the specific OP Stack chain to Ethereum Mainnet. Burns USDC on the L2 and sends a message to Ethereum Mainnet to unlock the equivalent amount of USDC. Receives messages from Ethereum Mainnet and mints USDC. Allows chain operator to execute arbitrary functions on the Bridged USDC contract as if they were the owner of the contract.
 
 ## L1 → L2 Deployment
 
@@ -89,7 +90,7 @@ yarn coverage
 
 ## Deploying
 
-In order to deploy the opUSDC procotol for your op-chain, you will need to fill out these variables in the `.env` file:
+In order to deploy the opUSDC procotol for your OP Stack chain, you will need to fill out these variables in the `.env` file:
 
 ```python
 # The factory contract address on L1
@@ -131,7 +132,7 @@ yarn script:deploy:broadcast
 ```
 
 ## Migrating to Native USDC
-> ⚠️ Migrating to native USDC is a manual process that requires communication with circle, this section assumes both parties are ready to migrate to native USDC.
+> ⚠️ Migrating to native USDC is a manual process that requires communication with Circle, this section assumes both parties are ready to migrate to native USDC.
 
 In order to migrate to native USDC, you will need to fill out these variables in the `.env` file:
 ```python
@@ -155,7 +156,7 @@ And when you are ready to migrate to native USDC, run:
 yarn script:migrate:broadcast
 ```
 
-### What will circle need at migration?
+### What will Circle need at migration?
 
 #### Circle will need the metadata from the original deployment of the USDC implementation that was used
   
