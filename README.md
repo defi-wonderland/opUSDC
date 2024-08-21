@@ -112,8 +112,9 @@ After all these variables are set, navigate to the `script/mainnet/Deploy.s.sol`
     // NOTE: We have these hardcoded to default values, if used in product you will need to change them
 
     bytes[] memory _usdcInitTxs = new bytes[](3);
+    string memory _name = string.concat('Bridged USDC, ' ', '(', chainName, ')');
     
-    _usdcInitTxs[0] = USDCInitTxs.INITIALIZEV2;
+    _usdcInitTxs[0] = abi.encodeCall(IUSDC.initializeV2, (_name));
     _usdcInitTxs[1] = USDCInitTxs.INITIALIZEV2_1;
     _usdcInitTxs[2] = USDCInitTxs.INITIALIZEV2_2;
 

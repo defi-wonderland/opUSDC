@@ -4,6 +4,7 @@ pragma solidity 0.8.25;
 import {Script} from 'forge-std/Script.sol';
 import {console} from 'forge-std/Test.sol';
 import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
+import {IUSDC} from 'interfaces/external/IUSDC.sol';
 import {USDCInitTxs} from 'src/contracts/utils/USDCInitTxs.sol';
 
 contract Deploy is Script {
@@ -21,8 +22,9 @@ contract Deploy is Script {
     // NOTE: We have these hardcoded to default values, if used in product you will need to change them
 
     bytes[] memory _usdcInitTxs = new bytes[](3);
+    string memory _name = string.concat('Bridged ', ' ', '(', chainName, ')');
 
-    _usdcInitTxs[0] = USDCInitTxs.INITIALIZEV2;
+    _usdcInitTxs[0] = abi.encodeCall(IUSDC.initializeV2, (_name));
     _usdcInitTxs[1] = USDCInitTxs.INITIALIZEV2_1;
     _usdcInitTxs[2] = USDCInitTxs.INITIALIZEV2_2;
 
