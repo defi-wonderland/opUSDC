@@ -133,7 +133,7 @@ yarn script:deploy:broadcast
 ```
 
 ## Migrating to Native USDC
-> ⚠️ Migrating to native USDC is a manual process that requires communication with Circle, this section assumes both parties are ready to migrate to native USDC.
+> ⚠️ Migrating to native USDC is a manual process that requires communication with Circle, this section assumes both parties are ready to migrate to native USDC. Please review [Circle’s documentation](https://www.circle.com/blog/bridged-usdc-standard) to learn about the process around Circle obtaining ownership of the Bridged USDC Standard token contract. 
 
 In order to migrate to native USDC, you will need to fill out these variables in the `.env` file:
 ```python
