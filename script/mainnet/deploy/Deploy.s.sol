@@ -22,7 +22,7 @@ contract Deploy is Script {
     // NOTE: We have these hardcoded to default values, if used in product you will need to change them
 
     bytes[] memory _usdcInitTxs = new bytes[](3);
-    string memory _name = string.concat('Bridged ', ' ', '(', chainName, ')');
+    string memory _name = string.concat('Bridged USDC', ' ', '(', chainName, ')');
 
     _usdcInitTxs[0] = abi.encodeCall(IUSDC.initializeV2, (_name));
     _usdcInitTxs[1] = USDCInitTxs.INITIALIZEV2_1;
