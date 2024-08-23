@@ -90,6 +90,8 @@ yarn coverage
 
 ## Deploying
 
+> :exclamation: `BRIDGED_USDC_IMPLEMENTATION` needs to be deployed ahead of time onto the target L2 chain.
+
 In order to deploy the opUSDC procotol for your OP Stack chain, you will need to fill out these variables in the `.env` file:
 
 ```python
