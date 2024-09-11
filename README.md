@@ -26,6 +26,27 @@ _`L2OpUSDCBridgeAdapter`_ - Contract that allows for the transfer of USDC from t
 
 ![image](https://github.com/defi-wonderland/opUSDC/assets/165055168/eaf55522-e768-463f-830b-b9305cec1e79)
 
+For a user to make a deposit, the process is the following:
+
+### Deposits
+1. Users approve the `L1OpUSDCBridgeAdapter` to spend USDC.
+2. Users proceed to deposit USDC by calling the contract.
+3. The `L1OpUSDCBridgeAdapter` sends the message to the appointed CrossDomainMessenger.
+4. The message is digested and included by the sequencer.
+5. The `L1OpUSDCBridgeAdapter` mints the specified amount of `bridgedUSDC` to the user.
+
+Similarly, for withdrawals:
+
+### Withdrawals
+1. Users send `bridgedUSDC` to the `L2OpUSDCBridgeAdapter`.
+2. The `L2OpUSDCBridgeAdapter` burns the token.
+3. The `L2OpUSDCBridgeAdapter` sends the message to the appointed CrossDomainMessenger.
+4. The message is eventually included and proven on L1.
+5. Wait for the challenge period (at least 7 days).
+6. The receiving user (or relayers) withdraws the message after the challenge period, which is then forwarded to the `L1OpUSDCBridgeAdapter` that releases the specified amount of USDC to the user.
+
+> **You can test the bridging flows using [Brid.gg in Sepolia](https://testnet.brid.gg/op-sepolia?amount=1&originChainId=11155111&token=USDC).**
+
 ## Migrating from Bridged USDC to Native USDC
 
 ![image](https://github.com/user-attachments/assets/291aae4c-e9fb-43a5-a11d-71bb3fc78311)
