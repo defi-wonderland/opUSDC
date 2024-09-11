@@ -44,6 +44,8 @@ Similarly, for withdrawals:
 5. Wait for the challenge period (at least 7 days).
 6. The receiving user (or relayers) withdraws the message after the challenge period, which is then forwarded to the `L1OpUSDCBridgeAdapter` that releases the specified amount of USDC to the user.
 
+> **You can test the bridging flows using [Brid.gg in Sepolia](https://testnet.brid.gg/op-sepolia?amount=1&originChainId=11155111&token=USDC).**
+
 ## Migrating from Bridged USDC to Native USDC
 
 ![image](https://github.com/user-attachments/assets/291aae4c-e9fb-43a5-a11d-71bb3fc78311)
