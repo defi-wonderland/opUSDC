@@ -31,7 +31,7 @@ For a user to make a deposit, the process is the following:
 1. Users approve the `L1OpUSDCBridgeAdapter` to spend USDC.
 2. Users proceed to deposit USDC by calling the contract.
 3. The `L1OpUSDCBridgeAdapter` sends the message to the appointed CrossDomainMessenger.
-4. The sequencer is digested and included by the sequencer.
+4. The message is digested and included by the sequencer.
 5. The `L1OpUSDCBridgeAdapter` mints the specified amount of `bridgedUSDC` to the user.
 
 Similarly, for withdrawals:
