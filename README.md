@@ -8,7 +8,18 @@ Chain operators can use the Bridged USDC Standard for the OP Stack to get bridge
 
 
 ## Contracts
-> :exclamation: `L1OpUSDCFactory.sol` has been deployed to `0x7dB8637A5fd20BbDab1176BdF49C943A96F2E9c6`.
+> :exclamation: `L1OpUSDCFactory.sol` has been deployed to the following addresses:
+  - Mainnet: `0x7dB8637A5fd20BbDab1176BdF49C943A96F2E9c6`
+  - Sepolia: `0x3c66c9b865c7c43330606D8CfAf86480c92f9f40`
+
+> :exclamation: `L1OpUSDCBridgeAdapter.sol` has been deployed to the following addresses:
+  - Sepolia: `0xE9E655E8420E8191a7b747a43f9752a4F93913d2`
+
+> :exclamation: `L2OpUSDCBridgeAdapter.sol` has been deployed to the following addresses:
+  - Optimism Sepolia: `0xa2865E6f7a981914732466ab44a4a53d5FfEFE80`
+
+> :exclamation: `Bridged USDC` contract has been deployed to the following addresses:
+  - Optimism Sepolia: `0x13C8BBfee9aaD48393fcfF409Fac17e1E108B744`
  
 _`L1OpUSDCFactory.sol`_ - Factory contract to deploy and setup the `L1OpUSDCBridgeAdapter` contract on L1. Precalculates the addresses of the L2 deployments and triggers their deployment, by sending a transaction to L2.
 
