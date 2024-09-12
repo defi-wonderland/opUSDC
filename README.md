@@ -155,6 +155,11 @@ And when you are ready to deploy to mainnet, run:
 yarn script:deploy:broadcast
 ```
 
+### Tips For Verifying
+
+- Remember to set the EVM version to `paris` when verifying the contracts.
+- If you are verifying manually through a block explorer UI, you can choose a single Soldiity file option and use `forge flatten <contract_name> > <flattened_contract_name>` to get the flattened contract and avoid having to upload multiple Solidity files.
+
 ## Migrating to Native USDC
 > ⚠️ Migrating to native USDC is a manual process that requires communication with Circle, this section assumes both parties are ready to migrate to native USDC. Please review [Circle’s documentation](https://www.circle.com/blog/bridged-usdc-standard) to learn about the process around Circle obtaining ownership of the Bridged USDC Standard token contract. 
 

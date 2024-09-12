@@ -10,6 +10,7 @@ sort_imports = true
 
 [profile.default]
 solc_version = '0.8.25'
+evm_version = 'paris'
 
 [profile.optimized]
 via_ir = true
