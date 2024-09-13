@@ -2,25 +2,29 @@
 
 USDC is one of the most bridged assets across the crypto ecosystem, and USDC is often bridged to new chains prior to any action from Circle. This can create a challenge when bridged USDC achieves substantial marketshare, but native USDC (issued by Circle) is preferred by the ecosystem, leading to fragmentation between multiple representations of USDC. Circle introduced the [Bridged USDC Standard](https://www.circle.com/en/bridged-usdc) to ensure that chains can easily deploy a form of USDC that is capable of being upgraded in-place by Circle to native USDC, if and when appropriate, and prevent the fragmentation problem.
 
-Bridged USDC Standard for the OP Stack allows for an efficient and modular solution for expanding the Bridged USDC Standard across the Superchain ecosystem. 
+Bridged USDC Standard for the OP Stack allows for an efficient and modular solution for expanding the Bridged USDC Standard across the Superchain ecosystem.
 
-Chain operators can use the Bridged USDC Standard for the OP Stack to get bridged USDC on their OP Stack chain while also providing the optionality for Circle to seamlessly upgrade bridged USDC to native USDC and retain existing supply, holders, and app integrations. 
-
+Chain operators can use the Bridged USDC Standard for the OP Stack to get bridged USDC on their OP Stack chain while also providing the optionality for Circle to seamlessly upgrade bridged USDC to native USDC and retain existing supply, holders, and app integrations.
 
 ## Contracts
+
 > :exclamation: `L1OpUSDCFactory.sol` has been deployed to the following addresses:
-  - Mainnet: `0x7dB8637A5fd20BbDab1176BdF49C943A96F2E9c6`
-  - Sepolia: `0x3c66c9b865c7c43330606D8CfAf86480c92f9f40`
+
+- Mainnet: `0x7dB8637A5fd20BbDab1176BdF49C943A96F2E9c6`
+- Sepolia: `0x3c66c9b865c7c43330606D8CfAf86480c92f9f40`
 
 > :exclamation: `L1OpUSDCBridgeAdapter.sol` has been deployed to the following addresses:
-  - Sepolia: `0xE9E655E8420E8191a7b747a43f9752a4F93913d2`
+
+- Sepolia: `0xE9E655E8420E8191a7b747a43f9752a4F93913d2`
 
 > :exclamation: `L2OpUSDCBridgeAdapter.sol` has been deployed to the following addresses:
-  - Optimism Sepolia: `0xa2865E6f7a981914732466ab44a4a53d5FfEFE80`
+
+- Optimism Sepolia: `0xa2865E6f7a981914732466ab44a4a53d5FfEFE80`
 
 > :exclamation: `Bridged USDC` contract has been deployed to the following addresses:
-  - Optimism Sepolia: `0x13C8BBfee9aaD48393fcfF409Fac17e1E108B744`
- 
+
+- Optimism Sepolia: `0x13C8BBfee9aaD48393fcfF409Fac17e1E108B744`
+
 _`L1OpUSDCFactory.sol`_ - Factory contract to deploy and setup the `L1OpUSDCBridgeAdapter` contract on L1. Precalculates the addresses of the L2 deployments and triggers their deployment, by sending a transaction to L2.
 
 _`L2OpUSDCDeploy.sol`_ - One time use deployer contract deployed from the L1 factory through a cross-chain deployment. Used as a utility contract for deploying the L2 USDC Proxy, and `L2OpUSDCBridgeAdapter` contract, all at once in its constructor.
@@ -40,6 +44,7 @@ _`L2OpUSDCBridgeAdapter`_ - Contract that allows for the transfer of USDC from t
 For a user to make a deposit, the process is the following:
 
 ### Deposits
+
 1. Users approve the `L1OpUSDCBridgeAdapter` to spend USDC.
 2. Users proceed to deposit USDC by calling the contract.
 3. The `L1OpUSDCBridgeAdapter` sends the message to the appointed CrossDomainMessenger.
@@ -49,6 +54,7 @@ For a user to make a deposit, the process is the following:
 Similarly, for withdrawals:
 
 ### Withdrawals
+
 1. Users send `bridgedUSDC` to the `L2OpUSDCBridgeAdapter`.
 2. The `L2OpUSDCBridgeAdapter` burns the token.
 3. The `L2OpUSDCBridgeAdapter` sends the message to the appointed CrossDomainMessenger.
@@ -62,8 +68,8 @@ Similarly, for withdrawals:
 
 ![image](https://github.com/user-attachments/assets/291aae4c-e9fb-43a5-a11d-71bb3fc78311)
 
-
 ## Security
+
 The referenced implementation for the OP Stack has undergone audits from [Spearbit](https://spearbit.com/) and is recommended for production use. The audit report is available [here](./audits/spearbit.pdf).
 
 ## Setup
@@ -142,12 +148,13 @@ MAINNET_RPC=
 ```
 
 After all these variables are set, navigate to the `script/mainnet/Deploy.s.sol` file and edit the following lines with your desired configuration, we add a sanity check that will revert if you forget to change this value:
+
 ```solidity
     // NOTE: We have these hardcoded to default values, if used in product you will need to change them
 
     bytes[] memory _usdcInitTxs = new bytes[](3);
     string memory _name = string.concat('Bridged USDC', ' ', '(', chainName, ')');
-    
+
     _usdcInitTxs[0] = abi.encodeCall(IUSDC.initializeV2, (_name));
     _usdcInitTxs[1] = USDCInitTxs.INITIALIZEV2_1;
     _usdcInitTxs[2] = USDCInitTxs.INITIALIZEV2_2;
@@ -157,11 +164,13 @@ After all these variables are set, navigate to the `script/mainnet/Deploy.s.sol`
 ```
 
 Then run this command to test:
+
 ```bash
 yarn script:deploy
 ```
 
 And when you are ready to deploy to mainnet, run:
+
 ```bash
 yarn script:deploy:broadcast
 ```
@@ -172,9 +181,11 @@ yarn script:deploy:broadcast
 - If you are verifying manually through a block explorer UI, you can choose a single Soldiity file option and use `forge flatten <contract_name> > <flattened_contract_name>` to get the flattened contract and avoid having to upload multiple Solidity files.
 
 ## Migrating to Native USDC
-> ⚠️ Migrating to native USDC is a manual process that requires communication with Circle, this section assumes both parties are ready to migrate to native USDC. Please review [Circle’s documentation](https://www.circle.com/blog/bridged-usdc-standard) to learn about the process around Circle obtaining ownership of the Bridged USDC Standard token contract. 
+
+> ⚠️ Migrating to native USDC is a manual process that requires communication with Circle, this section assumes both parties are ready to migrate to native USDC. Please review [Circle’s documentation](https://www.circle.com/blog/bridged-usdc-standard) to learn about the process around Circle obtaining ownership of the Bridged USDC Standard token contract.
 
 In order to migrate to native USDC, you will need to fill out these variables in the `.env` file:
+
 ```python
 # The address of the L1 opUSDC bridge adapter
 L1_ADAPTER=
@@ -187,11 +198,13 @@ BURN_CALLER
 ```
 
 After all these variables are set, run this command to test:
+
 ```bash
 yarn script:migrate
 ```
 
 And when you are ready to migrate to native USDC, run:
+
 ```bash
 yarn script:migrate:broadcast
 ```
@@ -199,7 +212,7 @@ yarn script:migrate:broadcast
 ### What will Circle need at migration?
 
 #### Circle will need the metadata from the original deployment of the USDC implementation that was used
-  
+
 To do this you will need to go back to the `stablecoin-evm` github repo that the implementation was deployed from in order to extract the raw metadata from the compiled files. The compiled files are usually found in the `out/` or `artifacts/` folders. To extract the raw metadata you can run a command like this:
 
 ```bash
@@ -213,6 +226,7 @@ You will need to do this for both the token contract and any external libraries 
 The primary license for the boilerplate is MIT, see [`LICENSE`](https://github.com/defi-wonderland/opUSDC/blob/main/LICENSE)
 
 ## Bridged USDC Standard Factory Disclaimer
-This software is provided “as is,” without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and noninfringement. In no event shall the authors or copyright holders be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the software or the use or other dealings in the software. 
 
-Please review [Circle’s disclaimer](https://github.com/circlefin/stablecoin-evm/blob/master/doc/bridged_USDC_standard.md#for-more-information) for the limitations around Circle obtaining ownership of the Bridged USDC Standard token contract. 
+This software is provided “as is,” without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and noninfringement. In no event shall the authors or copyright holders be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the software or the use or other dealings in the software.
+
+Please review [Circle’s disclaimer](https://github.com/circlefin/stablecoin-evm/blob/master/doc/bridged_USDC_standard.md#for-more-information) for the limitations around Circle obtaining ownership of the Bridged USDC Standard token contract.
