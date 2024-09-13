@@ -1,21 +1,33 @@
 # Bridged USDC Standard for the OP Stack
 
-USDC is one of the most bridged assets across the crypto ecosystem, and USDC is often bridged to new chains prior to any action from Circle. This can create a challenge when Bridged USDC achieves substantial marketshare, but Native USDC is preferred by the ecosystem, leading to fragmentation between multiple representations of USDC. Circle introduced the [Bridged USDC Standard](https://www.circle.com/blog/bridged-usdc-standard) to ensure that chains can easily deploy a form of USDC that is capable of being upgraded in-place by Circle to Native USDC, if and when appropriate, and prevent the fragmentation problem.
+USDC is one of the most bridged assets across the crypto ecosystem, and USDC is often bridged to new chains prior to any action from Circle. This can create a challenge when bridged USDC achieves substantial marketshare, but native USDC (issued by Circle) is preferred by the ecosystem, leading to fragmentation between multiple representations of USDC. Circle introduced the [Bridged USDC Standard](https://www.circle.com/en/bridged-usdc) to ensure that chains can easily deploy a form of USDC that is capable of being upgraded in-place by Circle to native USDC, if and when appropriate, and prevent the fragmentation problem.
 
-Bridged USDC Standard for the OP Stack allows for an efficient and modular solution for expanding the Bridged USDC Standard across the Superchain ecosystem. Utilizing the cross chain messaging of the canonical OP Stack bridge the adapter allows for easy access to Bridged USDC liquidity across OP Stack chains.
+Bridged USDC Standard for the OP Stack allows for an efficient and modular solution for expanding the Bridged USDC Standard across the Superchain ecosystem. 
 
-Chain operators can use the Bridged USDC Standard for the OP Stack to get Bridged USDC on their OP Stack chain while also providing the optionality for Circle to seamlessly upgrade Bridged USDC to Native USDC and retain existing supply, holders, and app integrations. 
+Chain operators can use the Bridged USDC Standard for the OP Stack to get bridged USDC on their OP Stack chain while also providing the optionality for Circle to seamlessly upgrade bridged USDC to native USDC and retain existing supply, holders, and app integrations. 
 
 
 ## Contracts
+> :exclamation: `L1OpUSDCFactory.sol` has been deployed to the following addresses:
+  - Mainnet: `0x7dB8637A5fd20BbDab1176BdF49C943A96F2E9c6`
+  - Sepolia: `0x3c66c9b865c7c43330606D8CfAf86480c92f9f40`
 
+> :exclamation: `L1OpUSDCBridgeAdapter.sol` has been deployed to the following addresses:
+  - Sepolia: `0xE9E655E8420E8191a7b747a43f9752a4F93913d2`
+
+> :exclamation: `L2OpUSDCBridgeAdapter.sol` has been deployed to the following addresses:
+  - Optimism Sepolia: `0xa2865E6f7a981914732466ab44a4a53d5FfEFE80`
+
+> :exclamation: `Bridged USDC` contract has been deployed to the following addresses:
+  - Optimism Sepolia: `0x13C8BBfee9aaD48393fcfF409Fac17e1E108B744`
+ 
 _`L1OpUSDCFactory.sol`_ - Factory contract to deploy and setup the `L1OpUSDCBridgeAdapter` contract on L1. Precalculates the addresses of the L2 deployments and triggers their deployment, by sending a transaction to L2.
 
 _`L2OpUSDCDeploy.sol`_ - One time use deployer contract deployed from the L1 factory through a cross-chain deployment. Used as a utility contract for deploying the L2 USDC Proxy, and `L2OpUSDCBridgeAdapter` contract, all at once in its constructor.
 
-_`L1OpUSDCBridgeAdapter`_ - Contract that allows for the transfer of USDC from Ethereum Mainnet to a specific OP-chain. Locks USDC on Ethereum Mainnet and sends a message to the other chain to mint the equivalent amount of USDC. Receives messages from the other chain and unlocks USDC on the Ethereum Mainnet. Controls the message flow between layers. Supports the requirements for the Bridged USDC to be migrated to Native USDC should the chain operator and Circle want to.
+_`L1OpUSDCBridgeAdapter`_ - Contract that allows for the transfer of USDC from Ethereum Mainnet to a specific OP Stack chain. Locks USDC on Ethereum Mainnet and sends a message to the other chain to mint the equivalent amount of USDC. Receives messages from the other chain and unlocks USDC on the Ethereum Mainnet. Controls the message flow between layers. Supports the requirements for the Bridged USDC to be migrated to Native USDC should the chain operator and Circle want to.
 
-_`L2OpUSDCBridgeAdapter`_ - Contract that allows for the transfer of USDC from the specific OP-chain to Ethereum Mainnet. Burns USDC on the L2 and sends a message to Ethereum Mainnet to unlock the equivalent amount of USDC. Receives messages from Ethereum Mainnet and mints USDC. Allows chain operator to execute arbitrary functions on the Bridged USDC contract as if they were the owner of the contract.
+_`L2OpUSDCBridgeAdapter`_ - Contract that allows for the transfer of USDC from the specific OP Stack chain to Ethereum Mainnet. Burns USDC on the L2 and sends a message to Ethereum Mainnet to unlock the equivalent amount of USDC. Receives messages from Ethereum Mainnet and mints USDC. Allows chain operator to execute arbitrary functions on the Bridged USDC contract as if they were the owner of the contract.
 
 ## L1 → L2 Deployment
 
@@ -52,7 +64,7 @@ Similarly, for withdrawals:
 
 
 ## Security
-Bridged USDC Standard for the OP Stack has undergone audits from [Spearbit](https://spearbit.com/) and is recommended for production use. The audit report is available [here](./audits/spearbit.pdf).
+The referenced implementation for the OP Stack has undergone audits from [Spearbit](https://spearbit.com/) and is recommended for production use. The audit report is available [here](./audits/spearbit.pdf).
 
 ## Setup
 
@@ -110,11 +122,13 @@ yarn coverage
 
 ## Deploying
 
-In order to deploy the opUSDC procotol for your op-chain, you will need to fill out these variables in the `.env` file:
+> :exclamation: `BRIDGED_USDC_IMPLEMENTATION` needs to be deployed ahead of time onto the target L2 chain.
+
+In order to deploy the opUSDC procotol for your OP Stack chain, you will need to fill out these variables in the `.env` file:
 
 ```python
 # The factory contract address on L1
-L1_FACTORY_MAINNET=
+L1_FACTORY_MAINNET=0x7dB8637A5fd20BbDab1176BdF49C943A96F2E9c6
 # The bridged USDC implementation address on L2
 BRIDGED_USDC_IMPLEMENTATION=
 # The address of your CrossDomainMessenger on L1
@@ -132,8 +146,9 @@ After all these variables are set, navigate to the `script/mainnet/Deploy.s.sol`
     // NOTE: We have these hardcoded to default values, if used in product you will need to change them
 
     bytes[] memory _usdcInitTxs = new bytes[](3);
+    string memory _name = string.concat('Bridged USDC', ' ', '(', chainName, ')');
     
-    _usdcInitTxs[0] = USDCInitTxs.INITIALIZEV2;
+    _usdcInitTxs[0] = abi.encodeCall(IUSDC.initializeV2, (_name));
     _usdcInitTxs[1] = USDCInitTxs.INITIALIZEV2_1;
     _usdcInitTxs[2] = USDCInitTxs.INITIALIZEV2_2;
 
@@ -151,8 +166,13 @@ And when you are ready to deploy to mainnet, run:
 yarn script:deploy:broadcast
 ```
 
+### Tips For Verifying
+
+- Remember to set the EVM version to `paris` when verifying the contracts.
+- If you are verifying manually through a block explorer UI, you can choose a single Soldiity file option and use `forge flatten <contract_name> > <flattened_contract_name>` to get the flattened contract and avoid having to upload multiple Solidity files.
+
 ## Migrating to Native USDC
-> ⚠️ Migrating to native USDC is a manual process that requires communication with circle, this section assumes both parties are ready to migrate to native USDC.
+> ⚠️ Migrating to native USDC is a manual process that requires communication with Circle, this section assumes both parties are ready to migrate to native USDC. Please review [Circle’s documentation](https://www.circle.com/blog/bridged-usdc-standard) to learn about the process around Circle obtaining ownership of the Bridged USDC Standard token contract. 
 
 In order to migrate to native USDC, you will need to fill out these variables in the `.env` file:
 ```python
@@ -176,7 +196,7 @@ And when you are ready to migrate to native USDC, run:
 yarn script:migrate:broadcast
 ```
 
-### What will circle need at migration?
+### What will Circle need at migration?
 
 #### Circle will need the metadata from the original deployment of the USDC implementation that was used
   
