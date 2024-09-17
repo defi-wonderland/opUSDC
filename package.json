@@ -21,7 +21,7 @@
     "script:migrate": "forge script script/mainnet/migration/MigrateToNative.s.sol --slow --via-ir",
     "script:migrate:broadcast": "forge script script/mainnet/migration/MigrateToNative.s.sol --broadcast --verify --slow --via-ir",
     "test": "forge test -vvv",
-    "test:fuzz": "echidna test/invariants/fuzz/OpUSDC.t.sol --config test/invariants/fuzz/config.yaml --contract OpUsdcTest",
+    "test:fuzz": "echidna test/invariants/fuzz/OpUSDC.t.sol --config test/invariants/fuzz/OpUsdc.yaml --contract FuzzOpUsdc",
     "test:integration": "forge test --match-contract Integration -vvv",
     "test:symb": "halmos",
     "test:unit": "forge test --match-contract Unit -vvv",
