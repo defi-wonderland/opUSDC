@@ -67,7 +67,7 @@ jobs:
         run: yarn test:integration
 
   lint:
-    name: Lint Commit Messages
+    name: Lint
     runs-on: ubuntu-latest
 
     steps:
