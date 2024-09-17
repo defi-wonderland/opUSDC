@@ -5,11 +5,12 @@ bracket_spacing = false
 int_types = 'long'
 quote_style = 'single'
 number_underscore = 'thousands'
-multiline_func_header = 'params_first'
+multiline_func_header = 'params_first_multi'
 sort_imports = true
 
 [profile.default]
 solc_version = '0.8.25'
+evm_version = 'paris'
 
 [profile.optimized]
 via_ir = true

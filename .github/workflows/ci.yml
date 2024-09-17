@@ -67,13 +67,13 @@ jobs:
         run: yarn test:integration
 
   lint:
-    name: Lint Commit Messages
+    name: Lint
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1 # Fetch only the last commit
 
       - uses: wagoid/commitlint-github-action@v6
 

@@ -8,7 +8,18 @@ Chain operators can use the Bridged USDC Standard for the OP Stack to get bridge
 
 
 ## Contracts
-> :exclamation: `L1OpUSDCFactory.sol` has been deployed to `0x7dB8637A5fd20BbDab1176BdF49C943A96F2E9c6`.
+> :exclamation: `L1OpUSDCFactory.sol` has been deployed to the following addresses:
+  - Mainnet: `0x7dB8637A5fd20BbDab1176BdF49C943A96F2E9c6`
+  - Sepolia: `0x3c66c9b865c7c43330606D8CfAf86480c92f9f40`
+
+> :exclamation: `L1OpUSDCBridgeAdapter.sol` has been deployed to the following addresses:
+  - Sepolia: `0xE9E655E8420E8191a7b747a43f9752a4F93913d2`
+
+> :exclamation: `L2OpUSDCBridgeAdapter.sol` has been deployed to the following addresses:
+  - Optimism Sepolia: `0xa2865E6f7a981914732466ab44a4a53d5FfEFE80`
+
+> :exclamation: `Bridged USDC` contract has been deployed to the following addresses:
+  - Optimism Sepolia: `0x13C8BBfee9aaD48393fcfF409Fac17e1E108B744`
  
 _`L1OpUSDCFactory.sol`_ - Factory contract to deploy and setup the `L1OpUSDCBridgeAdapter` contract on L1. Precalculates the addresses of the L2 deployments and triggers their deployment, by sending a transaction to L2.
 
@@ -154,6 +165,11 @@ And when you are ready to deploy to mainnet, run:
 ```bash
 yarn script:deploy:broadcast
 ```
+
+### Tips For Verifying
+
+- Remember to set the EVM version to `paris` when verifying the contracts.
+- If you are verifying manually through a block explorer UI, you can choose a single Soldiity file option and use `forge flatten <contract_name> > <flattened_contract_name>` to get the flattened contract and avoid having to upload multiple Solidity files.
 
 ## Migrating to Native USDC
 > ⚠️ Migrating to native USDC is a manual process that requires communication with Circle, this section assumes both parties are ready to migrate to native USDC. Please review [Circle’s documentation](https://www.circle.com/blog/bridged-usdc-standard) to learn about the process around Circle obtaining ownership of the Bridged USDC Standard token contract. 
