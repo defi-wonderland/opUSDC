@@ -33,10 +33,12 @@
     "test/**/*.sol": "yarn lint:sol-tests",
     "package.json": "sort-package-json"
   },
+  "resolutions": {
+    "micromatch": "^4.0.8"
+  },
   "dependencies": {
     "@openzeppelin/contracts": "5.0.2",
-    "@openzeppelin/contracts-upgradeable": "5.0.2",
-    "micromatch": "4.0.8"
+    "@openzeppelin/contracts-upgradeable": "5.0.2"
   },
   "devDependencies": {
     "@commitlint/cli": "17.0.3",
