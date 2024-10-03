@@ -14,7 +14,7 @@
     "lint:sol-logic": "solhint -c .solhint.json 'src/**/*.sol' 'script/**/*.sol'",
     "lint:sol-tests": "solhint -c .solhint.tests.json 'test/**/*.sol'",
     "mainnet:deploy:factory": "dotenv -e .env -- sh -c 'forge script script/mainnet/deploy/L1FactoryDeployAndSetup.s.sol:L1FactoryDeployAndSetup  --via-ir -vv --rpc-url $MAINNET_RPC'",
-    "mainnet:deploy:factory:broadcast": "dotenv -e .env -- sh -c 'forge script/mainnet/deploy/L1FactoryDeployAndSetup.s.sol:L1FactoryDeployAndSetup --via-ir --broadcast -vv --rpc-url $MAINNET_RPC'",
+    "mainnet:deploy:factory:broadcast": "dotenv -e .env -- sh -c 'forge script script/mainnet/deploy/L1FactoryDeployAndSetup.s.sol:L1FactoryDeployAndSetup --via-ir --broadcast -vv --rpc-url $MAINNET_RPC'",
     "mainnet:deploy:protocol": "dotenv -e .env -- sh -c 'forge script script/mainnet/deploy/Deploy.s.sol --slow --via-ir -vv --rpc-url $MAINNET_RPC'",
     "mainnet:deploy:protocol:broadcast": "dotenv -e .env -- sh -c 'forge script script/mainnet/deploy/Deploy.s.sol --slow --via-ir --broadcast -vv --rpc-url $MAINNET_RPC'",
     "prepare": "husky install",

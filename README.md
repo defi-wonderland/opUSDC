@@ -166,6 +166,18 @@ And when you are ready to deploy to mainnet, run:
 yarn script:deploy:broadcast
 ```
 
+In addittion, the L1OpUSDCFactory deployment command is:
+```bash
+yarn mainnet:deploy:factory
+```
+
+And when you are ready to deploy to mainnet, run:
+```bash
+yarn mainnet:deploy:factory:broadcast
+```
+
+Alternatively, you can run the deployment scripts over your desired testent by replacing mainnet with testnet in the commands above.
+
 ### Tips For Verifying
 
 - Remember to set the EVM version to `paris` when verifying the contracts.
