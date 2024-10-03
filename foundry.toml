@@ -31,6 +31,7 @@ runs = 1000
 mainnet = "${MAINNET_RPC}"
 optimism = "${OPTIMISM_RPC}"
 base = "${BASE_RPC}"
+testnet = "${TESTNET_RPC}"
 sepolia = "${SEPOLIA_RPC}"
 
 [etherscan]

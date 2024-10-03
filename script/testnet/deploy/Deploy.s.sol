@@ -9,11 +9,11 @@ import {USDCInitTxs} from 'src/contracts/utils/USDCInitTxs.sol';
 
 contract Deploy is Script {
   uint32 public constant MIN_GAS_LIMIT_DEPLOY = 9_000_000;
-  IL1OpUSDCFactory public immutable L1_FACTORY = IL1OpUSDCFactory(vm.envAddress('L1_FACTORY_MAINNET'));
-  address public immutable BRIDGED_USDC_IMPLEMENTATION = vm.envAddress('BRIDGED_USDC_IMPLEMENTATION');
-  address public immutable L1_MESSENGER = vm.envAddress('L1_MESSENGER');
-  string public chainName = vm.envString('CHAIN_NAME');
-  address public owner = vm.rememberKey(vm.envUint('MAINNET_PK'));
+  IL1OpUSDCFactory public immutable L1_FACTORY = IL1OpUSDCFactory(vm.envAddress('L1_FACTORY_TESTNET'));
+  address public immutable BRIDGED_USDC_IMPLEMENTATION = vm.envAddress('TESTNET_BRIDGED_USDC_IMPLEMENTATION');
+  address public immutable L1_MESSENGER = vm.envAddress('L1_MESSENGER_TESTNET');
+  string public chainName = vm.envString('TESTNET_CHAIN_NAME');
+  address public owner = vm.rememberKey(vm.envUint('TESTNET_PK'));
 
   function run() public {
     vm.startBroadcast(owner);
