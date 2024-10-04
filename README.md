@@ -10,16 +10,16 @@ Chain operators can use the Bridged USDC Standard for the OP Stack to get bridge
 ## Contracts
 > :exclamation: `L1OpUSDCFactory.sol` has been deployed to the following addresses:
   - Mainnet: `0x7dB8637A5fd20BbDab1176BdF49C943A96F2E9c6`
-  - Sepolia: `0x3c66c9b865c7c43330606D8CfAf86480c92f9f40`
+  - Sepolia: `0x82c6c4940cE0066B9F8b500aBF8535810524890c`
 
 > :exclamation: `L1OpUSDCBridgeAdapter.sol` has been deployed to the following addresses:
-  - Sepolia: `0xE9E655E8420E8191a7b747a43f9752a4F93913d2`
+  - Sepolia: `0x0429b5441c85EF7932B694f1998B778D89375b12`
 
 > :exclamation: `L2OpUSDCBridgeAdapter.sol` has been deployed to the following addresses:
-  - Optimism Sepolia: `0xa2865E6f7a981914732466ab44a4a53d5FfEFE80`
+  - Optimism Sepolia: `0xCe7bb486F2b17735a2ee7566Fe03cA77b1a1aa9d`
 
 > :exclamation: `Bridged USDC` contract has been deployed to the following addresses:
-  - Optimism Sepolia: `0x13C8BBfee9aaD48393fcfF409Fac17e1E108B744`
+  - Optimism Sepolia: `0x7a30534619d60e4A610833F985bdF7892fD9bcD5`
  
 _`L1OpUSDCFactory.sol`_ - Factory contract to deploy and setup the `L1OpUSDCBridgeAdapter` contract on L1. Precalculates the addresses of the L2 deployments and triggers their deployment, by sending a transaction to L2.
 
@@ -181,6 +181,7 @@ Alternatively, you can run the deployment scripts over your desired testent by r
 ### Tips For Verifying
 
 - Remember to set the EVM version to `paris` when verifying the contracts.
+- Remember to add the `--via-ir` version if you compiled the contracts with the optimized flag and you're verifying them through the CLI.
 - If you are verifying manually through a block explorer UI, you can choose a single Soldiity file option and use `forge flatten <contract_name> > <flattened_contract_name>` to get the flattened contract and avoid having to upload multiple Solidity files.
 
 ## Migrating to Native USDC
