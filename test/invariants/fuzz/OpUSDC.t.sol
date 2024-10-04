@@ -388,7 +388,12 @@ contract FuzzOpUsdc is SetupOpUSDC {
     require(l2Adapter.messengerStatus() != IOpUSDCBridgeAdapter.Status.Active);
     require(!usdcMainnet.isBlacklisted(_spender)); // Avoid reverting when funds sent back to l1 (as test mock bridge is atomic)
 
-    _amount = clamp(_amount, 0, (2 ^ 255 - 1) - usdcBridged.balanceOf(_to) - _amount);
+    if (l2Adapter.messengerStatus() == IOpUSDCBridgeAdapter.Status.Deprecated) {
+      // deprecated -> fund sent back to l1
+      _amount = clamp(_amount, 0, (2 ^ 255 - 1) - usdcMainnet.balanceOf(_spender) - _amount);
+    } else {
+      _amount = clamp(_amount, 0, (2 ^ 255 - 1) - usdcBridged.balanceOf(_to) - _amount);
+    }
 
     // provided enough usdc on l1
     hevm.prank(_usdcMinter);
