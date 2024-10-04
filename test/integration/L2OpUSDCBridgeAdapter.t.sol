@@ -5,6 +5,8 @@ import {IntegrationBase} from './IntegrationBase.sol';
 import {StdStorage, stdStorage} from 'forge-std/StdStorage.sol';
 import {IOpUSDCBridgeAdapter} from 'interfaces/IOpUSDCBridgeAdapter.sol';
 
+import 'forge-std/Test.sol';
+
 contract dummyImplementation {
   address public minter;
 
@@ -94,23 +96,32 @@ contract Integration_Bridging is IntegrationBase {
   /**
    * @notice Test bridging with a user who is blacklisted on L1
    */
-  function test_bridgingWithBlacklistedUser() public {
+  function test_bridgingWithBlacklistedUserOnL1() public {
     vm.selectFork(mainnet);
     vm.prank(MAINNET_USDC.blacklister());
     MAINNET_USDC.blacklist(_user);
 
+    console.log(1);
+
     vm.selectFork(optimism);
+    console.log('user balance before:', bridgedUSDC.balanceOf(_user));
     // Mint to increment total supply of bridgedUSDC and balance of _user
     vm.prank(address(l2Adapter));
     bridgedUSDC.mint(_user, _amount);
 
+    console.log('user balance af:', bridgedUSDC.balanceOf(_user));
+
+    console.log(2);
     vm.startPrank(_user);
     bridgedUSDC.approve(address(l2Adapter), _amount);
     l2Adapter.sendMessage(_user, _amount, _MIN_GAS_LIMIT);
     vm.stopPrank();
 
+    console.log(3);
     assertEq(bridgedUSDC.balanceOf(_user), 0);
+    console.log(4);
     assertEq(bridgedUSDC.balanceOf(address(l2Adapter)), 0);
+    console.log(5);
 
     vm.selectFork(mainnet);
     _relayL2ToL1Message(
@@ -121,9 +132,9 @@ contract Integration_Bridging is IntegrationBase {
       abi.encodeWithSignature('receiveMessage(address,address,uint256)', _user, _user, _amount)
     );
 
-    assertEq(MAINNET_USDC.balanceOf(_user), 0);
-    assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), _amount);
-    assertEq(l1Adapter.lockedFundsDetails(_user, _user), _amount);
+    assertEq(MAINNET_USDC.balanceOf(_user), 0, '1');
+    assertEq(MAINNET_USDC.balanceOf(address(l1Adapter)), _amount, '2');
+    assertEq(l1Adapter.lockedFundsDetails(_user, _user), _amount, '3');
   }
 
   /**

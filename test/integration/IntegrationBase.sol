@@ -22,14 +22,14 @@ contract IntegrationBase is Helpers {
   uint256 internal constant _OPTIMISM_FORK_BLOCK = 121_876_282;
   uint256 internal constant _BASE_FORK_BLOCK = 16_281_004;
 
-  IUSDC public constant MAINNET_USDC = IUSDC(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+  IUSDC public constant MAINNET_USDC = IUSDC(0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238);
   address public constant MAINNET_USDC_IMPLEMENTATION = 0x43506849D7C04F9138D1A2050bbF3A0c054402dd;
   address public constant L2_CREATE2_DEPLOYER = 0x13b0D85CcB8bf860b6b79AF3029fCA081AE9beF2;
-  address public constant OPTIMISM_PORTAL = 0xbEb5Fc579115071764c7423A4f12eDde41f106Ed;
+  address public constant OPTIMISM_PORTAL = 0x16Fc5058F25648194471939df75CF27A2fdC48BC;
   ITestCrossDomainMessenger public constant L2_MESSENGER =
     ITestCrossDomainMessenger(0x4200000000000000000000000000000000000007);
   ITestCrossDomainMessenger public constant OPTIMISM_L1_MESSENGER =
-    ITestCrossDomainMessenger(0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1);
+    ITestCrossDomainMessenger(0x58Cc85b8D04EA49cC6DBd3CbFFd00B4B8D6cb3ef);
   ITestCrossDomainMessenger public constant BASE_L1_MESSENGER =
     ITestCrossDomainMessenger(0x866E82a600A1414e583f7F13623F1aC5d58b0Afa);
   uint32 public constant MIN_GAS_LIMIT_DEPLOY = 9_000_000;
@@ -56,7 +56,7 @@ contract IntegrationBase is Helpers {
   uint256 public base;
 
   // EOA addresses
-  address internal _owner = makeAddr('owner');
+  address internal _owner = 0x8421D6D2253d3f8e25586Aa6692b1Bf591da3779; // makeAddr('owner');
   address internal _user = makeAddr('user');
 
   // Helper variables
@@ -73,59 +73,41 @@ contract IntegrationBase is Helpers {
   IL1OpUSDCFactory.L2Deployments public l2Deployments;
 
   function setUp() public virtual {
-    mainnet = vm.createFork(vm.rpcUrl('mainnet'), _MAINNET_FORK_BLOCK);
-    optimism = vm.createFork(vm.rpcUrl('optimism'), _OPTIMISM_FORK_BLOCK);
-    base = vm.createFork(vm.rpcUrl('base'), _BASE_FORK_BLOCK);
+    mainnet =
+      vm.createFork(vm.rpcUrl('https://eth-sepolia.g.alchemy.com/v2/IRdWoKj7-6dnihhXL33ILI6AgyYKt1eY'), 6_814_077);
+    optimism =
+      vm.createFork(vm.rpcUrl('https://opt-sepolia.g.alchemy.com/v2/IRdWoKj7-6dnihhXL33ILI6AgyYKt1eY'), 18_126_898);
+    // base = vm.createFork(vm.rpcUrl('base'), _BASE_FORK_BLOCK);
 
-    l1Factory = new L1OpUSDCFactory(address(MAINNET_USDC));
+    // l1Factory = new L1OpUSDCFactory(address(MAINNET_USDC));
 
-    vm.selectFork(optimism);
-    address _usdcImplAddr;
-    bytes memory _USDC_IMPLEMENTATION_CREATION_CODE = USDC_IMPLEMENTATION_CREATION_CODE;
-    assembly {
-      _usdcImplAddr :=
-        create(0, add(_USDC_IMPLEMENTATION_CREATION_CODE, 0x20), mload(_USDC_IMPLEMENTATION_CREATION_CODE))
-    }
-
-    // Define the initialization transactions
-    usdcInitTxns[0] = USDCInitTxs.INITIALIZEV2;
-    usdcInitTxns[1] = USDCInitTxs.INITIALIZEV2_1;
-    usdcInitTxns[2] = USDCInitTxs.INITIALIZEV2_2;
-    // Define the L2 deployments data
-    l2Deployments = IL1OpUSDCFactory.L2Deployments(_owner, _usdcImplAddr, MIN_GAS_LIMIT_DEPLOY, usdcInitTxns);
+    // vm.selectFork(optimism);
+    // address _usdcImplAddr;
+    // bytes memory _USDC_IMPLEMENTATION_CREATION_CODE = USDC_IMPLEMENTATION_CREATION_CODE;
+    // assembly {
+    //   _usdcImplAddr :=
+    //     create(0, add(_USDC_IMPLEMENTATION_CREATION_CODE, 0x20), mload(_USDC_IMPLEMENTATION_CREATION_CODE))
+    // }
 
     vm.selectFork(mainnet);
 
-    vm.prank(_owner);
-    (address _l1Adapter, address _l2Factory, address _l2Adapter) =
-      l1Factory.deploy(address(OPTIMISM_L1_MESSENGER), _owner, CHAIN_NAME, l2Deployments);
-
-    l1Adapter = L1OpUSDCBridgeAdapter(_l1Adapter);
-
-    // Get salt and initialize data for l2 deployments
-    bytes32 _salt = bytes32(l1Factory.deploymentsSaltCounter());
-    usdcInitializeData = IL2OpUSDCDeploy.USDCInitializeData(
-      'Bridged USDC (Test)', l1Factory.USDC_SYMBOL(), MAINNET_USDC.currency(), MAINNET_USDC.decimals()
-    );
-
+    l1Adapter = L1OpUSDCBridgeAdapter(0x0429b5441c85EF7932B694f1998B778D89375b12);
     // Give max minting power to the master minter
     address _masterMinter = MAINNET_USDC.masterMinter();
     vm.prank(_masterMinter);
     MAINNET_USDC.configureMinter(_masterMinter, type(uint256).max);
 
     vm.selectFork(optimism);
-    _relayL2Deployments(OP_ALIASED_L1_MESSENGER, _salt, _l1Adapter, usdcInitializeData, l2Deployments);
+    l2Adapter = L2OpUSDCBridgeAdapter(0xCe7bb486F2b17735a2ee7566Fe03cA77b1a1aa9d);
 
-    l2Adapter = L2OpUSDCBridgeAdapter(_l2Adapter);
     bridgedUSDC = IUSDC(l2Adapter.USDC());
-    l2Factory = L2OpUSDCDeploy(_l2Factory);
 
     // Make foundry know these two address exist on both forks
     vm.makePersistent(address(l1Adapter));
     vm.makePersistent(address(l2Adapter));
     vm.makePersistent(address(bridgedUSDC));
     vm.makePersistent(address(l2Adapter.FALLBACK_PROXY_ADMIN()));
-    vm.makePersistent(address(l2Factory));
+    // vm.makePersistent(address(l2Factory));
   }
 
   function _relayL2Deployments(
