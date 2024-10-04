@@ -11,7 +11,6 @@ contract L1FactoryDeployAndSetup is Script {
   address public deployer = vm.rememberKey(vm.envUint('MAINNET_PK'));
 
   function run() public {
-    vm.createSelectFork(vm.rpcUrl(vm.envString('MAINNET_RPC')));
     vm.startBroadcast(deployer);
     console.log('Deploying L1OpUSDCFactory ...');
     IL1OpUSDCFactory _l1Factory = new L1OpUSDCFactory(USDC);
