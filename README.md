@@ -191,8 +191,7 @@ Alternatively, you can run the deployment scripts over your desired testent by r
             "CrossChainDeployments":"<CROSS_CHAIN_DEPLOYMENTS_ADDRESS>"
         }
   ```
-  Make sure to add it inside the `"libraries"` field of the `"settings"` block where `"compilationTarget"` matches `"src/contracts/L1OpUSDCFactory.sol": "L1OpUSDCFactory"`.# Bridged USDC Standard for the OP Stack
-
+  Make sure to add it inside the `"libraries"` field of the `"settings"` block where `"compilationTarget"` matches `"src/contracts/L1OpUSDCFactory.sol": "L1OpUSDCFactory"`.
 
 ## Migrating to Native USDC
 > ⚠️ Migrating to native USDC is a manual process that requires communication with Circle, this section assumes both parties are ready to migrate to native USDC. Please review [Circle’s documentation](https://www.circle.com/blog/bridged-usdc-standard) to learn about the process around Circle obtaining ownership of the Bridged USDC Standard token contract. 
