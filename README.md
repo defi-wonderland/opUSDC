@@ -183,6 +183,16 @@ Alternatively, you can run the deployment scripts over your desired testent by r
 - Remember to set the EVM version to `paris` when verifying the contracts.
 - Remember to add the `--via-ir` version if you compiled the contracts with the optimized flag and you're verifying them through the CLI.
 - If you are verifying manually through a block explorer UI, you can choose a single Soldiity file option and use `forge flatten <contract_name> > <flattened_contract_name>` to get the flattened contract and avoid having to upload multiple Solidity files.
+- If you're facing issues with the `L1OpUSDCFactory` verification, you can resolve them by adding the `CrossChainDeployments` library address to the `L1OpUSDCFactory.json` file as shown below:
+
+  ```json
+      "libraries": {
+        "src/libraries/CrossChainDeployments.sol": {
+            "CrossChainDeployments":"<CROSS_CHAIN_DEPLOYMENTS_ADDRESS>"
+        }
+  ```
+  Make sure to add it inside the `"libraries"` field of the `"settings"` block where `"compilationTarget"` matches `"src/contracts/L1OpUSDCFactory.sol": "L1OpUSDCFactory"`.# Bridged USDC Standard for the OP Stack
+
 
 ## Migrating to Native USDC
 > ⚠️ Migrating to native USDC is a manual process that requires communication with Circle, this section assumes both parties are ready to migrate to native USDC. Please review [Circle’s documentation](https://www.circle.com/blog/bridged-usdc-standard) to learn about the process around Circle obtaining ownership of the Bridged USDC Standard token contract. 
