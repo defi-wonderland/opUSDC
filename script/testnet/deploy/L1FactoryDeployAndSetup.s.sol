@@ -8,7 +8,7 @@ import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 
 contract L1FactoryDeployAndSetup is Script {
   address public deployer = vm.rememberKey(vm.envUint('TESTNET_PK'));
-  address public usdc = vm.envAddress('TESTNET_USDC');
+  address public usdc = vm.envAddress('TESTNET_USDC_IMPLEMENTATION');
 
   function run() public {
     vm.createSelectFork(vm.rpcUrl(vm.envString('TESTNET_RPC')));

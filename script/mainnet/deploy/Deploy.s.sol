@@ -18,7 +18,7 @@ contract Deploy is Script {
   function run() public {
     vm.startBroadcast(owner);
 
-    // NOTE: We have these hardcoded to default values, if used in product you will need to change them
+    // NOTE: We have these hardcoded to default values, if used in production you will need to change them
     bytes[] memory _usdcInitTxs = new bytes[](3);
     string memory _name = string.concat('Bridged USDC', ' ', '(', chainName, ')');
 
