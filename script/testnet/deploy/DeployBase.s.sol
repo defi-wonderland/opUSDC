@@ -10,7 +10,7 @@ contract DeployBase is Script {
   address public constant L1_MESSENGER = 0xC34855F4De64F1840e5686e64278da901e261f20;
   uint32 public constant MIN_GAS_LIMIT_DEPLOY = 9_000_000;
   string public constant CHAIN_NAME = 'Base Sepolia';
-  IL1OpUSDCFactory public immutable L1_FACTORY = IL1OpUSDCFactory(vm.envAddress('L1_FACTORY_SEPOLIA'));
+  IL1OpUSDCFactory public immutable L1_FACTORY = IL1OpUSDCFactory(vm.envAddress('L1_FACTORY_TESTNET'));
   address public immutable USDC_BASE_SEPOLIA_IMPLEMENTATION = vm.envAddress('USDC_BASE_SEPOLIA_IMPLEMENTATION');
 
   address public owner = vm.rememberKey(vm.envUint('SEPOLIA_PK'));

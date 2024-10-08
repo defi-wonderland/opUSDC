@@ -8,7 +8,7 @@ import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 
 contract L1FactoryDeployAndSetup is Script {
   address public deployer = vm.rememberKey(vm.envUint('MAINNET_PK'));
-  address public usdc = vm.envAddress('MAINNET_USDC_IMPLEMENTATION');
+  address public usdc = vm.envAddress('USDC_ETHEREUM_IMPLEMENTATION');
 
   function run() public {
     vm.startBroadcast(deployer);

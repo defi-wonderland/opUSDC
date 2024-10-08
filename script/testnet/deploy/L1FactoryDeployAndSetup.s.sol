@@ -8,10 +8,9 @@ import {IL1OpUSDCFactory} from 'interfaces/IL1OpUSDCFactory.sol';
 
 contract L1FactoryDeployAndSetup is Script {
   address public deployer = vm.rememberKey(vm.envUint('TESTNET_PK'));
-  address public usdc = vm.envAddress('TESTNET_USDC_IMPLEMENTATION');
+  address public usdc = vm.envAddress('USDC_ETHEREUM_TESTNET_IMPLEMENTATION');
 
   function run() public {
-    vm.createSelectFork(vm.rpcUrl(vm.envString('TESTNET_RPC')));
     vm.startBroadcast(deployer);
     console.log('Deploying L1OpUSDCFactory ...');
     IL1OpUSDCFactory _l1Factory = new L1OpUSDCFactory(usdc);
