@@ -9,7 +9,7 @@ contract MigrateToNativeOp is Script {
   uint32 public constant MIN_GAS_LIMIT_SET_BURN_AMOUNT_L2 = 100_000;
   IL1OpUSDCBridgeAdapter public immutable L1_ADAPTER = IL1OpUSDCBridgeAdapter(vm.envAddress('L1_ADAPTER_OP'));
 
-  address public owner = vm.rememberKey(vm.envUint('MAINNET_OWNER_PK'));
+  address public owner = vm.rememberKey(vm.envUint('OWNER_PK'));
   address public roleCaller = vm.envAddress('OP_ROLE_CALLER');
   address public burnCaller = vm.envAddress('OP_BURN_CALLER');
 

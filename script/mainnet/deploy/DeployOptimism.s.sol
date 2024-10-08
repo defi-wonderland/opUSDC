@@ -10,9 +10,9 @@ contract DeployOptimism is Script {
   address public constant L1_MESSENGER = 0x25ace71c97B33Cc4729CF772ae268934F7ab5fA1;
   uint32 public constant MIN_GAS_LIMIT_DEPLOY = 9_000_000;
   string public constant CHAIN_NAME = 'Optimism';
-  IL1OpUSDCFactory public immutable L1_FACTORY = IL1OpUSDCFactory(vm.envAddress('L1_FACTORY_MAINNET'));
+  IL1OpUSDCFactory public immutable L1_FACTORY = IL1OpUSDCFactory(vm.envAddress('L1_FACTORY'));
   address public immutable USDC_OPTIMISM_IMPLEMENTATION = vm.envAddress('USDC_OPTIMISM_IMPLEMENTATION');
-  address public owner = vm.rememberKey(vm.envUint('MAINNET_PK'));
+  address public owner = vm.rememberKey(vm.envUint('PK'));
 
   function run() public {
     vm.startBroadcast(owner);

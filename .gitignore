@@ -10,6 +10,7 @@ out-via-ir
 
 # Config files
 .env
+.env.testnet
 
 # Avoid ignoring gitkeep
 !/**/.gitkeep
