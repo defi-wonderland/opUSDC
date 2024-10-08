@@ -21,7 +21,7 @@
     "lint:natspec": "npx @defi-wonderland/natspec-smells --config natspec-smells.config.js",
     "lint:sol-logic": "solhint -c .solhint.json 'src/**/*.sol' 'script/**/*.sol'",
     "lint:sol-tests": "solhint -c .solhint.tests.json 'test/**/*.sol'",
-    "prepare": "husky",
+    "prepare": "husky init",
     "script:migrate": "forge clean && forge script script/MigrateToNative.s.sol --slow --via-ir --rpc-url $ETHEREUM_RPC'",
     "script:migrate:broadcast": "forge clean && forge script script/MigrateToNative.s.sol --broadcast --slow --via-ir --rpc-url $ETHEREUM_RPC'",
     "test": "forge test -vvv",
