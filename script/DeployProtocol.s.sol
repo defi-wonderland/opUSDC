@@ -37,13 +37,13 @@ contract DeployProtocol is Script {
     });
 
     // Deploy the L2 contracts
-    (address _l1Adapter, address _l2Factory, address _l2Adapter) =
+    (address _l1Adapter, address _l2Deploy, address _l2Adapter) =
       L1_FACTORY.deploy(L1_MESSENGER, owner, chainName, _l2Deployments);
     vm.stopBroadcast();
 
-    /// NOTE: Hardcode the `L1_ADAPTER_BASE` and `L2_ADAPTER_BASE` addresses inside the `.env` file
+    /// NOTE: Hardcode the newly deployed `_l1Adapter` address on `L1_ADAPTER` inside the `.env` or `env.example` file
     console.log('L1 Adapter:', _l1Adapter);
-    console.log('L2 Factory:', _l2Factory);
+    console.log('L2 Deploy:', _l2Deploy);
     console.log('L2 Adapter:', _l2Adapter);
   }
 }

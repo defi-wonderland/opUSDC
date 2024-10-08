@@ -15,7 +15,7 @@ contract DeployL1Factory is Script {
     console.log('Deploying L1OpUSDCFactory ...');
     IL1OpUSDCFactory _l1Factory = new L1OpUSDCFactory(usdc);
     console.log('L1OpUSDCFactory deployed at:', address(_l1Factory));
-    /// NOTE: Hardcode the address on `L1_FACTORY` inside the `.env` or `.env.testnet` file
+    /// NOTE: Hardcode the newly deployed `_l1Factory` address on `L1_FACTORY` inside the `.env` or `.env.testnet` file
     vm.stopBroadcast();
   }
 }
