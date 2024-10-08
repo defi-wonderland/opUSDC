@@ -124,11 +124,11 @@ yarn coverage
 
 > :exclamation: `BRIDGED_USDC_IMPLEMENTATION` needs to be deployed ahead of time onto the target L2 chain.
 
-In order to deploy the opUSDC procotol for your OP Stack chain, you will need to fill out these variables in the `.env` file:
+In order to deploy the opUSDC protocol for your OP Stack chain, you will need to fill out these variables in the `.env` file:
 
 ```python
 # The factory contract address on L1
-L1_FACTORY_MAINNET=0x7dB8637A5fd20BbDab1176BdF49C943A96F2E9c6
+L1_FACTORY=0x7dB8637A5fd20BbDab1176BdF49C943A96F2E9c6
 # The bridged USDC implementation address on L2
 BRIDGED_USDC_IMPLEMENTATION=
 # The address of your CrossDomainMessenger on L1
@@ -136,9 +136,9 @@ L1_MESSENGER=
 # The name of your chain
 CHAIN_NAME=
 # The private key that will sign the transactions on L1
-MAINNET_PK=
+PRIVATE_KEY=
 # Ethereum RPC URL
-MAINNET_RPC=
+ETHEREUM_RPC=
 ```
 
 After all these variables are set, navigate to the `script/mainnet/Deploy.s.sol` file and edit the following lines with your desired configuration, we add a sanity check that will revert if you forget to change this value:
@@ -168,12 +168,12 @@ yarn script:deploy:broadcast
 
 In addittion, the L1OpUSDCFactory deployment command is:
 ```bash
-yarn mainnet:deploy:factory
+yarn deploy:mainnet:factory
 ```
 
 And when you are ready to deploy to mainnet, run:
 ```bash
-yarn mainnet:deploy:factory:broadcast
+yarn deploy:mainnet:factory:broadcast
 ```
 
 Alternatively, you can run the deployment scripts over your desired testent by replacing mainnet with testnet in the commands above.
@@ -200,7 +200,7 @@ In order to migrate to native USDC, you will need to fill out these variables in
 # The address of the L1 opUSDC bridge adapter
 L1_ADAPTER=
 # The private key of the transaction signer, should be the owner of the L1 Adapter
-MAINNET_OWNER_PK=
+L1_ADAPTER_OWNER_PK=
 # The address of the role caller, should be provided by circle
 ROLE_CALLER=
 # The address of the burn caller, should be provided by circle

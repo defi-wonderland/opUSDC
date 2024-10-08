@@ -5,9 +5,9 @@ import {Script} from 'forge-std/Script.sol';
 import {IL1OpUSDCBridgeAdapter} from 'interfaces/IL1OpUSDCBridgeAdapter.sol';
 
 /// Warning: Script created only for testing purposes.
-contract MigrateToNativeOp is Script {
-  IL1OpUSDCBridgeAdapter public immutable L1_ADAPTER = IL1OpUSDCBridgeAdapter(vm.envAddress('L1_ADAPTER_OP_SEPOLIA'));
-  address public burnCaller = vm.rememberKey(vm.envUint('SEPOLIA_OP_BURN_CALLER_PK'));
+contract BurnLockedUSDC is Script {
+  IL1OpUSDCBridgeAdapter public immutable L1_ADAPTER = IL1OpUSDCBridgeAdapter(vm.envAddress('L1_ADAPTER'));
+  address public burnCaller = vm.rememberKey(vm.envUint('BURN_CALLER_PK'));
 
   function run() public {
     vm.startBroadcast(burnCaller);
