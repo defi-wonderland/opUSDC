@@ -14,7 +14,6 @@ contract MigrateToNative is Script {
   address public burnCaller = vm.envAddress('BURN_CALLER');
 
   function run() public {
-    vm.createSelectFork(vm.rpcUrl(vm.envString('ETHEREUM_RPC')));
     vm.startBroadcast(owner);
     L1_ADAPTER.migrateToNative(roleCaller, burnCaller, MIN_GAS_LIMIT_RECEIVE_L2, MIN_GAS_LIMIT_SET_BURN_AMOUNT_L2);
     vm.stopBroadcast();
