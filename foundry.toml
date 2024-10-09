@@ -28,11 +28,9 @@ src = 'src/interfaces/'
 runs = 1000
 
 [rpc_endpoints]
-mainnet = "${MAINNET_RPC}"
+mainnet = "${ETHEREUM_RPC}"
 optimism = "${OPTIMISM_RPC}"
 base = "${BASE_RPC}"
-sepolia = "${SEPOLIA_RPC}"
 
 [etherscan]
 mainnet = { key = "${ETHERSCAN_API_KEY}", chain = "mainnet" }
-sepolia = { key = "${ETHERSCAN_API_KEY}", chain = "sepolia" }

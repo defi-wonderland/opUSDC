@@ -104,12 +104,13 @@ contract Integration_Bridging is IntegrationBase {
     vm.prank(address(l2Adapter));
     bridgedUSDC.mint(_user, _amount);
 
+    uint256 _userBalanceBefore = bridgedUSDC.balanceOf(_user);
     vm.startPrank(_user);
     bridgedUSDC.approve(address(l2Adapter), _amount);
     l2Adapter.sendMessage(_user, _amount, _MIN_GAS_LIMIT);
     vm.stopPrank();
 
-    assertEq(bridgedUSDC.balanceOf(_user), 0);
+    assertEq(bridgedUSDC.balanceOf(_user), _userBalanceBefore - _amount);
     assertEq(bridgedUSDC.balanceOf(address(l2Adapter)), 0);
 
     vm.selectFork(mainnet);

@@ -10,16 +10,16 @@ Chain operators can use the Bridged USDC Standard for the OP Stack to get bridge
 ## Contracts
 > :exclamation: `L1OpUSDCFactory.sol` has been deployed to the following addresses:
   - Mainnet: `0x7dB8637A5fd20BbDab1176BdF49C943A96F2E9c6`
-  - Sepolia: `0x3c66c9b865c7c43330606D8CfAf86480c92f9f40`
+  - Sepolia: `0x82c6c4940cE0066B9F8b500aBF8535810524890c`
 
 > :exclamation: `L1OpUSDCBridgeAdapter.sol` has been deployed to the following addresses:
-  - Sepolia: `0xE9E655E8420E8191a7b747a43f9752a4F93913d2`
+  - Sepolia: `0x0429b5441c85EF7932B694f1998B778D89375b12`
 
 > :exclamation: `L2OpUSDCBridgeAdapter.sol` has been deployed to the following addresses:
-  - Optimism Sepolia: `0xa2865E6f7a981914732466ab44a4a53d5FfEFE80`
+  - Optimism Sepolia: `0xCe7bb486F2b17735a2ee7566Fe03cA77b1a1aa9d`
 
 > :exclamation: `Bridged USDC` contract has been deployed to the following addresses:
-  - Optimism Sepolia: `0x13C8BBfee9aaD48393fcfF409Fac17e1E108B744`
+  - Optimism Sepolia: `0x7a30534619d60e4A610833F985bdF7892fD9bcD5`
  
 _`L1OpUSDCFactory.sol`_ - Factory contract to deploy and setup the `L1OpUSDCBridgeAdapter` contract on L1. Precalculates the addresses of the L2 deployments and triggers their deployment, by sending a transaction to L2.
 
@@ -124,11 +124,11 @@ yarn coverage
 
 > :exclamation: `BRIDGED_USDC_IMPLEMENTATION` needs to be deployed ahead of time onto the target L2 chain.
 
-In order to deploy the opUSDC procotol for your OP Stack chain, you will need to fill out these variables in the `.env` file:
+In order to deploy the opUSDC protocol for your OP Stack chain, you will need to fill out these variables in the `.env` file:
 
 ```python
 # The factory contract address on L1
-L1_FACTORY_MAINNET=0x7dB8637A5fd20BbDab1176BdF49C943A96F2E9c6
+L1_FACTORY=0x7dB8637A5fd20BbDab1176BdF49C943A96F2E9c6
 # The bridged USDC implementation address on L2
 BRIDGED_USDC_IMPLEMENTATION=
 # The address of your CrossDomainMessenger on L1
@@ -136,9 +136,9 @@ L1_MESSENGER=
 # The name of your chain
 CHAIN_NAME=
 # The private key that will sign the transactions on L1
-MAINNET_PK=
+PRIVATE_KEY=
 # Ethereum RPC URL
-MAINNET_RPC=
+ETHEREUM_RPC=
 ```
 
 After all these variables are set, navigate to the `script/mainnet/Deploy.s.sol` file and edit the following lines with your desired configuration, we add a sanity check that will revert if you forget to change this value:
@@ -166,10 +166,31 @@ And when you are ready to deploy to mainnet, run:
 yarn script:deploy:broadcast
 ```
 
+In addittion, the L1OpUSDCFactory deployment command is:
+```bash
+yarn deploy:mainnet:factory
+```
+
+And when you are ready to deploy to mainnet, run:
+```bash
+yarn deploy:mainnet:factory:broadcast
+```
+
+Alternatively, you can run the deployment scripts over your desired testent by replacing mainnet with testnet in the commands above.
+
 ### Tips For Verifying
 
 - Remember to set the EVM version to `paris` when verifying the contracts.
+- Remember to add the `--via-ir` version if you compiled the contracts with the optimized flag and you're verifying them through the CLI.
 - If you are verifying manually through a block explorer UI, you can choose a single Soldiity file option and use `forge flatten <contract_name> > <flattened_contract_name>` to get the flattened contract and avoid having to upload multiple Solidity files.
+- If you're facing issues with the `L1OpUSDCFactory` verification, you can resolve them by adding the `CrossChainDeployments` library address to the `L1OpUSDCFactory.json` file as shown below:
+
+  ```json
+      "libraries": {
+        "src/libraries/CrossChainDeployments.sol": {
+            "CrossChainDeployments":"<CROSS_CHAIN_DEPLOYMENTS_ADDRESS>"
+        }
+  ```
 
 ## Migrating to Native USDC
 > ⚠️ Migrating to native USDC is a manual process that requires communication with Circle, this section assumes both parties are ready to migrate to native USDC. Please review [Circle’s documentation](https://www.circle.com/blog/bridged-usdc-standard) to learn about the process around Circle obtaining ownership of the Bridged USDC Standard token contract. 
@@ -179,7 +200,7 @@ In order to migrate to native USDC, you will need to fill out these variables in
 # The address of the L1 opUSDC bridge adapter
 L1_ADAPTER=
 # The private key of the transaction signer, should be the owner of the L1 Adapter
-MAINNET_OWNER_PK=
+L1_ADAPTER_OWNER_PK=
 # The address of the role caller, should be provided by circle
 ROLE_CALLER=
 # The address of the burn caller, should be provided by circle
