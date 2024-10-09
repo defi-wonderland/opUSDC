@@ -7,7 +7,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  MAINNET_RPC: ${{ secrets.MAINNET_RPC }}
+  ETHEREUM: ${{ secrets.ETHEREUM }}
   OPTIMISM_RPC: ${{ secrets.OPTIMISM_RPC }}
   BASE_RPC: ${{ secrets.BASE_RPC }}
   SEPOLIA_RPC: ${{ secrets.SEPOLIA_RPC }}
