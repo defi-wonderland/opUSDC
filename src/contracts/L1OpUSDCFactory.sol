@@ -85,6 +85,11 @@ contract L1OpUSDCFactory is IL1OpUSDCFactory {
     // Construct this function on the L2 factory contract
     if (bytes4(_l2Deployments.usdcInitTxs[0]) == _INITIALIZE_SELECTOR) revert IL1OpUSDCFactory_NoInitializeTx();
 
+//This ensures _chainName is non-empty and its length is within a reasonable range.
+    if (bytes(_chainName).length == 0) revert InvalidChainName("Chain name cannot be empty");
+    if (bytes(_chainName).length > 100) revert InvalidChainName("Chain name is too long");
+
+
     // Update the salt counter so the L2 factory is deployed with a different salt to a different address and get it
     uint256 _currentNonce = deploymentsSaltCounter += 2;
 
