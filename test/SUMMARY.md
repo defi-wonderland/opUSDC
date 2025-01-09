@@ -1,6 +1,6 @@
 # Tests summary.
 
-There are 4 main contracts, one abstract and 2 peripherals ones (lib, utils), total sloc is 379. Main implementation is built symetrically - L1 and L2, with a factory/child pattern.
+There are 4 main contracts, one abstract and 2 peripherals ones (lib, utils), total sloc is 379. Main implementation is built symmetrically - L1 and L2, with a factory/child pattern.
 
 ## Unit Tests
 Current coverage is 100% of the branches for the 7 contracts, across 121 tests (all passing), except one branch flagged as non covered in the L1Adapter (a burn amount of 0, which should not revert) - manually reviewed as covered.
