@@ -137,7 +137,7 @@ L1_MESSENGER=
 CHAIN_NAME=
 # The private key that will sign the transactions on L1
 PRIVATE_KEY=
-# Ethereum RPC URL
+# Ethereum RPC URL for the Parent Chain (e.g. Ethereum Mainnet or Ethereum Sepolia)
 ETHEREUM_RPC=
 ```
 
