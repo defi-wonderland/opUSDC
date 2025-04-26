@@ -13,10 +13,11 @@ contract DeployProtocol is Script {
   address public immutable BRIDGED_USDC_IMPLEMENTATION = vm.envAddress('BRIDGED_USDC_IMPLEMENTATION');
   address public immutable L1_MESSENGER = vm.envAddress('L1_MESSENGER');
   string public chainName = vm.envString('CHAIN_NAME');
-  address public owner = vm.rememberKey(vm.envUint('PRIVATE_KEY'));
+  address public l1Owner = vm.envAddress('L1_OWNER');
+  address public l2Owner = vm.envAddress('L2_OWNER');
 
   function run() public {
-    vm.startBroadcast(owner);
+    vm.startBroadcast();
 
     // NOTE: We have these hardcoded to default values, if used in production you will need to change them
     bytes[] memory _usdcInitTxs = new bytes[](3);
@@ -30,7 +31,7 @@ contract DeployProtocol is Script {
     assert(keccak256(_usdcInitTxs[0]) != keccak256(USDCInitTxs.INITIALIZEV2));
 
     IL1OpUSDCFactory.L2Deployments memory _l2Deployments = IL1OpUSDCFactory.L2Deployments({
-      l2AdapterOwner: owner,
+      l2AdapterOwner: l2Owner,
       usdcImplAddr: BRIDGED_USDC_IMPLEMENTATION,
       usdcInitTxs: _usdcInitTxs,
       minGasLimitDeploy: MIN_GAS_LIMIT_DEPLOY
@@ -38,7 +39,7 @@ contract DeployProtocol is Script {
 
     // Deploy the L2 contracts
     (address _l1Adapter, address _l2Deploy, address _l2Adapter) =
-      L1_FACTORY.deploy(L1_MESSENGER, owner, chainName, _l2Deployments);
+      L1_FACTORY.deploy(L1_MESSENGER, l1Owner, chainName, _l2Deployments);
     vm.stopBroadcast();
 
     /// NOTE: Hardcode the newly deployed `_l1Adapter` address on `L1_ADAPTER` inside the `.env` or `env.example` file
