@@ -68,11 +68,11 @@ Similarly, for withdrawals:
 
 ![image](https://github.com/user-attachments/assets/291aae4c-e9fb-43a5-a11d-71bb3fc78311)
 
-## Summary
+### Summary
 
 Bridged USDC representation involves locking liquidity in the home chain and minting tokens on the destination chain. Migrating to native means transferring ownership of the bridged USDC to Circle and burning the locked funds on the home chain to consolidate liquidity across chains, making the bridged USDC canonical. ⚠️ This process is irreversible and will deprecate the adapters ⚠️.
 
-## Step by step
+### Step by step
 
 1. Call `migrateToNative()` on L1
    1. Params
