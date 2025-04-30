@@ -123,7 +123,7 @@ Bridged USDC representation involves locking liquidity in the home chain and min
      1. Effects
         1. Burns the USDC locked in the adapter based on the `burnAmount` variable or the contract balance.
         2. Reset `burnAmount` and `burnCaller` variables, to avoid calling the function more than once.
-        3. `receiveWithdrawLockedFundsPostMigration` is enabled, this function handles the messages that were in-flight during the migration and were sent back from L2.
+        3. `receiveWithdrawLockedFundsPostMigration` is enabled, this function handles the messages that were in-flight during the migration and were sent back from L2 by transferring the locked USDC to the user.
 
 ## Security
 
