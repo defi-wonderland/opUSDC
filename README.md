@@ -92,7 +92,7 @@ Bridged USDC representation involves locking liquidity in the home chain and min
       1. `_roleCaller` The address that will be allowed to transfer the USDC roles on the destination chain.
       2. `_setBurnAmountMinGasLimit` Minimum gas limit that the setBurnAmount message can be executed on L1
    2. Effects
-      1. Changes the `messengerStatus` variable locking `receiveStopMessaging`, `receiveResumeMessaging`, and `sendMessage`. Modifying `receiveMessage` behavior to attend pending messages that could arrive after the migration.
+      1. Changes the `messengerStatus` variable locking `receiveStopMessaging`, `receiveResumeMessaging`, and `sendMessage`. Modifying `receiveMessage` behavior to return pending messages to L1 that could arrive after the migration. Also, modifies `withdrawLockedFunds` behavior to send the locked funds to the spender through a message to L1.
       2. Removes L2 Adapter as minter form USDC contract.
       3. Calculates the amount of USDC that is going to be burned on origin.
       4. Sends message to call `setBurnAmount` on origin chain.
