@@ -155,9 +155,11 @@ The following functions will be callable after migration:
 - `L2OpUSDCBridgeAdapter`
   Note: Since the adapter is deprecated these functions will handle the messages that were in-flight during the migration and will sent locked funds (if the address was blocked by Circle at the moment of the relaying the message and then unblocked) back to the spender through a message to L1.
   - `receiveMessage`
-  - `withdrawLockedFunds`
+   ![image](https://github.com/user-attachments/assets/4b489415-9dca-406e-bb87-38f9f04ac25a)
 
-![image](https://github.com/user-attachments/assets/6f8a19c8-b742-4ef2-8ddb-04f0eb019b04)
+  - `withdrawLockedFunds`
+   ![image](https://github.com/user-attachments/assets/cc0ca3fe-d608-419d-884b-76b8eec58fc3)
+
 
 ## Security
 
