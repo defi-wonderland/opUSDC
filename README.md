@@ -157,8 +157,7 @@ The following functions will be callable after migration:
   - `receiveMessage`
   - `withdrawLockedFunds`
 
-![image](https://github.com/user-attachments/assets/52973589-c472-4827-98c9-034633cc9671)
-
+![image](https://github.com/user-attachments/assets/6f8a19c8-b742-4ef2-8ddb-04f0eb019b04)
 
 ## Security
 
