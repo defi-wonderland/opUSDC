@@ -97,6 +97,7 @@ Bridged USDC representation involves locking liquidity in the home chain and min
      - Calculates the amount of USDC that is going to be burned on origin.
      - Sends message to call `setBurnAmount` on origin chain.
        ⚠️ Note: Messages sent from L2 to L1 are not automatically relayed, so this message needs to be manually treated as the [Optimism Docs](https://docs.optimism.io/app-developers/bridging/messaging#for-l2-to-l1-transactions) suggest, first submit the transaction proof on the portal and then wait 7 days to finalize the withdrawal.
+       ⚠️ Note: User friendly interface to submit the transaction proof: [Superchain Relayer](https://console.optimism.io/relayer)
    - Note: This function is not blocked to be triggered again from L1 if a withdrawal for `setBurnAmount` was not yet finalized.
 
    ***
