@@ -75,28 +75,29 @@ Bridged USDC representation involves locking liquidity in the home chain and min
 ### Step by step
 
 1. Call `migrateToNative()` on L1
-   1. Params
-      1. `_roleCaller` The address that will be allowed to transfer the USDC roles on the destination chain.
-      2. `_burnCaller` The address that will be allowed to call this contract to burn the USDC tokens
-      3. `_minGasLimitReceiveOnL2` Minimum gas limit that the message for the`receiveMigrateToNative` call can be executed with on L2
-      4. `_minGasLimitSetBurnAmount` Minimum gas limit that the message can be executed with to set the burn amount (This param is set on L2, and it represents the `minGasLimit` for when the withdrawal is finalized on L1)
-   2. Effects
-      1. Sets the `burnCaller` variable
-      2. Changes the `messengerStatus` variable locking this function to avoid calling this process twice and locking `sendMessage`, `stopMessaging` and `resumeMessaging`
-         Enables `setBurnAmount` that is only callable by the Linked Adapter.
-      3. Sends message to call `receiveMigrateToNative` on destination chain.
-   3. ⚠️ Note: Once this step is executed the bridges can’t be unpaused.
+   - Params
+     - `_roleCaller` The address that will be allowed to transfer the USDC roles on the destination chain.
+     - `_burnCaller` The address that will be allowed to call this contract to burn the USDC tokens
+     - `_minGasLimitReceiveOnL2` Minimum gas limit that the message for the`receiveMigrateToNative` call can be executed with on L2
+     - `_minGasLimitSetBurnAmount` Minimum gas limit that the message can be executed with to set the burn amount (This param is set on L2, and it represents the `minGasLimit` for when the withdrawal is finalized on L1)
+   - Effects
+     - Sets the `burnCaller` variable
+     - Changes the `messengerStatus` variable locking this function to avoid calling this process twice and locking `sendMessage`, `stopMessaging` and `resumeMessaging`.
+     - Enables `setBurnAmount` that is only callable by the Linked Adapter.
+     - Sends message to call `receiveMigrateToNative` on destination chain.
+   - ⚠️ Note: Once this step is executed the bridges can’t be unpaused.
 2. Call `receiveMigrateToNative` on L2 (Automatically relayed)
 
-   1. Params
-      1. `_roleCaller` The address that will be allowed to transfer the USDC roles on the destination chain.
-      2. `_setBurnAmountMinGasLimit` Minimum gas limit that the setBurnAmount message can be executed on L1
-   2. Effects
-      1. Changes the `messengerStatus` variable locking `receiveStopMessaging`, `receiveResumeMessaging`, and `sendMessage`. Modifying `receiveMessage` behavior to return pending messages to L1 that could arrive after the migration. Also, modifies `withdrawLockedFunds` behavior to send the locked funds to the spender through a message to L1.
-      2. Removes L2 Adapter as minter form USDC contract.
-      3. Calculates the amount of USDC that is going to be burned on origin.
-      4. Sends message to call `setBurnAmount` on origin chain.
-   3. Note: This function is not blocked to be triggered again from L1 if a withdrawal for `setBurnAmount` was not yet finalized.
+   - Params
+     - `_roleCaller` The address that will be allowed to transfer the USDC roles on the destination chain.
+     - `_setBurnAmountMinGasLimit` Minimum gas limit that the setBurnAmount message can be executed on L1
+   - Effects
+     - Changes the `messengerStatus` variable locking `receiveStopMessaging`, `receiveResumeMessaging`, and `sendMessage`. Modifying `receiveMessage` behavior to return pending messages to L1 that could arrive after the migration. Also, modifies `withdrawLockedFunds` behavior to send the locked funds to the spender through a message to L1.
+     - Removes L2 Adapter as minter form USDC contract.
+     - Calculates the amount of USDC that is going to be burned on origin.
+     - Sends message to call `setBurnAmount` on origin chain.
+       ⚠️ Note: Messages sent from L2 to L1 are not automatically relayed, so this message needs to be manually treated as the [Optimism Docs](https://docs.optimism.io/app-developers/bridging/messaging#for-l2-to-l1-transactions) suggest, first submit the transaction proof on the portal and then wait 7 days to finalize the withdrawal.
+   - Note: This function is not blocked to be triggered again from L1 if a withdrawal for `setBurnAmount` was not yet finalized.
 
    ***
 
@@ -106,24 +107,54 @@ Bridged USDC representation involves locking liquidity in the home chain and min
 
 - L2 Sequence
   1. Call `transferUSDCRoles`
-     1. Params
-        1. `_owner` The address to transfer ownership to
-     2. Effects
-        1. Transfers the ownership of the Bridged USDC contract to the `_owner`
-        2. Transfer the admin rights of the Bridged USDC proxy to the `msg.sender` (a.k.a. `roleCaller`)
+     - Params
+       - `_owner` The address to transfer ownership to
+     - Effects
+       - Transfers the ownership of the Bridged USDC contract to the `_owner`
+       - Transfer the admin rights of the Bridged USDC proxy to the `msg.sender` (a.k.a. `roleCaller`)
 - L1 Sequence (MUST wait at least 7 days to execute this sequence).
   1. Call `setBurnAmount`
-     1. Params
-        1. `_amount` The amount of USDC tokens that will be burned
-     2. Effects
-        1. Sets `burnAmount` variable that will be later used by `burnLockedUSDC`
-        2. Changes the `messengerStatus` to `Deprecated` disabling all the function related to migration and sending messages.
-     3. ⚠️ Note: After this point the `burnCaller` and the `roleCaller` are not longer updatable
+     - Params
+       - `_amount` The amount of USDC tokens that will be burned
+     - Effects
+       - Sets `burnAmount` variable that will be later used by `burnLockedUSDC`
+       - Changes the `messengerStatus` to `Deprecated` disabling all the function related to migration and sending messages.
+     - ⚠️ Note: After this point the `burnCaller` and the `roleCaller` are not longer updatable
   2. Call `burnLockedUSDC`
-     1. Effects
-        1. Burns the USDC locked in the adapter based on the `burnAmount` variable or the contract balance.
-        2. Reset `burnAmount` and `burnCaller` variables, to avoid calling the function more than once.
-        3. `receiveWithdrawLockedFundsPostMigration` is enabled, this function handles the messages that were in-flight during the migration and were sent back from L2 by transferring the locked USDC to the user.
+     - Effects
+       - Burns the USDC locked in the adapter based on the `burnAmount` variable or the contract balance.
+       - Reset `burnAmount` and `burnCaller` variables, to avoid calling the function more than once.
+       - `receiveWithdrawLockedFundsPostMigration` is enabled, this function handles the messages that were in-flight during the migration and were sent back from L2 by transferring the locked USDC to the user.
+
+### Contracts behavior after migration
+
+The following functions will revert or won't be callable after migration:
+
+- `L1OpUSDCBridgeAdapter`
+  - `migrateToNative`
+  - `setBurnAmount`
+  - `burnLockedUSDC`
+  - `stopMessaging`
+  - `resumeMessaging`
+  - `sendMessage`
+- `L2OpUSDCBridgeAdapter`
+  - `receiveMigrateToNative`
+  - `transferUSDCRoles`
+  - `receiveStopMessaging`
+  - `receiveResumeMessaging`
+  - `sendMessage`
+  - `callUsdcTransaction`
+
+The following functions will be callable after migration:
+
+- `L1OpUSDCBridgeAdapter`
+  - `receiveMessage`
+  - `receiveWithdrawLockedFundsPostMigration`
+  - `withdrawLockedFunds`
+- `L2OpUSDCBridgeAdapter`
+  Note: Since the adapter is deprecated these functions will handle the messages that were in-flight during the migration and will sent locked funds (if the address was blocked by Circle at the moment of the relaying the message and then unblocked) back to the spender through a message to L1.
+  - `receiveMessage`
+  - `withdrawLockedFunds`
 
 ## Security
 
