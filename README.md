@@ -157,6 +157,9 @@ The following functions will be callable after migration:
   - `receiveMessage`
   - `withdrawLockedFunds`
 
+![image](https://github.com/user-attachments/assets/52973589-c472-4827-98c9-034633cc9671)
+
+
 ## Security
 
 The referenced implementation for the OP Stack has undergone audits from [Spearbit](https://spearbit.com/) and is recommended for production use. The audit report is available [here](./audits/spearbit.pdf).
